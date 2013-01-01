@@ -163,15 +163,10 @@ class RectifiedLinearBuilder(OpBuilder):
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
 
-        # TODO: we can remove this check if we upgrade nengo dependency to
-        # >= 2.6.1
-        if hasattr(ops[0].neurons, "amplitude"):
-            if all(op.neurons.amplitude == 1 for op in ops):
-                self.amplitude = None
-            else:
-                self.amplitude = get_constant(ops, "amplitude", signals.dtype)
-        else:
+        if all(op.neurons.amplitude == 1 for op in ops):
             self.amplitude = None
+        else:
+            self.amplitude = get_constant(ops, "amplitude", signals.dtype)
 
     def build_step(self, signals):
         J = signals.gather(self.J_data)
@@ -182,7 +177,7 @@ class RectifiedLinearBuilder(OpBuilder):
 
 
 class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
-    """Build a group of :class:`~nengo:nengo.SpikingRectifiedLinear` neuron 
+    """Build a group of :class:`~nengo:nengo.SpikingRectifiedLinear` neuron
        operators."""
 
     def __init__(self, ops, signals):
@@ -230,13 +225,7 @@ class LIFRateBuilder(OpBuilder):
 
         self.tau_ref = get_constant(ops, "tau_ref", signals.dtype)
         self.tau_rc = get_constant(ops, "tau_rc", signals.dtype)
-
-        # TODO: we can remove this check if we upgrade nengo dependency to
-        # >= 2.6.1
-        if hasattr(ops[0].neurons, "amplitude"):
-            self.amplitude = get_constant(ops, "amplitude", signals.dtype)
-        else:
-            self.amplitude = tf.constant(1.0, dtype=signals.dtype)
+        self.amplitude = get_constant(ops, "amplitude", signals.dtype)
 
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])

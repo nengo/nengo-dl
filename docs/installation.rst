@@ -1,13 +1,6 @@
 Installation
 ============
 
-Requirements
-------------
-- ``python 2.7`` or ``python >= 3.4``
-- ``numpy >= 1.11.0``
-- ``nengo >= 2.5.0``
-- ``tensorflow >= 1.3.0``
-
 Installing NengoDL
 ------------------
 To install NengoDL, we recommend using ``pip``:
@@ -15,6 +8,14 @@ To install NengoDL, we recommend using ``pip``:
 .. code-block:: bash
 
   pip install nengo_dl
+
+That's it!
+
+Requirements
+------------
+NengoDL works with Python 2.7 or 3.4+.  See `requirements.txt
+<https://github.com/nengo/nengo_dl/blob/master/requirements.txt>`_ for a list
+of the package dependencies.
 
 ``pip`` will do its best to install all of NengoDL's requirements when it
 installs NengoDL.  However, if anything goes wrong during this process you

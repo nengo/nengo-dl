@@ -38,6 +38,7 @@ Release History
   parameters via ``sim.data``.
 - TensorFlow ops created within the Simulator context will now default to
   the same device as the Simulator.
+- Update minimum Nengo version to 2.7.0
 
 **Fixed**
 

@@ -16,7 +16,7 @@ environment:
       NENGO_VERSION: git+https://github.com/nengo/nengo.git
     - NUMPY_VERSION: numpy==1.11.0
       TF_VERSION: tensorflow==1.3.0
-      NENGO_VERSION: nengo==2.5.0
+      NENGO_VERSION: nengo==2.7.0
 
 init:
   - set PATH=%PYTHON_VERSION%;%PYTHON_VERSION%\\Scripts;%PATH%
