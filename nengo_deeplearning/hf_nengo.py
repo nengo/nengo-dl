@@ -18,10 +18,22 @@ def convert_layer(nonlinearity, n_neurons):
     elif isinstance(nonlinearity, hf.nl.Linear):
         ens = nengo.Node(size_in=n_neurons)
         ens.neurons = ens
+    elif isinstance(nonlinearity, hf.nl.Continuous):
+        return convert_layer(nonlinearity.base, n_neurons)
     else:
         raise TypeError("Cannot convert nonlinearity %s" % nonlinearity)
 
     return ens
+
+
+def get_synapse(nonlinearity, dt):
+    if not isinstance(nonlinearity, hf.nl.Continuous):
+        return None
+
+    if isinstance(nonlinearity.coeff, np.ndarray):
+        raise TypeError("ndarray tau not supported")
+
+    return nengo.Lowpass(dt / nonlinearity.coeff)
 
 
 def hf_to_nengo(hfnet, dt=1):
@@ -35,7 +47,8 @@ def hf_to_nengo(hfnet, dt=1):
             for post in hfnet.conns[pre]:
                 W, b = hfnet.get_weights(hfnet.W, (pre, post))
                 nengo.Connection(layers[pre].neurons, layers[post].neurons,
-                                 transform=W.T, synapse=None)
+                                 transform=W.T,
+                                 synapse=get_synapse(hfnet.layers[post], dt))
                 layers[post].bias += b
 
         if isinstance(hfnet, hf.RNNet):
@@ -45,11 +58,16 @@ def hf_to_nengo(hfnet, dt=1):
             for l in range(hfnet.n_layers):
                 if hfnet.rec_layers[l]:
                     W, b = hfnet.get_weights(hfnet.W, (l, l))
-                    nengo.Connection(layers[l].neurons, layers[l].neurons,
-                                     transform=W.T, synapse=0)
+                    c = nengo.Connection(layers[l].neurons, layers[l].neurons,
+                                         transform=W.T,
+                                         synapse=get_synapse(hfnet.layers[l],
+                                                             dt))
+                    if c.synapse is None:
+                        c.synapse = nengo.Lowpass(0)
 
                     nengo.Connection(bias, layers[l].neurons,
-                                     transform=b[:, None], synapse=None)
+                                     transform=b[:, None],
+                                     synapse=get_synapse(hfnet.layers[l], dt))
 
     net.layers = layers
     return net
@@ -103,8 +121,9 @@ def test_ff():
 
 
 def test_rnn():
+    dt = 0.2
     n_inputs = 10
-    sig_len = 10
+    sig_len = int(10 / dt)
     inputs = np.outer(np.linspace(0.1, 0.9, n_inputs),
                       np.ones(sig_len))[:, :, None]
     targets = np.outer(np.linspace(0.1, 0.9, n_inputs),
@@ -112,7 +131,8 @@ def test_rnn():
     inputs = inputs.astype(np.float32)
     targets = targets.astype(np.float32)
 
-    hfnet = hf.RNNet(shape=[1, 10, 1], layers=hf.nl.Logistic())
+    hfnet = hf.RNNet(shape=[1, 10, 1],
+                     layers=hf.nl.Continuous(hf.nl.Logistic(), 1, dt))
     hfnet.run_batches(inputs, targets, max_epochs=30,
                       optimizer=hf.opt.HessianFree(CG_iter=100))
 
@@ -125,7 +145,8 @@ def test_rnn():
     plt.plot(outputs.squeeze().T)
     plt.title("hf outputs")
 
-    net = hf_to_nengo(hfnet)
+    net = hf_to_nengo(hfnet, dt)
+
     with net:
         array_in = ArrayInput(inputs[0])
         inp = nengo.Node(array_in, size_out=1)
@@ -140,11 +161,11 @@ def test_rnn():
     plt_out = plt.gca()
     plt.title("nengo outputs")
 
-    sim = nengo.Simulator(net, dt=1)
+    sim = nengo.Simulator(net, dt=dt)
     for i in range(n_inputs):
         array_in.data = inputs[i]
         sim.reset()
-        sim.run(sig_len)
+        sim.run(sig_len * dt)
 
         plt_in.plot(sim.data[in_p])
         plt_out.plot(sim.data[out_p])
