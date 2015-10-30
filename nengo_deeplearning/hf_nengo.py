@@ -5,11 +5,13 @@ from nengo.utils.functions import piecewise
 import numpy as np
 
 
-def convert_layer(nonlinearity, n_neurons):
+def convert_layer(nonlinearity, n_neurons, net, dt):
     # TODO: let this map in both directions
 
     ens = nengo.Ensemble(n_neurons, 1, gain=np.ones(n_neurons),
                          bias=np.zeros(n_neurons))
+    ens.inpt = ens.neurons
+    ens.oupt = ens.neurons
 
     if isinstance(nonlinearity, hf.nl.ReLU):
         ens.neuron_type = nengo.neurons.RectifiedLinear()
@@ -17,57 +19,71 @@ def convert_layer(nonlinearity, n_neurons):
         ens.neuron_type = nengo.neurons.Sigmoid(tau_ref=1)
     elif isinstance(nonlinearity, hf.nl.Linear):
         ens = nengo.Node(size_in=n_neurons)
-        ens.neurons = ens
+        ens.inpt = ens
+        ens.oupt = ens
     elif isinstance(nonlinearity, hf.nl.Continuous):
-        return convert_layer(nonlinearity.base, n_neurons)
+        ens = convert_layer(nonlinearity.base, n_neurons, net, dt)
+        ens.inpt = nengo.Node(FilterFunc(nonlinearity.coeff),
+                              size_in=n_neurons, size_out=n_neurons)
+        nengo.Connection(ens.inpt, ens.neurons, synapse=None)
+
+#         ens.inpt = nengo.Node(size_in=n_neurons)
+#         nengo.Connection(ens.inpt, ens.neurons,
+#                          synapse=get_synapse(nonlinearity, net, dt, False))
     else:
         raise TypeError("Cannot convert nonlinearity %s" % nonlinearity)
 
     return ens
 
 
-def get_synapse(nonlinearity, dt):
-    if not isinstance(nonlinearity, hf.nl.Continuous):
-        return None
-
-    if isinstance(nonlinearity.coeff, np.ndarray):
-        raise TypeError("ndarray tau not supported")
-
-    return nengo.Lowpass(dt / nonlinearity.coeff)
+# def get_synapse(nonlinearity, net, dt, blocking=True):
+#     if not isinstance(nonlinearity, hf.nl.Continuous):
+#         return None
+#
+#     if isinstance(nonlinearity.coeff, np.ndarray):
+#         raise TypeError("ndarray tau not supported")
+#
+#     c = nonlinearity.coeff / dt
+#     syn = nengo.Lowpass(1 / c - 1)
+#     net.config[syn].blocking = blocking
+#
+#     return syn
 
 
 def hf_to_nengo(hfnet, dt=1):
     with nengo.Network() as net:
+        net.config.configures(nengo.Lowpass)
+        net.config[nengo.Lowpass].set_param("blocking",
+                                            nengo.params.BoolParam(True))
+
         # convert each layer to an ensemble
-        layers = [convert_layer(l, hfnet.shape[i])
+        layers = [convert_layer(l, hfnet.shape[i], net, dt)
                   for i, l in enumerate(hfnet.layers)]
 
         # add in feedforward connections
+        net.ff_bias = nengo.Node([1])
         for pre in hfnet.conns:
             for post in hfnet.conns[pre]:
                 W, b = hfnet.get_weights(hfnet.W, (pre, post))
-                nengo.Connection(layers[pre].neurons, layers[post].neurons,
-                                 transform=W.T,
-                                 synapse=get_synapse(hfnet.layers[post], dt))
-                layers[post].bias += b
+                nengo.Connection(layers[pre].oupt, layers[post].inpt,
+                                 transform=W.T, synapse=None)
+#                 layers[post].bias += b
+                nengo.Connection(net.ff_bias, layers[post].inpt,
+                                 transform=b[:, None], synapse=None)
 
         if isinstance(hfnet, hf.RNNet):
             # bias on first timestep
-            bias = nengo.Node(piecewise({dt: [1], 2 * dt: [0]}), size_out=1)
+            net.rec_bias = nengo.Node(piecewise({dt: [1], 2 * dt: [0]}),
+                                      size_out=1)
 
             for l in range(hfnet.n_layers):
                 if hfnet.rec_layers[l]:
                     W, b = hfnet.get_weights(hfnet.W, (l, l))
-                    c = nengo.Connection(layers[l].neurons, layers[l].neurons,
-                                         transform=W.T,
-                                         synapse=get_synapse(hfnet.layers[l],
-                                                             dt))
-                    if c.synapse is None:
-                        c.synapse = nengo.Lowpass(0)
+                    nengo.Connection(layers[l].oupt, layers[l].inpt,
+                                     transform=W.T, synapse=0)
 
-                    nengo.Connection(bias, layers[l].neurons,
-                                     transform=b[:, None],
-                                     synapse=get_synapse(hfnet.layers[l], dt))
+                    nengo.Connection(net.rec_bias, layers[l].inpt,
+                                     transform=b[:, None], synapse=None)
 
     net.layers = layers
     return net
@@ -86,6 +102,23 @@ class ArrayInput(nengo.processes.Process):
             step.count += 1
             return self.data[step.count % self.data.shape[0]]
         step.count = -1
+
+        return step
+
+
+class FilterFunc(nengo.processes.Process):
+    def __init__(self, coeff):
+        super(FilterFunc, self).__init__()
+        self.coeff = coeff
+
+    def make_step(self, size_in, size_out, dt, rng):
+        assert size_in == size_out
+
+        self.state = np.zeros(size_in)
+
+        def step(_, x):
+            self.state += (x - self.state) * self.coeff
+            return self.state
 
         return step
 
@@ -121,7 +154,7 @@ def test_ff():
 
 
 def test_rnn():
-    dt = 0.2
+    dt = 0.25
     n_inputs = 10
     sig_len = int(10 / dt)
     inputs = np.outer(np.linspace(0.1, 0.9, n_inputs),
@@ -140,9 +173,9 @@ def test_rnn():
     plt.plot(inputs.squeeze().T)
     plt.title("hf inputs")
 
-    outputs = hfnet.forward(inputs, hfnet.W)[-1]
+    outputs = hfnet.forward(inputs, hfnet.W)
     plt.figure()
-    plt.plot(outputs.squeeze().T)
+    plt.plot(outputs[-1].squeeze().T)
     plt.title("hf outputs")
 
     net = hf_to_nengo(hfnet, dt)
@@ -150,9 +183,9 @@ def test_rnn():
     with net:
         array_in = ArrayInput(inputs[0])
         inp = nengo.Node(array_in, size_out=1)
-        nengo.Connection(inp, net.layers[0], synapse=None)
-        in_p = nengo.Probe(net.layers[0].neurons)
-        out_p = nengo.Probe(net.layers[-1].neurons)
+        nengo.Connection(inp, net.layers[0].inpt, synapse=None)
+        in_p = nengo.Probe(net.layers[0].oupt)
+        out_p = nengo.Probe(net.layers[-1].oupt)
 
     plt.figure()
     plt_in = plt.gca()
