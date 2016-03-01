@@ -31,7 +31,8 @@ class ExpandableSumLayer(lgn.layers.ElemwiseSumLayer):
 
         return (input_shapes[0][0], self.num_units)
 
-#     def get_output_for(self, inputs, **kwargs):
+
+# def get_output_for(self, inputs, **kwargs):
 #         print self.name
 #         print inputs
 #
@@ -49,6 +50,9 @@ class EnsembleLayer:
         self.ens = ens
         self.name = ens.label or "ensemble"
         self._decoded_input = None
+        self._encoders = None
+        self.eval_points = nengo.builder.ensemble.gen_eval_points(
+            ens, ens.eval_points, np.random)
 
         # neuron input
         self.input = ExpandableSumLayer(
@@ -56,12 +60,12 @@ class EnsembleLayer:
 
         # add gain/bias
         layer = self.input
-        gain, bias, _, _ = nengo.builder.ensemble.get_gain_bias(ens)
-        if gain is not None:
-            layer = lgn.layers.NonlinearityLayer(layer, lambda x: x * gain,
-                                                 name=self.name + "_gain")
-        if bias is not None:
-            layer = lgn.layers.BiasLayer(layer, name=self.name + "_bias")
+        self.gain, self.bias, _, _ = nengo.builder.ensemble.get_gain_bias(ens)
+        layer = lgn.layers.NonlinearityLayer(layer,
+                                             lambda x: x * self.gain,
+                                             name=self.name + "_gain")
+        layer = lgn.layers.BiasLayer(layer, name=self.name + "_bias",
+                                     b=self.bias)
 
         # neural output
         self.output = lgn.layers.NonlinearityLayer(
@@ -77,12 +81,20 @@ class EnsembleLayer:
             # add connection to neuron inputs
             self.input.add_incoming(
                 lgn.layers.DenseLayer(self._decoded_input,
-                                      self.input.num_units,
+                                      self.input.num_units, W=self.encoders.T,
                                       nonlinearity=None, b=None,
                                       name=self.name + "_encoders"))
 
         return self._decoded_input
 
+    @property
+    def encoders(self):
+        if self._encoders is None:
+            self._encoders = nengo_lasagne.to_array(self.ens.encoders,
+                                                    (self.ens.n_neurons,
+                                                     self.ens.dimensions))
+
+        return self._encoders
 
 # class MultiDenseLayer(lgn.layers.ElemwiseMergeLayer):
 #     """A layer that receives inputs from multiple layers.

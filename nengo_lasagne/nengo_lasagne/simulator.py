@@ -11,19 +11,16 @@ class Simulator(object):
         self.network = network
         self.dt = float(dt)
         self.closed = False
+        self.conf = network.config[Simulator]
 
         if model is None:
-            self.model = builder.Model(network)
+            self.model = builder.Model(network, nef_init=self.conf.nef_init)
 
-            train_data = (network.config[Simulator].train_inputs,
-                          network.config[Simulator].train_targets)
-            batch_size = network.config[Simulator].batch_size
-            n_epochs = network.config[Simulator].n_epochs
-            l_rate = network.config[Simulator].l_rate
-
+            train_data = (self.conf.train_inputs, self.conf.train_targets)
             self.model.train_network(train_data=train_data,
-                                     batch_size=batch_size,
-                                     n_epochs=n_epochs, l_rate=l_rate)
+                                     batch_size=self.conf.batch_size,
+                                     n_epochs=self.conf.n_epochs,
+                                     l_rate=self.conf.l_rate)
         else:
             self.model = model
 

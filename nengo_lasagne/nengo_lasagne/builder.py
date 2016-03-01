@@ -1,3 +1,4 @@
+import warnings
 from collections import defaultdict, OrderedDict
 
 import nengo
@@ -12,7 +13,9 @@ from nengo_lasagne import layers
 
 
 class Model:
-    def __init__(self, network):
+    def __init__(self, network, nef_init=True):
+        self.nef_init = nef_init
+
         # check that it's a valid network
         print("checking network")
         self.check_network(network)
@@ -22,35 +25,50 @@ class Model:
         self.build_network(network)
 
     def check_network(self, net):
-        # TODO: throw warnings here about the parameters being ignored
         for ens in net.all_ensembles:
             # can only use a subset of neuron types
-            assert type(ens.neuron_type) in nengo_lasagne.nonlinearity_map
+            if type(ens.neuron_type) not in nengo_lasagne.nonlinearity_map:
+                raise TypeError("Unsupported nonlinearity (%s)" %
+                                ens.neuron_type)
+
+            if ens.noise is not None:
+                warnings.warn("Ignoring noise parameter on ensemble")
+            if ens.seed is not None:
+                warnings.warn("Ignoring seed parameter on ensemble")
 
         for node in net.all_nodes:
             # only input nodes or passthrough nodes
-            assert node.size_in == 0 or node.output is None
+            if node.size_in != 0 and node.output is not None:
+                raise ValueError("Only input nodes or passthrough nodes are "
+                                 "allowed")
 
         for conn in net.all_connections:
             # TODO: support recurrent connections
-            assert conn.pre is not conn.post
+            if conn.pre_obj is conn.post_obj:
+                raise NotImplementedError("Recurrent connections unsupported")
+
+            if conn.synapse is not None:
+                warnings.warn("Ignoring synapse parameter on connection")
+            if conn.learning_rule_type is not None:
+                warnings.warn("Ignoring learning rule on connection")
+            if conn.seed is not None:
+                warnings.warn("Ignoring seed parameter on connection")
 
     def build_network(self, net):
-        self.lgn_objs = OrderedDict()
+        self.params = OrderedDict()
         self.inputs = OrderedDict()
 
         for node in net.all_nodes:
             if node.size_in == 0:
-                self.lgn_objs[node] = lgn.layers.InputLayer(
+                self.params[node] = lgn.layers.InputLayer(
                     (None, node.size_out), name=node.label)
-                self.inputs[node] = self.lgn_objs[node]
+                self.inputs[node] = self.params[node]
             else:
-                # TODO: add nonlinearity layer if node has output function?
-                self.lgn_objs[node] = layers.ExpandableSumLayer([],
-                                                                node.size_in)
+                self.params[node] = layers.ExpandableSumLayer([],
+                                                              node.size_in)
 
         for ens in net.all_ensembles:
-            self.lgn_objs[ens] = layers.EnsembleLayer(ens)
+            self.params[ens] = layers.EnsembleLayer(ens)
 
         for conn in net.all_connections:
             self.add_connection(conn)
@@ -61,12 +79,12 @@ class Model:
         lgn_probes = []
         for probe in net.all_probes:
             if isinstance(probe.target, nengo.Node):
-                lgn_probes += [self.lgn_objs[probe.target]]
+                lgn_probes += [self.params[probe.target]]
             elif isinstance(probe.target, nengo.Ensemble):
                 # TODO: create decoded connection and probe that
                 raise NotImplementedError()
             elif isinstance(probe.target, nengo.ensemble.Neurons):
-                lgn_probes += [self.lgn_objs[probe.target].output]
+                lgn_probes += [self.params[probe.target].output]
 
         self.probe_func = theano.function(lgn_inputs,
                                           lgn.layers.get_output(lgn_probes))
@@ -78,8 +96,8 @@ class Model:
 
         # loss function
         train_inputs, train_targets = train_data
-        inputs = OrderedDict([(o, self.lgn_objs[o]) for o in train_inputs])
-        outputs = OrderedDict([(o, self.lgn_objs[o]) for o in train_targets])
+        inputs = OrderedDict([(o, self.params[o]) for o in train_inputs])
+        outputs = OrderedDict([(o, self.params[o]) for o in train_targets])
 
         lgn_outputs = lgn.layers.get_output(outputs.values())
         target_vars = [T.fmatrix("%s_targets" % o) for o in outputs]
@@ -94,7 +112,7 @@ class Model:
             loss = T.add(*losses)
 
         # training update
-        updates = lgn.updates.sgd(
+        updates = lgn.updates.adagrad(
             loss, lgn.layers.get_all_params(outputs.values()),
             learning_rate=l_rate)
         self.train = theano.function([x.input_var for x in inputs.values()] +
@@ -117,47 +135,64 @@ class Model:
                              [train_targets[x][minibatch] for x in outputs]))
 
     def add_connection(self, conn):
-        if isinstance(conn.pre, nengo.base.ObjView):
-            pre_slice = conn.pre.slice
-            pre = conn.pre.obj
-        else:
-            pre_slice = None
-            pre = conn.pre
+        # TODO: synapses
 
-        if isinstance(conn.post, nengo.base.ObjView):
-            post_slice = conn.post.slice
-            post = conn.post.obj
-        else:
-            post_slice = None
-            post = conn.post
+        pre = conn.pre_obj
+        pre_slice = conn.pre_slice
 
+        post = conn.post_obj
+        post_slice = conn.post_slice
+
+        # get layer corresponding to pre
         if isinstance(pre, nengo.Node):
-            pre = self.lgn_objs[pre]
+            pre = self.params[pre]
         elif isinstance(pre, nengo.Ensemble):
-            pre = self.lgn_objs[pre].output
+            pre = self.params[pre].output
         elif isinstance(pre, nengo.ensemble.Neurons):
-            pre = self.lgn_objs[pre.ensemble].output
+            pre = self.params[pre.ensemble].output
         else:
             raise ValueError("Unknown pre type (%s)" % type(conn.pre))
 
-        if pre_slice is not None:
+        # apply pre slice
+        if pre_slice != slice(None):
             pre = lgn.layers.SliceLayer(pre, pre_slice)
 
+        # get layer corresponding to post
         if isinstance(post, nengo.Node):
-            post = self.lgn_objs[post]
+            post = self.params[post]
         elif isinstance(post, nengo.Ensemble):
-            post = self.lgn_objs[post].decoded_input
+            post = self.params[post].decoded_input
         elif isinstance(post, nengo.ensemble.Neurons):
-            post = self.lgn_objs[post.ensemble].input
+            post = self.params[post.ensemble].input
         else:
             raise ValueError("Unknown post type (%s)" % type(conn.post))
 
-        if post_slice is not None:
-            num_post = len(range(post.num_units)[post_slice])
-            incoming = lgn.layers.DenseLayer(
-                pre, len(range(post.num_units)[post_slice]), nonlinearity=None,
-                b=None)
+        if isinstance(conn.pre_obj, nengo.Node):
+            # directly apply nonlinearity (note: no connection weights)
+            if conn.function is None:
+                incoming = pre
+            else:
+                # note: this won't work properly if conn.function doesn't
+                # return a symbolic theano expression (e.g. if it uses numpy
+                # functions or something)
+                incoming = lgn.layers.ExpressionLayer(
+                    pre, conn.function, output_shape=(None, conn.post.size_in))
+        else:
+            # get initial weights
+            init_W = lgn.init.GlorotUniform()
+            if self.nef_init and conn.function is not None:
+                # note: we're ignoring the transform on the connection, unless
+                # the function is also set. this is so that the transform can
+                # be used to match up the pre/post shapes of connections (so
+                # that Nengo doesn't complain), while still using lasagne's
+                # initialization methods.
+                init_W = self.compute_decoders(conn)
 
+            # connection weight layer
+            incoming = lgn.layers.DenseLayer(
+                pre, conn.post.size_in, W=init_W, nonlinearity=None, b=None)
+
+        if post_slice != slice(None):
             # zero-pad to get full shape (TODO: more efficient solution?)
             def pad_func(x):
                 z = T.zeros((x.shape[0], post.num_units))
@@ -166,11 +201,31 @@ class Model:
             incoming = lgn.layers.ExpressionLayer(
                 incoming, pad_func, output_shape=(None, post.num_units))
 
-        else:
-            incoming = lgn.layers.DenseLayer(pre, post.num_units,
-                                             nonlinearity=None, b=None)
-
-        # TODO: initialize the weights here based on function/transform
-        # specified in connection
         post.add_incoming(incoming)
         # TODO: put a dropout layer in here?
+
+    def compute_decoders(self, conn):
+        assert isinstance(conn.pre, nengo.Ensemble)
+
+        pre = self.params[conn.pre_obj]
+
+        eval_points = nengo.builder.connection.get_eval_points(
+            self, conn, None)
+
+        inputs = np.dot(eval_points, pre.encoders.T / conn.pre_obj.radius)
+        targets = np.dot(np.apply_along_axis(conn.function, 1,
+                                             eval_points[:, conn.pre_slice]),
+                         conn.transform.T)
+        if targets.ndim == 1:
+            targets = targets[:, None]
+
+        post_enc = None
+        if conn.solver.weights:
+            post_enc = self.params[conn.post_obj].encoders.T[conn.post_slice]
+            post_enc /= conn.post_obj.radius
+
+        decoders, _ = nengo.builder.connection.solve_for_decoders(
+            conn.solver, conn.pre_obj.neuron_type, pre.gain, pre.bias, inputs,
+            targets, np.random, post_enc)
+
+        return decoders
