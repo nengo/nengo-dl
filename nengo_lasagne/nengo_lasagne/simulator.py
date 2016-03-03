@@ -32,19 +32,18 @@ class Simulator(object):
         raise NotImplementedError()
 
     def run_steps(self, steps):
-        self.n_steps += 1
-
         inputs = []
-        for node in self.model.inputs:
-            if nengo.utils.compat.is_array_like(node.output):
-                inputs += [np.tile(node.output, (steps, 1))]
-            elif callable(node.output):
-                inputs += [[node.output(i * self.dt) for i in range(steps)]]
-            elif isinstance(node.output, nengo.processes.Process):
-                inputs += [node.output.run_steps(steps, dt=self.dt)]
+        for node in self.network.all_nodes:
+            if node.output is not None:
+                if nengo.utils.compat.is_array_like(node.output):
+                    inputs += [np.tile(node.output, (steps, 1))]
+                elif callable(node.output):
+                    inputs += [[node.output(i * self.dt) for i in range(steps)]]
+                elif isinstance(node.output, nengo.processes.Process):
+                    inputs += [node.output.run_steps(steps, dt=self.dt)]
 
         # cast all to float32
-        inputs = [np.asarray(x, dtype=np.float32) for x in inputs]
+        inputs = [np.asarray(x[None, ...], dtype=np.float32) for x in inputs]
 
         output = self.model.probe_func(*inputs)
         for i, probe in enumerate(self.network.all_probes):
@@ -54,7 +53,7 @@ class Simulator(object):
         self.run_steps(int(np.round(float(t) / self.dt)))
 
     def reset(self):
-        self.n_steps = 0
+        pass
 
     def close(self):
         self.closed = True

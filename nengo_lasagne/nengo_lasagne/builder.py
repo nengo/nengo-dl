@@ -1,5 +1,5 @@
 import warnings
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict
 
 import nengo
 import nengo.builder
@@ -27,7 +27,7 @@ class Model:
     def check_network(self, net):
         for ens in net.all_ensembles:
             # can only use a subset of neuron types
-            if type(ens.neuron_type) not in nengo_lasagne.nonlinearity_map:
+            if type(ens.neuron_type) not in nengo_lasagne.nl_map:
                 raise TypeError("Unsupported nonlinearity (%s)" %
                                 ens.neuron_type)
 
@@ -43,10 +43,6 @@ class Model:
                                  "allowed")
 
         for conn in net.all_connections:
-            # TODO: support recurrent connections
-            if conn.pre_obj is conn.post_obj:
-                raise NotImplementedError("Recurrent connections unsupported")
-
             if conn.synapse is not None:
                 warnings.warn("Ignoring synapse parameter on connection")
             if conn.learning_rule_type is not None:
@@ -56,35 +52,51 @@ class Model:
 
     def build_network(self, net):
         self.params = OrderedDict()
-        self.inputs = OrderedDict()
 
+        # build nodes
         for node in net.all_nodes:
-            if node.size_in == 0:
-                self.params[node] = lgn.layers.InputLayer(
-                    (None, node.size_out), name=node.label)
-                self.inputs[node] = self.params[node]
-            else:
-                self.params[node] = layers.ExpandableSumLayer([],
-                                                              node.size_in)
+            self.params[node] = layers.NodeLayer(node)
 
+        lgn_inputs = [self.params[o].input.input_var for o in net.all_nodes
+                      if isinstance(self.params[o].input,
+                                    lgn.layers.InputLayer)]
+
+        self.batch_size, self.seq_len, _ = lgn_inputs[0].shape
+
+        # build ensembles
         for ens in net.all_ensembles:
-            self.params[ens] = layers.EnsembleLayer(ens)
+            # check if ensemble is recurrent
+            recurrent = None
+            for conn in net.all_connections:
+                if (self.base_obj(conn.pre) is self.base_obj(ens) and
+                        self.is_recurrent(conn)):
+                    rec = conn
+                    if rec is not None and recurrent is not None:
+                        raise ValueError("Only one recurrent connection "
+                                         "allowed per ensemble")
+                    recurrent = recurrent or rec
+            self.params[ens] = layers.EnsembleLayer(ens, recurrent=recurrent,
+                                                    batch_size=self.batch_size)
 
+        # build connections
         for conn in net.all_connections:
-            self.add_connection(conn)
+            if not self.is_recurrent(conn):
+                self.add_connection(conn)
 
         # probe function
-        lgn_inputs = [o.input_var for o in self.inputs.values()]
-
         lgn_probes = []
         for probe in net.all_probes:
             if isinstance(probe.target, nengo.Node):
-                lgn_probes += [self.params[probe.target]]
+                lgn_probes += [self.params[probe.target].output]
             elif isinstance(probe.target, nengo.Ensemble):
                 # TODO: create decoded connection and probe that
                 raise NotImplementedError()
             elif isinstance(probe.target, nengo.ensemble.Neurons):
-                lgn_probes += [self.params[probe.target].output]
+                lgn_probes += [self.params[probe.target.ensemble].output]
+
+        # print("params", lgn.layers.get_all_params(lgn_probes))
+        # print(theano.printing.debugprint(self.eval))
+        # print(theano.printing.debugprint(self.train))
 
         self.probe_func = theano.function(lgn_inputs,
                                           lgn.layers.get_output(lgn_probes))
@@ -96,11 +108,13 @@ class Model:
 
         # loss function
         train_inputs, train_targets = train_data
-        inputs = OrderedDict([(o, self.params[o]) for o in train_inputs])
-        outputs = OrderedDict([(o, self.params[o]) for o in train_targets])
 
-        lgn_outputs = lgn.layers.get_output(outputs.values())
-        target_vars = [T.fmatrix("%s_targets" % o) for o in outputs]
+        lgn_outputs = lgn.layers.get_output(
+            [lgn.layers.ReshapeLayer(self.params[o].output,
+                                     (self.batch_size, self.seq_len,
+                                      self.params[o].output.num_units))
+             for o in train_targets])
+        target_vars = [T.ftensor3("%s_targets" % o) for o in train_targets]
         losses = [lgn.objectives.squared_error(o, t).mean()
                   for o, t in zip(lgn_outputs, target_vars)]
 
@@ -113,53 +127,58 @@ class Model:
 
         # training update
         updates = lgn.updates.adagrad(
-            loss, lgn.layers.get_all_params(outputs.values()),
+            loss, lgn.layers.get_all_params([self.params[o].output
+                                             for o in train_targets]),
             learning_rate=l_rate)
-        self.train = theano.function([x.input_var for x in inputs.values()] +
-                                     target_vars, loss, updates=updates)
-        self.eval = theano.function([x.input_var for x in inputs.values()],
-                                    lgn_outputs)
+        self.train = theano.function([self.params[x].input.input_var
+                                      for x in train_inputs] + target_vars,
+                                     loss, updates=updates)
+        self.eval = theano.function([self.params[x].input.input_var
+                                     for x in train_inputs], lgn_outputs)
 
         #         print "params", lgn.layers.get_all_params(outputs.values())
         #         print theano.printing.debugprint(self.eval)
         #         print theano.printing.debugprint(self.train)
 
-        n_inputs = len(train_inputs[list(inputs)[0]])
+        n_inputs = len(list(train_inputs.values())[0])
         for _ in range(n_epochs):
             indices = np.arange(n_inputs)
             np.random.shuffle(indices)
             for start in range(0, n_inputs - batch_size + 1, batch_size):
                 minibatch = indices[start:start + batch_size]
 
-                self.train(*([train_inputs[x][minibatch] for x in inputs] +
-                             [train_targets[x][minibatch] for x in outputs]))
+                self.train(*([train_inputs[x][minibatch]
+                              for x in train_inputs] +
+                             [train_targets[x][minibatch]
+                              for x in train_targets]))
 
     def add_connection(self, conn):
         # TODO: synapses
 
-        pre = conn.pre_obj
-        pre_slice = conn.pre_slice
-
-        post = conn.post_obj
-        post_slice = conn.post_slice
-
-        # get layer corresponding to pre
-        if isinstance(pre, nengo.Node):
-            pre = self.params[pre]
-        elif isinstance(pre, nengo.Ensemble):
-            pre = self.params[pre].output
-        elif isinstance(pre, nengo.ensemble.Neurons):
-            pre = self.params[pre.ensemble].output
-        else:
-            raise ValueError("Unknown pre type (%s)" % type(conn.pre))
+        # get lasagne layer corresponding to pre
+        pre = self.params[self.base_obj(conn.pre)].output
 
         # apply pre slice
-        if pre_slice != slice(None):
-            pre = lgn.layers.SliceLayer(pre, pre_slice)
+        if conn.pre_slice != slice(None):
+            pre = lgn.layers.SliceLayer(pre, conn.pre_sice)
+
+        # apply node nonlinearity
+        if isinstance(conn.pre_obj, nengo.Node) and conn.function is not None:
+            # note: this won't work properly if conn.function doesn't
+            # return a symbolic theano expression (e.g. if it uses numpy
+            # functions or something)
+            pre = lgn.layers.ExpressionLayer(
+                pre, conn.function, output_shape=(None, conn.post.size_in))
+
+        # set up connection weight layer
+        pre = lgn.layers.DenseLayer(
+            pre, conn.post.size_in, W=self.get_weights(conn, pre),
+            nonlinearity=None, b=None, name="%s W" % conn)
 
         # get layer corresponding to post
+        post = conn.post_obj
         if isinstance(post, nengo.Node):
-            post = self.params[post]
+            post = self.params[post].input
         elif isinstance(post, nengo.Ensemble):
             post = self.params[post].decoded_input
         elif isinstance(post, nengo.ensemble.Neurons):
@@ -167,45 +186,54 @@ class Model:
         else:
             raise ValueError("Unknown post type (%s)" % type(conn.post))
 
-        if isinstance(conn.pre_obj, nengo.Node):
-            # directly apply nonlinearity (note: no connection weights)
-            if conn.function is None:
-                incoming = pre
-            else:
-                # note: this won't work properly if conn.function doesn't
-                # return a symbolic theano expression (e.g. if it uses numpy
-                # functions or something)
-                incoming = lgn.layers.ExpressionLayer(
-                    pre, conn.function, output_shape=(None, conn.post.size_in))
-        else:
-            # get initial weights
-            init_W = lgn.init.GlorotUniform()
-            if self.nef_init and conn.function is not None:
-                # note: we're ignoring the transform on the connection, unless
-                # the function is also set. this is so that the transform can
-                # be used to match up the pre/post shapes of connections (so
-                # that Nengo doesn't complain), while still using lasagne's
-                # initialization methods.
-                init_W = self.compute_decoders(conn)
-
-            # connection weight layer
-            incoming = lgn.layers.DenseLayer(
-                pre, conn.post.size_in, W=init_W, nonlinearity=None, b=None)
-
-        if post_slice != slice(None):
+        # apply post slice
+        if conn.post_slice != slice(None):
             # zero-pad to get full shape (TODO: more efficient solution?)
             def pad_func(x):
                 z = T.zeros((x.shape[0], post.num_units))
-                return T.inc_subtensor(z[:, post_slice], x)
+                return T.inc_subtensor(z[:, conn.post_slice], x)
 
-            incoming = lgn.layers.ExpressionLayer(
-                incoming, pad_func, output_shape=(None, post.num_units))
+            pre = lgn.layers.ExpressionLayer(
+                pre, pad_func, output_shape=(None, post.num_units))
 
-        post.add_incoming(incoming)
+        post.add_incoming(pre)
         # TODO: put a dropout layer in here?
+
+    def get_weights(self, conn, pre):
+        if not np.all(np.isfinite(conn.transform)):
+            # use nan transform to indicate that we want the initial weights to
+            # be randomized
+            init_W = lgn.init.GlorotUniform()
+        else:
+            if isinstance(conn.pre_obj, nengo.Ensemble):
+                # then we're dealing with decoders
+                # note: the nef_init flag is just so that we can turn this
+                # feature on/off to easily compare performance (without
+                # having to go back and set the transforms to nans in
+                # our model)
+                if self.nef_init:
+                    init_W = self.compute_decoders(conn)
+                else:
+                    init_W = lgn.init.GlorotUniform()
+            else:
+                # neurons/nodes, so weights are directly
+                # specified with the transform parameter
+                if conn.transform.ndim == 0:
+                    # expand scalar to full matrix
+                    init_W = np.ones((pre.output_shape[-1], conn.post.size_in),
+                                     dtype=np.float32) * conn.transform
+                else:
+                    init_W = np.asarray(conn.transform, dtype=np.float32).T
+
+        return init_W
 
     def compute_decoders(self, conn):
         assert isinstance(conn.pre, nengo.Ensemble)
+
+        if conn.function is None:
+            func = lambda x: x
+        else:
+            func = conn.function
 
         pre = self.params[conn.pre_obj]
 
@@ -213,7 +241,7 @@ class Model:
             self, conn, None)
 
         inputs = np.dot(eval_points, pre.encoders.T / conn.pre_obj.radius)
-        targets = np.dot(np.apply_along_axis(conn.function, 1,
+        targets = np.dot(np.apply_along_axis(func, 1,
                                              eval_points[:, conn.pre_slice]),
                          conn.transform.T)
         if targets.ndim == 1:
@@ -228,4 +256,28 @@ class Model:
             conn.solver, conn.pre_obj.neuron_type, pre.gain, pre.bias, inputs,
             targets, np.random, post_enc)
 
-        return decoders
+        return np.asarray(decoders, dtype=np.float32)
+
+    def is_recurrent(self, conn):
+        if self.base_obj(conn.pre) is self.base_obj(conn.post):
+            # TODO: support slicing on recurrent connections
+            if (isinstance(conn.pre, nengo.base.ObjView) or
+                    isinstance(conn.post, nengo.base.ObjView)):
+                raise NotImplementedError("Cannot slice recurrent connections")
+
+            if isinstance(conn.pre_obj, nengo.Node):
+                raise NotImplementedError(
+                    "Cannot do recurrent connection on node")
+
+            return True
+
+        return False
+
+    def base_obj(self, obj):
+        if isinstance(obj, nengo.base.ObjView):
+            obj = obj.obj
+
+        if isinstance(obj, nengo.ensemble.Neurons):
+            obj = obj.ensemble
+
+        return obj

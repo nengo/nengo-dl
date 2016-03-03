@@ -15,7 +15,10 @@ class ExpandableSumLayer(lgn.layers.ElemwiseSumLayer):
     def add_incoming(self, incoming, coeff=1):
         self.input_shapes += [incoming if isinstance(incoming, tuple)
                               else incoming.output_shape]
-        assert self.input_shapes[-1][1] == self.num_units
+
+        assert self.input_shapes[-1][-1] == self.num_units
+        if len(self.input_shapes) > 1:
+            assert self.input_shapes[-1] == self.input_shapes[-2]
 
         self.input_layers += [None if isinstance(incoming, tuple)
                               else incoming]
@@ -23,30 +26,30 @@ class ExpandableSumLayer(lgn.layers.ElemwiseSumLayer):
         self.coeffs += [coeff]
 
     def get_output_shape_for(self, input_shapes):
-        # check that all the batch sizes are the same
         if len(self.input_layers) == 0:
-            return (None, self.num_units)
+            return None, self.num_units
 
-        assert len(np.unique([x[0] for x in input_shapes])) == 1
-
-        return (input_shapes[0][0], self.num_units)
+        return input_shapes[0][0], self.num_units
 
 
-# def get_output_for(self, inputs, **kwargs):
-#         print self.name
-#         print inputs
-#
-#         output = super(ExpandableSumLayer, self).get_output_for(inputs,
-#                                                                 **kwargs)
-#
-#
-#         assert output is not None
-#
-#         return output
+class NodeLayer:
+    def __init__(self, node):
+        self.num_units = node.size_out
+
+        if node.size_in == 0:
+            self.input = lgn.layers.InputLayer((None, None, self.num_units),
+                                               name=node.label)
+
+            # flatten the batch/sequence dimensions
+            self.output = lgn.layers.ReshapeLayer(
+                self.input, (-1, self.num_units), name=node.label + "_reshape")
+        else:
+            self.input = self.output = ExpandableSumLayer([], self.num_units,
+                                                          name=node.label)
 
 
 class EnsembleLayer:
-    def __init__(self, ens):
+    def __init__(self, ens, recurrent=None, batch_size=None):
         self.ens = ens
         self.name = ens.label or "ensemble"
         self._decoded_input = None
@@ -59,18 +62,55 @@ class EnsembleLayer:
             [], ens.n_neurons, name=self.name + "_input")
 
         # add gain/bias
-        layer = self.input
         self.gain, self.bias, _, _ = nengo.builder.ensemble.get_gain_bias(ens)
-        layer = lgn.layers.NonlinearityLayer(layer,
+        self.gain = np.asarray(self.gain, dtype=np.float32)
+        self.bias = np.asarray(self.bias, dtype=np.float32)
+        layer = lgn.layers.NonlinearityLayer(self.input,
                                              lambda x: x * self.gain,
                                              name=self.name + "_gain")
         layer = lgn.layers.BiasLayer(layer, name=self.name + "_bias",
                                      b=self.bias)
 
         # neural output
-        self.output = lgn.layers.NonlinearityLayer(
-            layer, nengo_lasagne.nonlinearity_map[type(ens.neuron_type)],
-            name=self.name + "_output")
+        if recurrent is None:
+            self.output = lgn.layers.NonlinearityLayer(
+                layer, nengo_lasagne.nl_map[type(ens.neuron_type)],
+                name=self.name + "_nl")
+        else:
+            # TODO: support slicing on recurrent connection
+            # TODO: NEF initialization
+            rec = lgn.layers.InputLayer((None, ens.n_neurons))
+
+            if isinstance(recurrent.post_obj, nengo.ensemble.Neurons):
+                rec = lgn.layers.DenseLayer(rec, ens.n_neurons,
+                                            name=self.name + "_rec",
+                                            nonlinearity=None, b=None)
+            else:
+                rec = lgn.layers.DenseLayer(rec, ens.dimensions,
+                                            name=self.name + "_rec",
+                                            nonlinearity=None, b=None)
+                rec = lgn.layers.DenseLayer(rec, ens.n_neurons,
+                                            W=self.decoded_input.enc_layer.W,
+                                            name=self.name + "_rec_enc",
+                                            nonlinearity=None, b=None)
+            rec = lgn.layers.NonlinearityLayer(rec, lambda x: x * self.gain,
+                                               name=self.name + "_rec_gain")
+
+            layer = lgn.layers.ReshapeLayer(
+                layer, (batch_size, -1, ens.n_neurons),
+                name=self.name + "_reshape_in")
+
+            # TODO: explore optimization parameters (e.g. rollout)
+            layer = lgn.layers.CustomRecurrentLayer(
+                layer, lgn.layers.InputLayer((None, ens.n_neurons)), rec,
+                nonlinearity=nengo_lasagne.nl_map[type(ens.neuron_type)],
+                name=self.name + "_nl")
+            # layer = lgn.layers.RecurrentLayer(
+            #     layer, ens.n_neurons, name=self.name + "_nl",
+            #     nonlinearity=nengo_lasagne.nl_map[type(ens.neuron_type)])
+
+            self.output = lgn.layers.ReshapeLayer(
+                layer, (-1, ens.n_neurons), name=self.name + "_reshape_out")
 
     @property
     def decoded_input(self):
@@ -79,11 +119,10 @@ class EnsembleLayer:
                 [], self.ens.dimensions, name=self.name + "_decoded_input")
 
             # add connection to neuron inputs
-            self.input.add_incoming(
-                lgn.layers.DenseLayer(self._decoded_input,
-                                      self.input.num_units, W=self.encoders.T,
-                                      nonlinearity=None, b=None,
-                                      name=self.name + "_encoders"))
+            self._decoded_input.enc_layer = lgn.layers.DenseLayer(
+                self._decoded_input, self.input.num_units, W=self.encoders.T,
+                nonlinearity=None, b=None, name=self.name + "_encoders")
+            self.input.add_incoming(self._decoded_input.enc_layer)
 
         return self._decoded_input
 
@@ -95,61 +134,3 @@ class EnsembleLayer:
                                                      self.ens.dimensions))
 
         return self._encoders
-
-# class MultiDenseLayer(lgn.layers.ElemwiseMergeLayer):
-#     """A layer that receives inputs from multiple layers.
-#
-#     Basically DenseLayer and ElementwiseSumLayer combined together.
-#     """
-#
-#     def __init__(self, incomings, num_units,
-#                  nonlinearity=lgn.nonlinearities.rectify,
-#                  Ws=lgn.init.GlorotUniform(),
-#                  gain=None, b=None,
-#                  **kwargs):
-#         super(MultiDenseLayer, self).__init__(incomings, T.add, **kwargs)
-#
-#         self.num_units = num_units
-#         self.nonlinearity = nonlinearity
-#
-#         if isinstance(Ws, list):
-#             if len(Ws) != len(incomings):
-#                 raise ValueError("Mismatch: got %d Ws for %d incomings" %
-#                                  (len(Ws), len(incomings)))
-#         else:
-#             Ws = [Ws] * len(incomings)
-#
-#         self.Ws = [self.add_param(Ws[i], (incomings[i].output_shape[1],
-#                                           num_units), name="W_%d" % i)
-#                    for i in range(len(incomings))]
-#
-#         # TODO: do we want gains/biases to be trainable?
-#         if gain is None:
-#             self.gain = gain
-#         else:
-#             self.gain = self.add_param(gain, (num_units,), name="gain",
-#                                        trainable=True)
-#         if b is None:
-#             self.b = b
-#         else:
-#             self.b = self.add_param(b, (num_units,), name="b",
-#                                     trainable=True)
-#
-#     def get_output_shape_for(self, input_shapes):
-#         # check that all the batch sizes are the same
-#         assert len(np.unique([x[0] for x in input_shapes])) == 1
-#
-#         return (input_shapes[0][0], self.num_units)
-#
-#     def get_output_for(self, inputs, **kwargs):
-#         inputs = [T.dot(input, W)
-#                   for input, W in zip(inputs, self.Ws)]
-#
-#         output = super(MultiDenseLayer, self).get_output_for(inputs, **kwargs)
-#         if self.gain is not None:
-#             output *= self.gain
-#         if self.b is not None:
-#             output += self.b
-#         output = self.nonlinearity(output)
-#
-#         return output

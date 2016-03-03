@@ -20,6 +20,12 @@ def default_config():
 def settings(net, train_inputs, train_targets, batch_size=None,
              n_epochs=1000, l_rate=0.1, nef_init=True):
     net.config.configures(Simulator)
+
+    for x in train_inputs:
+        assert train_inputs[x].ndim == 3
+    for x in train_targets:
+        assert train_targets[x].ndim == 3
+
     net.config[Simulator].set_param("train_inputs", Parameter(train_inputs))
     net.config[Simulator].set_param("train_targets", Parameter(train_targets))
 
@@ -32,9 +38,10 @@ def settings(net, train_inputs, train_targets, batch_size=None,
 
     net.config[Simulator].set_param("nef_init", Parameter(nef_init))
 
+
 def to_array(x, shape):
     if isinstance(x, nengo.dists.Distribution):
-        return x.sample(*shape)
+        x = x.sample(*shape)
 
     assert x.shape == shape
-    return np.asarray(x)
+    return np.asarray(x, dtype=np.float32)
