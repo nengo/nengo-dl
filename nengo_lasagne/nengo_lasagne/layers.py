@@ -32,27 +32,42 @@ class ExpandableSumLayer(lgn.layers.ElemwiseSumLayer):
         return input_shapes[0][0], self.num_units
 
 
+class GainLayer(lgn.layers.Layer):
+    def __init__(self, incoming, gain=lgn.init.Constant(1.0),
+                 trainable=True, **kwargs):
+        super(GainLayer, self).__init__(incoming, **kwargs)
+
+        self.gain = self.add_param(gain, (incoming.output_shape[-1],),
+                                   name="gain",
+                                   trainable=trainable)
+
+    def get_output_for(self, input, **kwargs):
+        return input * self.gain
+
+
 class NodeLayer:
     def __init__(self, node):
+        self.name = str(node)
         self.num_units = node.size_out
 
         if node.size_in == 0:
             self.input = lgn.layers.InputLayer((None, None, self.num_units),
-                                               name=node.label)
+                                               name=self.name)
 
             # flatten the batch/sequence dimensions
             self.output = lgn.layers.ReshapeLayer(
-                self.input, (-1, self.num_units), name=node.label + "_reshape")
+                self.input, (-1, self.num_units), name=self.name + "_reshape")
         else:
             self.input = self.output = ExpandableSumLayer([], self.num_units,
-                                                          name=node.label)
+                                                          name=self.name)
 
 
 class EnsembleLayer:
-    def __init__(self, ens, recurrent=None, batch_size=None):
+    def __init__(self, ens):
         self.ens = ens
-        self.name = ens.label or "ensemble"
-        self._decoded_input = None
+        self.name = str(ens)
+        self.recurrent = False
+        self._vector_input = None
         self._encoders = None
         self.eval_points = nengo.builder.ensemble.gen_eval_points(
             ens, ens.eval_points, np.random)
@@ -62,69 +77,68 @@ class EnsembleLayer:
             [], ens.n_neurons, name=self.name + "_input")
 
         # add gain/bias
-        self.gain, self.bias, _, _ = nengo.builder.ensemble.get_gain_bias(ens)
-        self.gain = np.asarray(self.gain, dtype=np.float32)
-        self.bias = np.asarray(self.bias, dtype=np.float32)
-        layer = lgn.layers.NonlinearityLayer(self.input,
-                                             lambda x: x * self.gain,
-                                             name=self.name + "_gain")
-        layer = lgn.layers.BiasLayer(layer, name=self.name + "_bias",
-                                     b=self.bias)
+        gain, bias, _, _ = nengo.builder.ensemble.get_gain_bias(ens)
+        gain = np.asarray(gain, dtype=np.float32)
+        bias = np.asarray(bias, dtype=np.float32)
+        self.gain_layer = GainLayer(self.input, gain=gain, trainable=True,
+                                    name=self.name + "_gain")
+        self.bias_layer = lgn.layers.BiasLayer(self.gain_layer, b=bias,
+                                               name=self.name + "_bias")
 
         # neural output
-        if recurrent is None:
-            self.output = lgn.layers.NonlinearityLayer(
-                layer, nengo_lasagne.nl_map[type(ens.neuron_type)],
-                name=self.name + "_nl")
-        else:
-            # TODO: support slicing on recurrent connection
-            # TODO: NEF initialization
-            rec = lgn.layers.InputLayer((None, ens.n_neurons))
+        self.output = lgn.layers.NonlinearityLayer(
+            self.bias_layer, nengo_lasagne.nl_map[type(ens.neuron_type)],
+            name=self.name + "_nl")
 
-            if isinstance(recurrent.post_obj, nengo.ensemble.Neurons):
-                rec = lgn.layers.DenseLayer(rec, ens.n_neurons,
-                                            name=self.name + "_rec",
-                                            nonlinearity=None, b=None)
-            else:
-                rec = lgn.layers.DenseLayer(rec, ens.dimensions,
-                                            name=self.name + "_rec",
-                                            nonlinearity=None, b=None)
-                rec = lgn.layers.DenseLayer(rec, ens.n_neurons,
-                                            W=self.decoded_input.enc_layer.W,
-                                            name=self.name + "_rec_enc",
-                                            nonlinearity=None, b=None)
-            rec = lgn.layers.NonlinearityLayer(rec, lambda x: x * self.gain,
-                                               name=self.name + "_rec_gain")
+    def make_recurrent(self, conn, model):
+        if self.recurrent:
+            raise ValueError("Only one recurrent connection allowed per "
+                             "ensemble")
+        self.recurrent = True
 
-            layer = lgn.layers.ReshapeLayer(
-                layer, (batch_size, -1, ens.n_neurons),
-                name=self.name + "_reshape_in")
+        rec = lgn.layers.InputLayer((None, self.ens.n_neurons))
 
-            # TODO: explore optimization parameters (e.g. rollout)
-            layer = lgn.layers.CustomRecurrentLayer(
-                layer, lgn.layers.InputLayer((None, ens.n_neurons)), rec,
-                nonlinearity=nengo_lasagne.nl_map[type(ens.neuron_type)],
-                name=self.name + "_nl")
-            # layer = lgn.layers.RecurrentLayer(
-            #     layer, ens.n_neurons, name=self.name + "_nl",
-            #     nonlinearity=nengo_lasagne.nl_map[type(ens.neuron_type)])
+        rec = ConnectionLayer(conn, rec, model).output
 
-            self.output = lgn.layers.ReshapeLayer(
-                layer, (-1, ens.n_neurons), name=self.name + "_reshape_out")
+        if isinstance(conn.post_obj, nengo.Ensemble):
+            rec = lgn.layers.DenseLayer(rec, self.ens.n_neurons,
+                                        W=self.vector_input.enc_layer.W,
+                                        name=self.name + "_rec_enc",
+                                        nonlinearity=None, b=None)
+
+        rec = GainLayer(
+            rec, gain=self.gain_layer.gain, name=self.name + "_rec_gain",
+            trainable=(self.gain_layer.gain in
+                       self.gain_layer.get_params(trainable=True)))
+
+        layer = self.output.input_layer
+
+        layer = lgn.layers.ReshapeLayer(
+            layer, (model.batch_size, -1, self.ens.n_neurons),
+            name=self.name + "_reshape_in")
+
+        # TODO: explore optimization parameters (e.g. rollout)
+        layer = lgn.layers.CustomRecurrentLayer(
+            layer, lgn.layers.InputLayer((None, self.ens.n_neurons)), rec,
+            nonlinearity=nengo_lasagne.nl_map[type(self.ens.neuron_type)],
+            name=self.name + "_nl")
+
+        self.output = lgn.layers.ReshapeLayer(
+            layer, (-1, self.ens.n_neurons), name=self.name + "_reshape_out")
 
     @property
-    def decoded_input(self):
-        if self._decoded_input is None:
-            self._decoded_input = ExpandableSumLayer(
+    def vector_input(self):
+        if self._vector_input is None:
+            self._vector_input = ExpandableSumLayer(
                 [], self.ens.dimensions, name=self.name + "_decoded_input")
 
             # add connection to neuron inputs
-            self._decoded_input.enc_layer = lgn.layers.DenseLayer(
-                self._decoded_input, self.input.num_units, W=self.encoders.T,
+            self._vector_input.enc_layer = lgn.layers.DenseLayer(
+                self._vector_input, self.input.num_units, W=self.encoders.T,
                 nonlinearity=None, b=None, name=self.name + "_encoders")
-            self.input.add_incoming(self._decoded_input.enc_layer)
+            self.input.add_incoming(self._vector_input.enc_layer)
 
-        return self._decoded_input
+        return self._vector_input
 
     @property
     def encoders(self):
@@ -134,3 +148,93 @@ class EnsembleLayer:
                                                      self.ens.dimensions))
 
         return self._encoders
+
+
+class ConnectionLayer:
+    def __init__(self, conn, layer, model):
+        # TODO: support synapses?
+
+        self.model = model
+
+        # apply pre slice
+        if conn.pre_slice != slice(None):
+            layer = lgn.layers.SliceLayer(layer, conn.pre_sice)
+
+        # apply node nonlinearity
+        if isinstance(conn.pre_obj, nengo.Node) and conn.function is not None:
+            # note: this won't work properly if conn.function doesn't
+            # return a symbolic theano expression (e.g. if it uses numpy
+            # functions or something)
+            layer = lgn.layers.ExpressionLayer(
+                layer, conn.function, output_shape=(None, conn.post.size_in))
+
+        # set up connection weight layer
+        layer = lgn.layers.DenseLayer(
+            layer, conn.post.size_in, W=self.get_weights(conn, layer),
+            nonlinearity=None, b=None, name="%s_W" % conn)
+
+        # apply post slice
+        if conn.post_slice != slice(None):
+            # zero-pad to get full shape (TODO: more efficient solution?)
+            def pad_func(x):
+                z = T.zeros((x.shape[0], conn.post_obj.size_in))
+                return T.inc_subtensor(z[:, conn.post_slice], x)
+
+            layer = lgn.layers.ExpressionLayer(
+                layer, pad_func, output_shape=(None, conn.post_obj.size_in))
+
+        self.output = layer
+
+    def get_weights(self, conn, pre):
+        if isinstance(conn.transform, nengo.dists.Distribution):
+            if hasattr(conn.transform, "lgn_dist"):
+                init_W = conn.transform.lgn_dist
+            else:
+                init_W = nengo_lasagne.dists.nengo_wrap(conn.transform)
+        else:
+            if isinstance(conn.pre_obj, nengo.Ensemble):
+                # then we're dealing with decoders
+                init_W = self.compute_decoders(conn)
+            else:
+                # neurons/nodes, so weights are directly
+                # specified with the transform parameter
+                if conn.transform.ndim == 0:
+                    # expand scalar to full matrix
+                    init_W = np.ones((pre.output_shape[-1], conn.post.size_in),
+                                     dtype=np.float32) * conn.transform
+                else:
+                    init_W = np.asarray(conn.transform, dtype=np.float32).T
+
+        return init_W
+
+    def compute_decoders(self, conn):
+        assert isinstance(conn.pre, nengo.Ensemble)
+
+        if conn.function is None:
+            func = lambda x: x
+        else:
+            func = conn.function
+
+        pre = self.model.params[conn.pre_obj]
+
+        eval_points = nengo.builder.connection.get_eval_points(
+            self.model, conn, rng=None)
+
+        inputs = np.dot(eval_points, pre.encoders.T / conn.pre_obj.radius)
+        targets = np.dot(np.apply_along_axis(func, 1,
+                                             eval_points[:, conn.pre_slice]),
+                         conn.transform.T)
+        if targets.ndim == 1:
+            targets = targets[:, None]
+
+        post_enc = None
+        if conn.solver.weights:
+            post_enc = self.model.params[conn.post_obj].encoders.T
+            post_enc = post_enc[conn.post_slice]
+            post_enc /= conn.post_obj.radius
+
+        decoders, _ = nengo.builder.connection.solve_for_decoders(
+            conn.solver, conn.pre_obj.neuron_type, pre.gain_layer.gain.eval(),
+            pre.bias_layer.b.eval(), inputs, targets, np.random, post_enc)
+
+        return np.asarray(decoders, dtype=np.float32)

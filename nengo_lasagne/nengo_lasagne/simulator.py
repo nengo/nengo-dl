@@ -11,16 +11,10 @@ class Simulator(object):
         self.network = network
         self.dt = float(dt)
         self.closed = False
-        self.conf = network.config[Simulator]
 
         if model is None:
-            self.model = builder.Model(network, nef_init=self.conf.nef_init)
+            self.model = builder.Model(network)
 
-            train_data = (self.conf.train_inputs, self.conf.train_targets)
-            self.model.train_network(train_data=train_data,
-                                     batch_size=self.conf.batch_size,
-                                     n_epochs=self.conf.n_epochs,
-                                     l_rate=self.conf.l_rate)
         else:
             self.model = model
 
@@ -31,23 +25,42 @@ class Simulator(object):
     def step(self):
         raise NotImplementedError()
 
-    def run_steps(self, steps):
-        inputs = []
-        for node in self.network.all_nodes:
-            if node.output is not None:
-                if nengo.utils.compat.is_array_like(node.output):
-                    inputs += [np.tile(node.output, (steps, 1))]
-                elif callable(node.output):
-                    inputs += [[node.output(i * self.dt) for i in range(steps)]]
-                elif isinstance(node.output, nengo.processes.Process):
-                    inputs += [node.output.run_steps(steps, dt=self.dt)]
+    def run_steps(self, steps, inputs=None):
+        self.steps = steps
 
-        # cast all to float32
-        inputs = [np.asarray(x[None, ...], dtype=np.float32) for x in inputs]
+        if inputs is None:
+            # generate inputs by running Nodes
+            input_vals = []
+            for node in self.network.all_nodes:
+                if node.output is not None:
+                    if nengo.utils.compat.is_array_like(node.output):
+                        input_vals += [np.tile(node.output, (steps, 1))]
+                    elif callable(node.output):
+                        input_vals += [[node.output(i * self.dt)
+                                        for i in range(steps)]]
+                    elif isinstance(node.output, nengo.processes.Process):
+                        input_vals += [node.output.run_steps(steps,
+                                                             dt=self.dt)]
 
-        output = self.model.probe_func(*inputs)
+            # cast all to float32
+            input_vals = [np.asarray(x[None, ...], dtype=np.float32)
+                          for x in input_vals]
+        else:
+            input_vals = []
+            # we iterate over all_nodes because we need inputs to be
+            # in the same order that probe_func expects them
+            for node in self.network.all_nodes:
+                if node in inputs:
+                    assert inputs[node].shape[1] == steps
+                    assert inputs[node].shape[2] == node.size_out
+                    input_vals += [inputs[node]]
+
+        output = self.model.probe_func(*input_vals)
         for i, probe in enumerate(self.network.all_probes):
             self.data[probe] = output[i]
+
+    def trange(self):
+        return np.arange(self.steps) * self.dt
 
     def run(self, t):
         self.run_steps(int(np.round(float(t) / self.dt)))
