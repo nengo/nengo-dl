@@ -2,6 +2,7 @@ import nengo
 import lasagne as lgn
 
 from . import builder, dists, layers, simulator
+from .layers import LasagneNode
 from .simulator import Simulator
 from .utils import default_config, to_array
 

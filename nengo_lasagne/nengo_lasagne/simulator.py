@@ -32,7 +32,7 @@ class Simulator(object):
             # generate inputs by running Nodes
             input_vals = []
             for node in self.network.all_nodes:
-                if node.output is not None:
+                if node.size_in == 0:
                     if nengo.utils.compat.is_array_like(node.output):
                         input_vals += [np.tile(node.output, (steps, 1))]
                     elif callable(node.output):
@@ -58,6 +58,9 @@ class Simulator(object):
         output = self.model.probe_func(*input_vals)
         for i, probe in enumerate(self.network.all_probes):
             self.data[probe] = output[i]
+
+    def train(self, *args, **kwargs):
+        self.model.train(*args, **kwargs)
 
     def trange(self):
         return np.arange(self.steps) * self.dt

@@ -8,12 +8,16 @@ import theano
 import theano.tensor as T
 import numpy as np
 
+from nengo.utils.progress import ProgressTracker, TerminalProgressBar
+
 import nengo_lasagne
 from nengo_lasagne import layers
 
 
 class Model:
     def __init__(self, network):
+        self.network = network
+
         # check that it's a valid network
         print("checking network")
         self.check_network(network)
@@ -35,10 +39,11 @@ class Model:
                 warnings.warn("Ignoring seed parameter on ensemble")
 
         for node in net.all_nodes:
-            # only input nodes or passthrough nodes
-            if node.size_in != 0 and node.output is not None:
-                raise ValueError("Only input nodes or passthrough nodes are "
-                                 "allowed")
+            pass
+            # # only input nodes or passthrough nodes
+            # if node.size_in != 0 and node.output is not None:
+            #     raise ValueError("Only input nodes or passthrough nodes are "
+            #                      "allowed")
 
         for conn in net.all_connections:
             if conn.synapse is not None:
@@ -92,15 +97,12 @@ class Model:
 
             lgn_probes += [target]
 
-        # print("params", lgn.layers.get_all_params(lgn_probes))
-        # print(theano.printing.debugprint(self.eval))
-        # print(theano.printing.debugprint(self.train))
-
-        self.probe_func = theano.function(lgn_inputs,
-                                          lgn.layers.get_output(lgn_probes))
+        self.probe_func = theano.function(
+            lgn_inputs, lgn.layers.get_output(lgn_probes, deterministic=True))
 
     def train(self, train_inputs, train_targets, optimizer=lgn.updates.adagrad,
-              minibatch_size=None, n_epochs=1000, optimizer_kwargs=None):
+              minibatch_size=None, n_epochs=1000, optimizer_kwargs=None,
+              objective=lgn.objectives.squared_error):
         print("training network")
 
         # loss function
@@ -108,13 +110,14 @@ class Model:
             [lgn.layers.ReshapeLayer(self.params[o].output,
                                      (self.batch_size, self.seq_len,
                                       self.params[o].output.num_units))
-             for o in train_targets])
-        target_vars = [T.ftensor3("%s_targets" % o) for o in train_targets]
-        losses = [lgn.objectives.squared_error(o, t).mean()
+             for o in train_targets],
+            deterministic=False)
+        target_vars = [T.ftensor3("%s_targets" % o)
+                       for o in train_targets]
+        losses = [objective(o, t).mean()
                   for o, t in zip(lgn_outputs, target_vars)]
 
         # sum the losses for all the outputs to get the overall objective
-        # (could do something more complicated here)
         if len(losses) == 1:
             loss = losses[0]
         else:
@@ -131,28 +134,30 @@ class Model:
         self.train = theano.function([self.params[x].input.input_var
                                       for x in train_inputs] + target_vars,
                                      loss, updates=updates)
-        self.eval = theano.function([self.params[x].input.input_var
-                                     for x in train_inputs], lgn_outputs)
+        # self.eval = theano.function([self.params[x].input.input_var
+        #                              for x in train_inputs], lgn_outputs)
 
         #         print "params", lgn.layers.get_all_params(outputs.values())
         #         print theano.printing.debugprint(self.eval)
-        #         print theano.printing.debugprint(self.train)
+        # print(theano.printing.pprint(self.train))
 
         # run training epochs
-        # TODO: hook this up to a progress bar?
-        n_inputs = len(list(train_inputs.values())[0])
-        minibatch_size = minibatch_size or n_inputs
-        for _ in range(n_epochs):
-            indices = np.arange(n_inputs)
-            np.random.shuffle(indices)
-            for start in range(0, n_inputs - minibatch_size + 1,
-                               minibatch_size):
-                minibatch = indices[start:start + minibatch_size]
+        with ProgressTracker(n_epochs, TerminalProgressBar()) as progress:
+            n_inputs = len(list(train_inputs.values())[0])
+            minibatch_size = minibatch_size or n_inputs
+            for _ in range(n_epochs):
+                indices = np.arange(n_inputs)
+                np.random.shuffle(indices)
+                for start in range(0, n_inputs - minibatch_size + 1,
+                                   minibatch_size):
+                    minibatch = indices[start:start + minibatch_size]
 
-                self.train(*([train_inputs[x][minibatch]
-                              for x in train_inputs] +
-                             [train_targets[x][minibatch]
-                              for x in train_targets]))
+                    self.train(*([train_inputs[x][minibatch]
+                                  for x in train_inputs] +
+                                 [train_targets[x][minibatch]
+                                  for x in train_targets]))
+
+                progress.step()
 
         print("training complete")
 

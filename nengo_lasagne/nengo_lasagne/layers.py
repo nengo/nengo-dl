@@ -1,4 +1,5 @@
 import lasagne as lgn
+import theano
 import theano.tensor as T
 import numpy as np
 import nengo.builder
@@ -48,18 +49,81 @@ class GainLayer(lgn.layers.Layer):
 class NodeLayer:
     def __init__(self, node):
         self.name = str(node)
-        self.num_units = node.size_out
 
-        if node.size_in == 0:
-            self.input = lgn.layers.InputLayer((None, None, self.num_units),
-                                               name=self.name)
+        if isinstance(node, LasagneNode):
+            # directly insert the layers into the model
+            assert not node.time_input
 
-            # flatten the batch/sequence dimensions
-            self.output = lgn.layers.ReshapeLayer(
-                self.input, (-1, self.num_units), name=self.name + "_reshape")
+            input_layer = node.inputs[0]
+
+            if node.size_in == 0:
+                self.input = input_layer
+            else:
+                # need to replace the input with an expandablesumlayer
+                self.input = ExpandableSumLayer([], node.size_in)
+
+                for l in lgn.layers.get_all_layers(node.layer):
+                    if (hasattr(l, "input_layer") and l.input_layer is
+                        input_layer):
+                        l.input_layer = self.input
+                    if (hasattr(l, "input_layers") and
+                                input_layer in l.input_layers):
+                        for i in range(len(l.input_layers)):
+                            l.input_layers[i] = self.input
+
+            self.output = node.layer
         else:
-            self.input = self.output = ExpandableSumLayer([], self.num_units,
-                                                          name=self.name)
+            if node.size_in == 0:
+                self.input = lgn.layers.InputLayer((None, None,
+                                                    node.size_out),
+                                                   name=self.name)
+
+                # flatten the batch/sequence dimensions
+                self.output = lgn.layers.ReshapeLayer(
+                    self.input, (-1, node.size_out),
+                    name=self.name + "_reshape")
+            else:
+                self.input = ExpandableSumLayer([], node.size_in,
+                                                name=self.name)
+                self.output = self.input
+
+                # in order to get this stuff to work need to figure out how
+                # to handle the time input
+                # if callable(node.output):
+                #     output = node.output
+                # elif isinstance(node.output, nengo.processes.Process):
+                #     raise NotImplementedError()
+                # else:
+                #     raise TypeError("Unknown output type")
+                #
+                # self.output = lgn.layers.NonlinearityLayer(self.input,
+                #                                            nonlinearity=output)
+
+
+class LasagneNode(nengo.Node):
+    def __init__(self, output, time_input=False, **kwargs):
+        assert isinstance(output, lgn.layers.Layer)
+
+        self.layer = output
+        self.time_input = False
+
+        layers = lgn.layers.get_all_layers(output)
+        self.inputs = [x for x in layers
+                       if isinstance(x, lgn.layers.InputLayer)]
+        assert len(self.inputs) == 1
+
+        self.compiled = theano.function(
+            [x.input_var for x in self.inputs],
+            lgn.layers.get_output(output, deterministic=True),
+            allow_input_downcast=True)
+
+        def func(t, x):
+            if time_input:
+                return self.compiled(np.concatenate((t, x))).squeeze()
+            else:
+                return self.compiled(x).squeeze()
+
+        super(LasagneNode, self).__init__(output=func, **kwargs)
 
 
 class EnsembleLayer:
@@ -169,9 +233,10 @@ class ConnectionLayer:
                 layer, conn.function, output_shape=(None, conn.post.size_in))
 
         # set up connection weight layer
-        layer = lgn.layers.DenseLayer(
-            layer, conn.post.size_in, W=self.get_weights(conn, layer),
-            nonlinearity=None, b=None, name="%s_W" % conn)
+        if getattr(model.network.config[conn], "insert_weights", True):
+            layer = lgn.layers.DenseLayer(
+                layer, conn.post.size_in, W=self.get_weights(conn, layer),
+                nonlinearity=None, b=None, name="%s_W" % conn)
 
         # apply post slice
         if conn.post_slice != slice(None):
@@ -238,3 +303,13 @@ class ConnectionLayer:
             pre.bias_layer.b.eval(), inputs, targets, np.random, post_enc)
 
         return np.asarray(decoders, dtype=np.float32)
+
+# class TimeLayer(lgn.layers.Layer):
+#     def __init__(self, incoming, dt=0.001, name="time"):
+#         assert isinstance(incoming, tuple)
+#         super(TimeLayer, self).__init__(incoming, name)
+#         self.dt = dt
+#
+#     def get_output_for(self, input):
+#         return T.tile(T.arange(0, self.input_shape[1]) * self.dt,
+#                       (self.input_shape[0], 1, 1))

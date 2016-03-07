@@ -1,5 +1,9 @@
+import pickle
+
+import lasagne
+import lasagne.nonlinearities as nl
+import matplotlib.pyplot as plt
 import nengo
-from nengo.params import Parameter
 from nengo.processes import PresentInput
 import numpy as np
 
@@ -97,6 +101,10 @@ def test_recurrent():
         output_p = nengo.Probe(output_node)
 
     sim = nlg.Simulator(net, dt=dt)
+
+    print("layers")
+    print(lasagne.layers.get_all_layers(sim.model.params[output_node].output))
+
     sim.model.train({input_node: inputs}, {output_node: targets},
                     n_epochs=1000, minibatch_size=100,
                     optimizer_kwargs={"learning_rate": 1e-2})
@@ -111,6 +119,99 @@ def test_recurrent():
     print(np.sqrt(np.mean((truth - sim.data[output_p]) ** 2)))
 
 
+def test_lasagnenode():
+    with open("mnist.pkl", "rb") as f:
+        train, _, test = pickle.load(f, encoding="bytes")
+
+    n_conv = 2
+
+    # input layer
+    l = lasagne.layers.InputLayer(shape=(None,))
+    l = lasagne.layers.ReshapeLayer(l, shape=(-1, 1, 28, 28))
+
+    # conv layers
+    for _ in range(n_conv):
+        l = lasagne.layers.Conv2DLayer(l, num_filters=32, filter_size=(5, 5),
+                                       nonlinearity=nl.rectify,
+                                       W=lasagne.init.HeNormal(gain="relu"))
+        l = lasagne.layers.MaxPool2DLayer(l, pool_size=(2, 2))
+
+    # dense layer
+    l = lasagne.layers.DenseLayer(l, num_units=256, nonlinearity=nl.rectify,
+                                  W=lasagne.init.HeNormal(gain='relu'))
+
+    # dropout
+    l = lasagne.layers.DropoutLayer(l, p=0.5)
+
+    # output layer
+    l = lasagne.layers.DenseLayer(l, num_units=10, nonlinearity=nl.softmax)
+
+    with nengo.Network() as net, nlg.default_config():
+        net.config[nengo.Connection].set_param("insert_weights",
+                                               nengo.params.BoolParam(True))
+
+        input_node = nengo.Node(output=PresentInput(test[0], 0.001))
+        conv_layers = nlg.layers.LasagneNode(output=l, size_in=784)
+        output_node = nengo.Node(size_in=10)
+
+        conn1 = nengo.Connection(input_node, conv_layers)
+        conn2 = nengo.Connection(conv_layers, output_node)
+
+        net.config[conn1].insert_weights = False
+        net.config[conn2].insert_weights = False
+
+        input_p = nengo.Probe(input_node)
+        p = nengo.Probe(output_node)
+        p2 = nengo.Probe(conv_layers)
+
+    sim = nlg.Simulator(net)
+
+    # print("layers")
+    # for l in lasagne.layers.get_all_layers(
+    #         sim.model.params[output_node].output):
+    #     print("=" * 30)
+    #     print(str(l), l.output_shape)
+    #     print("incoming:", end=" ")
+    #     if hasattr(l, "input_layer"):
+    #         print(l.input_layer)
+    #     elif hasattr(l, "input_layers"):
+    #         print(l.input_layers)
+    #     print()
+
+    targets = np.zeros((train[1].shape[0], 1, 10), dtype=np.float32)
+    targets[np.arange(train[1].shape[0]), :, train[1]] = 1.0
+
+    sim.train({input_node: train[0][:, None]}, {output_node: targets},
+              n_epochs=1, minibatch_size=500,
+              optimizer=lasagne.updates.nesterov_momentum,
+              optimizer_kwargs={"learning_rate": 0.01, "momentum": 0.9},
+              objective=lasagne.objectives.categorical_crossentropy)
+
+    sim.run_steps(test[0].shape[0])
+    # sim.run_steps(1, inputs={input_node: test[0][:, None]})
+
+    output = sim.data[p].squeeze()
+
+    print(np.argmax(output[:10], axis=1))
+    print(test[1][:10])
+    print(np.mean(np.argmax(output, axis=1) == test[1]))
+
+    # **** nengo simulator ****
+
+    sim2 = nengo.Simulator(net)
+    sim2.reset()
+    sim2.run_steps(test[0].shape[0])
+
+    output = sim2.data[p]
+
+    print(np.argmax(output[:10], axis=1))
+    print(test[1][1:11])
+    print(np.mean(np.argmax(output[:-1], axis=1) == test[1][1:]))
+
+    plt.show()
+
+
 # test_xor()
-test_fancy()
+# test_fancy()
 # test_recurrent()
+test_lasagnenode()
