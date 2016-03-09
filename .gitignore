@@ -10,3 +10,5 @@ dist
 .ipynb_checkpoints/
 .cache
 /nengo_lasagne/.idea
+
+nengo_lasagne/mnist.pkl
