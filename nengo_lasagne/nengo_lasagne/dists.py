@@ -4,13 +4,13 @@ from nengo.dists import Distribution
 
 class InitWrapper:
     def __getattr__(self, key):
-        return wrap_lasagne(getattr(lgn.init, key)())
+        return wrap_lasagne(getattr(lgn.init, key))
 
 
 def wrap_lasagne(dist):
     class WrappedDist(Distribution):
-        def __init__(self):
-            self.lgn_dist = dist
+        def __init__(self, *args, **kwargs):
+            self.lgn_dist = dist(*args, **kwargs)
 
         def sample(self, n, d=None, rng=None):
             if rng is not None:
@@ -31,8 +31,8 @@ def wrap_lasagne(dist):
 
 def wrap_nengo(dist):
     class WrappedDist(lgn.init.Initializer):
-        def __init__(self):
-            self.nengo_dist = dist
+        def __init__(self, *args, **kwargs):
+            self.nengo_dist = dist(*args, **kwargs)
 
         def __call__(self, shape):
             return self.sample(shape)
