@@ -9,8 +9,6 @@ def default_config():
     config[nengo.Ensemble].bias = nengo.dists.Choice([0])
 
     config[nengo.Connection].synapse = None
-    config[nengo.Connection].set_param("insert_weights",
-                                       nengo.params.BoolParam(True))
 
     return config
 

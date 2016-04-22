@@ -36,7 +36,7 @@ class Simulator(object):
                     if nengo.utils.compat.is_array_like(node.output):
                         input_vals += [np.tile(node.output, (steps, 1))]
                     elif callable(node.output):
-                        input_vals += [[node.output(i * self.dt)
+                        input_vals += [[node.output((i+1) * self.dt)
                                         for i in range(steps)]]
                     elif isinstance(node.output, nengo.processes.Process):
                         input_vals += [node.output.run_steps(steps,

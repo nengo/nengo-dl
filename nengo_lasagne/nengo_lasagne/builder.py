@@ -131,31 +131,28 @@ class Model:
         if optimizer_kwargs is None:
             optimizer_kwargs = {}
         updates = optimizer(loss, params, **optimizer_kwargs)
-        self.train = theano.function([self.params[x].input.input_var
-                                      for x in train_inputs] + target_vars,
-                                     loss, updates=updates)
-        # self.eval = theano.function([self.params[x].input.input_var
-        #                              for x in train_inputs], lgn_outputs)
+        self.train_func = theano.function(
+            [self.params[x].input.input_var for x in train_inputs] +
+            target_vars, loss, updates=updates)
 
-        #         print "params", lgn.layers.get_all_params(outputs.values())
-        #         print theano.printing.debugprint(self.eval)
-        # print(theano.printing.pprint(self.train))
+        # print("layers", lgn.layers.get_all_layers([self.params[o].output
+        #                                     for o in train_targets]))
+        # print("params", lgn.layers.get_all_params([self.params[o].output
+        #                                     for o in train_targets]))
 
         # run training epochs
         with ProgressTracker(n_epochs, TerminalProgressBar()) as progress:
             n_inputs = len(list(train_inputs.values())[0])
             minibatch_size = minibatch_size or n_inputs
             for _ in range(n_epochs):
-                indices = np.arange(n_inputs)
-                np.random.shuffle(indices)
+                indices = np.random.permutation(n_inputs)
                 for start in range(0, n_inputs - minibatch_size + 1,
                                    minibatch_size):
                     minibatch = indices[start:start + minibatch_size]
 
-                    self.train(*([train_inputs[x][minibatch]
-                                  for x in train_inputs] +
-                                 [train_targets[x][minibatch]
-                                  for x in train_targets]))
+                    self.train_func(*(
+                        [train_inputs[x][minibatch] for x in train_inputs] +
+                        [train_targets[x][minibatch] for x in train_targets]))
 
                 progress.step()
 
