@@ -7,7 +7,7 @@ import nengo
 from nengo.processes import PresentInput
 import numpy as np
 
-import nengo_lasagne as nlg
+import nengo_deeplearning as ndl
 
 
 def test_xor():
@@ -15,7 +15,7 @@ def test_xor():
                         dtype=np.float32)
     targets = np.asarray([[[0]], [[1]], [[1]], [[0]]], dtype=np.float32)
 
-    with nengo.Network() as net, nlg.default_config():
+    with nengo.Network() as net, ndl.default_config():
         N = 10
         d = 2
         inp = nengo.Node(output=PresentInput(inputs, 0.001),
@@ -25,12 +25,12 @@ def test_xor():
 
         #         nengo.Connection(inp, ens.neurons, transform=np.zeros((N, 2)))
         #         nengo.Connection(ens.neurons, output, transform=np.zeros((1, N)))
-        nengo.Connection(inp, ens, transform=nlg.init.GlorotUniform())
-        nengo.Connection(ens, output, transform=nlg.init.GlorotUniform())
+        nengo.Connection(inp, ens, transform=ndl.init.GlorotUniform())
+        nengo.Connection(ens, output, transform=ndl.init.GlorotUniform())
 
         p = nengo.Probe(output)
 
-    sim = nlg.Simulator(net)
+    sim = ndl.Simulator(net)
     sim.model.train({inp: inputs}, {output: targets}, minibatch_size=4,
                     n_epochs=1000, l_rate=0.1)
     sim.run_steps(4)
@@ -46,7 +46,7 @@ def test_fancy():
     inputs = inputs[:, :, None]
     outputs = outputs[:, None]
 
-    with nengo.Network() as net, nlg.default_config():
+    with nengo.Network() as net, ndl.default_config():
         input_nodes = [nengo.Node(output=PresentInput(x.squeeze(axis=1),
                                                       0.001),
                                   label="node_%d" % i)
@@ -65,7 +65,7 @@ def test_fancy():
 
         p = nengo.Probe(output_node)
 
-    sim = nlg.Simulator(net)
+    sim = ndl.Simulator(net)
     sim.model.train(dict(zip(input_nodes, inputs)), {output_node: outputs},
                     n_epochs=1000, minibatch_size=100,
                     optimizer_kwargs={"learning_rate": 1e-2})
@@ -87,20 +87,20 @@ def test_recurrent():
     inputs = np.random.randn(batch_size, sig_len, 1).astype(np.float32)
     targets = np.cumsum(inputs, axis=1) * dt
 
-    with nengo.Network() as net, nlg.default_config():
+    with nengo.Network() as net, ndl.default_config():
         input_node = nengo.Node(output=nengo.processes.WhiteNoise(scale=False))
         ens = nengo.Ensemble(50, 1)
         output_node = nengo.Node(size_in=1)
 
         nengo.Connection(input_node, ens)
         nengo.Connection(ens.neurons, ens.neurons,
-                         transform=nlg.init.GlorotUniform())
+                         transform=ndl.init.GlorotUniform())
         nengo.Connection(ens, output_node)
 
         input_p = nengo.Probe(input_node)
         output_p = nengo.Probe(output_node)
 
-    sim = nlg.Simulator(net, dt=dt)
+    sim = ndl.Simulator(net, dt=dt)
 
     print("layers")
     print(lasagne.layers.get_all_layers(sim.model.params[output_node].output))
@@ -146,12 +146,12 @@ def test_lasagnenode():
     # output layer
     l = lasagne.layers.DenseLayer(l, num_units=10, nonlinearity=nl.softmax)
 
-    with nengo.Network() as net, nlg.default_config():
+    with nengo.Network() as net, ndl.default_config():
         net.config[nengo.Connection].set_param("insert_weights",
                                                nengo.params.BoolParam(True))
 
         input_node = nengo.Node(output=PresentInput(test[0], 0.001))
-        conv_layers = nlg.layers.LasagneNode(output=l, size_in=784)
+        conv_layers = ndl.layers.LasagneNode(output=l, size_in=784)
         output_node = nengo.Node(size_in=10)
 
         conn1 = nengo.Connection(input_node, conv_layers)
@@ -164,7 +164,7 @@ def test_lasagnenode():
         p = nengo.Probe(output_node)
         p2 = nengo.Probe(conv_layers)
 
-    sim = nlg.Simulator(net)
+    sim = ndl.Simulator(net)
 
     # print("layers")
     # for l in lasagne.layers.get_all_layers(

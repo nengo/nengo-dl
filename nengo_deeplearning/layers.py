@@ -4,7 +4,7 @@ import theano.tensor as T
 import numpy as np
 import nengo.builder
 
-import nengo_lasagne
+import nengo_deeplearning
 
 
 class ExpandableSumLayer(lgn.layers.ElemwiseSumLayer):
@@ -64,10 +64,10 @@ class NodeLayer:
 
                 for l in lgn.layers.get_all_layers(node.layer):
                     if (hasattr(l, "input_layer") and l.input_layer is
-                        input_layer):
+                            input_layer):
                         l.input_layer = self.input
                     if (hasattr(l, "input_layers") and
-                                input_layer in l.input_layers):
+                            input_layer in l.input_layers):
                         for i in range(len(l.input_layers)):
                             l.input_layers[i] = self.input
 
@@ -151,7 +151,7 @@ class EnsembleLayer:
 
         # neural output
         self.output = lgn.layers.NonlinearityLayer(
-            self.bias_layer, nengo_lasagne.nl_map[type(ens.neuron_type)],
+            self.bias_layer, nengo_deeplearning.nl_map[type(ens.neuron_type)],
             name=self.name + "_nl")
 
     def make_recurrent(self, conn, model):
@@ -184,7 +184,7 @@ class EnsembleLayer:
         # TODO: explore optimization parameters (e.g. rollout)
         layer = lgn.layers.CustomRecurrentLayer(
             layer, lgn.layers.InputLayer((None, self.ens.n_neurons)), rec,
-            nonlinearity=nengo_lasagne.nl_map[type(self.ens.neuron_type)],
+            nonlinearity=nengo_deeplearning.nl_map[type(self.ens.neuron_type)],
             name=self.name + "_nl")
 
         self.output = lgn.layers.ReshapeLayer(
@@ -207,9 +207,9 @@ class EnsembleLayer:
     @property
     def encoders(self):
         if self._encoders is None:
-            self._encoders = nengo_lasagne.to_array(self.ens.encoders,
-                                                    (self.ens.n_neurons,
-                                                     self.ens.dimensions))
+            self._encoders = nengo_deeplearning.to_array(self.ens.encoders,
+                                                         (self.ens.n_neurons,
+                                                          self.ens.dimensions))
 
         return self._encoders
 
@@ -255,7 +255,7 @@ class ConnectionLayer:
             if hasattr(conn.transform, "lgn_dist"):
                 init_W = conn.transform.lgn_dist
             else:
-                init_W = nengo_lasagne.dists.nengo_wrap(conn.transform)
+                init_W = nengo_deeplearning.dists.nengo_wrap(conn.transform)
         else:
             if isinstance(conn.pre_obj, nengo.Ensemble):
                 # then we're dealing with decoders

@@ -10,8 +10,8 @@ import numpy as np
 
 from nengo.utils.progress import ProgressTracker, TerminalProgressBar
 
-import nengo_lasagne
-from nengo_lasagne import layers
+import nengo_deeplearning
+from nengo_deeplearning import layers
 
 
 class Model:
@@ -29,7 +29,7 @@ class Model:
     def check_network(self, net):
         for ens in net.all_ensembles:
             # can only use a subset of neuron types
-            if type(ens.neuron_type) not in nengo_lasagne.nl_map:
+            if type(ens.neuron_type) not in nengo_deeplearning.nl_map:
                 raise TypeError("Unsupported nonlinearity (%s)" %
                                 ens.neuron_type)
 

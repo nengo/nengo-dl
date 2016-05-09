@@ -6,9 +6,9 @@ represents a release version. Commits for which the version doesn't have
 '-dev' should be git tagged with the version.
 """
 
-name = "skspeech"
+name = "nengo_deeplearning"
 version_info = (0, 1, 0)  # (major, minor, patch)
 dev = True
 
 version = "{v}{dev}".format(v='.'.join(str(v) for v in version_info),
-                            dev='-dev' if dev else '')
+                            dev='.dev' if dev else '')

@@ -5,8 +5,8 @@ import numpy as np
 def default_config():
     config = nengo.Config(nengo.Ensemble, nengo.Connection)
     config[nengo.Ensemble].neuron_type = nengo.RectifiedLinear()
-    config[nengo.Ensemble].gain = nengo.dists.Uniform(0.9, 1.1)
-    config[nengo.Ensemble].bias = nengo.dists.Choice([0])
+    config[nengo.Ensemble].gain = nengo.dists.Choice([1])
+    config[nengo.Ensemble].bias = nengo.dists.Uniform(-1, 1)
 
     config[nengo.Connection].synapse = None
 

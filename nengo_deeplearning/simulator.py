@@ -2,7 +2,7 @@ import lasagne as lgn
 import nengo
 import numpy as np
 
-from nengo_lasagne import builder
+from nengo_deeplearning import builder
 
 
 class Simulator(object):

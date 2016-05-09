@@ -9,6 +9,5 @@ dist
 *.swp
 .ipynb_checkpoints/
 .cache
-/nengo_lasagne/.idea
-
-nengo_lasagne/mnist.pkl
+.idea
+docs/mnist.pkl

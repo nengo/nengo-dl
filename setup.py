@@ -1,15 +1,8 @@
-#!/usr/bin/env python
-import imp
 import io
+import runpy
 import os
 
-try:
-    from setuptools import setup
-except ImportError:
-    from ez_setup import use_setuptools
-    use_setuptools()
-
-from setuptools import find_packages, setup  # noqa: F811
+from setuptools import find_packages, setup
 
 
 def read(*filenames, **kwargs):
@@ -21,18 +14,21 @@ def read(*filenames, **kwargs):
             buf.append(f.read())
     return sep.join(buf)
 
+
 root = os.path.dirname(os.path.realpath(__file__))
-version_module = imp.load_source(
-    'version', os.path.join(root, 'nengo_deeplearning', 'version.py'))
-description = "Deep learning in Nengo."
+# version_module = imp.load_source(
+#     'version', os.path.join(root, 'nengo_deeplearning', 'version.py'))
+version = runpy.run_path(os.path.join(root, 'nengo_deeplearning',
+                                      'version.py'))['version']
+description = "Deep learning in Nengo"
 long_description = read('README.rst', 'CHANGES.rst')
 
 url = "https://github.com/nengo/nengo_deeplearning"
 setup(
     name="nengo_deeplearning",
-    version=version_module.version,
+    version=version,
     author="Nengo developers",
-    author_email="tbekolay@gmail.com",
+    author_email="daniel.rasmussen@appliedbrainresearch.com",
     packages=find_packages(),
     include_package_data=True,
     scripts=[],
@@ -40,8 +36,5 @@ setup(
     license="",
     description=description,
     long_description=long_description,
-    install_requires=[
-        "nengo",
-        "numpy",
-    ],
+    install_requires=["nengo", "numpy", "lasagne", "theano"],
 )
