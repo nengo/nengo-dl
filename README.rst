@@ -17,5 +17,7 @@ Requirements
 ============
 
 Theano
+
 Lasagne
+
 CUDA (if you want to take advantage of the GPU acceleration)
