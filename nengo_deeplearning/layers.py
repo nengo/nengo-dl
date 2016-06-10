@@ -64,10 +64,10 @@ class NodeLayer:
 
                 for l in lgn.layers.get_all_layers(node.layer):
                     if (hasattr(l, "input_layer") and l.input_layer is
-                            input_layer):
+                        input_layer):
                         l.input_layer = self.input
                     if (hasattr(l, "input_layers") and
-                            input_layer in l.input_layers):
+                                input_layer in l.input_layers):
                         for i in range(len(l.input_layers)):
                             l.input_layers[i] = self.input
 
@@ -207,9 +207,9 @@ class EnsembleLayer:
     @property
     def encoders(self):
         if self._encoders is None:
-            self._encoders = nengo_deeplearning.to_array(self.ens.encoders,
-                                                         (self.ens.n_neurons,
-                                                          self.ens.dimensions))
+            self._encoders = nengo_deeplearning.to_array(
+                self.ens.encoders, (self.ens.n_neurons,self.ens.dimensions))
+            self._encoders /= self.ens.radius
 
         return self._encoders
 
@@ -285,7 +285,7 @@ class ConnectionLayer:
         eval_points = nengo.builder.connection.get_eval_points(
             self.model, conn, rng=None)
 
-        inputs = np.dot(eval_points, pre.encoders.T / conn.pre_obj.radius)
+        inputs = np.dot(eval_points, pre.encoders.T)
         targets = np.dot(np.apply_along_axis(func, 1,
                                              eval_points[:, conn.pre_slice]),
                          conn.transform.T)
@@ -296,7 +296,6 @@ class ConnectionLayer:
         if conn.solver.weights:
             post_enc = self.model.params[conn.post_obj].encoders.T
             post_enc = post_enc[conn.post_slice]
-            post_enc /= conn.post_obj.radius
 
         decoders, _ = nengo.builder.connection.solve_for_decoders(
             conn.solver, conn.pre_obj.neuron_type, pre.gain_layer.gain.eval(),
