@@ -1,81 +1,291 @@
-import lasagne as lgn
-import nengo
-import numpy as np
+from collections import Mapping, defaultdict
+import logging
+import warnings
 
-from nengo_deeplearning import builder
+import nengo
+from nengo.exceptions import (ReadonlyError, SimulatorClosed, SimulationError,
+                              NengoWarning)
+from nengo.utils.graphs import toposort
+from nengo.utils.progress import ProgressTracker
+from nengo.utils.simulator import operator_depencency_graph
+import numpy as np
+import tensorflow as tf
+
+from nengo_deeplearning import operators, utils, DATA_DIR
+
+logger = logging.getLogger(__name__)
 
 
 class Simulator(object):
-    def __init__(self, network, dt=0.001, seed=None, model=None):
-        # TODO: support seed
-        self.network = network
-        self.dt = float(dt)
-        self.closed = False
+    # unsupported unit tests
+    unsupported = [
+        ("nengo/tests/test_simulator.py:test_warn_on_opensim_del",
+         "nengo_deeplearning raises a different (more visible) warning (see "
+         "tests/test_simulator.py:test_warn_on_opensim_del"),
 
+        ("nengo/tests/test_simulator.py:test_signal_init_values",
+         "different method required to manually step simulator (see "
+         "tests/test_simulator.py:test_signal_init_values"),
+
+        ("nengo/tests/test_node.py:test_args",
+         "time is passed as np.float32, not a float (see "
+         "tests/test_simulator.py:test_args")
+    ]
+
+    def __init__(self, network, dt=0.001, seed=None, model=None,
+                 save_graph=False):
+        self.closed = None
+        self.sess = None
+
+        # build model (uses default nengo builder)
         if model is None:
-            self.model = builder.Model(network)
-
+            # TODO: support cache?
+            self.model = nengo.builder.Model(
+                dt=float(dt), label="%s, dt=%f" % (network, dt))
         else:
+            if dt != model.dt:
+                warnings.warn("Model dt (%g) does not match Simulator "
+                              "dt (%g)" % (model.dt, dt), NengoWarning)
             self.model = model
 
-        self.data = dict([(probe, None) for probe in network.all_probes])
+        if network is not None:
+            self.model.build(network)
 
-        self.reset()
+        # convert operator graph to tensorflow graph
+        self.op_order = toposort(operator_depencency_graph(
+            self.model.operators))
+
+        self.data = ProbeDict(self.model.params)
+
+        if seed is None:
+            seed = np.random.randint(np.iinfo(np.int32).max)
+        self.reset(seed=seed)
+
+        if save_graph:
+            summary = tf.summary.FileWriter(
+                "%s/%s" % (DATA_DIR, self.model.toplevel.label),
+                graph=self.graph)
+            summary.close()
+
+    def reset(self, seed=None):
+        if self.closed:
+            raise SimulatorClosed("Cannot reset closed Simulator.")
+
+        # close old session
+        if self.sess is not None:
+            self.close()
+
+        if seed is not None:
+            self.seed = seed
+
+        self.rng = np.random.RandomState(self.seed)
+
+        # (re)build graph
+        # TODO: just rebuild the sim_process nodes
+        self.build_graph()
+
+        # start session
+        self.sess = tf.Session(graph=self.graph)
+        self.closed = False
+
+        # initialize signals
+        self.sess.run(self.init_op)
+
+        # clear probe data
+        for probe in self.model.probes:
+            self.model.params[probe] = []
+
+        self.n_steps = 0
+        self.time = 0.0
+
+    def build_graph(self):
+        with tf.Graph().as_default() as self.graph:
+            self.signals = operators.SignalDict(
+                {self.model.step: tf.Variable(0, name="step"),
+                 self.model.time: tf.Variable(0.0, name="time")})
+
+            # build all the non-update operators
+            self.node_outputs = []
+            self.updates = []
+            self.reads = defaultdict(list)
+            for op in self.op_order:
+                # note: the only thing we need to explicitly sequence is that
+                # updates happen after reads. the other requirements (sets ->
+                # incs -> reads) are implicitly enforced because assign ops
+                # produce a new tensor that future ops will operate on
+                dependencies = [x for sig in op.updates
+                                for x in self.reads[self.signals[sig]]]
+                with self.graph.control_dependencies(dependencies):
+                    with self.graph.name_scope(utils.function_name(op)):
+                        outputs = operators.convert(op, self.signals, self.dt,
+                                                    self.rng)
+
+                for r in op.reads:
+                    self.reads[self.signals[r]] += outputs
+
+                if isinstance(op, nengo.builder.operator.SimPyFunc):
+                    self.node_outputs += outputs
+                if len(op.updates) > 0:
+                    self.updates += [self.signals[x] for x in op.updates]
+
+            self.probe_tensors = [self.signals[self.model.sig[p]["in"]]
+                                  for p in self.model.probes]
+
+            self.init_op = tf.global_variables_initializer()
+
+        print("build complete")
+        # print("probes", [str(x) for x in self.probe_tensors])
+        # print("updates", [str(x) for x in self.updates])
 
     def step(self):
-        raise NotImplementedError()
+        if self.closed:
+            raise SimulatorClosed("Simulator cannot run because it is closed.")
 
-    def run_steps(self, steps, inputs=None):
-        self.steps = steps
+        # we need to explicitly fetch the node_outputs and updates (even though
+        # we don't use those values) to make sure those ops run
+        # note: using a fetches dict has the effect of removing any duplicates
+        # (so e.g. we don't double-fetch something if it is in both
+        # probe_tensors and updates)
+        step_tensor = self.signals[self.model.step]
+        time_tensor = self.signals[self.model.time]
+        fetches = {x: x for x in
+                   [step_tensor, time_tensor] + self.probe_tensors +
+                   self.node_outputs + self.updates}
+        try:
+            output = self.sess.run(fetches)
+        except tf.errors.InternalError as e:
+            utils.handle_internal_error(e)
 
-        if inputs is None:
-            # generate inputs by running Nodes
-            input_vals = []
-            for node in self.network.all_nodes:
-                if node.size_in == 0:
-                    if nengo.utils.compat.is_array_like(node.output):
-                        input_vals += [np.tile(node.output, (steps, 1))]
-                    elif callable(node.output):
-                        input_vals += [[node.output((i+1) * self.dt)
-                                        for i in range(steps)]]
-                    elif isinstance(node.output, nengo.processes.Process):
-                        input_vals += [node.output.run_steps(steps,
-                                                             dt=self.dt)]
+        self.n_steps = output[step_tensor]
+        self.time = output[time_tensor]
 
-            # cast all to float32
-            input_vals = [np.asarray(x[None, ...], dtype=np.float32)
-                          for x in input_vals]
-        else:
-            input_vals = []
-            # we iterate over all_nodes because we need inputs to be
-            # in the same order that probe_func expects them
-            for node in self.network.all_nodes:
-                if node in inputs:
-                    assert inputs[node].shape[1] == steps
-                    assert inputs[node].shape[2] == node.size_out
-                    input_vals += [inputs[node]]
+        for i, p in enumerate(self.model.probes):
+            period = (1 if p.sample_every is None else
+                      p.sample_every / self.dt)
 
-        output = self.model.probe_func(*input_vals)
-        for i, probe in enumerate(self.network.all_probes):
-            self.data[probe] = output[i]
+            if self.n_steps % period < 1:
+                self.model.params[p].append(output[self.probe_tensors[i]])
 
-    def train(self, *args, **kwargs):
-        self.model.train(*args, **kwargs)
+    def run(self, time_in_seconds, progress_bar=None):
+        """Simulate for the given length of time.
 
-    def trange(self):
-        return np.arange(self.steps) * self.dt
+        Parameters
+        ----------
+        time_in_seconds : float
+            Amount of time to run the simulation for.
+        progress_bar : bool or `.ProgressBar` or `.ProgressUpdater`, optional \
+                       (Default: True)
+            Progress bar for displaying the progress of the simulation run.
 
-    def run(self, t):
-        self.run_steps(int(np.round(float(t) / self.dt)))
+            If True, the default progress bar will be used.
+            If False, the progress bar will be disabled.
+            For more control over the progress bar, pass in a `.ProgressBar`
+            or `.ProgressUpdater` instance.
+        """
+        steps = int(np.round(float(time_in_seconds) / self.dt))
+        logger.info("Running %s for %f seconds, or %d steps",
+                    self.model.label, time_in_seconds, steps)
+        self.run_steps(steps, progress_bar=progress_bar)
 
-    def reset(self):
-        pass
+    def run_steps(self, steps, progress_bar=None):
+        """Simulate for the given number of ``dt`` steps.
+
+        Parameters
+        ----------
+        steps : int
+            Number of steps to run the simulation for.
+        progress_bar : bool or `.ProgressBar` or `.ProgressUpdater`, optional \
+                       (Default: True)
+            Progress bar for displaying the progress of the simulation run.
+
+            If True, the default progress bar will be used.
+            If False, the progress bar will be disabled.
+            For more control over the progress bar, pass in a `.ProgressBar`
+            or `.ProgressUpdater` instance.
+        """
+
+        # TODO: support progress bar
+        for i in range(steps):
+            self.step()
 
     def close(self):
-        self.closed = True
+        if not self.closed:
+            self.sess.close()
+            self.closed = True
+            self.sess = None
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
+
+    @property
+    def dt(self):
+        """(float) The time step of the simulator."""
+        return self.model.dt
+
+    @dt.setter
+    def dt(self, dummy):
+        raise ReadonlyError(attr='dt', obj=self)
+
+    def __del__(self):
+        """Raise a ResourceWarning if we are deallocated while open."""
+        if self.closed is not None and not self.closed:
+            warnings.warn(
+                "Simulator with model=%s was deallocated while open. "
+                "Simulators should be closed manually to ensure resources "
+                "are properly freed." % self.model, RuntimeWarning)
+            self.close()
+
+    def trange(self, dt=None):
+        """Create a vector of times matching probed data.
+
+        Note that the range does not start at 0 as one might expect, but at
+        the first timestep (i.e., ``dt``).
+
+        Parameters
+        ----------
+        dt : float, optional (Default: None)
+            The sampling period of the probe to create a range for.
+            If None, the simulator's ``dt`` will be used.
+        """
+        dt = self.dt if dt is None else dt
+        n_steps = int(self.n_steps * (self.dt / dt))
+        return dt * np.arange(1, n_steps + 1)
+
+
+class ProbeDict(Mapping):
+    """Map from Probe -> ndarray
+
+    This is more like a view on the dict that the simulator manipulates.
+    However, for speed reasons, the simulator uses Python lists,
+    and we want to return NumPy arrays. Additionally, this mapping
+    is readonly, which is more appropriate for its purpose.
+    """
+
+    def __init__(self, raw):
+        self.raw = raw
+        self._cache = {}
+
+    def __getitem__(self, key):
+        if (key not in self._cache or
+                    len(self._cache[key]) != len(self.raw[key])):
+            rval = self.raw[key]
+            if isinstance(rval, list):
+                rval = np.asarray(rval)
+                rval.setflags(write=False)
+            self._cache[key] = rval
+        return self._cache[key]
+
+    def __iter__(self):
+        return iter(self.raw)
+
+    def __len__(self):
+        return len(self.raw)
+
+    def __repr__(self):
+        return repr(self.raw)
+
+    def __str__(self):
+        return str(self.raw)

@@ -10,4 +10,5 @@ dist
 .ipynb_checkpoints/
 .cache
 .idea
+data
 docs/mnist.pkl
