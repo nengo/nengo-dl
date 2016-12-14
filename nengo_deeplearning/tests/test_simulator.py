@@ -1,6 +1,7 @@
 import nengo
 from nengo.builder.signal import Signal
 from nengo.builder.operator import ElementwiseInc, DotInc
+from nengo.utils.testing import warns
 import numpy as np
 
 import nengo_deeplearning
@@ -11,7 +12,7 @@ def test_warn_on_opensim_del():
         nengo.Ensemble(10, 1)
 
     sim = nengo_deeplearning.Simulator(net)
-    with nengo.utils.testing.warns(RuntimeWarning):
+    with warns(RuntimeWarning):
         sim.__del__()
     sim.close()
 

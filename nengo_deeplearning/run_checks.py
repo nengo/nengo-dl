@@ -1,5 +1,7 @@
 import os
+import sys
 
+import flake8.main
 import nengo
 import pytest
 
@@ -19,3 +21,5 @@ print("#" * 30, "NENGO_DEEPLEARNING TESTS", "#" * 30)
 pytest.main()
 
 # run flake8
+sys.argv += ["."]
+flake8.main.main()

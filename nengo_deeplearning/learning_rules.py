@@ -1,7 +1,7 @@
 from nengo.builder.learning_rules import SimBCM, SimOja, SimVoja
 import tensorflow as tf
 
-from nengo_deeplearning import operators, Builder, DEBUG
+from nengo_deeplearning import Builder, DEBUG
 
 
 @Builder.register(SimBCM)
