@@ -17,6 +17,9 @@ def handle_internal_error(e):
 def sanitize_name(name):
     """Remove illegal tensorflow name characters from string."""
 
+    if not isinstance(name, str):
+        name = str(name)
+
     name = name.replace(" ", "_")
     name = name.replace(":", "_")
 

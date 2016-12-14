@@ -34,9 +34,11 @@ class Simulator(object):
     ]
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
-                 save_graph=False):
+                 progress_bar=True, tensorboard=False):
         self.closed = None
         self.sess = None
+        self.progress_bar = progress_bar
+        self.tensorboard = tensorboard
 
         # build model (uses default nengo builder)
         if model is None:
@@ -48,7 +50,7 @@ class Simulator(object):
             self.model = model
 
         if network is not None:
-            self.model.build(network)
+            self.model.build(network, progress_bar=self.progress_bar)
 
         # convert operator graph to tensorflow graph
         self.op_order = toposort(operator_depencency_graph(
@@ -59,12 +61,6 @@ class Simulator(object):
         if seed is None:
             seed = np.random.randint(np.iinfo(np.int32).max)
         self.reset(seed=seed)
-
-        if save_graph:
-            summary = tf.summary.FileWriter(
-                "%s/%s" % (DATA_DIR, self.model.toplevel.label),
-                graph=self.graph)
-            summary.close()
 
     def reset(self, seed=None):
         if self.closed:
@@ -83,19 +79,51 @@ class Simulator(object):
         # TODO: just rebuild the sim_process nodes
         self.build_graph()
 
+        # set up probes
+        with self.graph.as_default():
+            names = []
+            for i, probe in enumerate(self.model.probes):
+                # clear probe data
+                self.model.params[probe] = []
+
+                # add probes to tensorboard summary
+                if self.tensorboard:
+                    # cut out the memory address so tensorboard doesn't display
+                    # them as separate graphs for each run
+                    name = utils.sanitize_name(probe)
+                    name = name[:name.index("_at_0x")]
+                    count = len([x for x in names if x.startswith(name)])
+                    name += "_%d" % count
+                    names += [name]
+
+                    for j in range(probe.size_in):
+                        tf.summary.scalar(
+                            "%s.dim%d" % (name, j), self.probe_tensors[i][j])
+
+            self.summary_op = tf.summary.merge_all()
+
         # start session
         self.sess = tf.Session(graph=self.graph)
+        print("Session initialized")
         self.closed = False
 
         # initialize signals
         self.sess.run(self.init_op)
 
-        # clear probe data
-        for probe in self.model.probes:
-            self.model.params[probe] = []
-
         self.n_steps = 0
         self.time = 0.0
+
+        if self.tensorboard:
+            directory = "%s/%s" % (DATA_DIR, self.model.toplevel.label)
+            if os.path.isdir(directory):
+                run_number = max([int(x[4:]) for x in os.listdir(directory)
+                                  if x.startswith("run")]) + 1
+            else:
+                run_number = 0
+            self.summary = tf.summary.FileWriter(
+                "%s/run_%d" % (directory, run_number), graph=self.graph)
+        else:
+            self.summary = None
 
     def build_graph(self):
         with tf.Graph().as_default() as self.graph:
@@ -132,10 +160,6 @@ class Simulator(object):
 
             self.init_op = tf.global_variables_initializer()
 
-        print("build complete")
-        # print("probes", [str(x) for x in self.probe_tensors])
-        # print("updates", [str(x) for x in self.updates])
-
     def step(self):
         if self.closed:
             raise SimulatorClosed("Simulator cannot run because it is closed.")
@@ -150,6 +174,10 @@ class Simulator(object):
         fetches = {x: x for x in
                    [step_tensor, time_tensor] + self.probe_tensors +
                    self.node_outputs + self.updates}
+
+        if self.tensorboard:
+            fetches[self.summary_op] = self.summary_op
+
         try:
             output = self.sess.run(fetches)
         except tf.errors.InternalError as e:
@@ -164,6 +192,9 @@ class Simulator(object):
 
             if self.n_steps % period < 1:
                 self.model.params[p].append(output[self.probe_tensors[i]])
+
+        if self.tensorboard:
+            self.summary.add_summary(output[self.summary_op], self.n_steps)
 
     def run(self, time_in_seconds, progress_bar=None):
         """Simulate for the given length of time.
@@ -203,15 +234,21 @@ class Simulator(object):
             or `.ProgressUpdater` instance.
         """
 
-        # TODO: support progress bar
-        for i in range(steps):
-            self.step()
+        if progress_bar is None:
+            progress_bar = self.progress_bar
+        with ProgressTracker(steps, progress_bar, "Simulation") as progress:
+            for _ in range(steps):
+                self.step()
+                progress.step()
 
     def close(self):
         if not self.closed:
             self.sess.close()
             self.closed = True
             self.sess = None
+
+            if self.summary is not None:
+                self.summary.close()
 
     def __enter__(self):
         return self
