@@ -1,17 +1,18 @@
 from collections import Mapping, defaultdict
 import logging
+import os
 import warnings
 
-import nengo
-from nengo.exceptions import (ReadonlyError, SimulatorClosed, SimulationError,
-                              NengoWarning)
+from nengo.builder import Model
+from nengo.builder.operator import SimPyFunc
+from nengo.exceptions import (ReadonlyError, SimulatorClosed, NengoWarning)
 from nengo.utils.graphs import toposort
 from nengo.utils.progress import ProgressTracker
 from nengo.utils.simulator import operator_depencency_graph
 import numpy as np
 import tensorflow as tf
 
-from nengo_deeplearning import operators, utils, DATA_DIR
+from nengo_deeplearning import signals, utils, Builder, DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +40,7 @@ class Simulator(object):
 
         # build model (uses default nengo builder)
         if model is None:
-            # TODO: support cache?
-            self.model = nengo.builder.Model(
-                dt=float(dt), label="%s, dt=%f" % (network, dt))
+            self.model = Model(dt=float(dt), label="%s, dt=%f" % (network, dt))
         else:
             if dt != model.dt:
                 warnings.warn("Model dt (%g) does not match Simulator "
@@ -100,7 +99,7 @@ class Simulator(object):
 
     def build_graph(self):
         with tf.Graph().as_default() as self.graph:
-            self.signals = operators.SignalDict(
+            self.signals = signals.SignalDict(
                 {self.model.step: tf.Variable(0, name="step"),
                  self.model.time: tf.Variable(0.0, name="time")})
 
@@ -117,13 +116,13 @@ class Simulator(object):
                                 for x in self.reads[self.signals[sig]]]
                 with self.graph.control_dependencies(dependencies):
                     with self.graph.name_scope(utils.function_name(op)):
-                        outputs = operators.convert(op, self.signals, self.dt,
-                                                    self.rng)
+                        outputs = Builder.build(op, self.signals, self.dt,
+                                                self.rng)
 
                 for r in op.reads:
                     self.reads[self.signals[r]] += outputs
 
-                if isinstance(op, nengo.builder.operator.SimPyFunc):
+                if isinstance(op, SimPyFunc):
                     self.node_outputs += outputs
                 if len(op.updates) > 0:
                     self.updates += [self.signals[x] for x in op.updates]

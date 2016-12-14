@@ -11,7 +11,7 @@ pytest.main([
     '--ref-simulator', 'nengo_deeplearning.Simulator',
     '-p', 'nengo.tests.options',
     '-x',
-    # '-k test_ensemble.py'
+    # '-k test_learning_rules.py'
 ])
 
 # run local tests

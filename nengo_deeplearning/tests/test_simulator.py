@@ -47,8 +47,7 @@ def test_signal_init_values():
     array = Signal([1.0, 2.0, 3.0])
 
     m = nengo.builder.Model(dt=0)
-    m.operators += [PreserveValue(five), PreserveValue(array),
-                    ElementwiseInc(zero, zero, five),
+    m.operators += [ElementwiseInc(zero, zero, five),
                     DotInc(zeroarray, one, array)]
 
     with nengo_deeplearning.Simulator(None, model=m) as sim:

@@ -36,7 +36,7 @@ setup(
     license="",
     description=description,
     long_description=long_description,
-    install_requires=["nengo", "numpy"],
+    install_requires=["nengo", "numpy", "tensorflow"],
     entry_points={"nengo.backends":
                   ["deeplearning = nengo_deeplearning:Simulator"]},
 )
