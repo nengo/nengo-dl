@@ -35,6 +35,7 @@ class Simulator(object):
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
                  progress_bar=True, tensorboard=False):
+        # TODO: allow float precision to be selected
         self.closed = None
         self.sess = None
         self.progress_bar = progress_bar

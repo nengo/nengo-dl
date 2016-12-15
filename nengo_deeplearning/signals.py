@@ -11,6 +11,9 @@ class SignalDict(dict):
 
     Takes care of view/base logic
     """
+    def __init__(self, *args, **kwargs):
+        super(SignalDict, self).__init__(*args, **kwargs)
+        self.variables = {}
 
     def __getitem__(self, key):
         try:
@@ -52,32 +55,40 @@ class SignalDict(dict):
     def __setitem__(self, key, val):
         """Assign `val` to `key`.
 
-        Unlike normal dicts, this means that you cannot add a new key
-        to a SignalDict using __setitem__. This is by design, to avoid
-        silent typos when debugging Simulator. Every key must instead
-        be explicitly initialized with SignalDict.init.
+        If modifying a Variable, this modifies the underlying state of the
+        variable.  If modifying a Tensor, no need to keep the state around
+        so we just overwrite the entry.
         """
 
-        assert key in self
-        dict.__setitem__(self, key, val)
+        if key in self.variables:
+            self.assign_view(key, val)
+        else:
+            dict.__setitem__(self, key, val)
 
     def __str__(self):
         """Pretty-print the signals and current values."""
 
-        return "\n".join(["%s %s" % (repr(k), repr(self[k]))
+        return "\n".join(["%s: %s" % (repr(k), repr(self[k]))
                           for k in self])
 
-    def init(self, signal):
-        """Set up a permanent mapping from signal -> tensor."""
-        if signal in self:
-            raise SignalError("Cannot add signal twice")
+    def create_variable(self, signal):
+        """Create a Variable (persistent state) for the given signal."""
+
+        if signal in self.variables:
+            raise SignalError("%s is already associated with a "
+                              "Variable" % signal)
 
         if signal.is_view:
-            if signal.base not in self:
-                self.init(signal.base)
+            if signal.base not in self.variables:
+                if signal.base in self:
+                    # TODO: what do we do if there's already a tensor signal?
+                    # does this happen?
+                    raise NotImplementedError
+                self.create_variable(signal.base)
 
             if DEBUG:
-                print("init view of", self[signal.base], self[signal])
+                print("init view of", self.variables[signal.base],
+                      self[signal])
 
             # get a view onto the base data
             dict.__setitem__(self, signal, self[signal])
@@ -91,6 +102,8 @@ class SignalDict(dict):
                 print("init base", x)
 
             dict.__setitem__(self, signal, x)
+
+        self.variables[signal] = self[signal]
 
         return self[signal]
 
@@ -106,8 +119,11 @@ class SignalDict(dict):
                 # advanced indexing
                 src = tf.gather(src, tf.constant(src_slice))
 
+        # get the base variable (e.g., if this is a slice)
         dst_var = self.get_variable(self[dst])
-        assert dst_var is not None
+        if dst_var is None:
+            raise BuildError("Attempted to assign to signal that is not based"
+                             " on a Variable")
 
         if DEBUG:
             print("assigning %s to %s" % (src, dst_var))
@@ -152,9 +168,9 @@ class SignalDict(dict):
 
             # we also need to update the base signal, so that future operations
             # on the base get the updated value
-            self[dst.base] = result
+            dict.__setitem__(self, dst.base, result)
 
-        self[dst] = result
+        dict.__setitem__(self, dst, result)
 
         if DEBUG:
             print("result", self[dst], dst)
@@ -163,9 +179,6 @@ class SignalDict(dict):
 
     def get_variable(self, tensor):
         """Trace a Tensor backwards to find the base Variable."""
-
-        # TODO: is this still necessary, or did it get fixed by something
-        # else during the debugging?
 
         if tensor.dtype._is_ref_dtype:
             return tensor

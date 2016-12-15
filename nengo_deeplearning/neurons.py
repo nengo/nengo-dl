@@ -11,11 +11,25 @@ def sim_neurons(op, signals, dt):
         print("sim_neurons")
         print(op)
         print("J", signals[op.J])
-        print("output", signals[op.output])
-        print("states", [str(signals[s]) for s in op.states])
+
+    # signal creation needs to be handled specifically for this op, because
+    # the output/states are marked as sets, but they're actually reads as well.
+    # (at least the states are reads; it is unclear whether there are neuron
+    # types that need to read output, or if we just need a blank dummy
+    # variable as I've assumed here)
+    assert op.output not in signals
+    signals[op.output] = tf.zeros(op.output.shape,
+                                  tf.as_dtype(op.output.dtype))
+    for s in op.states:
+        assert s not in signals
+        signals.create_variable(s)
 
     output = signals[op.output]
     states = [signals[s] for s in op.states]
+
+    if DEBUG:
+        print("output", output)
+        print("states", [str(s) for s in states])
 
     if type(op.neurons) == RectifiedLinear:
         result = (tf.nn.relu(signals[op.J]),)
@@ -38,14 +52,16 @@ def sim_neurons(op, signals, dt):
                             name=utils.sanitize_name(repr(op.neurons)))
 
     for i in range(len(states)):
-        signals.assign_view(op.states[i], result[i + 1])
+        signals[op.states[i]] = result[i + 1]
 
     # we need the control_dependencies to force the state update operators
     # to run (otherwise they look like unused nodes and get optimized out)
     with tf.control_dependencies([signals[s] for s in op.states]):
-        output = signals.assign_view(op.output, result[0])
+        # note: need the identity so that an operator is created within
+        # the dependency scope
+        signals[op.output] = tf.identity(result[0])
 
-    return output
+    return signals[op.output]
 
 
 def lif_rate(neurons, J):
@@ -66,7 +82,6 @@ def lif_spiking(neurons, J, dt, voltage, refractory):
     voltage = voltage - (J - voltage) * (tf.exp(-delta_t / neurons.tau_rc) - 1)
 
     spiked = voltage > 1
-    # spikes = tf.scatter_nd(indices, 1/dt, tf.shape(voltage))
     spikes = tf.cast(spiked, tf.float64) / dt
 
     indices = tf.cast(tf.where(spiked), tf.int32)
@@ -76,7 +91,7 @@ def lif_spiking(neurons, J, dt, voltage, refractory):
         spiked, tf.scatter_nd(indices, t_spike, tf.shape(refractory)),
         refractory)
 
-    # TODO: is it faster to do the scatter/gather, or to just do the
+    # TODO: is it faster to do the scatter/gather as above, or to just do the
     # computation on the full array?
     # t_spike = dt + neurons.tau_rc * tf.log1p(-(voltage - 1) / (J - 1))
     # refractory = tf.where(spiked, neurons.tau_ref + t_spike, refractory)

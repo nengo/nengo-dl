@@ -12,7 +12,8 @@ def sim_bcm(op, signals, dt):
     post = op.learning_rate * dt * post * (post - signals[op.theta])
     post = tf.expand_dims(post, 1)
 
-    return signals.assign_view(op.delta, post * pre)
+    signals[op.delta] = post * pre
+    return signals[op.delta]
 
 
 @Builder.register(SimOja)
@@ -22,7 +23,8 @@ def sim_oja(op, signals, dt):
     update += op.learning_rate * dt * update * tf.expand_dims(
         signals[op.pre_filtered], 0)
 
-    return signals.assign_view(op.delta, update)
+    signals[op.delta] = update
+    return signals[op.delta]
 
 
 @Builder.register(SimVoja)
@@ -41,4 +43,5 @@ def sim_voja(op, signals, dt):
 
     update = alpha * (scale * post * pre - post * signals[op.scaled_encoders])
 
-    return signals.assign_view(op.delta, update)
+    signals[op.delta] = update
+    return signals[op.delta]

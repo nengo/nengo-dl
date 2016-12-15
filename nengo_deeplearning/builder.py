@@ -70,13 +70,22 @@ class Builder(object):
         if DEBUG:
             print("===================")
             print("CONVERTING", op)
+            print("sets", op.sets)
+            print("incs", op.incs)
+            print("reads", op.reads)
+            print("updates", op.updates)
 
         # add operator signals to `signals` dict
-        for sig in op.all_signals:
-            if sig not in signals:
+        for sig in op.updates + op.reads + op.incs:
+            try:
+                # we try to fetch the signal this way so that it will
+                # succeed for views that haven't yet been explicitly
+                # added to `signals`
+                _ = signals[sig]
+            except KeyError:
                 if DEBUG:
-                    print("creating signal", sig)
-                signals.init(sig)
+                    print("creating variable", sig)
+                signals.create_variable(sig)
 
         build_func = cls.builders[type(op)]
         kwargs = {}
@@ -88,7 +97,7 @@ class Builder(object):
 
         assert output is not None
 
-        if isinstance(output, tf.Tensor):
+        if isinstance(output, (tf.Tensor, tf.Variable)):
             output = [output]
         elif isinstance(output, tuple):
             output = list(output)
