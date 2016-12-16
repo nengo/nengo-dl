@@ -1,0 +1,32 @@
+language: python
+notifications:
+  email:
+    on_success: change
+    on_failure: change
+
+env:
+  matrix:
+    - CONDA_DEPS="numpy==1.9.2"
+      PYTHON_VERSION="3.5"
+    - CONDA_DEPS="numpy"
+      PYTHON_VERSION="3.5"
+
+# Setup Miniconda
+before_install:
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+  - conda create -q -n test python=$PYTHON_VERSION pip $CONDA_DEPS
+  - source activate test
+
+# install requirements that weren't installed in CONDA_DEPS
+install:
+  - pip install -r requirements.txt
+  - pip install -r requirements-test.txt
+
+script:
+  - py.test --pyargs nengo --simulator nengo_deeplearning.Simulator --ref-simulator nengo_deeplearning.Simulator -p nengo.tests.options
+  - flake8

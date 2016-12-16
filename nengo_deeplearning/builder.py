@@ -81,7 +81,7 @@ class Builder(object):
                 # we try to fetch the signal this way so that it will
                 # succeed for views that haven't yet been explicitly
                 # added to `signals`
-                _ = signals[sig]
+                signals[sig]
             except KeyError:
                 if DEBUG:
                     print("creating variable", sig)
