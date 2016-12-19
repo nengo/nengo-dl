@@ -11,6 +11,7 @@ from nengo.utils.progress import ProgressTracker
 from nengo.utils.simulator import operator_depencency_graph
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.client.timeline import Timeline
 
 from nengo_deeplearning import signals, utils, Builder, DATA_DIR
 
@@ -133,10 +134,7 @@ class Simulator(object):
     def build_graph(self):
         with tf.Graph().as_default() as self.graph:
             self.signals = signals.SignalDict(
-                self.dtype,
-                {self.model.step: tf.Variable(0, name="step"),
-                 self.model.time: tf.Variable(0.0, dtype=self.dtype,
-                                              name="time")})
+                self.dtype, {self.model.step: tf.Variable(0, name="step")})
 
             # build all the non-update operators
             self.node_outputs = []
@@ -167,7 +165,7 @@ class Simulator(object):
 
             self.init_op = tf.global_variables_initializer()
 
-    def step(self):
+    def step(self, profile=False):
         if self.closed:
             raise SimulatorClosed("Simulator cannot run because it is closed.")
 
@@ -182,11 +180,19 @@ class Simulator(object):
                    [step_tensor, time_tensor] + self.probe_tensors +
                    self.node_outputs + self.updates}
 
-        if self.tensorboard:
+        if self.tensorboard and self.summary_op is not None:
             fetches[self.summary_op] = self.summary_op
 
+        if profile:
+            run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+            run_metadata = tf.RunMetadata()
+        else:
+            run_options = None
+            run_metadata = None
+
         try:
-            output = self.sess.run(fetches)
+            output = self.sess.run(fetches, options=run_options,
+                                   run_metadata=run_metadata)
         except tf.errors.InternalError as e:
             utils.handle_internal_error(e)
 
@@ -200,8 +206,13 @@ class Simulator(object):
             if self.n_steps % period < 1:
                 self.model.params[p].append(output[self.probe_tensors[i]])
 
-        if self.tensorboard:
+        if self.tensorboard and self.summary_op is not None:
             self.summary.add_summary(output[self.summary_op], self.n_steps)
+
+        if profile:
+            timeline = Timeline(run_metadata.step_stats)
+            with open("timeline.json", "w") as f:
+                f.write(timeline.generate_chrome_trace_format())
 
     def run(self, time_in_seconds, progress_bar=None):
         """Simulate for the given length of time.

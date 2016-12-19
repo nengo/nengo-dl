@@ -1,6 +1,7 @@
 import time
 
 import matplotlib.pyplot as plt
+import tensorflow as tf
 import nengo
 import nengo_ocl
 import numpy as np
@@ -11,6 +12,8 @@ import nengo_deeplearning as nengo_dl
 def cconv(dimensions, neurons_per_d, neuron_type):
     with nengo.Network() as net:
         net.config[nengo.Ensemble].neuron_type = neuron_type
+        net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
+        net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
 
         cconv = nengo.networks.CircularConvolution(neurons_per_d, dimensions)
 
@@ -25,6 +28,8 @@ def cconv(dimensions, neurons_per_d, neuron_type):
 def integrator(dimensions, neurons_per_d, neuron_type):
     with nengo.Network() as net:
         net.config[nengo.Ensemble].neuron_type = neuron_type
+        net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
+        net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
 
         integ = nengo.networks.Integrator(0.1, neurons_per_d * dimensions,
                                           dimensions)
@@ -38,6 +43,8 @@ def integrator(dimensions, neurons_per_d, neuron_type):
 def pes(dimensions, neurons_per_d, neuron_type):
     with nengo.Network() as net:
         net.config[nengo.Ensemble].neuron_type = neuron_type
+        net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
+        net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
 
         inp = nengo.Node([1] * dimensions)
         pre = nengo.Ensemble(neurons_per_d * dimensions, dimensions)
@@ -55,11 +62,11 @@ def pes(dimensions, neurons_per_d, neuron_type):
 
 # TODO: add a probing benchmark
 
-if __name__ == "__main__":
+def compare_backends():
     benchmarks = [pes, cconv, integrator]
     n_range = [32]
     d_range = [128, 256, 512]
-    neuron_types = [nengo.LIFRate]  # , nengo.LIF]
+    neuron_types = [nengo.RectifiedLinear]  # , nengo.LIF]
     backends = [nengo_dl, nengo, nengo_ocl]
 
     data = np.zeros((len(benchmarks), len(n_range), len(d_range),
@@ -87,8 +94,6 @@ if __name__ == "__main__":
 
     # data = np.load("benchmark_data.npz")["arr_0"]
 
-    print(data[..., 1] / data[..., 0])
-
     for i in range(len(benchmarks)):
         for j in range(len(neuron_types)):
             plt.figure()
@@ -104,3 +109,17 @@ if __name__ == "__main__":
             plt.ylabel("nengo_dl / nengo_ocl")
 
     plt.show()
+
+
+def profiling():
+    # note: in order for profiling to work, you have to manually add
+    # ...\CUDA\v8.0\extras\CUPTI\libx64 to the path
+    net = pes(128, 32, nengo.RectifiedLinear())
+    net.label = "profiling_pes"
+    with nengo_dl.Simulator(net, tensorboard=True) as sim:
+        sim.step(profile=True)
+
+
+if __name__ == "__main__":
+    # compare_backends()
+    profiling()

@@ -46,6 +46,8 @@ def sim_process(op, signals, dt, rng):
 
     if op.mode == "inc":
         signals[op.output] = signals[op.output] + result
+        # TODO: why does this += make it way slower?
+        # signals[op.output] += result
     else:
         signals[op.output] = result
     return signals[op.output]

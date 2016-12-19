@@ -9,9 +9,7 @@ from nengo_deeplearning import utils, Builder, DEBUG
 @Builder.register(TimeUpdate)
 def time_update(op, signals, dt):
     signals[op.step] = tf.assign_add(signals[op.step], 1)
-    # TODO: is there really no way to multiply an int by a float?
-    signals[op.time] = tf.assign(signals[op.time],
-                                 tf.cast(signals[op.step], signals.dtype) * dt)
+    signals[op.time] = tf.cast(signals[op.step], signals.dtype) * dt
 
     return signals[op.step], signals[op.time]
 
@@ -33,7 +31,10 @@ def reset(op, signals):
     # matrices)
     value = np.resize(value, op.dst.shape)
 
-    signals[op.dst] = tf.constant(value)
+    const = tf.constant(value)
+    const.zero_constant = np.all(value == 0)
+
+    signals[op.dst] = const
     return signals[op.dst]
 
 
@@ -65,7 +66,7 @@ def sliced_copy(op, signals):
 
     if not op.dst.is_view and op.dst_slice is Ellipsis:
         if op.inc:
-            signals[op.dst] = signals[op.dst] + src
+            signals.inc(op.dst, src)
         else:
             signals[op.dst] = src
     else:
@@ -76,7 +77,7 @@ def sliced_copy(op, signals):
         if op.dst_slice is Ellipsis:
             # update the whole dst tensor
             if op.inc:
-                signals[op.dst] = signals[op.dst] + src
+                signals.inc(op.dst, src)
             else:
                 signals[op.dst] = src
 
@@ -135,32 +136,18 @@ def scatter(dst, indices, src, inc=False):
     # expand source to target shape
     scatter_src = tf.scatter_nd(indices, src, tf.shape(dst))
 
-    if inc:
+    if getattr(dst, "zero_constant", False):
+        return scatter_src
+    elif inc:
         return dst + scatter_src
     else:
         mask = tf.scatter_nd(indices, tf.ones_like(src), tf.shape(dst))
-        return tf.where(mask, scatter_src, dst)
-
-
-@Builder.register(ElementwiseInc)
-def elementwise_inc(op, signals):
-    if DEBUG:
-        print("elementwise_inc")
-        print(op)
-        print("dst", signals[op.Y])
-        print("A", signals[op.A])
-        print("X", signals[op.X])
-
-    signals[op.Y] = signals[op.Y] + signals[op.A] * signals[op.X]
-
-    return signals[op.Y]
+        return tf.where(mask, scatter_src, dst)]
 
 
 @Builder.register(DotInc)
+@Builder.register(ElementwiseInc)
 def dot_inc(op, signals):
-    # note: this is matrix/vector (A) by vector (X) multiplication,
-    # not matrix-matrix
-
     if DEBUG:
         print("dot_inc")
         print(op)
@@ -168,11 +155,16 @@ def dot_inc(op, signals):
         print("A", signals[op.A])
         print("X", signals[op.X])
 
+    # elementwise product
     dot = tf.mul(signals[op.A], signals[op.X])
-    if op.A.ndim == 2:
+
+    # for the case of matrix-vector multiplication we do a sum along the
+    # vector axis (so we're doing a matrix-vector dot product, not an
+    # elementwise multiplication)
+    if op.A.ndim == 2 and op.X.ndim == 1:
         dot = tf.reduce_sum(dot, axis=1)
 
-    signals[op.Y] = signals[op.Y] + dot
+    signals.inc(op.Y, dot)
 
     return signals[op.Y]
 

@@ -83,6 +83,8 @@ def lif_rate(neurons, J):
 
 
 def lif_spiking(neurons, J, dt, voltage, refractory):
+    # TODO: use sparse operators when dealing with spikes
+
     refractory = refractory - dt
     delta_t = tf.clip_by_value(dt - refractory, 0, dt)
 

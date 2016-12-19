@@ -70,6 +70,14 @@ class SignalDict(dict):
         else:
             dict.__setitem__(self, key, val)
 
+    def inc(self, key, val):
+        # basically equivalent to self[key] += val, with some added logic
+        # for efficiency
+        if getattr(self[key], "zero_constant", False):
+            self[key] = val
+        else:
+            self[key] += val
+
     def __str__(self):
         """Pretty-print the signals and current values."""
 
