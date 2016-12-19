@@ -19,7 +19,8 @@ def sim_neurons(op, signals, dt):
     # variable as I've assumed here)
     assert op.output not in signals
     signals[op.output] = tf.zeros(op.output.shape,
-                                  tf.as_dtype(op.output.dtype))
+                                  utils.cast_dtype(op.output.dtype,
+                                                   signals.dtype))
     for s in op.states:
         assert s not in signals
         signals.create_variable(s)
@@ -40,15 +41,21 @@ def sim_neurons(op, signals, dt):
     elif type(op.neurons) == LIFRate:
         result = lif_rate(op.neurons, signals[op.J])
     else:
+        output_dtype = utils.cast_dtype(output.dtype, signals.dtype)
+        state_dtypes = [utils.cast_dtype(s.dtype, signals.dtype)
+                        for s in states]
+
         # generic python function
         def return_step_math(dt, J, output, *states):
             op.neurons.step_math(dt, J, output, *states)
 
-            return (output,) + states
+            return ([output.astype(output_dtype.as_numpy_dtype)] +
+                    [x.astype(d.as_numpy_dtype) for x, d in zip(states,
+                                                                state_dtypes)])
 
         result = tf.py_func(return_step_math,
                             [tf.constant(dt), signals[op.J], output] + states,
-                            [output.dtype] + [s.dtype for s in states],
+                            [output_dtype] + state_dtypes,
                             name=utils.sanitize_name(repr(op.neurons)))
 
     for i in range(len(states)):
@@ -82,7 +89,7 @@ def lif_spiking(neurons, J, dt, voltage, refractory):
     voltage = voltage - (J - voltage) * (tf.exp(-delta_t / neurons.tau_rc) - 1)
 
     spiked = voltage > 1
-    spikes = tf.cast(spiked, tf.float64) / dt
+    spikes = tf.cast(spiked, J.dtype) / dt
 
     indices = tf.cast(tf.where(spiked), tf.int32)
     t_spike = neurons.tau_ref + dt + neurons.tau_rc * tf.log1p(

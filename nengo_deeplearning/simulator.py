@@ -28,18 +28,22 @@ class Simulator(object):
          "different method required to manually step simulator (see "
          "tests/test_simulator.py:test_signal_init_values"),
 
+        ("nengo/tests/test_simulator.py:test_entry_point",
+         "overridden so we can pass custom test simulators (see "
+         "tests/test_simulator.py:test_entry_point"),
+
         ("nengo/tests/test_node.py:test_args",
          "time is passed as np.float32, not a float (see "
          "tests/test_simulator.py:test_args")
     ]
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
-                 progress_bar=True, tensorboard=False):
-        # TODO: allow float precision to be selected
+                 progress_bar=True, tensorboard=False, dtype=tf.float32):
         self.closed = None
         self.sess = None
         self.progress_bar = progress_bar
         self.tensorboard = tensorboard
+        self.dtype = dtype
 
         # build model (uses default nengo builder)
         if model is None:
@@ -129,8 +133,10 @@ class Simulator(object):
     def build_graph(self):
         with tf.Graph().as_default() as self.graph:
             self.signals = signals.SignalDict(
+                self.dtype,
                 {self.model.step: tf.Variable(0, name="step"),
-                 self.model.time: tf.Variable(0.0, name="time")})
+                 self.model.time: tf.Variable(0.0, dtype=self.dtype,
+                                              name="time")})
 
             # build all the non-update operators
             self.node_outputs = []

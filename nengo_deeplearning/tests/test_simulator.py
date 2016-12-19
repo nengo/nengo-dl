@@ -1,3 +1,5 @@
+import pkg_resources
+
 import nengo
 from nengo.builder.signal import Signal
 from nengo.builder.operator import ElementwiseInc, DotInc
@@ -63,3 +65,9 @@ def test_signal_init_values():
         assert output[1][0] == 1.0
         assert output[2][0] == 5.0
         assert np.all(output[3] == np.array([1, 2, 3]))
+
+
+def test_entry_point():
+    sims = [ep.load() for ep in
+            pkg_resources.iter_entry_points(group='nengo.backends')]
+    assert nengo_deeplearning.Simulator in sims

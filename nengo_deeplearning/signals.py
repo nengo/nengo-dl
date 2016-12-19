@@ -11,8 +11,9 @@ class SignalDict(dict):
 
     Takes care of view/base logic
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, dtype, *args, **kwargs):
         super(SignalDict, self).__init__(*args, **kwargs)
+        self.dtype = dtype
         self.variables = {}
 
     def __getitem__(self, key):
@@ -60,6 +61,10 @@ class SignalDict(dict):
         so we just overwrite the entry.
         """
 
+        if val.dtype.is_floating and val.dtype.base_dtype != self.dtype:
+            raise BuildError("Tensor detected with wrong dtype (%s), should "
+                             "be %s." % (val.dtype.base_dtype, self.dtype))
+
         if key in self.variables:
             self.assign_view(key, val)
         else:
@@ -96,7 +101,7 @@ class SignalDict(dict):
             name = utils.sanitize_name(signal.name)
 
             x = tf.Variable(signal.initial_value, name=name,
-                            dtype=signal.dtype)
+                            dtype=utils.cast_dtype(signal.dtype, self.dtype))
 
             if DEBUG:
                 print("init base", x)

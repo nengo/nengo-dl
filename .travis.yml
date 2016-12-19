@@ -5,11 +5,26 @@ notifications:
     on_failure: change
 
 env:
+  global:
+    - STATIC="false"
+
   matrix:
-    - CONDA_DEPS="numpy==1.9.2"
+    - CONDA_DEPS="numpy==1.7"
       PYTHON_VERSION="3.5"
+      PRECISION="64"
     - CONDA_DEPS="numpy"
       PYTHON_VERSION="3.5"
+      PRECISION="64"
+    - CONDA_DEPS="numpy"
+      PYTHON_VERSION="3.4"
+      PRECISION="64"
+    - CONDA_DEPS="numpy"
+      PYTHON_VERSION="3.5"
+      PRECISION="32"
+    - CONDA_DEPS="numpy"
+      PYTHON_VERSION="3.5"
+      PRECISION="64"
+      STATIC="true"
 
 # Setup Miniconda
 before_install:
@@ -28,5 +43,8 @@ install:
   - pip install -r requirements-test.txt
 
 script:
-  - py.test --pyargs nengo --simulator nengo_deeplearning.Simulator --ref-simulator nengo_deeplearning.Simulator -p nengo.tests.options
-  - flake8
+  - if [[ "$STATIC" == "false" ]]; then
+      py.test --pyargs nengo --simulator nengo_deeplearning.tests.Simulator$PRECISION --ref-simulator nengo_deeplearning.tests.Simulator$PRECISION -p nengo.tests.options
+    else
+      flake8
+    fi

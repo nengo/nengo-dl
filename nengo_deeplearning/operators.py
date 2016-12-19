@@ -11,7 +11,7 @@ def time_update(op, signals, dt):
     signals[op.step] = tf.assign_add(signals[op.step], 1)
     # TODO: is there really no way to multiply an int by a float?
     signals[op.time] = tf.assign(signals[op.time],
-                                 tf.to_float(signals[op.step]) * dt)
+                                 tf.cast(signals[op.step], signals.dtype) * dt)
 
     return signals[op.step], signals[op.time]
 
@@ -24,7 +24,9 @@ def reset(op, signals):
         print("val", op.value)
 
     # convert value to appropriate dtype
-    value = np.asarray(op.value, dtype=op.dst.dtype)
+    value = np.asarray(op.value)
+    value = value.astype(utils.cast_dtype(value.dtype,
+                                          signals.dtype).as_numpy_dtype)
 
     # convert value to appropriate shape (note: this can change the
     # number of elements, which we use to broadcast scalars up to full
@@ -199,10 +201,10 @@ def sim_py_func(op, signals):
             noop_func, inputs, [x.dtype for x in inputs],
             name=utils.function_name(op.fn))
     else:
+        output_dtype = utils.cast_dtype(op.output.dtype, signals.dtype)
         node_outputs = tf.py_func(
-            utils.align_func(op.fn, op.output),
-            inputs, tf.as_dtype(op.output.dtype),
-            name=utils.function_name(op.fn))
+            utils.align_func(op.fn, op.output.shape, output_dtype),
+            inputs, output_dtype, name=utils.function_name(op.fn))
 
         signals[op.output] = node_outputs
 

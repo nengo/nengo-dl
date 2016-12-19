@@ -37,11 +37,12 @@ def sim_process(op, signals, dt, rng):
 
         step_f = op.process.make_step(shape_in, shape_out, dt, rng)
 
+        output_dtype = utils.cast_dtype(op.output.dtype, signals.dtype)
+
         result = tf.py_func(
-            utils.align_func(step_f, op.output),
+            utils.align_func(step_f, op.output.shape, output_dtype),
             [signals[op.t]] + ([] if input is None else [input]),
-            tf.as_dtype(op.output.dtype),
-            name=utils.sanitize_name(type(op.process).__name__))
+            output_dtype, name=utils.sanitize_name(type(op.process).__name__))
 
     if op.mode == "inc":
         signals[op.output] = signals[op.output] + result

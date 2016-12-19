@@ -11,11 +11,18 @@ from nengo_deeplearning.simulator import Simulator  # noqa: F401
 from nengo_deeplearning import (  # noqa: F401
     operators, neurons, processes, learning_rules)
 
-# --- check version
-import nengo
+# check GPU support
+from tensorflow.python.client import device_lib  # noqa: E402
 
-minimum_nengo_version = (2, 3, 0)
-latest_nengo_version = (2, 3, 0)
+if not any(["gpu" in x.name for x in device_lib.list_local_devices()]):
+    warnings.warn("No GPU support detected. It is recommended that you "
+                  "install tensorflow-gpu (`pip install tensorflow-gpu`).")
+
+# check nengo version
+import nengo  # noqa: E402
+
+minimum_nengo_version = (2, 3, 1)
+latest_nengo_version = (2, 3, 1)
 if nengo.version.version_info < minimum_nengo_version:
     raise ValueError(
         "`nengo_deeplearning` does not support `nengo` version %s. Upgrade "
