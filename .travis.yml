@@ -4,12 +4,16 @@ notifications:
     on_success: change
     on_failure: change
 
+# gives us a more up-to-date glibc (required by tensorflow)
+sudo: required
+dist: trusty
+
 env:
   global:
     - STATIC="false"
 
   matrix:
-    - CONDA_DEPS="numpy==1.7"
+    - CONDA_DEPS="numpy==1.11"
       PYTHON_VERSION="3.5"
       PRECISION="64"
     - CONDA_DEPS="numpy"
@@ -42,9 +46,11 @@ install:
   - pip install -r requirements.txt
   - pip install -r requirements-test.txt
 
+# run pytest/flake8
 script:
   - if [[ "$STATIC" == "false" ]]; then
-      py.test --pyargs nengo --simulator nengo_deeplearning.tests.Simulator$PRECISION --ref-simulator nengo_deeplearning.tests.Simulator$PRECISION -p nengo.tests.options
+      python setup.py develop;
+      py.test --pyargs nengo --simulator nengo_deeplearning.tests.Simulator$PRECISION --ref-simulator nengo_deeplearning.tests.Simulator$PRECISION -p nengo.tests.options;
     else
-      flake8
+      flake8;
     fi

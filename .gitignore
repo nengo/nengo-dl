@@ -12,3 +12,4 @@ dist
 .idea
 data
 docs/mnist.pkl
+/nengo_deeplearning/tmp.py

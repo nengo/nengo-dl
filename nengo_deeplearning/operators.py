@@ -110,7 +110,7 @@ def sliced_copy(op, signals):
                                                src, inc=op.inc)
         else:
             # advanced indexing
-            indices = np.asarray(op.dst_slice)
+            indices = np.asarray(op.dst_slice, dtype=np.int32)
             signals[op.dst] = scatter(signals[op.dst], tf.constant(indices),
                                       src, inc=op.inc)
 
@@ -142,7 +142,7 @@ def scatter(dst, indices, src, inc=False):
         return dst + scatter_src
     else:
         mask = tf.scatter_nd(indices, tf.ones_like(src), tf.shape(dst))
-        return tf.where(mask, scatter_src, dst)]
+        return tf.where(mask, scatter_src, dst)
 
 
 @Builder.register(DotInc)
