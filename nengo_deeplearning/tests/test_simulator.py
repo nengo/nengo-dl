@@ -8,6 +8,11 @@ import numpy as np
 
 import nengo_deeplearning
 
+try:
+    from nengo.builder.operator import PreserveValue
+except:
+    PreserveValue = None
+
 
 def test_warn_on_opensim_del():
     with nengo.Network() as net:
@@ -52,6 +57,8 @@ def test_signal_init_values():
     m = nengo.builder.Model(dt=0)
     m.operators += [ElementwiseInc(zero, zero, five),
                     DotInc(zeroarray, one, array)]
+    if PreserveValue is not None:
+        m.operators += [PreserveValue(five), PreserveValue(array)]
 
     with nengo_deeplearning.Simulator(None, model=m) as sim:
         tensors = [sim.signals[s] for s in (zero, one, five, array)]

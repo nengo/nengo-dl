@@ -17,6 +17,11 @@ from nengo_deeplearning import signals, utils, Builder, DATA_DIR
 
 logger = logging.getLogger(__name__)
 
+try:
+    from nengo.builder.operator import PreserveValue
+except:
+    PreserveValue = None
+
 
 class Simulator(object):
     # unsupported unit tests
@@ -32,6 +37,9 @@ class Simulator(object):
         ("nengo/tests/test_simulator.py:test_entry_point",
          "overridden so we can pass custom test simulators (see "
          "tests/test_simulator.py:test_entry_point"),
+
+        ("nengo/tests/test_builder.py:test_signal_init_values",
+         "duplicate of test_simulator.py:test_signal_init_values"),
 
         ("nengo/tests/test_node.py:test_args",
          "time is passed as np.float32, not a float (see "
@@ -141,11 +149,14 @@ class Simulator(object):
             self.updates = []
             self.reads = defaultdict(list)
             for op in self.op_order:
+                if PreserveValue is not None and isinstance(op, PreserveValue):
+                    continue
+
                 # note: the only thing we need to explicitly sequence is that
                 # updates happen after reads. the other requirements (sets ->
                 # incs -> reads) are implicitly enforced because assign ops
                 # produce a new tensor that future ops will operate on
-                dependencies = [x for sig in op.updates
+                dependencies = [x for sig in op.updates if sig in self.signals
                                 for x in self.reads[self.signals[sig]]]
                 with self.graph.control_dependencies(dependencies):
                     with self.graph.name_scope(utils.function_name(op)):

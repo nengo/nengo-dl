@@ -21,7 +21,7 @@ if not any(["gpu" in x.name for x in device_lib.list_local_devices()]):
 # check nengo version
 import nengo  # noqa: E402
 
-minimum_nengo_version = (2, 3, 1)
+minimum_nengo_version = (2, 3, 0)
 latest_nengo_version = (2, 3, 1)
 if nengo.version.version_info < minimum_nengo_version:
     raise ValueError(

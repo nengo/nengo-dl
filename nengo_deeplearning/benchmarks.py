@@ -1,7 +1,6 @@
 import time
 
 import matplotlib.pyplot as plt
-import tensorflow as tf
 import nengo
 import nengo_ocl
 import numpy as np
