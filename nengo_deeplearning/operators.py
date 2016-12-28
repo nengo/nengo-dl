@@ -8,10 +8,9 @@ from nengo_deeplearning import utils, Builder, DEBUG
 
 @Builder.register(TimeUpdate)
 def time_update(op, signals, dt):
-    signals[op.step] = tf.assign_add(signals[op.step], 1)
+    # note: the step signal is handled as part of the state in the
+    # simulation loop
     signals[op.time] = tf.cast(signals[op.step], signals.dtype) * dt
-
-    return signals[op.step], signals[op.time]
 
 
 @Builder.register(Reset)
@@ -35,13 +34,11 @@ def reset(op, signals):
     const.zero_constant = np.all(value == 0)
 
     signals[op.dst] = const
-    return signals[op.dst]
 
 
 @Builder.register(Copy)
 def copy(op, signals):
     signals[op.dst] = signals[op.src]
-    return signals[op.dst]
 
 
 @Builder.register(SlicedCopy)
@@ -123,8 +120,6 @@ def sliced_copy(op, signals):
                     signals[op.dst.base], tf.constant(indices), src,
                     inc=op.inc)
 
-    return signals[op.dst]
-
 
 def scatter(dst, indices, src, inc=False):
     """Mimics the interface of tf.scatter_add/update, but for Tensors
@@ -166,8 +161,6 @@ def dot_inc(op, signals):
 
     signals.inc(op.Y, dot)
 
-    return signals[op.Y]
-
 
 @Builder.register(SimPyFunc)
 def sim_py_func(op, signals):
@@ -187,19 +180,19 @@ def sim_py_func(op, signals):
     if op.output is None:
         def noop_func(*args):
             op.fn(*args)
-            return args
+            return args[0]
 
-        node_outputs = tf.py_func(
-            noop_func, inputs, [x.dtype for x in inputs],
+        node_output = tf.py_func(
+            noop_func, inputs, inputs[0].dtype,
             name=utils.function_name(op.fn))
+        node_output.set_shape(())
     else:
         output_dtype = utils.cast_dtype(op.output.dtype, signals.dtype)
-        node_outputs = tf.py_func(
+        node_output = tf.py_func(
             utils.align_func(op.fn, op.output.shape, output_dtype),
             inputs, output_dtype, name=utils.function_name(op.fn))
+        node_output.set_shape(op.output.shape)
 
-        signals[op.output] = node_outputs
+        signals[op.output] = node_output
 
-    node_outputs = ([node_outputs] if isinstance(node_outputs, tf.Tensor) else
-                    node_outputs)
-    return node_outputs
+    return node_output

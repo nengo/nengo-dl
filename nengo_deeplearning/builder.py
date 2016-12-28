@@ -75,14 +75,8 @@ class Builder(object):
             print("reads", op.reads)
             print("updates", op.updates)
 
-        # add operator signals to `signals` dict
-        for sig in op.updates + op.reads + op.incs:
-            try:
-                # we try to fetch the signal this way so that it will
-                # succeed for views that haven't yet been explicitly
-                # added to `signals`
-                signals[sig]
-            except KeyError:
+        for sig in op.reads + op.incs:
+            if sig not in signals:
                 if DEBUG:
                     print("creating variable", sig)
                 signals.create_variable(sig)
@@ -94,8 +88,6 @@ class Builder(object):
         if build_func._pass_rng:
             kwargs["rng"] = rng
         output = build_func(op, signals, **kwargs)
-
-        assert output is not None
 
         if isinstance(output, (tf.Tensor, tf.Variable)):
             output = [output]

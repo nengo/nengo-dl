@@ -5,15 +5,6 @@ import numpy as np
 import tensorflow as tf
 
 
-def handle_internal_error(e):
-    if e.op.type == "PyFunc":
-        raise SimulationError(
-            "Function '%s' caused an error "
-            "(see error log above)" % e.op.name) from None
-
-    raise e
-
-
 def sanitize_name(name):
     """Remove illegal tensorflow name characters from string."""
 
@@ -56,7 +47,10 @@ def print_op(input, message):
         print(message, str(x))
         return x
 
-    return tf.py_func(print_func, [input], input.dtype)
+    output = tf.py_func(print_func, [input], input.dtype)
+    output.set_shape(input.get_shape())
+
+    return output
 
 
 def cast_dtype(dtype, target):

@@ -12,18 +12,13 @@ def sim_neurons(op, signals, dt):
         print(op)
         print("J", signals[op.J])
 
-    # signal creation needs to be handled specifically for this op, because
-    # the output/states are marked as sets, but they're actually reads as well.
-    # (at least the states are reads; it is unclear whether there are neuron
-    # types that need to read output, or if we just need a blank dummy
-    # variable as I've assumed here)
+    # it is unclear whether there are neuron types that need to read output
+    # (i.e., treat it as state), or if we just need a blank dummy variable
+    # (as I've assumed here)
     assert op.output not in signals
     signals[op.output] = tf.zeros(op.output.shape,
                                   utils.cast_dtype(op.output.dtype,
                                                    signals.dtype))
-    for s in op.states:
-        assert s not in signals
-        signals.create_variable(s)
 
     output = signals[op.output]
     states = [signals[s] for s in op.states]
@@ -57,18 +52,16 @@ def sim_neurons(op, signals, dt):
                             [tf.constant(dt), signals[op.J], output] + states,
                             [output_dtype] + state_dtypes,
                             name=utils.sanitize_name(repr(op.neurons)))
+        for i, s in enumerate([op.output] + op.states):
+            result[i].set_shape(s.shape)
 
-    for i in range(len(states)):
-        signals[op.states[i]] = result[i + 1]
+    for i, s in enumerate([op.output] + op.states):
+        signals[s] = result[i]
 
-    # we need the control_dependencies to force the state update operators
-    # to run (otherwise they look like unused nodes and get optimized out)
-    with tf.control_dependencies([signals[s] for s in op.states]):
-        # note: need the identity so that an operator is created within
-        # the dependency scope
-        signals[op.output] = tf.identity(result[0])
+    if DEBUG:
+        print("output states", [str(x) for x in result[1:]])
 
-    return signals[op.output]
+    return result[1:]
 
 
 def lif_rate(neurons, J):

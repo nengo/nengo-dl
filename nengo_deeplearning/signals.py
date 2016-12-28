@@ -11,6 +11,7 @@ class SignalDict(dict):
 
     Takes care of view/base logic
     """
+
     def __init__(self, dtype, *args, **kwargs):
         super(SignalDict, self).__init__(*args, **kwargs)
         self.dtype = dtype
@@ -65,10 +66,16 @@ class SignalDict(dict):
             raise BuildError("Tensor detected with wrong dtype (%s), should "
                              "be %s." % (val.dtype.base_dtype, self.dtype))
 
-        if key in self.variables:
+        if key in self.variables or (
+                    hasattr(key, "base") and key.base in self.variables):
             self.assign_view(key, val)
         else:
             dict.__setitem__(self, key, val)
+
+    def __contains__(self, key):
+        # differs from standard in that it returns True for views
+        return dict.__contains__(self, key) or (
+            hasattr(key, "base") and dict.__contains__(self, key.base))
 
     def inc(self, key, val):
         # basically equivalent to self[key] += val, with some added logic
@@ -93,18 +100,9 @@ class SignalDict(dict):
 
         if signal.is_view:
             if signal.base not in self.variables:
-                if signal.base in self:
-                    # TODO: what do we do if there's already a tensor signal?
-                    # does this happen?
-                    raise NotImplementedError
+                assert signal.base not in self
+
                 self.create_variable(signal.base)
-
-            if DEBUG:
-                print("init view of", self.variables[signal.base],
-                      self[signal])
-
-            # get a view onto the base data
-            dict.__setitem__(self, signal, self[signal])
         else:
             name = utils.sanitize_name(signal.name)
 
@@ -116,14 +114,10 @@ class SignalDict(dict):
 
             dict.__setitem__(self, signal, x)
 
-        self.variables[signal] = self[signal]
-
-        return self[signal]
+            self.variables[signal] = x
 
     def assign_view(self, dst, src, src_slice=Ellipsis, dst_slice=Ellipsis,
                     inc=False):
-        # TODO: optimize out slice(None,None,None)
-
         if isinstance(src, Signal):
             src = self[src]
             if isinstance(src_slice, slice):
@@ -200,10 +194,10 @@ class SignalDict(dict):
         for input in set(tensor.op.inputs):
             base = self.get_variable(input)
             if base is not None:
-                if my_base is not None:
+                if my_base is None:
+                    my_base = base
+                elif base is not my_base:
                     raise BuildError(
                         "Multiple base variables found for tensor")
-                else:
-                    my_base = base
 
         return my_base

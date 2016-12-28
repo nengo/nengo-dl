@@ -43,14 +43,17 @@ def sim_process(op, signals, dt, rng):
             utils.align_func(step_f, op.output.shape, output_dtype),
             [signals[op.t]] + ([] if input is None else [input]),
             output_dtype, name=utils.sanitize_name(type(op.process).__name__))
+        result.set_shape(op.output.shape)
 
     if op.mode == "inc":
-        signals[op.output] = signals[op.output] + result
-        # TODO: why does this += make it way slower?
-        # signals[op.output] += result
-    else:
+        signals.inc(op.output, result)
+    elif op.mode == "set":
         signals[op.output] = result
-    return signals[op.output]
+    # note: if op.mode=="update" we return the new variable (which will be used
+    # in the next iteration of the while loop), but we don't update `signals`
+    # (so it doesn't effect calculations on this time step)
+
+    return result
 
 
 def linear_filter(input, output, num, den, dt):

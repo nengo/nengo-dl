@@ -48,11 +48,18 @@ def test_args():
 
 def test_signal_init_values():
     """Tests that initial values are not overwritten."""
+
     zero = Signal([0.0])
     one = Signal([1.0])
     five = Signal([5.0])
     zeroarray = Signal([[0.0], [0.0], [0.0]])
     array = Signal([1.0, 2.0, 3.0])
+
+    class DummyProbe():
+        def __init__(self, target):
+            self.target = target
+            self.sample_every = None
+            self.size_in = target.size
 
     m = nengo.builder.Model(dt=0)
     m.operators += [ElementwiseInc(zero, zero, five),
@@ -60,18 +67,18 @@ def test_signal_init_values():
     if PreserveValue is not None:
         m.operators += [PreserveValue(five), PreserveValue(array)]
 
+    probes = [DummyProbe(zero), DummyProbe(one), DummyProbe(five),
+              DummyProbe(array)]
+    m.probes += probes
+    for p in probes:
+        m.sig[p]['in'] = p.target
+
     with nengo_deeplearning.Simulator(None, model=m) as sim:
-        tensors = [sim.signals[s] for s in (zero, one, five, array)]
-        output = sim.sess.run(tensors)
-        assert output[0][0] == 0.0
-        assert output[1][0] == 1.0
-        assert output[2][0] == 5.0
-        assert np.all(output[3] == np.array([1, 2, 3]))
-        output = sim.sess.run(tensors)
-        assert output[0][0] == 0.0
-        assert output[1][0] == 1.0
-        assert output[2][0] == 5.0
-        assert np.all(output[3] == np.array([1, 2, 3]))
+        sim.run_steps(3)
+        assert np.allclose(sim.data[probes[0]], 0)
+        assert np.allclose(sim.data[probes[1]], 1)
+        assert np.allclose(sim.data[probes[2]], 5)
+        assert np.allclose(sim.data[probes[3]], [1, 2, 3])
 
 
 def test_entry_point():

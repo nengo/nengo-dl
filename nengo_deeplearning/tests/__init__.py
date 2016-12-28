@@ -8,9 +8,6 @@ class Simulator32(Simulator):
         ("nengo/tests/test_synapses.py:test_alpha",
          "tolerances too small for 32 bit precision"),
 
-        ("nengo/tests/test_synapses.py:test_linearfilter",
-         "tolerances too small for 32 bit precision"),
-
         ("nengo/tests/test_synapses.py:test_triangle",
          "tolerances too small for 32 bit precision"),
     ]
