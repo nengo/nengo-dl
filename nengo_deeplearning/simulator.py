@@ -1,4 +1,4 @@
-from collections import Mapping
+from collections import Mapping, OrderedDict
 import datetime
 import logging
 import os
@@ -15,8 +15,9 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.client.timeline import Timeline
 
-from nengo_deeplearning import (signals, utils, Builder, default_device,
-                                DATA_DIR)
+from nengo_deeplearning import (signals, utils, graph_optimizer, Builder,
+                                default_device,
+                                DEBUG, DATA_DIR)
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class Simulator(object):
         self.tensorboard = tensorboard
         self.dtype = dtype
         self.max_run_steps = max_run_steps
-        self.device = default_device if device is None else device
+        self.device = device
 
         # build model (uses default nengo builder)
         if model is None:
@@ -72,9 +73,14 @@ class Simulator(object):
         if network is not None:
             self.model.build(network, progress_bar=self.progress_bar)
 
-        # figure out order of operations based on signal dependencies
-        self.op_order = toposort(operator_depencency_graph(
-            self.model.operators))
+        # create conglomerated base arrays and recompute signals as references
+        # into those arrays
+        self.base_arrays, self.sig_map = graph_optimizer.create_op_signals(
+            self.model.operators, float_type=dtype.as_numpy_dtype)
+
+        # figure out order of operators based on signal dependencies
+        self.plan = graph_optimizer.greedy_planner(
+            self.model.operators, self.sig_map)
 
         self.data = ProbeDict(self.model.params)
 
@@ -97,14 +103,17 @@ class Simulator(object):
 
         # (re)build graph
         self.graph = tf.Graph()
-        self.signals = signals.SignalDict(self.dtype)
+
+        # TODO: does using variables force it to go on and off CPU
+        # constantly? check op device placement to verify
         with self.graph.as_default(), tf.device(self.device):
             state_signals = []
-            for op in self.op_order:
-                state_signals += op.updates
-
-                if isinstance(op, SimNeurons):
-                    state_signals += op.states
+            # for op_type, ops in self.plan:
+            #     for op in group[1]:
+            #         state_signals += op.updates
+            #
+            #         if isinstance(op, SimNeurons):
+            #             state_signals += op.states
 
             self.build_loop(state_signals)
 
@@ -117,7 +126,11 @@ class Simulator(object):
                 dtype=self.dtype.as_numpy_dtype)
 
         # start session
-        self.sess = tf.Session(graph=self.graph)
+        config = tf.ConfigProto(
+            allow_soft_placement=True,
+            # log_device_placement=True
+        )
+        self.sess = tf.Session(graph=self.graph, config=config)
         self.closed = False
 
         # initialize variables
@@ -131,17 +144,25 @@ class Simulator(object):
         # build operators
         side_effects = []
         stateful = []
-        for op in self.op_order:
-            if PreserveValue is not None and isinstance(op, PreserveValue):
-                continue
 
-            with self.graph.name_scope(utils.function_name(op)):
-                outputs = Builder.build(op, self.signals, self.dt,
+        # manually build TimeUpdate. we don't include this in the plan,
+        # because loop variables (`step`) are (semi?) pinned to the CPU, which
+        # causes the whole variable to get pinned to the CPU if we include
+        # `step` as part of the normal planning process.
+        self.signals.time = tf.cast(self.signals.step,
+                                    self.signals.dtype) * self.dt
+
+        for op_type, ops in self.plan:
+            with self.graph.name_scope(utils.sanitize_name(op_type.__name__)):
+                outputs = Builder.build(op_type, ops, self.signals, self.dt,
                                         self.rng)
 
-            if len(op.updates) > 0 or isinstance(op, SimNeurons):
-                stateful += outputs
-            elif outputs is not None:
+            if len(ops[0].updates) > 0 or op_type == SimNeurons:
+                # stateful += outputs
+                # TODO: once we remove all the state returns from the other
+                # builders we can just remove this
+                pass
+            elif outputs is not None and len(outputs) > 0:
                 side_effects += [x for x in outputs
                                  if x.op.type == "PyFunc"]
 
@@ -154,24 +175,58 @@ class Simulator(object):
         probe_tensors = [p + 0 if p.dtype._is_ref_dtype else p
                          for p in probe_tensors]
 
+        if DEBUG:
+            print("build_step complete")
+            print("probe_tensors", [str(x) for x in probe_tensors])
+            print("stateful", [str(x) for x in stateful])
+            print("side_effects", [str(x) for x in side_effects])
+
         return probe_tensors, stateful, side_effects
 
     def build_loop(self, state_sigs):
         def loop_condition(step, start, stop, *_):
             return step < stop
 
-        def loop_body(step, start, stop, probe_arrays, state):
+        def loop_body(step, start, stop, probe_arrays):
             # note: this function is only actually called once (to determine
             # the graph structure of the loop body), it isn't called each
             # iteration
+
+            # create base variables
+            with tf.variable_scope("base_vars"):
+                base_vars = OrderedDict(
+                    [(k, tf.get_variable(
+                        "%s_%s" % (k[0].__name__,
+                                   "_".join(str(x) for x in k[1])),
+                        initializer=tf.constant_initializer(v), dtype=v.dtype,
+                        shape=v.shape))
+                     for k, v in self.base_arrays.items()])
+            # base_vars = OrderedDict(
+            #     [(k, tf.Variable(
+            #         initial_value=v, dtype=v.dtype,
+            #         name="%s_%s" % (k[0].__name__,
+            #                         "_".join(str(x) for x in k[1]))))
+            #      for k, v in self.base_arrays.items()])
+
+            # TODO: this is just for testing
+            # for i,b in enumerate(bases):
+            #     tf.assign(base_vars[list(base_vars.keys())[i]], b)
+
+            if DEBUG:
+                print("created variables")
+                print([(k, v.name) for k, v in base_vars.items()])
+
+            self.signals = signals.SignalDict(self.sig_map, base_vars,
+                                              self.dtype)
 
             # note: nengo step counter is incremented at the beginning of the
             # timestep. we don't want to increment it yet, because we need
             # to figure out the side effects first, so we feed in step+1
             # here and then increment it later
-            self.signals[self.model.step] = step + 1
-            for i, sig in enumerate(state_sigs):
-                self.signals[sig] = state[i]
+            # self.signals[self.model.step] = tf.reshape(step + 1, (1,))
+            # for i, sig in enumerate(state_sigs):
+            #     self.signals[sig] = state[i]
+            self.signals.step = step + 1
 
             # build the operators for a single step
             probe_tensors, state, side_effects = self.build_step()
@@ -195,8 +250,11 @@ class Simulator(object):
                         default=lambda: probe_arrays[i])
 
             # need to make sure that any operators that could have side
-            # effects run each timestep, so we tie them to the step increment
-            with self.graph.control_dependencies(side_effects):
+            # effects run each timestep, so we tie them to the step increment.
+            # we also make sure that anything affecting the base variables
+            # is executed each timestep.
+            with self.graph.control_dependencies(
+                            side_effects + list(base_vars.values())):
                 step += 1
 
             # set up tensorboard output
@@ -221,7 +279,7 @@ class Simulator(object):
             #
             # summary_op = tf.summary.merge_all()
 
-            return step, start, stop, probe_arrays, state
+            return step, start, stop, probe_arrays
 
         self.step_var = tf.placeholder(tf.int32)
         self.start_var = tf.placeholder(tf.int32)
@@ -252,18 +310,22 @@ class Simulator(object):
                 clear_after_read=True)
             for i, p in enumerate(self.model.probes)]
 
-        # TODO: fill in state values from previous run_steps call
-        state = [tf.constant(np.asarray(u.initial_value,
-                                        dtype=self.dtype.as_numpy_dtype))
-                 for u in state_sigs]
+        # note: this state isn't actually used in the loop, since state is
+        # already persistent as a result of being stored in Variables
+        # TODO: do we still need to include state in the loop_vars? I think
+        # we do to ensure that those ops are executed, but not positive
+        # state = [tf.constant(np.asarray(u.initial_value,
+        #                                 dtype=self.dtype.as_numpy_dtype))
+        #          for u in state_sigs]
 
-        self.end_step, _, _, probe_arrays, _ = tf.while_loop(
+        loop_output = tf.while_loop(
             loop_condition, loop_body,
             loop_vars=(self.step_var, self.start_var, self.stop_var,
-                       probe_arrays, state),
-            parallel_iterations=1)
+                       probe_arrays),
+            parallel_iterations=1)  # TODO: more parallel iterations
 
-        self.probe_arrays = [p.pack() for p in probe_arrays]
+        self.end_step = loop_output[0]
+        self.probe_arrays = [p.pack() for p in loop_output[3]]
 
         if self.tensorboard:
             directory = "%s/%s" % (DATA_DIR, self.model.toplevel.label)

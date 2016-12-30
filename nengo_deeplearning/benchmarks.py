@@ -91,7 +91,8 @@ def compare_backends():
                         print(backend)
                         if backend == nengo_dl:
                             kwargs = {"max_run_steps": 5000,
-                                      "device": "/cpu:0"}
+                                      # "device": "/cpu:0"
+                                      }
                         else:
                             kwargs = {}
                         try:
@@ -139,7 +140,7 @@ def profiling():
     # note: in order for profiling to work, you have to manually add
     # ...\CUDA\v8.0\extras\CUPTI\libx64 to the path
     net = cconv(128, 32, nengo.RectifiedLinear())
-    with nengo_dl.Simulator(net, tensorboard=False, max_run_steps=1, device="/cpu:0") as sim:
+    with nengo_dl.Simulator(net, tensorboard=False, max_run_steps=1) as sim:
         sim.run_steps(1, profile=True)
 
 

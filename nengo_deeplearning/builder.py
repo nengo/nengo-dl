@@ -41,7 +41,7 @@ class Builder(object):
     builders = {}
 
     @classmethod
-    def build(cls, op, signals, dt, rng):
+    def build(cls, op_type, ops, signals, dt, rng):
         """Build ``op`` into ``model``.
 
         This method looks up the appropriate build function for ``obj`` and
@@ -62,37 +62,40 @@ class Builder(object):
             Random number generator
         """
 
-        if type(op) not in cls.builders:
+        if op_type not in cls.builders:
             print(cls.builders)
             raise nengo.exceptions.BuildError(
-                "Cannot build operators of type %r" % type(op))
+                "Cannot build operators of type %r" % op_type)
 
         if DEBUG:
             print("===================")
-            print("CONVERTING", op)
-            print("sets", op.sets)
-            print("incs", op.incs)
-            print("reads", op.reads)
-            print("updates", op.updates)
+            print("CONVERTING", ops)
+            print("sets", [op.sets for op in ops])
+            print("incs", [op.incs for op in ops])
+            print("reads", [op.reads for op in ops])
+            print("updates", [op.updates for op in ops])
 
-        for sig in op.reads + op.incs:
-            if sig not in signals:
-                if DEBUG:
-                    print("creating variable", sig)
-                signals.create_variable(sig)
+        # for op in ops:
+        #     for sig in op.reads + op.incs:
+        #         if sig not in signals:
+        #             if DEBUG:
+        #                 print("creating variable", sig)
+        #             signals.create_variable(sig)
 
-        build_func = cls.builders[type(op)]
+        build_func = cls.builders[op_type]
         kwargs = {}
         if build_func._pass_dt:
             kwargs["dt"] = dt
         if build_func._pass_rng:
             kwargs["rng"] = rng
-        output = build_func(op, signals, **kwargs)
+
+        output = build_func(ops, signals, **kwargs)
 
         if isinstance(output, (tf.Tensor, tf.Variable)):
             output = [output]
         elif isinstance(output, tuple):
             output = list(output)
+
         return output
 
     @classmethod
@@ -113,7 +116,6 @@ class Builder(object):
                               "Overwriting." % nengo_op)
 
             param_names = inspect.signature(build_fn).parameters
-
             build_fn._pass_dt = "dt" in param_names
             build_fn._pass_rng = "rng" in param_names
 

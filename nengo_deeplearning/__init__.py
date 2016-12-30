@@ -3,6 +3,7 @@ import warnings
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 DEBUG = False
+# TODO: change the debug system to use a proper logger
 
 # check GPU support
 from tensorflow.python.client import device_lib  # noqa: E402

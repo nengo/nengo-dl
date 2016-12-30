@@ -28,6 +28,9 @@ def function_name(func, sanitize=True):
 
 
 def align_func(func, output_shape, output_dtype):
+    if isinstance(output_dtype, tf.DType):
+        output_dtype = output_dtype.as_numpy_dtype
+
     # make sure the output of function is of the shape and dtype we expect
     def aligned_func(*args):
         tmp = func(*args)
@@ -35,7 +38,7 @@ def align_func(func, output_shape, output_dtype):
             raise SimulationError(
                 "Function %r returned None" % function_name(
                     func, sanitize=False))
-        tmp = np.asarray(tmp, dtype=output_dtype.as_numpy_dtype)
+        tmp = np.asarray(tmp, dtype=output_dtype)
         tmp = tmp.reshape(output_shape)
         return tmp
 
