@@ -9,7 +9,7 @@ import nengo_deeplearning as nengo_dl
 
 
 def cconv(dimensions, neurons_per_d, neuron_type):
-    with nengo.Network() as net:
+    with nengo.Network(label="cconv") as net:
         net.config[nengo.Ensemble].neuron_type = neuron_type
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
         net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
@@ -21,11 +21,13 @@ def cconv(dimensions, neurons_per_d, neuron_type):
         nengo.Connection(inp_a, cconv.A)
         nengo.Connection(inp_b, cconv.B)
 
+        nengo.Probe(cconv.output)
+
     return net
 
 
 def integrator(dimensions, neurons_per_d, neuron_type):
-    with nengo.Network() as net:
+    with nengo.Network(label="integrator") as net:
         net.config[nengo.Ensemble].neuron_type = neuron_type
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
         net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
@@ -36,11 +38,13 @@ def integrator(dimensions, neurons_per_d, neuron_type):
         inp = nengo.Node([0] * dimensions)
         nengo.Connection(inp, integ.input)
 
+        nengo.Probe(integ.ensemble)
+
     return net
 
 
 def pes(dimensions, neurons_per_d, neuron_type):
-    with nengo.Network() as net:
+    with nengo.Network(label="pes") as net:
         net.config[nengo.Ensemble].neuron_type = neuron_type
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
         net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
@@ -56,49 +60,54 @@ def pes(dimensions, neurons_per_d, neuron_type):
         conn = nengo.Connection(pre, post, learning_rule_type=nengo.PES())
         nengo.Connection(err, conn.learning_rule)
 
+        nengo.Probe(post)
+
     return net
 
 
-# TODO: add a probing benchmark
-
 def compare_backends():
-    benchmarks = [pes, cconv, integrator]
+    benchmarks = [pes, integrator]#, cconv]
     n_range = [32]
-    d_range = [128, 256, 512]
+    d_range = [64, 128, 256]
     neuron_types = [nengo.RectifiedLinear]  # , nengo.LIF]
     backends = [nengo_dl, nengo, nengo_ocl]
 
-    # data = np.zeros((len(benchmarks), len(n_range), len(d_range),
-    #                  len(neuron_types), len(backends)))
-    #
-    # for i, bench in enumerate(benchmarks):
-    #     for j, neurons in enumerate(n_range):
-    #         for k, dimensions in enumerate(d_range):
-    #             for l, neuron_type in enumerate(neuron_types):
-    #                 print("-" * 30)
-    #                 print(bench, neurons, dimensions, neuron_type)
-    #
-    #                 net = bench(dimensions, neurons, neuron_type())
-    #                 model = nengo.builder.Model()
-    #                 model.build(net)
-    #
-    #                 for m, backend in enumerate(backends):
-    #                     print(backend)
-    #
-    #                     try:
-    #                         with backend.Simulator(None, model=model) as sim:
-    #                             start = time.time()
-    #                             sim.run(5.0)
-    #                             data[i, j, k, l, m] = time.time() - start
-    #                     except Exception:
-    #                         print(backend, "crashed")
-    #                         data[i, j, k, l, m] = np.nan
-    #
-    # np.savez("benchmark_data.npz", data)
+    data = np.zeros((len(benchmarks), len(n_range), len(d_range),
+                     len(neuron_types), len(backends)))
 
-    data = np.load("benchmark_data.npz")["arr_0"]
+    for i, bench in enumerate(benchmarks):
+        for j, neurons in enumerate(n_range):
+            for k, dimensions in enumerate(d_range):
+                for l, neuron_type in enumerate(neuron_types):
+                    print("-" * 30)
+                    print(bench, neurons, dimensions, neuron_type)
 
-    bench_names = ["pes", "cconv", "integrator"]
+                    net = bench(dimensions, neurons, neuron_type())
+                    model = nengo.builder.Model()
+                    model.build(net)
+
+                    for m, backend in enumerate(backends):
+                        print(backend)
+                        if backend == nengo_dl:
+                            kwargs = {"max_run_steps": 5000}
+                        else:
+                            kwargs = {}
+                        try:
+                            with backend.Simulator(None, model=model,
+                                                   **kwargs) as sim:
+                                start = time.time()
+                                sim.run(5.0)
+                                data[i, j, k, l, m] = time.time() - start
+                        except Exception as e:
+                            print(backend, "CRASHED")
+                            print(e)
+                            data[i, j, k, l, m] = np.nan
+
+    np.savez("benchmark_data.npz", data)
+
+    # data = np.load("benchmark_data.npz")["arr_0"]
+
+    bench_names = ["pes", "integrator", "cconv"]
     neuron_names = ["relu"]
     for i in range(len(benchmarks)):
         for j in range(len(neuron_types)):
@@ -127,12 +136,11 @@ def compare_backends():
 def profiling():
     # note: in order for profiling to work, you have to manually add
     # ...\CUDA\v8.0\extras\CUPTI\libx64 to the path
-    net = pes(128, 32, nengo.RectifiedLinear())
-    net.label = "profiling_pes"
-    with nengo_dl.Simulator(net, tensorboard=True) as sim:
-        sim.step(profile=True)
+    net = cconv(128, 32, nengo.RectifiedLinear())
+    with nengo_dl.Simulator(net, tensorboard=False, max_run_steps=1) as sim:
+        sim.run_steps(1, profile=True)
 
 
 if __name__ == "__main__":
-    compare_backends()
-    # profiling()
+    # compare_backends()
+    profiling()

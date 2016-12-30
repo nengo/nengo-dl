@@ -1,6 +1,8 @@
 from collections import Mapping
+import datetime
 import logging
 import os
+import time
 import warnings
 
 from nengo.builder import Model
@@ -47,12 +49,14 @@ class Simulator(object):
     ]
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
-                 progress_bar=True, tensorboard=False, dtype=tf.float32):
+                 progress_bar=True, tensorboard=False, dtype=tf.float32,
+                 max_run_steps=None):
         self.closed = None
         self.sess = None
         self.progress_bar = progress_bar
         self.tensorboard = tensorboard
         self.dtype = dtype
+        self.max_run_steps = max_run_steps
 
         # build model (uses default nengo builder)
         if model is None:
@@ -112,7 +116,6 @@ class Simulator(object):
 
         # start session
         self.sess = tf.Session(graph=self.graph)
-        print("Session initialized")
         self.closed = False
 
         # initialize variables
@@ -242,7 +245,9 @@ class Simulator(object):
                 tf.TensorArray(
                     utils.cast_dtype(self.model.sig[p]["in"].dtype,
                                      tf.float32),
-                    size=0, dynamic_size=True,  # TODO: let user specify
+                    size=(0 if self.max_run_steps is None else
+                          self.max_run_steps),
+                    dynamic_size=self.max_run_steps is None,
                     clear_after_read=True)
                 for i, p in enumerate(self.model.probes)]
 
@@ -336,7 +341,27 @@ class Simulator(object):
                     self.model.label, time_in_seconds, steps)
         self.run_steps(steps)
 
-    def run_steps(self, n_steps):
+    def run_steps(self, n_steps, profile=False):
+        if self.closed:
+            raise SimulatorClosed("Simulator cannot run because it is closed.")
+
+        print("Starting simulation")
+        start = time.time()
+
+        if self.max_run_steps is None:
+            self._run_steps(n_steps, profile=profile)
+        else:
+            # break the run up into `max_run_steps` chunks
+            remaining_steps = n_steps
+            while remaining_steps > 0:
+                self._run_steps(min(self.max_run_steps, remaining_steps),
+                                profile=profile)
+                remaining_steps -= self.max_run_steps
+
+        print("Simulation finished in %s" %
+              datetime.timedelta(seconds=int(time.time() - start)))
+
+    def _run_steps(self, n_steps, profile=False):
         """Simulate for the given number of ``dt`` steps.
 
         Parameters
@@ -345,8 +370,12 @@ class Simulator(object):
             Number of steps to run the simulation for.
         """
 
-        if self.closed:
-            raise SimulatorClosed("Simulator cannot run because it is closed.")
+        if profile:
+            run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+            run_metadata = tf.RunMetadata()
+        else:
+            run_options = None
+            run_metadata = None
 
         # execute the loop
         try:
@@ -354,7 +383,8 @@ class Simulator(object):
                 [self.end_step, self.probe_arrays],
                 feed_dict={self.step_var: self.n_steps,
                            self.start_var: self.n_steps,
-                           self.stop_var: self.n_steps + n_steps})
+                           self.stop_var: self.n_steps + n_steps},
+                options=run_options, run_metadata=run_metadata)
         except tf.errors.InternalError as e:
             if e.op.type == "PyFunc":
                 raise SimulationError(
@@ -371,9 +401,12 @@ class Simulator(object):
         # update probe data
         for i, p in enumerate(self.model.probes):
             self.model.params[p] = np.concatenate(
-                (self.model.params[p],
-                 probe_data[i]),  # [:n_steps // self.probe_periods[i]]),
-                axis=0)
+                (self.model.params[p], probe_data[i]), axis=0)
+
+        if profile:
+            timeline = Timeline(run_metadata.step_stats)
+            with open("timeline.json", "w") as f:
+                f.write(timeline.generate_chrome_trace_format())
 
     def close(self):
         if not self.closed:
