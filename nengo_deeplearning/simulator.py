@@ -15,7 +15,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.client.timeline import Timeline
 
-from nengo_deeplearning import signals, utils, Builder, DATA_DIR
+from nengo_deeplearning import (signals, utils, Builder, default_device,
+                                DATA_DIR)
 
 logger = logging.getLogger(__name__)
 
@@ -50,13 +51,14 @@ class Simulator(object):
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
                  progress_bar=True, tensorboard=False, dtype=tf.float32,
-                 max_run_steps=None):
+                 max_run_steps=None, device=None):
         self.closed = None
         self.sess = None
         self.progress_bar = progress_bar
         self.tensorboard = tensorboard
         self.dtype = dtype
         self.max_run_steps = max_run_steps
+        self.device = default_device if device is None else device
 
         # build model (uses default nengo builder)
         if model is None:
@@ -96,7 +98,7 @@ class Simulator(object):
         # (re)build graph
         self.graph = tf.Graph()
         self.signals = signals.SignalDict(self.dtype)
-        with self.graph.as_default():
+        with self.graph.as_default(), tf.device(self.device):
             state_signals = []
             for op in self.op_order:
                 state_signals += op.updates
@@ -221,48 +223,47 @@ class Simulator(object):
 
             return step, start, stop, probe_arrays, state
 
-        with self.graph.as_default():
-            self.step_var = tf.placeholder(tf.int32)
-            self.start_var = tf.placeholder(tf.int32)
-            self.stop_var = tf.placeholder(tf.int32)
+        self.step_var = tf.placeholder(tf.int32)
+        self.start_var = tf.placeholder(tf.int32)
+        self.stop_var = tf.placeholder(tf.int32)
 
-            # note: probe_arrays need to be float32 because in the tensorflow
-            # case logic they end up comparing the tensorarray dtype to the
-            # tensorarray.flow dtype (which is always float32). could submit
-            # a patch to tensorflow if this is a significant issue, but
-            # it's probably a good idea to have the probe arrays be float32
-            # anyway
-            # for future reference, the patch would be in
-            # tensorflow/python/ops/control_flow_ops.py:2956
-            # def _correct_empty(v):
-            #     ...
-            #     else:
-            #         dtype = (v.flow.dtype if
-            #                  isinstance(v, tensor_array_ops.TensorArray)
-            #                  else v.dtype)
-            #         return array_ops.constant(dtype.as_numpy_dtype())
-            probe_arrays = [
-                tf.TensorArray(
-                    utils.cast_dtype(self.model.sig[p]["in"].dtype,
-                                     tf.float32),
-                    size=(0 if self.max_run_steps is None else
-                          self.max_run_steps),
-                    dynamic_size=self.max_run_steps is None,
-                    clear_after_read=True)
-                for i, p in enumerate(self.model.probes)]
+        # note: probe_arrays need to be float32 because in the tensorflow
+        # case logic they end up comparing the tensorarray dtype to the
+        # tensorarray.flow dtype (which is always float32). could submit
+        # a patch to tensorflow if this is a significant issue, but
+        # it's probably a good idea to have the probe arrays be float32
+        # anyway
+        # for future reference, the patch would be in
+        # tensorflow/python/ops/control_flow_ops.py:2956
+        # def _correct_empty(v):
+        #     ...
+        #     else:
+        #         dtype = (v.flow.dtype if
+        #                  isinstance(v, tensor_array_ops.TensorArray)
+        #                  else v.dtype)
+        #         return array_ops.constant(dtype.as_numpy_dtype())
+        probe_arrays = [
+            tf.TensorArray(
+                utils.cast_dtype(self.model.sig[p]["in"].dtype,
+                                 tf.float32),
+                size=(0 if self.max_run_steps is None else
+                      self.max_run_steps),
+                dynamic_size=self.max_run_steps is None,
+                clear_after_read=True)
+            for i, p in enumerate(self.model.probes)]
 
-            # TODO: fill in state values from previous run_steps call
-            state = [tf.constant(np.asarray(u.initial_value,
-                                            dtype=self.dtype.as_numpy_dtype))
-                     for u in state_sigs]
+        # TODO: fill in state values from previous run_steps call
+        state = [tf.constant(np.asarray(u.initial_value,
+                                        dtype=self.dtype.as_numpy_dtype))
+                 for u in state_sigs]
 
-            self.end_step, _, _, probe_arrays, _ = tf.while_loop(
-                loop_condition, loop_body,
-                loop_vars=(self.step_var, self.start_var, self.stop_var,
-                           probe_arrays, state),
-                parallel_iterations=1)
+        self.end_step, _, _, probe_arrays, _ = tf.while_loop(
+            loop_condition, loop_body,
+            loop_vars=(self.step_var, self.start_var, self.stop_var,
+                       probe_arrays, state),
+            parallel_iterations=1)
 
-            self.probe_arrays = [p.pack() for p in probe_arrays]
+        self.probe_arrays = [p.pack() for p in probe_arrays]
 
         if self.tensorboard:
             directory = "%s/%s" % (DATA_DIR, self.model.toplevel.label)
@@ -275,55 +276,6 @@ class Simulator(object):
             self.summary = tf.summary.FileWriter(
                 "%s/run_%d" % (directory, run_number),
                 graph=self.graph)
-
-    # def step(self, profile=False):
-    #     if self.closed:
-    #         raise SimulatorClosed("Simulator cannot run because it is closed.")
-    #
-    #     # we need to explicitly fetch the node_outputs and updates (even though
-    #     # we don't use those values) to make sure those ops run
-    #     # note: using a fetches dict has the effect of removing any duplicates
-    #     # (so e.g. we don't double-fetch something if it is in both
-    #     # probe_tensors and updates)
-    #     step_tensor = self.signals[self.model.step]
-    #     time_tensor = self.signals[self.model.time]
-    #     fetches = {x: x for x in
-    #                [step_tensor, time_tensor] + self.probe_tensors +
-    #                self.node_outputs + self.updates}
-    #
-    #     if self.tensorboard and self.summary_op is not None:
-    #         fetches[self.summary_op] = self.summary_op
-    #
-    #     if profile:
-    #         run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-    #         run_metadata = tf.RunMetadata()
-    #     else:
-    #         run_options = None
-    #         run_metadata = None
-    #
-    #     try:
-    #         output = self.sess.run(fetches, options=run_options,
-    #                                run_metadata=run_metadata)
-    #     except tf.errors.InternalError as e:
-    #         utils.handle_internal_error(e)
-    #
-    #     self.n_steps = output[step_tensor]
-    #     self.time = output[time_tensor]
-    #
-    #     for i, p in enumerate(self.model.probes):
-    #         period = (1 if p.sample_every is None else
-    #                   p.sample_every / self.dt)
-    #
-    #         if self.n_steps % period < 1:
-    #             self.model.params[p].append(output[self.probe_tensors[i]])
-    #
-    #     if self.tensorboard and self.summary_op is not None:
-    #         self.summary.add_summary(output[self.summary_op], self.n_steps)
-    #
-    #     if profile:
-    #         timeline = Timeline(run_metadata.step_stats)
-    #         with open("timeline.json", "w") as f:
-    #             f.write(timeline.generate_chrome_trace_format())
 
     def step(self):
         self.run_steps(1)
