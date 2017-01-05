@@ -1,7 +1,7 @@
 import inspect
 import warnings
 
-import nengo
+from nengo.exceptions import BuildError
 import tensorflow as tf
 
 from nengo_deeplearning import DEBUG
@@ -39,6 +39,28 @@ class Builder(object):
     """
 
     builders = {}
+    op_builds = {}
+
+    @classmethod
+    def pre_build(cls, op_type, ops, signals, dt, rng):
+        if DEBUG:
+            print("===================")
+            print("PRE BUILD", ops)
+            print("sets", [op.sets for op in ops])
+            print("incs", [op.incs for op in ops])
+            print("reads", [op.reads for op in ops])
+            print("updates", [op.updates for op in ops])
+
+        if op_type not in cls.builders:
+            raise BuildError("Cannot build operators of type %r" % op_type)
+
+        BuildClass = cls.builders[op_type]
+
+        kwargs = {}
+        if BuildClass.pass_rng:
+            kwargs["rng"] = rng
+
+        cls.op_builds[ops] = BuildClass(ops, signals, **kwargs)
 
     @classmethod
     def build(cls, op_type, ops, signals, dt, rng):
@@ -62,34 +84,15 @@ class Builder(object):
             Random number generator
         """
 
-        if op_type not in cls.builders:
-            print(cls.builders)
-            raise nengo.exceptions.BuildError(
-                "Cannot build operators of type %r" % op_type)
-
         if DEBUG:
             print("===================")
-            print("CONVERTING", ops)
-            print("sets", [op.sets for op in ops])
-            print("incs", [op.incs for op in ops])
-            print("reads", [op.reads for op in ops])
-            print("updates", [op.updates for op in ops])
+            print("BUILD", ops)
 
-        # for op in ops:
-        #     for sig in op.reads + op.incs:
-        #         if sig not in signals:
-        #             if DEBUG:
-        #                 print("creating variable", sig)
-        #             signals.create_variable(sig)
+        if ops not in cls.op_builds:
+            raise BuildError("Operators build has not been initialized "
+                             "(missed pre-build step)")
 
-        build_func = cls.builders[op_type]
-        kwargs = {}
-        if build_func._pass_dt:
-            kwargs["dt"] = dt
-        if build_func._pass_rng:
-            kwargs["rng"] = rng
-
-        output = build_func(ops, signals, **kwargs)
+        output = cls.op_builds[ops].build_step(signals)
 
         if isinstance(output, (tf.Tensor, tf.Variable)):
             output = [output]
@@ -106,20 +109,34 @@ class Builder(object):
 
         Parameters
         ----------
-        nengo_class : nengo.builder.operators.Operator
+        nengo_op : nengo.builder.operators.Operator
             The operator associated with the build function being decorated.
         """
 
-        def register_builder(build_fn):
+        def register_builder(build_class):
+            # if not issubclass(build_class, OpBuilder):
+            #     warnings.warn("Build classes should inherit from OpBuilder")
+
             if nengo_op in cls.builders:
                 warnings.warn("Operator '%s' already has a builder. "
                               "Overwriting." % nengo_op)
 
-            param_names = inspect.signature(build_fn).parameters
-            build_fn._pass_dt = "dt" in param_names
-            build_fn._pass_rng = "rng" in param_names
-
-            cls.builders[nengo_op] = build_fn
-            return build_fn
+            cls.builders[nengo_op] = build_class
+            return build_class
 
         return register_builder
+
+
+class OpBuilder(object):
+    pass_rng = False
+
+    def __init__(self, ops, signals):
+        # the constructor should set up any computations that are fixed for
+        # this op (i.e., things that do not need to be recomputed each
+        # timestep
+        pass
+
+    def build_step(self, signals):
+        # here we build whatever computations need to be executed in each
+        # simulation timestep
+        raise BuildError("OpBuilders must implement a build_step function")

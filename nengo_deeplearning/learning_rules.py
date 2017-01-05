@@ -2,92 +2,97 @@ from nengo.builder.learning_rules import SimBCM, SimOja, SimVoja
 import numpy as np
 import tensorflow as tf
 
-from nengo_deeplearning import Builder, utils, DEBUG
+from nengo_deeplearning import utils, DEBUG
+from nengo_deeplearning.builder import Builder, OpBuilder
 
 
 @Builder.register(SimBCM)
-def sim_bcm(ops, signals, dt):
-    pre = signals[[op.pre_filtered for op in ops]]
-    pre = tf.expand_dims(pre, 0)
+class SimBCMBuilder(OpBuilder):
+    def __init__(self, ops, signals):
+        self.pre_data = signals.combine([op.pre_filtered for op in ops])
+        self.post_data = signals.combine([op.post_filtered for op in ops])
+        self.theta_data = signals.combine([op.theta for op in ops])
 
-    post = signals[[op.post_filtered for op in ops]]
+        self.learning_rate = tf.constant(
+            [op.learning_rate for op in ops
+             for _ in range(op.post_filtered.shape[0])],
+            dtype=signals.dtype)
 
-    learning_rate = tf.constant(
-        [op.learning_rate for op in ops
-         for _ in range(op.post_filtered.shape[0])],
-        dtype=signals.dtype)
+        self.output_data = signals.combine([op.delta for op in ops])
 
-    theta = signals[[op.theta for op in ops]]
+    def build_step(self, signals):
+        pre = signals.gather(self.pre_data)
+        pre = tf.expand_dims(pre, 0)
+        post = signals.gather(self.post_data)
+        theta = signals.gather(self.theta_data)
 
-    post = learning_rate * dt * post * (post - theta)
-    post = tf.expand_dims(post, 1)
+        post = self.learning_rate * signals.dt * post * (post - theta)
+        post = tf.expand_dims(post, 1)
 
-    signals[[op.delta for op in ops]] = post * pre
-    # return signals[op.delta]
+        signals.scatter(self.output_data, post * pre)
 
 
 @Builder.register(SimOja)
-def sim_oja(ops, signals, dt):
-    pre = signals[[op.pre_filtered for op in ops]]
+class SimOjaBuilder(OpBuilder):
+    def __init__(self, ops, signals):
+        self.pre_data = signals.combine([op.pre_filtered for op in ops])
+        self.post_data = signals.combine([op.post_filtered for op in ops])
+        self.weights_data = signals.combine([op.weights for op in ops])
+        self.output_data = signals.combine([op.delta for op in ops])
 
-    post = signals[[op.post_filtered for op in ops]]
+        self.learning_rate = tf.constant(
+            [op.learning_rate for op in ops
+             for _ in range(op.post_filtered.shape[0])],
+            dtype=signals.dtype)
 
-    learning_rate = tf.constant(
-        [op.learning_rate for op in ops
-         for _ in range(op.post_filtered.shape[0])],
-        dtype=signals.dtype)
+        self.beta = tf.constant(
+            [[op.beta] for op in ops for _ in
+             range(op.post_filtered.shape[0])],
+            dtype=signals.dtype)
 
-    beta = tf.constant(
-        [[op.beta] for op in ops for _ in range(op.post_filtered.shape[0])],
-        dtype=signals.dtype)
+    def build_step(self, signals):
+        pre = signals.gather(self.pre_data)
+        post = signals.gather(self.post_data)
+        weights = signals.gather(self.weights_data)
 
-    weights = signals[[op.weights for op in ops]]
+        update = self.learning_rate * signals.dt * post ** 2
+        update = -self.beta * weights * tf.expand_dims(update, 1)
+        update += (tf.expand_dims(self.learning_rate, 1) * signals.dt *
+                   update * tf.expand_dims(pre, 0))
 
-    update = learning_rate * dt * post ** 2
-    update = -beta * weights * tf.expand_dims(update, 1)
-    update += (tf.expand_dims(learning_rate, 1) * dt * update *
-               tf.expand_dims(pre, 0))
-
-    signals[[op.delta for op in ops]] = update
-    # return signals[op.delta]
+        signals.scatter(self.output_data, update)
 
 
 @Builder.register(SimVoja)
-def sim_voja(ops, signals, dt):
-    # if DEBUG:
-    #     print("sim_voja")
-    #     print(op)
-    #     print("pre_decoded", signals[op.pre_decoded])
-    #     print("post_filtered", signals[op.post_filtered])
-    #     print("scaled_encoders", signals[op.scaled_encoders])
+class SimVojaBuilder(OpBuilder):
+    def __init__(self, ops, signals):
+        self.pre_data = signals.combine([op.pre_decoded for op in ops])
+        self.post_data = signals.combine([op.post_filtered for op in ops])
+        self.learning_data = signals.combine(
+            [op.learning_signal for op in ops
+             for _ in range(op.post_filtered.shape[0])])
+        self.encoder_data = signals.combine([op.scaled_encoders for op in ops])
+        self.output_data = signals.combine([op.delta for op in ops])
 
-    pre = signals[[op.pre_decoded for op in ops]]
-    post = signals[[op.post_filtered for op in ops]]
+        self.scale = tf.constant(
+            np.concatenate([op.scale[:, None] for op in ops], axis=0),
+            dtype=signals.dtype)
 
-    scale = tf.constant(
-        np.concatenate([op.scale[:, None] for op in ops], axis=0),
-        dtype=signals.dtype)
+        self.learning_rate = tf.constant(
+            [op.learning_rate for op in ops
+             for _ in range(op.post_filtered.shape[0])], dtype=signals.dtype)
 
-    learning_rate = tf.constant(
-        [op.learning_rate for op in ops
-         for _ in range(op.post_filtered.shape[0])], dtype=signals.dtype)
+    def build_step(self, signals):
+        pre = signals.gather(self.pre_data)
+        post = signals.gather(self.post_data)
+        learning_signal = signals.gather(self.learning_data)
+        scaled_encoders = signals.gather(self.encoder_data)
 
-    learning_signal = signals[[op.learning_signal for op in ops
-                               for _ in range(op.post_filtered.shape[0])]]
+        alpha = tf.expand_dims(
+            self.learning_rate * signals.dt * learning_signal, 1)
+        post = tf.expand_dims(post, 1)
+        pre = tf.expand_dims(pre, 0)
 
-    scaled_encoders = signals[[op.scaled_encoders for op in ops]]
+        update = alpha * (self.scale * post * pre - post * scaled_encoders)
 
-    alpha = tf.expand_dims(learning_rate * dt * learning_signal, 1)
-    post = tf.expand_dims(post, 1)
-    pre = tf.expand_dims(pre, 0)
-
-    # alpha = utils.print_op(alpha, "alpha")
-    # pre = utils.print_op(pre, "pre")
-    # post = utils.print_op(post, "post")
-
-    update = alpha * (scale * post * pre - post * scaled_encoders)
-
-    # update = utils.print_op(update, "update")
-
-    signals[[op.delta for op in ops]] = update
-    # return signals[op.delta]
+        signals.scatter(self.output_data, update)
