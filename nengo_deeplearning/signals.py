@@ -136,7 +136,6 @@ class SignalDict(dict):
         self.bases = bases
         self.dtype = dtype
         self.sig_map = sig_map
-        self.reads_by_base = defaultdict(list)
 
         # create this constant once here so we don't end up creating a new
         # constant in each operator

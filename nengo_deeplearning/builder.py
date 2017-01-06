@@ -42,7 +42,7 @@ class Builder(object):
     op_builds = {}
 
     @classmethod
-    def pre_build(cls, op_type, ops, signals, dt, rng):
+    def pre_build(cls, op_type, ops, signals, rng):
         if DEBUG:
             print("===================")
             print("PRE BUILD", ops)
@@ -63,7 +63,7 @@ class Builder(object):
         cls.op_builds[ops] = BuildClass(ops, signals, **kwargs)
 
     @classmethod
-    def build(cls, op_type, ops, signals, dt, rng):
+    def build(cls, ops, signals):
         """Build ``op`` into ``model``.
 
         This method looks up the appropriate build function for ``obj`` and

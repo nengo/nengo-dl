@@ -66,7 +66,7 @@ def pes(dimensions, neurons_per_d, neuron_type):
 
 
 def compare_backends():
-    benchmarks = [cconv]
+    benchmarks = [pes, cconv]
     n_range = [32]
     d_range = [64, 128, 256]
     neuron_types = [nengo.RectifiedLinear]  # , nengo.LIF]
@@ -139,7 +139,7 @@ def profiling():
     # note: in order for profiling to work, you have to manually add
     # ...\CUDA\v8.0\extras\CUPTI\libx64 to the path
     net = pes(128, 32, nengo.RectifiedLinear())
-    with nengo_dl.Simulator(net, tensorboard=False, max_run_steps=3,
+    with nengo_dl.Simulator(net, tensorboard=True, max_run_steps=3,
                             device="/gpu:0") as sim:
         sim.run_steps(3, profile=True)
 
