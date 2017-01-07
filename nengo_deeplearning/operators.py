@@ -84,83 +84,105 @@ class DotIncBuilder(OpBuilder):
             print("A", [op.A for op in ops])
             print("X", [op.X for op in ops])
 
-        # group all the A's and X's
-        A = [signals.sig_map[op.A] for op in ops]
-        X = [signals.sig_map[op.X] for op in ops]
+        n_ops = len(ops)
 
-        if DEBUG:
-            print("A tensors", [str(a) for a in A])
-            print("X tensors", [str(x) for x in X])
+        # group all the A's and X's
+        # A = [signals.sig_map[op.A] for op in ops]
+        # X = [signals.sig_map[op.X] for op in ops]
+        A_data = signals.combine([op.A for op in ops])
+        X_data = signals.combine([op.X for op in ops])
+
+        # if DEBUG:
+        #     print("A tensors", [str(a) for a in A])
+        #     print("X tensors", [str(x) for x in X])
 
         self.Y_data = signals.combine([op.Y for op in ops])
 
-        if A[0].ndim == 2 and X[0].ndim == 2:
+        if A_data.ndim == 2 and X_data.ndim == 2:
             # vector-vector outer product
-            assert all([a.shape[1] == 1 for a in A])
-            assert all([x.shape[0] == 1 for x in X])
+            assert all([op.A.shape[1] == 1 for op in ops])
+            assert all([op.X.shape[0] == 1 for op in ops])
 
-            for i in range(len(ops)):
-                A[i] = A[i].broadcast(1, X[i].shape[1])
-                X[i] = X[i].broadcast(0, A[i].shape[0])
+            # for i in range(len(ops)):
+            #     A[i] = A[i].broadcast(1, X[i].shape[1])
+            #     X[i] = X[i].broadcast(0, A[i].shape[0])
+            #
+            # self.A_data = signals.combine(A)
+            # self.X_data = signals.combine(X)
 
-            self.A_data = signals.combine(A)
-            self.X_data = signals.combine(X)
+            self.A_data = A_data.reshape((n_ops, -1, 1))
+            self.X_data = X_data.reshape((n_ops, 1, -1))
+
             self.reduce = False
-        elif A[0].ndim == 2 and X[0].ndim == 1:
+        elif A_data.ndim == 2 and X_data.ndim == 1:
             # matrix-vector inner product
 
-            for i in range(len(ops)):
-                X[i] = X[i].broadcast(0, A[i].shape[0])
+            # for i in range(len(ops)):
+            #     X[i] = X[i].broadcast(0, A[i].shape[0])
+            #
+            # self.A_data = signals.combine(A)
+            # self.X_data = signals.combine(X)
 
-            self.A_data = signals.combine(A)
-            self.X_data = signals.combine(X)
+            self.A_data = A_data.reshape((n_ops, -1, A_data.shape[1]))
+            self.X_data = X_data.reshape((n_ops, 1, -1))
+
             self.reduce = True
         else:
             # in all other cases we're just doing elementwise multiplication
             # add empty dimensions for broadcasting
 
-            # TODO: another possibility would be to be more conservative with
-            # our merging (insuring that shapes match in all dimensions),
-            # and then use normal broadcasting to do the multiplication. not
-            # sure if that would be faster or not
+            # TODO: change it so that only evenly sized arrays can be merged
+            # for dotinc, then we can use normal tensorflow broadcasting
+            # instead of creating huge index arrays
 
-            for i in range(len(ops)):
-                # if the first axes don't match it's because we're
-                # multiplying a vector by a scalar (interpreted as a length 1
-                # vector), so we repeat the scalar
-                if A[i].shape[0] < X[i].shape[0]:
-                    # A[i] = A[i].broadcast(1, X[i].shape[0] // A[i].shape[0])
-                    assert A[i].shape[0] == 1
-                    A[i] = A[i].tile(X[i].shape[0] // A[i].shape[0])
-                elif X[i].shape[0] < A[i].shape[0]:
-                    # X[i] = X[i].broadcast(1, A[i].shape[0] // X[i].shape[0])
-                    assert X[i].shape[0] == 1
-                    X[i] = X[i].tile(A[i].shape[0] // X[i].shape[0])
+            # for i in range(len(ops)):
+            #     # if the first axes don't match it's because we're
+            #     # multiplying a vector by a scalar (interpreted as a length 1
+            #     # vector), so we repeat the scalar
+            #     if A[i].shape[0] < X[i].shape[0]:
+            #         # A[i] = A[i].broadcast(1, X[i].shape[0] // A[i].shape[0])
+            #         assert A[i].shape[0] == 1
+            #         A[i] = A[i].tile(X[i].shape[0] // A[i].shape[0])
+            #     elif X[i].shape[0] < A[i].shape[0]:
+            #         # X[i] = X[i].broadcast(1, A[i].shape[0] // X[i].shape[0])
+            #         assert X[i].shape[0] == 1
+            #         X[i] = X[i].tile(A[i].shape[0] // X[i].shape[0])
+            #
+            #     # add empty broadcasting dimensions for any axes > 0
+            #     while A[i].ndim < X[i].ndim:
+            #         A[i] = A[i].broadcast(1, X[i].shape[A[i].ndim])
+            #     while X[i].ndim < A[i].ndim:
+            #         X[i] = X[i].broadcast(1, A[i].shape[X[i].ndim])
+            #
+            #     assert A[i].shape == X[i].shape
+            #
+            # self.A_data = signals.combine(A)
+            # self.X_data = signals.combine(X)
 
-                # add empty broadcasting dimensions for any axes > 0
-                while A[i].ndim < X[i].ndim:
-                    A[i] = A[i].broadcast(1, X[i].shape[A[i].ndim])
-                while X[i].ndim < A[i].ndim:
-                    X[i] = X[i].broadcast(1, A[i].shape[X[i].ndim])
+            self.A_data = A_data.reshape((n_ops, -1) + A_data.shape[1:])
+            self.X_data = X_data.reshape((n_ops, -1) + X_data.shape[1:])
 
-                assert A[i].shape == X[i].shape
+            # add empty dimensions for broadcasting
+            while self.A_data.ndim < self.X_data.ndim:
+                self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
+            while self.X_data.ndim < self.A_data.ndim:
+                self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
 
-            self.A_data = signals.combine(A)
-            self.X_data = signals.combine(X)
             self.reduce = False
 
     def build_step(self, signals):
         A = signals.gather(self.A_data)
         X = signals.gather(self.X_data)
 
-        if self.reduce:
-            X = tf.reshape(X, A.get_shape())
+        # if self.reduce:
+        #     X = tf.reshape(X, A.get_shape())
 
         dot = tf.mul(A, X)
 
         if self.reduce:
             dot = tf.reduce_sum(dot, axis=-1)
-            dot = tf.reshape(dot, (-1,))
+
+        dot = tf.reshape(dot, self.Y_data.shape)
 
         signals.scatter(self.Y_data, dot, mode="inc")
 

@@ -97,9 +97,12 @@ class TensorSignal(object):
             label=self.label + ".broadcast(%d, %d)" % (axis, length))
 
     def reshape(self, shape):
-        # note: we could support this in tensorflow if we want, but it hasn't
-        # been used so far
-        assert not self.in_tf
+        # replace -1 with inferred dimension
+        assert shape.count(-1) <= 1
+        n_elem = np.prod(self.shape)
+        n_shape = np.prod([x for x in shape if x != -1])
+        assert n_elem % n_shape == 0
+        shape = tuple([x if x != -1 else n_elem // n_shape for x in shape])
 
         if np.prod(shape) != np.prod(self.shape):
             raise BuildError("Number of elements don't match in reshape")
@@ -229,6 +232,8 @@ class SignalDict(dict):
             return dst + scatter_src
 
     def gather(self, src):
+        # TODO: optimize gathers into full reads or stridedslices if possible
+
         result = tf.gather(self.bases[src.key], src.indices)
 
         if src.shape is not None:

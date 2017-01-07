@@ -1,6 +1,7 @@
 from collections import defaultdict, OrderedDict
 
-from nengo.builder.operator import TimeUpdate, SimPyFunc, SlicedCopy
+from nengo.builder.operator import (TimeUpdate, SimPyFunc, SlicedCopy, DotInc,
+                                    ElementwiseInc)
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 from nengo.exceptions import BuildError
@@ -186,6 +187,10 @@ def greedy_planner(operators, sig_map):
 
     return merged_ops
 
+# TODO: add a thing that tries to rearrange arrays to minimize the number
+# of gathers needed
+
+
 # TODO: add a "noop" planner for testing/debugging
 
 def mergeable(op, chosen_ops, sig_map):
@@ -256,5 +261,14 @@ def mergeable(op, chosen_ops, sig_map):
         # processes must also have the same mode
         if op.mode != c.mode:
             return False
+    elif isinstance(op, (DotInc, ElementwiseInc)):
+        # for these operations we also enforce that the first dimensions
+        # match (we know all the other dimensions match due to checks above).
+        # this allows us to stack all the arguments into continuous array
+        # array blocks, allowing for more efficient multiplication (mainly
+        # because it allows us to take advantage of broadcasting)
+        for s0, s1 in zip(op.all_signals, c.all_signals):
+            if sig_map[s0].shape[0] != sig_map[s1].shape[0]:
+                return False
 
     return True

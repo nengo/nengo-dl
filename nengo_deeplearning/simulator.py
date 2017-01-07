@@ -51,14 +51,15 @@ class Simulator(object):
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
                  progress_bar=True, tensorboard=False, dtype=tf.float32,
-                 max_run_steps=10, device=None):
+                 step_blocks=None, device=None, unroll_simulation=False):
         self.closed = None
         self.sess = None
         self.progress_bar = progress_bar
         self.tensorboard = tensorboard
         self.dtype = dtype
-        self.max_run_steps = max_run_steps
+        self.step_blocks = step_blocks
         self.device = device
+        self.unroll_simulation = unroll_simulation
 
         # build model (uses default nengo builder)
         if model is None:
@@ -108,7 +109,7 @@ class Simulator(object):
         for k in self.base_arrays:
             self.base_arrays[k][...] = self.base_arrays_init[k]
 
-        print("Constructing Tensorflow graph")
+        print("Constructing graph")
         start = time.time()
         with self.graph.as_default(), tf.device(self.device):
             for v in self.sig_map.values():
@@ -140,8 +141,10 @@ class Simulator(object):
                     Builder.pre_build(op_type, ops, self.signals, self.rng)
 
             # build stage
-            # self.build_loop()
-            self.build_loop_unrolled()
+            if self.unroll_simulation:
+                self.build_loop_unrolled()
+            else:
+                self.build_loop()
 
             init_op = tf.global_variables_initializer()
         print("Construction completed in %s " %
@@ -210,9 +213,9 @@ class Simulator(object):
             tf.TensorArray(
                 utils.cast_dtype(self.model.sig[p]["in"].dtype,
                                  tf.float32),
-                size=(0 if self.max_run_steps is None else
-                      self.max_run_steps),
-                dynamic_size=self.max_run_steps is None,
+                size=(0 if self.step_blocks is None else
+                      self.step_blocks),
+                dynamic_size=self.step_blocks is None,
                 clear_after_read=True)
             for i, p in enumerate(self.model.probes)]
 
@@ -225,7 +228,7 @@ class Simulator(object):
         self.start_var = tf.placeholder(tf.int32)
         self.stop_var = tf.placeholder(tf.int32)
 
-        for n in range(self.max_run_steps):
+        for n in range(self.step_blocks):
             self.signals.step = step + 1
 
             # build the operators for a single step
@@ -235,12 +238,15 @@ class Simulator(object):
             # probe_tensors = [utils.print_op(p, "probe_tensor_%d" % i) if i == 0
             #                  else p for i, p in enumerate(probe_tensors)]
 
+            # TODO: there's something weird going on here where probe_tensors
+            # are being read before they are computed (maybe just for nodes?)
+
             # with self.graph.control_dependencies(side_effects + probe_tensors):
             # copy probe data to array
             for i, p in enumerate(probe_tensors):
                 period = (
-                1 if self.model.probes[i].sample_every is None else
-                self.model.probes[i].sample_every / self.dt)
+                    1 if self.model.probes[i].sample_every is None else
+                    self.model.probes[i].sample_every / self.dt)
 
                 if p.dtype != tf.float32:
                     p = tf.cast(p, tf.float32)
@@ -368,10 +374,8 @@ class Simulator(object):
             tf.TensorArray(
                 utils.cast_dtype(self.model.sig[p]["in"].dtype,
                                  tf.float32),
-                size=(0 if self.max_run_steps is None else
-                      self.max_run_steps),
-                dynamic_size=self.max_run_steps is None,
-                clear_after_read=True)
+                size=(0 if self.step_blocks is None else self.step_blocks),
+                dynamic_size=self.step_blocks is None, clear_after_read=True)
             for i, p in enumerate(self.model.probes)]
 
         base_tensors = [tf.constant(b) for b in self.base_arrays.values()]
@@ -419,23 +423,22 @@ class Simulator(object):
         if self.closed:
             raise SimulatorClosed("Simulator cannot run because it is closed.")
 
-        if n_steps % self.max_run_steps != 0:
+        if self.step_blocks is not None and n_steps % self.step_blocks != 0:
             raise SimulationError(
                 "Number of steps (%d) must be an even multiple of "
-                "`max_run_steps` (%d) " % (n_steps, self.max_run_steps))
+                "`step_blocks` (%d) " % (n_steps, self.step_blocks))
 
         print("Simulation started")
         start = time.time()
 
-        if self.max_run_steps is None:
+        if self.step_blocks is None:
             self._run_steps(n_steps, profile=profile)
         else:
-            # break the run up into `max_run_steps` chunks
+            # break the run up into `step_blocks` sized chunks
             remaining_steps = n_steps
             while remaining_steps > 0:
-                self._run_steps(min(self.max_run_steps, remaining_steps),
-                                profile=profile)
-                remaining_steps -= self.max_run_steps
+                self._run_steps(self.step_blocks, profile=profile)
+                remaining_steps -= self.step_blocks
 
         print("Simulation finished in %s" %
               datetime.timedelta(seconds=int(time.time() - start)))
