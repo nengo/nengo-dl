@@ -51,7 +51,7 @@ class Simulator(object):
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
                  progress_bar=True, tensorboard=False, dtype=tf.float32,
-                 step_blocks=None, device=None, unroll_simulation=False):
+                 step_blocks=50, device=None, unroll_simulation=True):
         self.closed = None
         self.sess = None
         self.progress_bar = progress_bar
@@ -73,16 +73,17 @@ class Simulator(object):
         if network is not None:
             self.model.build(network, progress_bar=self.progress_bar)
 
-        # create conglomerated base arrays and recompute signals as references
-        # into those arrays
-        self.base_arrays, self.sig_map = graph_optimizer.create_op_signals(
-            self.model.operators, float_type=dtype.as_numpy_dtype)
+        # group mergeable operators
+        plan = graph_optimizer.greedy_planner(self.model.operators)
 
-        self.base_arrays_init = copy.deepcopy(self.base_arrays)
+        # order signals/operators to promote contiguous reads
+        signals, self.plan = graph_optimizer.order_signals(plan, n_passes=10)
+        # signals, self.plan = graph_optimizer.noop_order_signals(plan)
 
-        # figure out order of operators based on signal dependencies
-        self.plan = graph_optimizer.greedy_planner(
-            self.model.operators, self.sig_map)
+        # create base arrays and map Signals to TensorSignals (views on those
+        # base arrays)
+        self.base_arrays_init, self.sig_map = graph_optimizer.create_signals(
+            signals, self.plan, float_type=dtype.as_numpy_dtype)
 
         self.data = ProbeDict(self.model.params)
 
@@ -106,33 +107,24 @@ class Simulator(object):
         # (re)build graph
         self.graph = tf.Graph()
 
-        for k in self.base_arrays:
-            self.base_arrays[k][...] = self.base_arrays_init[k]
-
         print("Constructing graph")
         start = time.time()
         with self.graph.as_default(), tf.device(self.device):
-            for v in self.sig_map.values():
-                v.to_tf()
+            # clear probe data
+            for p in self.model.probes:
+                self.sig_map[self.model.sig[p]["in"]].load_indices()
+                self.model.params[p] = []
+
+            # create signal dict
+            self.signals = signals.SignalDict(self.sig_map, self.dtype,
+                                              self.dt)
 
             # create base variables
-            with tf.variable_scope("base_vars"):
-                base_vars = OrderedDict(
-                    [(k, tf.get_variable(
-                        "%s_%s" % (k[0].__name__,
-                                   "_".join(str(x) for x in k[1])),
-                        initializer=tf.constant_initializer(v),
-                        dtype=v.dtype, shape=v.shape))
-                     for k, v in self.base_arrays.items()])
-            # base_vars = OrderedDict(
-            #     [(k, b) for k, b in zip(self.base_arrays.keys(), bases)])
-
+            base_vars = self.get_base_variables()
             if DEBUG:
                 print("created variables")
                 print([(k, v.name) for k, v in base_vars.items()])
-
-            self.signals = signals.SignalDict(self.sig_map, base_vars,
-                                              self.dtype, self.dt)
+            init_op = tf.global_variables_initializer()
 
             # pre-build stage
             for op_type, ops in self.plan:
@@ -146,15 +138,8 @@ class Simulator(object):
             else:
                 self.build_loop()
 
-            init_op = tf.global_variables_initializer()
         print("Construction completed in %s " %
               datetime.timedelta(seconds=int(time.time() - start)))
-
-        # clear probe data
-        for p in self.model.probes:
-            self.model.params[p] = np.zeros(
-                (0,) + self.model.sig[p]["in"].shape,
-                dtype=self.dtype.as_numpy_dtype)
 
         # start session
         config = tf.ConfigProto(
@@ -173,6 +158,9 @@ class Simulator(object):
         self.summary = None
 
     def build_step(self):
+        # load base variables
+        self.signals.bases = self.get_base_variables(reuse=True)
+
         # build operators
         side_effects = []
         self.signals.reads_by_base = defaultdict(list)
@@ -189,8 +177,7 @@ class Simulator(object):
                 outputs = Builder.build(ops, self.signals)
 
             if outputs is not None and len(outputs) > 0:
-                side_effects += [x for x in outputs
-                                 if x.op.type == "PyFunc"]
+                side_effects += outputs
 
         probe_tensors = [self.signals[self.model.sig[p]["in"]]
                          for p in self.model.probes]
@@ -198,8 +185,7 @@ class Simulator(object):
         # TODO: figure out why this is necessary, then a more graceful solution
         # something to do with this telling tensorflow that the
         # probe read needs to happen each iteration
-        probe_tensors = [p + 0 if p.dtype._is_ref_dtype else p
-                         for p in probe_tensors]
+        probe_tensors = [p + 0 for p in probe_tensors]
 
         if DEBUG:
             print("build_step complete")
@@ -218,6 +204,8 @@ class Simulator(object):
                 dynamic_size=self.step_blocks is None,
                 clear_after_read=True)
             for i, p in enumerate(self.model.probes)]
+        # self.probe_arrays_ph = [tf.placeholder(
+        #     tf.float32, shape=(None, p.size_in)) for p in self.model.probes]
 
         self.step_var = tf.placeholder(tf.int32, shape=())
         step = tf.identity(self.step_var)
@@ -228,22 +216,20 @@ class Simulator(object):
         self.start_var = tf.placeholder(tf.int32)
         self.stop_var = tf.placeholder(tf.int32)
 
+        probe_reads = []
         for n in range(self.step_blocks):
             self.signals.step = step + 1
 
             # build the operators for a single step
-            with self.graph.name_scope("iteration_%d" % n):
+            # note: we have to make sure that all the probe values are read
+            # from the previous step before being overwritten in the next
+            with self.graph.name_scope("iteration_%d" % n), \
+                 self.graph.control_dependencies(probe_reads):
                 probe_tensors, side_effects = self.build_step()
 
-            # probe_tensors = [utils.print_op(p, "probe_tensor_%d" % i) if i == 0
-            #                  else p for i, p in enumerate(probe_tensors)]
-
-            # TODO: there's something weird going on here where probe_tensors
-            # are being read before they are computed (maybe just for nodes?)
-
-            # with self.graph.control_dependencies(side_effects + probe_tensors):
             # copy probe data to array
-            for i, p in enumerate(probe_tensors):
+            probe_reads = [tf.identity(p) for p in probe_tensors]
+            for i, p in enumerate(probe_reads):
                 period = (
                     1 if self.model.probes[i].sample_every is None else
                     self.model.probes[i].sample_every / self.dt)
@@ -290,11 +276,7 @@ class Simulator(object):
         def loop_condition(step, start, stop, *_):
             return step < stop
 
-        def loop_body(step, start, stop, probe_arrays, bases):
-            # note: this function is only actually called once (to determine
-            # the graph structure of the loop body), it isn't called each
-            # iteration
-
+        def loop_body(step, start, stop, probe_arrays):
             # note: nengo step counter is incremented at the beginning of the
             # timestep. we don't want to increment it yet, because we need
             # to figure out the side effects first, so we feed in step+1
@@ -323,7 +305,8 @@ class Simulator(object):
 
             # need to make sure that any operators that could have side
             # effects run each timestep, so we tie them to the step increment
-            with self.graph.control_dependencies(side_effects):
+            with self.graph.control_dependencies(
+                            side_effects + list(self.signals.bases.values())):
                 step += 1
 
             # set up tensorboard output
@@ -348,8 +331,7 @@ class Simulator(object):
             #
             # summary_op = tf.summary.merge_all()
 
-            return (step, start, stop, probe_arrays,
-                    list(self.signals.bases.values()))
+            return step, start, stop, probe_arrays
 
         self.step_var = tf.placeholder(tf.int32)
         self.start_var = tf.placeholder(tf.int32)
@@ -370,26 +352,30 @@ class Simulator(object):
         #                  isinstance(v, tensor_array_ops.TensorArray)
         #                  else v.dtype)
         #         return array_ops.constant(dtype.as_numpy_dtype())
-        probe_arrays = [
-            tf.TensorArray(
-                utils.cast_dtype(self.model.sig[p]["in"].dtype,
-                                 tf.float32),
-                size=(0 if self.step_blocks is None else self.step_blocks),
-                dynamic_size=self.step_blocks is None, clear_after_read=True)
-            for i, p in enumerate(self.model.probes)]
-
-        base_tensors = [tf.constant(b) for b in self.base_arrays.values()]
+        probe_arrays = []
+        for i, p in enumerate(self.model.probes):
+            probe_period = (1 if p.sample_every is None else
+                            int(p.sample_every / self.dt))
+            size = (0 if self.step_blocks is None else
+                    self.step_blocks // probe_period)
+            probe_arrays += [
+                tf.TensorArray(
+                    tf.float32, size=size,
+                    dynamic_size=self.step_blocks is None,
+                    clear_after_read=True)
+            ]
 
         loop_output = tf.while_loop(
             loop_condition, loop_body,
             loop_vars=(self.step_var, self.start_var, self.stop_var,
-                       probe_arrays, base_tensors),
+                       probe_arrays),
             parallel_iterations=1,  # TODO: more parallel iterations
             back_prop=False)
 
         self.end_step = loop_output[0]
         self.probe_arrays = [p.pack() for p in loop_output[3]]
-        self.end_base_arrays = loop_output[4]
+        self.end_base_arrays = list(
+            self.get_base_variables(reuse=True).values())
 
         if self.tensorboard:
             directory = "%s/%s" % (DATA_DIR, self.model.toplevel.label)
@@ -477,10 +463,6 @@ class Simulator(object):
 
             raise e
 
-        # update base arrays (so we resume from the same spot on next run)
-        for i, k in enumerate(self.base_arrays.keys()):
-            self.base_arrays[k] = final_bases[i]
-
         # update n_steps
         assert final_step - self.n_steps == n_steps
         self.n_steps = final_step
@@ -488,13 +470,24 @@ class Simulator(object):
 
         # update probe data
         for i, p in enumerate(self.model.probes):
-            self.model.params[p] = np.concatenate(
-                (self.model.params[p], probe_data[i]), axis=0)
+            self.model.params[p] += [probe_data[i]]
 
         if profile:
             timeline = Timeline(run_metadata.step_stats)
             with open("timeline.json", "w") as f:
                 f.write(timeline.generate_chrome_trace_format())
+
+    def get_base_variables(self, reuse=False):
+        with tf.variable_scope("base_vars", reuse=reuse):
+            bases = OrderedDict(
+                [(k, tf.get_variable(
+                    "%s_%s" % (k[0].__name__,
+                               "_".join(str(x) for x in k[1])),
+                    initializer=tf.constant_initializer(v),
+                    dtype=v.dtype, shape=v.shape))
+                 for k, v in self.base_arrays_init.items()])
+
+        return bases
 
     def close(self):
         if not self.closed:
@@ -567,7 +560,7 @@ class ProbeDict(Mapping):
         if cache_miss:
             rval = self.raw[key]
             if isinstance(rval, list):
-                rval = np.asarray(rval)
+                rval = np.concatenate(rval, axis=0)
                 rval.setflags(write=False)
             self._cache[key] = rval
         return self._cache[key]

@@ -164,4 +164,6 @@ def lif_spiking(tau_ref, tau_rc, min_voltage, J, dt, voltage, refractory):
     voltage = tf.where(spiked, tf.zeros_like(voltage),
                        tf.maximum(voltage, min_voltage))
 
+    # spikes = utils.print_op(spikes, "spikes")
+
     return spikes, voltage, refractory

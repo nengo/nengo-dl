@@ -56,6 +56,23 @@ def print_op(input, message):
     return output
 
 
+def assert_equal(x, y):
+    def assert_func(x, y):
+        check = np.allclose(x, y)
+        if not check:
+            print("assert equal failed")
+            print("x", x)
+            print("y", y)
+            raise AssertionError
+
+        return x
+
+    output = tf.py_func(assert_func, [x, y], x.dtype)
+    output.set_shape(x.get_shape())
+
+    return output
+
+
 def cast_dtype(dtype, target):
     if not isinstance(dtype, tf.DType):
         dtype = tf.as_dtype(dtype)

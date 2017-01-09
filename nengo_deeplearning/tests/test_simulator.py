@@ -84,4 +84,43 @@ def test_signal_init_values():
 def test_entry_point():
     sims = [ep.load() for ep in
             pkg_resources.iter_entry_points(group='nengo.backends')]
-    assert nengo_deeplearning.Simulator in sims
+    assert nengo_dl.Simulator in sims
+
+
+def test_step_blocks():
+    with nengo.Network(seed=0) as net:
+        inp = nengo.Node(np.sin)
+        ens = nengo.Ensemble(10, 1)
+        nengo.Connection(inp, ens)
+        p = nengo.Probe(ens)
+
+    sim1 = nengo_dl.Simulator(net, step_blocks=None)
+    sim2 = nengo_dl.Simulator(net, step_blocks=10)
+
+    sim1.run_steps(50)
+    sim2.run_steps(50)
+    sim1.close()
+    sim2.close()
+
+    assert np.allclose(sim1.data[p], sim2.data[p])
+
+
+def test_unroll_simulation():
+    # note: we run this multiple times because the effects of unrolling can
+    # be somewhat stochastic depending on the op order
+    for _ in range(10):
+        with nengo.Network(seed=0) as net:
+            inp = nengo.Node(np.sin)
+            ens = nengo.Ensemble(10, 1)
+            nengo.Connection(inp, ens)
+            p = nengo.Probe(ens)
+
+        sim1 = nengo_dl.Simulator(net, step_blocks=10, unroll_simulation=False)
+        sim2 = nengo_dl.Simulator(net, step_blocks=10, unroll_simulation=True)
+
+        sim1.run_steps(50)
+        sim2.run_steps(50)
+        sim1.close()
+        sim2.close()
+
+        assert np.allclose(sim1.data[p], sim2.data[p])

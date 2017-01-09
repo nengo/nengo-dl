@@ -32,12 +32,12 @@ class SimProcessBuilder(OpBuilder):
         self.process_type = type(ops[0].process)
 
         if self.process_type in TF_PROCESS_IMPL:
-            # note: we do this two-step check (even though it's redundant) to make
-            # sure that TF_PROCESS_IMPL is kept up to date
+            # note: we do this two-step check (even though it's redundant) to
+            # make sure that TF_PROCESS_IMPL is kept up to date
 
             if self.process_type == Lowpass:
-                self.process = LinearFilter(ops, signals.dt.dt_val,
-                                            self.output_data.dtype)
+                self.process = LinearFilter(ops, signals, self.input_data,
+                                            self.output_data)
         else:
             step_fs = [
                 op.process.make_step(
@@ -64,17 +64,17 @@ class SimProcessBuilder(OpBuilder):
                 "_".join([type(op.process).__name__ for op in ops]))
 
     def build_step(self, signals):
-        input = ([] if self.input_data is None
-                 else signals.gather(self.input_data))
-
         if self.process_type in TF_PROCESS_IMPL:
             # note: we do this two-step check (even though it's redundant) to make
             # sure that TF_PROCESS_IMPL is kept up to date
 
             if self.process_type == Lowpass:
-                output = signals.gather(self.output_data)
-                result = self.process.build_step(input, output)
+                # output = signals.gather(self.output_data)
+                self.process.build_step(signals)
         else:
+            input = ([] if self.input_data is None
+                     else signals.gather(self.input_data))
+
             result = tf.py_func(
                 utils.align_func(self.merged_func, self.output_data.shape,
                                  self.output_data.dtype),
@@ -82,21 +82,23 @@ class SimProcessBuilder(OpBuilder):
                 name=self.merged_func.__name__)
             result.set_shape(self.output_data.shape)
 
-        signals.scatter(self.output_data, result, mode=self.mode)
+            signals.scatter(self.output_data, result, mode=self.mode)
 
 
 class LinearFilter(object):
-    def __init__(self, ops, dt, dtype):
+    def __init__(self, ops, signals, input_data, output_data):
+        self.input_data = input_data
+        self.output_data = output_data
+
         nums = []
         dens = []
         for op in ops:
-            if op.process.tau <= 0.03 * dt:
+            if op.process.tau <= 0.03 * signals.dt.dt_val:
                 num = 1
                 den = 0
             else:
                 num, den, _ = cont2discrete((op.process.num, op.process.den),
-                                            dt,
-                                            method="zoh")
+                                            signals.dt.dt_val, method="zoh")
                 num = num.flatten()
 
                 num = num[1:] if num[0] == 0 else num
@@ -113,9 +115,11 @@ class LinearFilter(object):
             nums += [num] * op.input.shape[0]
             dens += [den] * op.input.shape[0]
 
-        self.nums = tf.constant(nums, dtype=dtype)
+        self.nums = tf.constant(nums, dtype=output_data.dtype)
         # note: applying the negative here
-        self.dens = tf.constant(-np.asarray(dens), dtype=dtype)
+        self.dens = tf.constant(-np.asarray(dens), dtype=output_data.dtype)
 
-    def build_step(self, input, output):
-        return self.dens * output + self.nums * input
+    def build_step(self, signals):
+        input = signals.gather(self.input_data)
+        signals.scatter(self.output_data, self.dens, mode="mul")
+        signals.scatter(self.output_data, self.nums * input, mode="inc")

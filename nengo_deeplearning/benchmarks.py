@@ -65,53 +65,59 @@ def pes(dimensions, neurons_per_d, neuron_type):
     return net
 
 
-def compare_backends():
-    benchmarks = [pes, cconv]
+def compare_backends(raw=False):
+    benchmarks = [pes, integrator, cconv]
     n_range = [32]
     d_range = [64, 128, 256]
-    neuron_types = [nengo.RectifiedLinear]  # , nengo.LIF]
+    neuron_types = [nengo.RectifiedLinear]
     backends = [nengo_dl, nengo, nengo_ocl]
 
-    data = np.zeros((len(benchmarks), len(n_range), len(d_range),
-                     len(neuron_types), len(backends)))
+    if raw:
+        data = np.zeros((len(benchmarks), len(n_range), len(d_range),
+                         len(neuron_types), len(backends)))
 
-    for i, bench in enumerate(benchmarks):
-        for j, neurons in enumerate(n_range):
-            for k, dimensions in enumerate(d_range):
-                for l, neuron_type in enumerate(neuron_types):
-                    print("-" * 30)
-                    print(bench, neurons, dimensions, neuron_type)
+        for i, bench in enumerate(benchmarks):
+            for j, neurons in enumerate(n_range):
+                for k, dimensions in enumerate(d_range):
+                    for l, neuron_type in enumerate(neuron_types):
+                        print("-" * 30)
+                        print(bench, neurons, dimensions, neuron_type)
 
-                    net = bench(dimensions, neurons, neuron_type())
-                    model = nengo.builder.Model()
-                    model.build(net)
+                        net = bench(dimensions, neurons, neuron_type())
+                        model = nengo.builder.Model()
+                        model.build(net)
 
-                    for m, backend in enumerate(backends):
-                        print(backend)
-                        if backend == nengo_dl:
-                            kwargs = {"step_blocks": 50,
-                                      "unroll_simulation": True,
-                                      # "device": "/cpu:0"
-                                      }
-                        else:
-                            kwargs = {}
-                        try:
-                            with backend.Simulator(None, model=model,
-                                                   **kwargs) as sim:
-                                start = time.time()
-                                sim.run(5.0)
-                                data[i, j, k, l, m] = time.time() - start
-                        except Exception as e:
-                            print(backend, "CRASHED")
-                            print(e)
-                            data[i, j, k, l, m] = np.nan
+                        for m, backend in enumerate(backends):
+                            print(backend)
+                            if backend == nengo_dl:
+                                kwargs = {"step_blocks": 50,
+                                          "unroll_simulation": True,
+                                          # "device": "/cpu:0"
+                                          }
+                            else:
+                                kwargs = {}
+                            try:
+                                with backend.Simulator(None, model=model,
+                                                       **kwargs) as sim:
+                                    start = time.time()
+                                    sim.run(5.0)
+                                    data[i, j, k, l, m] = time.time() - start
+                                    print("time", data[i, j, k, l, m])
+                            except Exception as e:
+                                print(backend, "CRASHED")
+                                print(e)
+                                data[i, j, k, l, m] = np.nan
 
-    np.savez("benchmark_data.npz", data)
-
-    # data = np.load("benchmark_data.npz")["arr_0"]
+        np.savez("benchmark_data.npz", data)
+    else:
+        data = np.load("benchmark_data.npz")["arr_0"]
 
     bench_names = ["pes", "integrator", "cconv"]
     neuron_names = ["relu"]
+
+    f, axes = plt.subplots(1, 3)
+
+
     for i in range(len(benchmarks)):
         for j in range(len(neuron_types)):
             plt.figure()
@@ -126,12 +132,12 @@ def compare_backends():
             plt.xlabel("dimensions")
             plt.ylabel("nengo_dl / nengo_ocl")
 
-            plt.figure()
-            plt.title("%s (%s)" % (bench_names[i], neuron_names[j]))
-            plt.plot(d_range, data[i, 0, :, j, :])
-            plt.xlabel("dimensions")
-            plt.ylabel("seconds")
-            plt.legend(["nengo_dl", "nengo", "nengo_ocl"])
+            axes[i].set_title("%s (%s)" % (bench_names[i], neuron_names[j]))
+            axes[i].plot(d_range, data[i, 0, :, j, :])
+            axes[i].set_xlabel("dimensions")
+            axes[i].set_ylabel("seconds")
+            axes[i].legend(["nengo_dl", "nengo", "nengo_ocl"])
+            axes[i].set_ylim([0, 50])
 
     plt.show()
 
@@ -140,11 +146,11 @@ def profiling():
     # note: in order for profiling to work, you have to manually add
     # ...\CUDA\v8.0\extras\CUPTI\libx64 to the path
     net = pes(128, 32, nengo.RectifiedLinear())
-    with nengo_dl.Simulator(net, tensorboard=False, step_blocks=50,
+    with nengo_dl.Simulator(net, tensorboard=True, step_blocks=50,
                             device="/gpu:0", unroll_simulation=True) as sim:
         sim.run_steps(50, profile=True)
 
 
 if __name__ == "__main__":
-    # compare_backends()
-    profiling()
+    compare_backends(raw=True)
+    # profiling()

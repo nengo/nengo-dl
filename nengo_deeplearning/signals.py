@@ -12,14 +12,18 @@ from nengo_deeplearning import utils, DEBUG
 class TensorSignal(object):
     def __init__(self, indices, key, label="TensorSignal", display_shape=None):
         # indices into the base array corresponding to this signal
-        if isinstance(indices, (tuple, list, np.ndarray)):
-            # we allow the original indices creation to happen outside of
-            # tensorflow (since the graph hasn't been created yet)
-            self.in_tf = False
-            self._np_indices = indices
-        else:
-            self.in_tf = True
-            self._indices = indices
+        # if isinstance(indices, (tuple, list, np.ndarray)):
+        #     # we allow the original indices creation to happen outside of
+        #     # tensorflow (since the graph hasn't been created yet)
+        #     self.in_tf = False
+        #     self._np_indices = indices
+        # else:
+        #     self.in_tf = True
+        #     self._indices = indices
+        assert isinstance(indices, (tuple, list, np.ndarray))
+        self._indices = np.asarray(indices)
+        self._indices.flags.writeable = False
+        self.tf_indices = None
 
         # dtype of base array
         self.key = key
@@ -31,10 +35,11 @@ class TensorSignal(object):
 
     @property
     def indices(self):
-        if self.in_tf:
-            return self._indices
-        else:
-            return self._np_indices
+        # if self.in_tf:
+        #     return self._indices
+        # else:
+        #     return self._np_indices
+        return self._indices
 
     @indices.setter
     def indices(self, val):
@@ -51,11 +56,12 @@ class TensorSignal(object):
     @property
     def shape(self):
         if self.display_shape is None:
-            if self.in_tf:
-                length = self._indices.get_shape().as_list()[0]
-            else:
-                length = self._np_indices.shape[0]
-            return (length,) + self.base_shape[1:]
+            # if self.in_tf:
+            #     length = self._indices.get_shape().as_list()[0]
+            # else:
+            #     length = self._np_indices.shape[0]
+            # return (length,) + self.base_shape[1:]
+            return (len(self.indices),) + self.base_shape[1:]
         else:
             return self.display_shape
 
@@ -71,30 +77,31 @@ class TensorSignal(object):
         if indices is Ellipsis:
             return self
 
-        if not self.in_tf or isinstance(indices, (int, slice)):
-            new_indices = self.indices[indices]
-        else:
-            # need to handle advanced indexing differently for tensor indices
-            new_indices = tf.gather(self.indices, indices)
+        # if not self.in_tf or isinstance(indices, (int, slice)):
+        #     new_indices = self.indices[indices]
+        # else:
+        #     # need to handle advanced indexing differently for tensor indices
+        #     new_indices = tf.gather(self.indices, indices)
 
-        return TensorSignal(new_indices, self.key, label=self.label + ".slice")
+        return TensorSignal(self.indices[indices], self.key,
+                            label=self.label + ".slice")
 
-    def broadcast(self, axis, length):
-        assert self.in_tf
-        assert axis in (0, 1)
-
-        indices = self.indices
-        indices = tf.stack([indices] * length, axis=axis)
-        indices = tf.reshape(indices, (-1,))
-
-        if axis == 1:
-            display_shape = self.shape + (length,)
-        else:
-            display_shape = (length,) + self.shape
-
-        return TensorSignal(
-            indices, self.key, display_shape=display_shape,
-            label=self.label + ".broadcast(%d, %d)" % (axis, length))
+    # def broadcast(self, axis, length):
+    #     assert self.in_tf
+    #     assert axis in (0, 1)
+    #
+    #     indices = self.indices
+    #     indices = tf.stack([indices] * length, axis=axis)
+    #     indices = tf.reshape(indices, (-1,))
+    #
+    #     if axis == 1:
+    #         display_shape = self.shape + (length,)
+    #     else:
+    #         display_shape = (length,) + self.shape
+    #
+    #     return TensorSignal(
+    #         indices, self.key, display_shape=display_shape,
+    #         label=self.label + ".broadcast(%d, %d)" % (axis, length))
 
     def reshape(self, shape):
         # replace -1 with inferred dimension
@@ -111,21 +118,30 @@ class TensorSignal(object):
             self.indices, self.key, display_shape=shape,
             label=self.label + ".reshape(%s)" % (shape,))
 
-    def tile(self, length):
-        assert self.in_tf
+    # def tile(self, length):
+    #     assert self.in_tf
+    #
+    #     # repeat along the first axis the given number of times
+    #     # note: we don't use tf.tile because it doesn't have a GPU kernel
+    #     indices = tf.concat(0, [self.indices] * length)
+    #     shape = (self.shape[0] * length,) + self.shape[1:]
+    #
+    #     return TensorSignal(
+    #         indices, self.key, display_shape=shape,
+    #         label=self.label + ".tile(%d)" % length)
 
-        # repeat along the first axis the given number of times
-        # note: we don't use tf.tile because it doesn't have a GPU kernel
-        indices = tf.concat(0, [self.indices] * length)
-        shape = (self.shape[0] * length,) + self.shape[1:]
+    def load_indices(self):
+        self.tf_indices = tf.constant(self.indices)
 
-        return TensorSignal(
-            indices, self.key, display_shape=shape,
-            label=self.label + ".tile(%d)" % length)
-
-    def to_tf(self):
-        self._indices = tf.constant(self._np_indices)
-        self.in_tf = True
+        start = self.indices[0]
+        stop = self.indices[-1] + 1
+        step = (self.indices[1] - self.indices[0] if len(self.indices) > 1
+                else 1)
+        if step != 0 and np.all(self.indices == np.arange(start, stop, step)):
+            self.as_slice = (tf.constant([start]), tf.constant([stop]),
+                             tf.constant([step]))
+        else:
+            self.as_slice = None
 
 
 class SignalDict(dict):
@@ -134,9 +150,8 @@ class SignalDict(dict):
     Takes care of view/base logic
     """
 
-    def __init__(self, sig_map, bases, dtype, dt, *args, **kwargs):
+    def __init__(self, sig_map, dtype, dt, *args, **kwargs):
         super(SignalDict, self).__init__(*args, **kwargs)
-        self.bases = bases
         self.dtype = dtype
         self.sig_map = sig_map
 
@@ -168,7 +183,8 @@ class SignalDict(dict):
         key = sigs[0].key
         assert all([s.key == key for s in sigs])
 
-        indices = tf.concat(0, [s.indices for s in sigs])
+        # indices = tf.concat(0, [s.indices for s in sigs])
+        indices = np.concatenate([s.indices for s in sigs], axis=0)
 
         assert all([s.shape[1:] == sigs[0].shape[1:] for s in sigs])
         display_shape = (np.sum([s.shape[0]
@@ -177,20 +193,11 @@ class SignalDict(dict):
         return key, indices, display_shape
 
     def scatter(self, dst, val, mode="update"):
+        assert dst.tf_indices is not None
+
         if val.dtype.is_floating and val.dtype.base_dtype != self.dtype:
             raise BuildError("Tensor detected with wrong dtype (%s), should "
                              "be %s." % (val.dtype.base_dtype, self.dtype))
-
-        if isinstance(val, tf.IndexedSlices):
-            # # source is already an indexed slice, so we just need to change
-            # # the indices
-            #
-            # assert dst.indices.get_shape()[0] == val.indices.get_shape()[0]
-            # # val.indices = dst.indices
-            # val = tf.IndexedSlices(val.val, dst.indices)
-
-            # TODO: remove this after I'm sure it's not being used anywhere
-            raise NotImplementedError
 
         # undo any reshaping that has happened relative to the base array
         dst_shape = (val.get_shape().as_list()[0],) + dst.key[1][1:]
@@ -203,6 +210,8 @@ class SignalDict(dict):
                 scatter_f = tf.scatter_update
             elif mode == "inc":
                 scatter_f = tf.scatter_add
+            elif mode == "mul":
+                scatter_f = tf.scatter_mul
         else:
             # for tensors we have to use our own version
             scatter_f = partial(self._scatter_f, mode=mode)
@@ -214,8 +223,8 @@ class SignalDict(dict):
             print("dst base", self.bases[dst.key])
 
         with tf.control_dependencies(self.reads_by_base[self.bases[dst.key]]):
-            self.bases[dst.key] = scatter_f(self.bases[dst.key], dst.indices,
-                                            val)
+            self.bases[dst.key] = scatter_f(
+                self.bases[dst.key], dst.tf_indices, val)
 
         if DEBUG:
             print("new dst base", self.bases[dst.key])
@@ -232,9 +241,12 @@ class SignalDict(dict):
             return dst + scatter_src
 
     def gather(self, src):
-        # TODO: optimize gathers into full reads or stridedslices if possible
+        assert src.tf_indices is not None
 
-        result = tf.gather(self.bases[src.key], src.indices)
+        if src.as_slice is not None:
+            result = tf.strided_slice(self.bases[src.key], *src.as_slice)
+        else:
+            result = tf.gather(self.bases[src.key], src.tf_indices)
 
         if src.shape is not None:
             result = tf.reshape(result, src.shape)
@@ -246,7 +258,7 @@ class SignalDict(dict):
 
         return result
 
-    def combine(self, sigs):
+    def combine(self, sigs, load_indices=True):
         """Combines several TensorSignals into one."""
 
         if len(sigs) == 0:
@@ -254,7 +266,12 @@ class SignalDict(dict):
 
         key, indices, shape = self._key_and_indices(sigs)
 
-        return TensorSignal(indices, key, display_shape=shape)
+        output = TensorSignal(indices, key, display_shape=shape)
+
+        if load_indices:
+            output.load_indices()
+
+        return output
 
     def __str__(self):
         """Pretty-print the signals and current values."""

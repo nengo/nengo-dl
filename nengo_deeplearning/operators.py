@@ -89,8 +89,8 @@ class DotIncBuilder(OpBuilder):
         # group all the A's and X's
         # A = [signals.sig_map[op.A] for op in ops]
         # X = [signals.sig_map[op.X] for op in ops]
-        A_data = signals.combine([op.A for op in ops])
-        X_data = signals.combine([op.X for op in ops])
+        A_data = signals.combine([op.A for op in ops], load_indices=False)
+        X_data = signals.combine([op.X for op in ops], load_indices=False)
 
         # if DEBUG:
         #     print("A tensors", [str(a) for a in A])
@@ -169,6 +169,9 @@ class DotIncBuilder(OpBuilder):
                 self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
 
             self.reduce = False
+
+        self.A_data.load_indices()
+        self.X_data.load_indices()
 
     def build_step(self, signals):
         A = signals.gather(self.A_data)
