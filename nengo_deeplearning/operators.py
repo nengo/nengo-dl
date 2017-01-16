@@ -1,20 +1,10 @@
 from nengo.builder.operator import (
-    Reset, Copy, ElementwiseInc, DotInc, TimeUpdate, SlicedCopy, SimPyFunc)
+    Reset, Copy, ElementwiseInc, DotInc, SlicedCopy, SimPyFunc)
 import numpy as np
 import tensorflow as tf
 
 from nengo_deeplearning import utils, DEBUG
 from nengo_deeplearning.builder import Builder, OpBuilder
-
-
-# @Builder.register(TimeUpdate)
-# def time_update(ops, signals, dt):
-#     # there should only ever be one TimeUpdate
-#     assert len(ops) == 1
-#
-#     # note: the step signal is handled as part of the state in the
-#     # simulation loop
-#     signals[ops[0].time] = tf.cast(signals[ops[0].step], signals.dtype) * dt
 
 
 @Builder.register(Reset)
@@ -131,10 +121,6 @@ class DotIncBuilder(OpBuilder):
             # in all other cases we're just doing elementwise multiplication
             # add empty dimensions for broadcasting
 
-            # TODO: change it so that only evenly sized arrays can be merged
-            # for dotinc, then we can use normal tensorflow broadcasting
-            # instead of creating huge index arrays
-
             # for i in range(len(ops)):
             #     # if the first axes don't match it's because we're
             #     # multiplying a vector by a scalar (interpreted as a length 1
@@ -218,8 +204,8 @@ class SimPyFuncBuilder(OpBuilder):
                 if op.output is None:
                     func = op.fn
                 else:
-                    func = utils.align_func(op.fn, op.output.shape,
-                                            self.output_dtype)
+                    func = utils.align_func(
+                        op.output.shape, self.output_dtype)(op.fn)
 
                 if op.x is None:
                     output = func(time)

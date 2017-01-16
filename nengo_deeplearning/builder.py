@@ -1,4 +1,3 @@
-import inspect
 import warnings
 
 from nengo.exceptions import BuildError
@@ -8,41 +7,29 @@ from nengo_deeplearning import DEBUG
 
 
 class Builder(object):
-    """Manages the build functions known to the nengo_deeplearning build
-    process.
-
-    Consists of two class methods to encapsulate the build function registry.
-    All build functions should use the `.Builder.register` method as a
-    decorator. For example::
-
-        @nengo.builder.Builder.register(MyRule)
-        def build_my_rule(model, my_rule, rule):
-            ...
-
-    registers a build function for ``MyRule`` objects.
-
-    Build functions should not be called directly, but instead called through
-    the `.Model.build` method. `.Model.build` uses the `.Builder.build` method
-    to ensure that the correct build function is called based on the type of
-    the object passed to it.
-    For example, to build the learning rule type ``my_rule`` from above, do::
-
-        model.build(my_rule, connection.learning_rule)
-
-    This will call the ``build_my_rule`` function from above with the arguments
-    ``model, my_rule, connection.learning_rule``.
-
-    Attributes
-    ----------
-    builders : dict
-        Mapping from types to the build function associated with that type.
-    """
+    """Manages the operator build classes known to the nengo_deeplearning build
+    process."""
 
     builders = {}
     op_builds = {}
 
     @classmethod
     def pre_build(cls, op_type, ops, signals, rng):
+        """Setup step for build classes, in which they compute any of the
+        values that are constant across simulation timesteps.
+
+        Parameters
+        ----------
+        op_type : type
+            `nengo` operator type
+        ops : list of nengo.builder.operators.Operator
+            the operator group to build into the model
+        signals : signals.SignalDict
+            dictionary mapping Signals to Tensors (updated by operations)
+        rng : :class:`~numpy:numpy.random.RandomState`
+            random number generator instance
+        """
+
         if DEBUG:
             print("===================")
             print("PRE BUILD", ops)
@@ -64,24 +51,14 @@ class Builder(object):
 
     @classmethod
     def build(cls, ops, signals):
-        """Build ``op`` into ``model``.
-
-        This method looks up the appropriate build function for ``obj`` and
-        calls it with the SignalDict and other arguments provided.
-
-        In addition to the parameters listed below, further positional and
-        keyword arguments will be passed unchanged into the build function.
+        """Build the computations implementing a single simulator timestep.
 
         Parameters
         ----------
-        op : object
-            The operator to build into the model.
+        ops : list of nengo.builder.operators.Operator
+            the operator group to build into the model
         signals : signals.SignalDict
-            Dictionary mapping Signals to Tensors (updated by operations)
-        dt : float
-            Simulation time step
-        rng : np.random.RandomState
-            Random number generator
+            dictionary mapping Signals to Tensors (updated by operations)
         """
 
         if DEBUG:
@@ -105,8 +82,6 @@ class Builder(object):
     def register(cls, nengo_op):
         """A decorator for adding a class to the build function registry.
 
-        Raises a warning if a build function already exists for the class.
-
         Parameters
         ----------
         nengo_op : nengo.builder.operators.Operator
@@ -114,8 +89,8 @@ class Builder(object):
         """
 
         def register_builder(build_class):
-            # if not issubclass(build_class, OpBuilder):
-            #     warnings.warn("Build classes should inherit from OpBuilder")
+            if not issubclass(build_class, OpBuilder):
+                warnings.warn("Build classes should inherit from OpBuilder")
 
             if nengo_op in cls.builders:
                 warnings.warn("Operator '%s' already has a builder. "
@@ -128,15 +103,38 @@ class Builder(object):
 
 
 class OpBuilder(object):
+    # set pass_rng to True if this build class requires the simulation
+    # random number generator to be passed to the constructor
     pass_rng = False
 
+    """The constructor should set up any computations that are fixed for
+    this op (i.e., things that do not need to be recomputed each timestep).
+
+    Parameters
+    ----------
+    ops : list of nengo.builder.operators.Operator
+        the operator group to build into the model
+    signals : signals.SignalDict
+        dictionary mapping Signals to Tensors (updated by operations)
+    """
     def __init__(self, ops, signals):
-        # the constructor should set up any computations that are fixed for
-        # this op (i.e., things that do not need to be recomputed each
-        # timestep
         pass
 
     def build_step(self, signals):
-        # here we build whatever computations need to be executed in each
-        # simulation timestep
-        raise BuildError("OpBuilders must implement a build_step function")
+        """This function builds whatever computations need to be executed in
+        each simulation timestep.
+
+        Parameters
+        ----------
+        signals : signals.SignalDict
+            dictionary mapping Signals to Tensors (updated by operations)
+
+        Returns
+        -------
+        list of `tf.Tensor`, optional
+            if not None, the returned tensors correspond to outputs with
+            possible side-effects, i.e. computations that need to be executed
+            in the tensorflow graph even if their output doesn't appear to be
+            used
+        """
+        raise BuildError("OpBuilders must implement a `build_step` function")

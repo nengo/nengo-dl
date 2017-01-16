@@ -1,7 +1,7 @@
 """We use semantic versioning (see http://semver.org/).
-Additionally, '-dev' will be added to the version unless the code base
+Additionally, '.dev0' will be added to the version unless the code base
 represents a release version. Commits for which the version doesn't have
-'-dev' should be git tagged with the version.
+'.dev0' should be git tagged with the version.
 """
 
 name = "nengo_deeplearning"

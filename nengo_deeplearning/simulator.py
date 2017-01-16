@@ -1,5 +1,4 @@
 from collections import Mapping, OrderedDict, defaultdict
-import copy
 import datetime
 import logging
 import os
@@ -7,7 +6,6 @@ import time
 import warnings
 
 from nengo.builder import Model
-from nengo.builder.neurons import SimNeurons
 from nengo.exceptions import (ReadonlyError, SimulatorClosed, NengoWarning,
                               SimulationError)
 import numpy as np
@@ -49,12 +47,43 @@ class Simulator(object):
          "tests/test_simulator.py:test_args")
     ]
 
+    """Simulate network using the `nengo_deeplearning` backend.
+
+    Parameters
+    ----------
+    network : `nengo.Network` or None
+        a network object to be built and then simulated. If None,
+        then a `nengo.builder.Model` with the build model must be provided
+        instead
+    dt : float, optional
+        length of a simulator timestep, in seconds
+    seed : int, optional
+        seed for all stochastic operators used in this simulator
+    model : `nengo.builder.Model`, optional
+        pre-built model object
+    tensorboard : bool, optional
+        if True, save network output in the tensorflow summary format, which
+        can be loaded into Tensorboard
+    dtype : tf.DType, optional
+        floating point precision to use for simulation
+    step_blocks : int, optional
+        controls how many simulation steps run each time the graph is executed
+        (affects memory usage and graph construction time)
+    device : None or "/cpu:0" or "/gpu:[0-n]", optional
+        device on which to execute computations (if None then uses the default
+        device as determined by tensorflow)
+    unroll_simulation : bool, optional
+        if True, unroll simulation loop by explicitly building each iteration
+        (up to `step_blocks`) into the computation graph. if False, use a
+        symbolic loop, which is more general and produces a simpler graph, but
+        is likely to be slower to simulate
+    """
+
     def __init__(self, network, dt=0.001, seed=None, model=None,
-                 progress_bar=True, tensorboard=False, dtype=tf.float32,
-                 step_blocks=50, device=None, unroll_simulation=True):
+                 tensorboard=False, dtype=tf.float32, step_blocks=50,
+                 device=None, unroll_simulation=True):
         self.closed = None
         self.sess = None
-        self.progress_bar = progress_bar
         self.tensorboard = tensorboard
         self.dtype = dtype
         self.step_blocks = step_blocks
@@ -71,7 +100,7 @@ class Simulator(object):
             self.model = model
 
         if network is not None:
-            self.model.build(network, progress_bar=self.progress_bar)
+            self.model.build(network, progress_bar=False)
 
         # group mergeable operators
         plan = graph_optimizer.greedy_planner(self.model.operators)
@@ -92,6 +121,15 @@ class Simulator(object):
         self.reset(seed=seed)
 
     def reset(self, seed=None):
+        """Resets the simulator to initial conditions.
+
+        Parameters
+        ----------
+        seed : int, optional
+            if not None, overwrite the default simulator seed with this value
+            (note: this becomes the new default simulator seed)
+        """
+
         if self.closed:
             raise SimulatorClosed("Cannot reset closed Simulator.")
 
@@ -146,9 +184,11 @@ class Simulator(object):
             allow_soft_placement=False,
             # log_device_placement=True
         )
-        print("Initializing session")
+
         self.sess = tf.Session(graph=self.graph, config=config)
         self.closed = False
+
+        print("Session initialized")
 
         # initialize variables
         self.sess.run(init_op)
@@ -158,6 +198,20 @@ class Simulator(object):
         self.summary = None
 
     def build_step(self):
+        """Build the operators that execute a single simulation timestep
+        into the graph.
+
+        Returns
+        -------
+        probe_tensors : list of `tf.Tensor`
+            the Tensor objects representing the data required for each model
+            Probe
+        side_effects : list of `tf.Tensor`
+            the output Tensors of computations that may have side-effects
+            (e.g., `Node` functions), meaning that they must be executed each
+            time step even if their output doesn't appear to be used
+        """
+
         # load base variables
         self.signals.bases = self.get_base_variables(reuse=True)
 
@@ -176,7 +230,7 @@ class Simulator(object):
             with self.graph.name_scope(utils.sanitize_name(op_type.__name__)):
                 outputs = Builder.build(ops, self.signals)
 
-            if outputs is not None and len(outputs) > 0:
+            if outputs is not None:
                 side_effects += outputs
 
         probe_tensors = [self.signals[self.model.sig[p]["in"]]
@@ -195,6 +249,19 @@ class Simulator(object):
         return probe_tensors, side_effects
 
     def build_loop_unrolled(self):
+        """Builds an unrolled version of the simulation loop (where each
+        iteration is explicitly represented in the graph).
+
+        Unrolling the simulation loop results in faster simulation, but
+        increases the graph construction time and memory usage.
+
+        Notes
+        -----
+        The number of timesteps that will be unrolled is defined by the
+        `step_blocks` parameter on Simulator initialization.
+        """
+
+        # create arrays to store output of probe variables each timestep
         probe_arrays = [
             tf.TensorArray(
                 utils.cast_dtype(self.model.sig[p]["in"].dtype,
@@ -207,13 +274,14 @@ class Simulator(object):
         # self.probe_arrays_ph = [tf.placeholder(
         #     tf.float32, shape=(None, p.size_in)) for p in self.model.probes]
 
+        # step variable representing the current timestep (will be filled in
+        # when `run_steps` is called)
         self.step_var = tf.placeholder(tf.int32, shape=())
+        # TODO: is this identity necessary?
         step = tf.identity(self.step_var)
         loop_i = tf.constant(0)
 
-        # note: these aren't used, they are just for compatibility with
-        # build_loop()
-        self.start_var = tf.placeholder(tf.int32)
+        # note: this isn't used, it is just for compatibility with build_loop()
         self.stop_var = tf.placeholder(tf.int32)
 
         probe_reads = []
@@ -224,7 +292,7 @@ class Simulator(object):
             # note: we have to make sure that all the probe values are read
             # from the previous step before being overwritten in the next
             with self.graph.name_scope("iteration_%d" % n), \
-                 self.graph.control_dependencies(probe_reads):
+                    self.graph.control_dependencies(probe_reads):
                 probe_tensors, side_effects = self.build_step()
 
             # copy probe data to array
@@ -273,10 +341,18 @@ class Simulator(object):
                 graph=self.graph)
 
     def build_loop(self):
-        def loop_condition(step, start, stop, *_):
+        """Build simulation loop.
+
+        Uses tensorflow's symbolic while loop framework, which is more flexible
+        than `build_loop_unrolled` in that it allows the simulation to run
+        for an arbitrary number of timesteps in one graph execution.  However,
+        it does introduce some additional overhead.
+        """
+
+        def loop_condition(step, stop, *_):
             return step < stop
 
-        def loop_body(step, start, stop, probe_arrays):
+        def loop_body(step, stop, loop_i, probe_arrays):
             # note: nengo step counter is incremented at the beginning of the
             # timestep. we don't want to increment it yet, because we need
             # to figure out the side effects first, so we feed in step+1
@@ -294,9 +370,9 @@ class Simulator(object):
                 p = tf.cast(p, tf.float32)
 
                 if period == 1:
-                    probe_arrays[i] = probe_arrays[i].write(step - start, p)
+                    probe_arrays[i] = probe_arrays[i].write(loop_i, p)
                 else:
-                    index = tf.cast(tf.cast(step - start, tf.float32) / period,
+                    index = tf.cast(tf.cast(loop_i, tf.float32) / period,
                                     tf.int32)
                     condition = tf.cast(step + 1, self.dtype) % period < 1
                     probe_arrays[i] = tf.case(
@@ -308,6 +384,8 @@ class Simulator(object):
             with self.graph.control_dependencies(
                             side_effects + list(self.signals.bases.values())):
                 step += 1
+
+            loop_i += 1
 
             # set up tensorboard output
             # if self.tensorboard:
@@ -331,11 +409,11 @@ class Simulator(object):
             #
             # summary_op = tf.summary.merge_all()
 
-            return step, start, stop, probe_arrays
+            return step, stop, loop_i, probe_arrays
 
         self.step_var = tf.placeholder(tf.int32)
-        self.start_var = tf.placeholder(tf.int32)
         self.stop_var = tf.placeholder(tf.int32)
+        loop_i = tf.constant(0)
 
         # note: probe_arrays need to be float32 because in the tensorflow
         # case logic they end up comparing the tensorarray dtype to the
@@ -365,10 +443,10 @@ class Simulator(object):
                     clear_after_read=True)
             ]
 
+        # build while loop
         loop_output = tf.while_loop(
             loop_condition, loop_body,
-            loop_vars=(self.step_var, self.start_var, self.stop_var,
-                       probe_arrays),
+            loop_vars=(self.step_var, self.stop_var, loop_i, probe_arrays),
             parallel_iterations=1,  # TODO: more parallel iterations
             back_prop=False)
 
@@ -390,6 +468,8 @@ class Simulator(object):
                 graph=self.graph)
 
     def step(self):
+        """Run the simulation for one time step."""
+
         self.run_steps(1)
 
     def run(self, time_in_seconds):
@@ -400,12 +480,28 @@ class Simulator(object):
         time_in_seconds : float
             Amount of time to run the simulation for.
         """
+
         steps = int(np.round(float(time_in_seconds) / self.dt))
-        logger.info("Running %s for %f seconds, or %d steps",
-                    self.model.label, time_in_seconds, steps)
         self.run_steps(steps)
 
     def run_steps(self, n_steps, profile=False):
+        """Simulate for the given number of steps.
+
+        Parameters
+        ----------
+        n_steps : int
+            the number of simulation steps to be executed
+        profile : bool, optional
+            if True, collect tensorflow profiling information while the
+            simulation is running (this will slow down the simulation)
+
+        Notes
+        -----
+        If `step_blocks` is specified, and `n_steps > step_blocks`, this will
+        repeatedly execute `step_blocks` timesteps until the the number of
+        steps executed is >= `n_steps`.
+        """
+
         if self.closed:
             raise SimulatorClosed("Simulator cannot run because it is closed.")
 
@@ -430,12 +526,15 @@ class Simulator(object):
               datetime.timedelta(seconds=int(time.time() - start)))
 
     def _run_steps(self, n_steps, profile=False):
-        """Simulate for the given number of ``dt`` steps.
+        """Execute `step_blocks` sized segments of the simulation.
 
         Parameters
         ----------
         n_steps : int
-            Number of steps to run the simulation for.
+            the number of simulation steps to be executed
+        profile : bool, optional
+            if True, collect tensorflow profiling information while the
+            simulation is running (this will slow down the simulation)
         """
 
         if profile:
@@ -451,7 +550,6 @@ class Simulator(object):
                 [self.end_step, self.probe_arrays, self.end_base_arrays],
                 feed_dict={
                     self.step_var: self.n_steps,
-                    self.start_var: self.n_steps,
                     self.stop_var: self.n_steps + n_steps,
                 },
                 options=run_options, run_metadata=run_metadata)
@@ -460,8 +558,8 @@ class Simulator(object):
                 raise SimulationError(
                     "Function '%s' caused an error "
                     "(see error log above)" % e.op.name) from None
-
-            raise e
+            else:
+                raise e
 
         # update n_steps
         assert final_step - self.n_steps == n_steps
@@ -474,15 +572,29 @@ class Simulator(object):
 
         if profile:
             timeline = Timeline(run_metadata.step_stats)
-            with open("timeline.json", "w") as f:
+            with open("nengo_dl_profile.json", "w") as f:
                 f.write(timeline.generate_chrome_trace_format())
 
     def get_base_variables(self, reuse=False):
+        """Loads the base variables used to store all simulation data.
+
+        Parameters
+        ----------
+        reuse : bool, optional
+            if False, create new Variables, otherwise look up the previously
+            created Variables
+
+        Returns
+        -------
+        dict of {(dtype, tuple of int): `tf.Variable`}
+            base variables, keyed by the dtype and shape of data stored in
+            this variable
+        """
+
         with tf.variable_scope("base_vars", reuse=reuse):
             bases = OrderedDict(
                 [(k, tf.get_variable(
-                    "%s_%s" % (k[0].__name__,
-                               "_".join(str(x) for x in k[1])),
+                    "%s_%s" % (k[0].__name__, "_".join(str(x) for x in k[1])),
                     initializer=tf.constant_initializer(v),
                     dtype=v.dtype, shape=v.shape))
                  for k, v in self.base_arrays_init.items()])
@@ -490,6 +602,15 @@ class Simulator(object):
         return bases
 
     def close(self):
+        """Close the simulation, freeing resources.
+
+        Notes
+        -----
+        The simulation cannot be restarted after it is closed.  This is not a
+        technical limitation, just a design decision made for all Nengo
+        simulators.
+        """
+
         if not self.closed:
             self.sess.close()
             self.closed = True
@@ -516,7 +637,8 @@ class Simulator(object):
         raise ReadonlyError(attr='dt', obj=self)
 
     def __del__(self):
-        """Raise a ResourceWarning if we are deallocated while open."""
+        """Raise a RuntimeWarning if we are deallocated while open."""
+
         if self.closed is not None and not self.closed:
             warnings.warn(
                 "Simulator with model=%s was deallocated while open. "
@@ -532,10 +654,11 @@ class Simulator(object):
 
         Parameters
         ----------
-        dt : float, optional (Default: None)
-            The sampling period of the probe to create a range for.
-            If None, the simulator's ``dt`` will be used.
+        dt : float, optional
+            the sampling period of the probe to create a range for;
+            if None, the simulator's ``dt`` will be used.
         """
+        
         dt = self.dt if dt is None else dt
         n_steps = int(self.n_steps * (self.dt / dt))
         return dt * np.arange(1, n_steps + 1)

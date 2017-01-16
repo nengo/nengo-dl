@@ -25,12 +25,15 @@ class SimProcessBuilder(OpBuilder):
 
         self.input_data = (None if ops[0].input is None else
                            signals.combine([op.input for op in ops]))
-
         self.output_data = signals.combine([op.output for op in ops])
         self.mode = "inc" if ops[0].mode == "inc" else "update"
 
         self.process_type = type(ops[0].process)
 
+        # if we have a custom tensorflow implementation for this process type,
+        # then we build that. otherwise we'll just execute the process step
+        # function externally (using `tf.py_func`), so we just need to set up
+        # the inputs/outputs for that.
         if self.process_type in TF_PROCESS_IMPL:
             # note: we do this two-step check (even though it's redundant) to
             # make sure that TF_PROCESS_IMPL is kept up to date
@@ -39,12 +42,16 @@ class SimProcessBuilder(OpBuilder):
                 self.process = LinearFilter(ops, signals, self.input_data,
                                             self.output_data)
         else:
+            # build the step function for each process
             step_fs = [
                 op.process.make_step(
                     op.input.shape if op.input is not None else (0,),
                     op.output.shape, signals.dt.dt_val,
                     op.process.get_rng(rng)) for op in ops]
 
+            # `merged_func` calls the step function for each process and
+            # combines the result
+            @utils.align_func(self.output_data.shape, self.output_data.dtype)
             def merged_func(time, input):
                 input_offset = 0
                 func_output = []
@@ -65,21 +72,15 @@ class SimProcessBuilder(OpBuilder):
 
     def build_step(self, signals):
         if self.process_type in TF_PROCESS_IMPL:
-            # note: we do this two-step check (even though it's redundant) to make
-            # sure that TF_PROCESS_IMPL is kept up to date
-
             if self.process_type == Lowpass:
-                # output = signals.gather(self.output_data)
                 self.process.build_step(signals)
         else:
             input = ([] if self.input_data is None
                      else signals.gather(self.input_data))
 
             result = tf.py_func(
-                utils.align_func(self.merged_func, self.output_data.shape,
-                                 self.output_data.dtype),
-                [signals.time, input], self.output_data.dtype,
-                name=self.merged_func.__name__)
+                self.merged_func, [signals.time, input],
+                self.output_data.dtype, name=self.merged_func.__name__)
             result.set_shape(self.output_data.shape)
 
             signals.scatter(self.output_data, result, mode=self.mode)

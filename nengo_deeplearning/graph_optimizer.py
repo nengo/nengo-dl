@@ -13,7 +13,23 @@ from nengo_deeplearning import signals, neurons, processes, DEBUG
 
 
 def greedy_planner(operators):
-    # based on nengo_ocl greedy_planner
+    """Combine mergeable operators into groups that will be executed as a
+     single computation.
+
+     Parameters
+     ----------
+     operators : list of nengo.builder.operator.Operator
+        all the `nengo` operators in a model (unordered)
+
+    Returns
+    -------
+    list of (type, list of nengo.builder.operator.Operator)
+        operators combined into mergeable groups and in execution order
+
+    Notes
+    -----
+    Originally based on `nengo_ocl` greedy planner
+     """
 
     # TimeUpdate is executed as part of the simulation loop, not part
     # of the step plan
@@ -87,8 +103,21 @@ def greedy_planner(operators):
 # TODO: add a "noop" planner for testing/debugging
 
 def mergeable(op, chosen_ops):
-    # check if the ops share the same shape and dtype for input/output
-    # signals
+    """Check if the given op can be merged with the candidate group
+
+    Parameters
+    ----------
+    op : nengo.builder.operator.Operator
+        the operator to be merged
+    chosen_ops : list of nengo.builder.operator.Operator
+        the operator group to be merged in to
+
+    Returns
+    -------
+    bool
+        True if `op` can be merged into `chosen_ops`, else False
+    """
+
     if len(chosen_ops) == 0:
         return True
 
@@ -96,16 +125,18 @@ def mergeable(op, chosen_ops):
     # since we know the rest all match
     c = chosen_ops[0]
 
+    # sets/incs/reads/updates must all match
     if (len(op.sets) != len(c.sets) or len(op.incs) != len(c.incs) or
-                len(op.reads) != len(c.reads) or
-                len(op.updates) != len(c.updates)):
+            len(op.reads) != len(c.reads) or
+            len(op.updates) != len(c.updates)):
         return False
 
     for s0, s1 in zip(op.all_signals, c.all_signals):
-        # if sig_map[s0].key != sig_map[s1].key:
-        #     return False
+        # dtype of signals must match
         if s0.dtype != s1.dtype:
             return False
+
+        # shape of signal base must match on all axes > 0
         if s0.base.shape[1:] != s1.base.shape[1:]:
             return False
 
@@ -115,6 +146,7 @@ def mergeable(op, chosen_ops):
         if s0.shape[1:] != s1.shape[1:]:
             return False
 
+    # operator-specific checks
     if isinstance(op, SlicedCopy):
         # can't merge incs and updates
         if op.inc != c.inc:
@@ -123,7 +155,7 @@ def mergeable(op, chosen_ops):
         # for these operations we also enforce that the first dimensions
         # match (we know all the other dimensions match due to checks above).
         # this allows us to stack all the arguments into continuous array
-        # array blocks, allowing for more efficient multiplication (mainly
+        # blocks, allowing for more efficient multiplication (mainly
         # because it allows us to take advantage of broadcasting)
         for s0, s1 in zip(op.all_signals, c.all_signals):
             shape0 = s0.shape[0] if s0.shape != () else 1
@@ -148,9 +180,9 @@ def mergeable(op, chosen_ops):
             if type(op.neurons) in neurons.TF_NEURON_IMPL:
                 return False
 
-            # all the states must have the same base (note: this is
-            # checking different state signals within one op against
-            # each other, rather than checking signals across ops)
+            # all the states must have the same base (note: this is checking
+            # different state signals within one op against each other, rather
+            # than checking signals across ops, which we already did)
             if len(op.states) > 0:
                 dtype = op.states[0].dtype
                 shape = op.states[0].base.shape[1:]
@@ -176,27 +208,34 @@ def mergeable(op, chosen_ops):
     return True
 
 
-def noop_order_signals(plan, **kwargs):
-    all_signals = list(set([s.base for op_type, ops in plan for op in ops
-                            for s in op.all_signals]))
-
-    # all_signals = [s.base for op_type, ops in plan for op in ops
-    #                for s in op.all_signals]
-    # all_signals = [s for i, s in enumerate(all_signals)
-    #                if s not in all_signals[:i]]
-    return all_signals, plan
-
-
 def order_signals(plan, n_passes=10):
     """Orders signals and operators to try to structure reads in contiguous
-    blocks."""
+    blocks.
+
+    Parameters
+    ----------
+    plan : list of (type, list of `nengo.builder.operator.Operator`)
+        operator execution plan (e.g., output from `greedy_planner`)
+    n_passes : int
+        number of repeated passes through the operator reordering stage
+
+    Returns
+    -------
+    list of `nengo.builder.signal.Signal`
+        signals organized into the order in which we want them arranged in
+        memory
+    list of (type, list of `nengo.builder.operator.Operator`)
+        input plan with operators reordered within groups to align with order
+        of signals
+    """
 
     # figure out all the read blocks in the plan (in theory we would like each
     # block to become a contiguous chunk in the base array)
     read_blocks = []
     for op_type, ops in plan:
         if op_type == SimNeurons:
-            # add state signals to the reads
+            # state signals are technically reads as well, they just aren't
+            # marked as such, so we add them to the reads list
             for op in ops:
                 op.reads += op.states
 
@@ -209,11 +248,13 @@ def order_signals(plan, n_passes=10):
         any([len(x.union(y)) == len(x) == len(y) for y in read_blocks[:i]])]
 
     # sort by the size of the block (descending order)
+    # TODO: we should give some bonus to duplicate read blocks (since they're
+    # affecting multiple operator groups)
     read_blocks = sorted(
         read_blocks, key=lambda b: np.sum([s.size for s in b]))
     read_blocks = read_blocks[::-1]
 
-    # get all the base signals
+    # get all the unique base signals
     all_signals = list(set([s.base for op_type, ops in plan for op in ops
                             for s in op.all_signals]))
 
@@ -233,6 +274,25 @@ def order_signals(plan, n_passes=10):
         print("signal blocks")
         print(signal_blocks)
 
+    sorted_reads = [(ops, i) for _, ops in plan
+                    for i in range(len(ops[0].reads))]
+    # note: we're sorting by the view size, not the base size
+    sorted_reads = sorted(
+        sorted_reads, key=lambda p: np.sum([op.reads[p[1]].size
+                                            for op in p[0]]))
+
+    if DEBUG:
+        print("sorted reads")
+        print("\n".join(str(x) for x in sorted_reads))
+
+    # reorder the signals into contiguous blocks (giving higher priority
+    # to larger groups)
+    all_signals = hamming_sort(all_signals, signal_blocks)
+
+    if DEBUG:
+        print("hamming sorted signals")
+        print(all_signals)
+
     # basically we're going to repeatedly iterate over two steps
     # 1) order the ops within a group according to the order of their
     #    read signals
@@ -246,38 +306,15 @@ def order_signals(plan, n_passes=10):
     # on the next pass we can put the first group back into a valid ordering
     # based on the order established by the later group.
 
-    sorted_reads = [(ops, i) for _, ops in plan
-                    for i in range(len(ops[0].reads))]
-    # note: we're sorting by the view size, not the base size
-    sorted_reads = sorted(
-        sorted_reads, key=lambda p: np.sum([op.reads[p[1]].size
-                                            for op in p[0]]))
-
-    if DEBUG:
-        print("sorted reads")
-        print("\n".join(str(x) for x in sorted_reads))
-
-    # reorder the signals into continuous blocks (giving higher priority
-    # to larger groups)
-    all_signals = hamming_sort(all_signals, signal_blocks)
-
-    if DEBUG:
-        print("hamming sorted signals")
-        print(all_signals)
-
     new_plan = {ops: ops for _, ops in plan}
     for n in range(n_passes):
         # TODO: detect if ops order didn't change (early termination)
         # TODO: every few iterations, eliminate the smallest unsatisfied block
-        # TODO: do multiple passes actually help?
         if DEBUG:
             print("======== pass %d ========" % n)
 
-        # reorder ops by signal order. this leaves the
-        # hamming sort order unchanged, but it could upset the order
-        # established in earlier read blocks. this is why we
-        # have multiple passes, in the hopes that they can converge to
-        # a mutual order.
+        # reorder ops by signal order. this leaves the overall
+        # hamming sort block order unchanged.
         new_plan, all_signals = sort_ops_by_signals(
             sorted_reads, all_signals, new_plan, signal_blocks)
 
@@ -307,6 +344,18 @@ def order_signals(plan, n_passes=10):
 
 
 def hamming_sort(signals, blocks):
+    """Reorder signals using heuristics to try to place signals that are read
+    by the same operators into adjacent positions (giving priority to larger
+    blocks).
+
+    Parameters
+    ----------
+    list of `nengo.builder.signal.Signal`
+        the signals to be sorted
+    dict of {Signal: tuple of bool}
+        dictionary indicating which read blocks each signal is a part of
+    """
+
     signals = np.asarray(signals)
     blocks = np.asarray([blocks[s] for s in signals])
 
@@ -322,10 +371,8 @@ def hamming_sort(signals, blocks):
         if DEBUG:
             print("curr_block", curr_block)
 
-        dists = np.sum(curr_block != blocks, axis=-1)
-
         # add any matching blocks to the sorted list
-        zero_dists = dists == 0
+        zero_dists = np.all(blocks == curr_block, axis=1)
         sorted_signals += [s for s in signals[zero_dists]]
 
         signals = signals[~zero_dists]
@@ -340,6 +387,11 @@ def hamming_sort(signals, blocks):
         # active block (this is to give us some persistence, so it doesn't
         # jump around too much)
         if active_block is None:
+            # pick the largest block in the current block to become the new
+            # active block (note: the boolean block arrays are sorted from
+            # largest to smallest, so argmax(curr_block) gives us the index of
+            # the first True block in the list, which is the largest. this
+            # ordering is used in several places.)
             active_block = np.argmax(curr_block)
 
         next_blocks = blocks[blocks[:, active_block]]
@@ -377,7 +429,7 @@ def hamming_sort(signals, blocks):
 
         # within the blocks that match curr_block equally, pick the next block
         # containing the largest read blocks
-        for i in range(blocks.shape[1]):
+        for i in range(blocks.shape[1] + 1):
             if len(next_blocks) == 1:
                 break
 
@@ -392,9 +444,111 @@ def hamming_sort(signals, blocks):
     return sorted_signals
 
 
+def sort_ops_by_signals(sorted_reads, signals, new_plan, blocks):
+    """Rearrange operators to match the order of signals.
+
+    Note: the same operators can be associated with multiple read blocks if
+    they have multiple inputs, so rearranging the operators according to one
+    of those blocks could mess up the order with respect to the other read
+    block.  We iterate through the read blocks in increasing size so
+    that the largest blocks win out.
+
+    Parameters
+    ----------
+    sorted_reads : list of (tuple of `nengo.builder.operator.Operator`, int)
+        the operators that form each read block, sorted by increasing size of
+        the read block. in the case that a group of operators participate in
+        multiple read blocks, the integer distinguishes which one of those
+        inputs this block is associated with.
+    signals : list of `nengo.builder.operator.Signal`
+        signals that have been arranged into a given order by other parts
+        of the algorithm
+    new_plan : dict of {tuple of Operator: tuple of Operator}
+        mapping from original operator group to the sorted operators
+    blocks : dict of {Signal: tuple of bool}
+        indicates which read blocks each signal participates in
+
+    Returns
+    -------
+    new_plan : dict of {tuple of Operator: tuple of Operator}
+        mapping from original operator group to the sorted operators
+    signals : list of `nengo.builder.operator.Signal`
+        signals list, possibly rearranged to match new operator order
+    """
+
+    if DEBUG:
+        print("sort ops by signals")
+
+    for old_ops, read_block in sorted_reads:
+        if DEBUG:
+            print("sorting ops", new_plan[old_ops])
+            print("by", [op.reads[read_block] for op in new_plan[old_ops]])
+
+        if len(old_ops) == 1:
+            # then we have nothing to sort
+            continue
+
+        ops = new_plan[old_ops]
+
+        # check if op reads are contiguous
+        # TODO: do we want to do this? I don't think so, because there is
+        # a chance that non-contiguous signals could become contiguous after
+        # the sort
+        # reads = [op.reads[read_block].base for op in ops]
+        # indices = sorted([signals.index(s) for s in reads])
+        # if indices != list(range(np.min(indices), np.max(indices) + 1)):
+        #     continue
+
+        # note: the key is (signal index, view offset), so ops will be
+        # sorted first by the order of the signals in the list, then by
+        # the order of the views within each signal
+        sorted_ops = sorted(
+            ops, key=lambda op: (signals.index(op.reads[read_block].base),
+                                 op.reads[read_block].elemoffset))
+
+        new_plan[old_ops] = tuple(sorted_ops)
+
+        if DEBUG:
+            print("sorted ops")
+            print(new_plan[old_ops])
+
+        # after sorting the operators, we then rearrange all the other read
+        # blocks associated with this group of operators to match the new
+        # order. note that this could make smaller (earlier) blocks out
+        # of order, which will hopefully be fixed on future passes. however,
+        # it means that larger (later) blocks will align themselves to this
+        # order if possible
+        signals = sort_signals_by_ops(
+            [x for x in sorted_reads
+             if x[0] == old_ops and x[1] != read_block],
+            signals, new_plan, blocks)
+
+    return new_plan, signals
+
+
 def sort_signals_by_ops(sorted_reads, signals, new_plan, blocks):
-    """Try to rearrange `signals` so that they are in the same order as
-    operator reads."""
+    """Attempts to rearrange `signals` so that it is in the same order as
+    operator reads, without changing the overall block order.
+
+    Parameters
+    ----------
+    sorted_reads : list of (tuple of `nengo.builder.operator.Operator`, int)
+        the operators that form each read block, sorted by increasing size of
+        the read block. in the case that a group of operators participate in
+        multiple read blocks, the integer distinguishes which one of those
+        inputs this block is associated with.
+    signals : list of `nengo.builder.operator.Signal`
+        signals to be sorted
+    new_plan : dict of {tuple of Operator: tuple of Operator}
+        mapping from original operator group to the sorted operators
+    blocks : dict of {Signal: tuple of bool}
+        indicates which read blocks each signal participates in
+
+    Returns
+    -------
+    list of `nengo.builder.operator.Signal`
+        sorted signals
+    """
 
     for old_ops, read_block in sorted_reads:
         if DEBUG:
@@ -402,15 +556,18 @@ def sort_signals_by_ops(sorted_reads, signals, new_plan, blocks):
                                       for op in new_plan[old_ops]])
             print(read_block, new_plan[old_ops])
 
-        if len(old_ops) == 1:
-            continue
-
         ops = new_plan[old_ops]
         op_reads = [op.reads[read_block].base for op in ops]
+
+        if len(set(op_reads)) == 1:
+            # only one read signal, so nothing to sort
+            continue
 
         # iterative approach, because we want signals to bubble up as close as
         # possible to sorted order (even if they can't be fully sorted), so
         # that there are minimal changes to op order
+        # TODO: do we actually want that? or if things can't be sorted fully
+        # should we just not bother?
         prev_index = signals.index(op_reads[0])
         for i in range(1, len(op_reads)):
             r_index = signals.index(op_reads[i])
@@ -426,9 +583,9 @@ def sort_signals_by_ops(sorted_reads, signals, new_plan, blocks):
                 r_index += 1
                 move = True
 
-                if (r_index > 0 and r_index < len(signals) and
-                            blocks[signals[r_index]] !=
-                            blocks[signals[r_index - 1]]):
+                if (0 < r_index < len(signals) and
+                        blocks[signals[r_index]] !=
+                        blocks[signals[r_index - 1]]):
                     break
 
             # if DEBUG:
@@ -448,58 +605,41 @@ def sort_signals_by_ops(sorted_reads, signals, new_plan, blocks):
     return signals
 
 
-def sort_ops_by_signals(sorted_reads, signals, new_plan, blocks):
-    """Rearrange ops to match the order of signals.
+def noop_order_signals(plan, **kwargs):
+    """A version of `order_signals` that doesn't do any reordering, for
+    debugging."""
 
-    Note: this could screw up the order of other read blocks associated with
-    these ops.  We iterate through the read blocks in increasing size so
-    that the largest blocks win out.
-    """
-
-    if DEBUG:
-        print("sort ops by signals")
-
-    for old_ops, read_block in sorted_reads:
-        if DEBUG:
-            print("sorting ops", new_plan[old_ops])
-            print("by", [op.reads[read_block] for op in new_plan[old_ops]])
-
-        if len(old_ops) == 1:
-            # then we have nothing to sort
-            continue
-
-        ops = new_plan[old_ops]
-
-        # check if op reads are contiguous
-        # reads = [op.reads[read_block].base for op in ops]
-        # indices = sorted([signals.index(s) for s in reads])
-        # if indices != list(range(np.min(indices), np.max(indices) + 1)):
-        #     continue
-
-        # note: the key is (signal index, view offset), so ops will be
-        # sorted first by the order of the signals in the list, then by
-        # the order of the views within each signal
-        sorted_ops = sorted(
-            ops, key=lambda op: (signals.index(op.reads[read_block].base),
-                                 op.reads[read_block].elemoffset))
-
-        new_plan[old_ops] = tuple(sorted_ops)
-
-        if DEBUG:
-            print("sorted ops")
-            print(new_plan[old_ops])
-
-        signals = sort_signals_by_ops(
-            [x for x in sorted_reads
-             if x[0] == old_ops and x[1] != read_block],
-            signals, new_plan, blocks)
-
-    return new_plan, signals
+    all_signals = list(set([s.base for op_type, ops in plan for op in ops
+                            for s in op.all_signals]))
+    return all_signals, plan
 
 
 def create_signals(sigs, plan, float_type=np.float32):
     """Groups signals together into larger arrays, and represent each
-    individual signal as a slice into that array."""
+    individual signal as a slice into that array.
+
+    Parameters
+    ----------
+    signals : list of `nengo.builder.operator.Signal`
+        base signals arranged into the order in which they should reside in
+        memory (e.g., output from `order_signals`)
+    plan : list of (type, list of `nengo.builder.operator.Operator`)
+        operator execution plan (only used to get a list of all the operators)
+    float_type : np.float32 or np.float64, optional
+        floating point precision to use for signals
+
+    Returns
+    -------
+    base_arrays : dict of {(dtype, shape) : :class:`~numpy:numpy.ndarray`}
+        combined arrays, containing the initial values for all signals
+    sig_map : dict of {`nengo.builder.signal.Signal`:
+                       :class:`.signals.TensorSignal}
+        mapping from `nengo` `Signals` to `nengo_dl` `TensorSignals` (views
+        into the base arrays)
+    """
+
+    # TODO: we don't need to separate base arrays by shape, we can just flatten
+    # them all, and keep track of the shape inside the TensorSignal
 
     base_arrays = OrderedDict()
     sig_map = {}
@@ -519,10 +659,12 @@ def create_signals(sigs, plan, float_type=np.float32):
         # resize scalars to length 1 vectors
         shape = sig.shape if sig.shape != () else (1,)
 
+        # key used to map signals to base arrays
         key = (dtype, (None,) + shape[1:])
 
         initial_value = sig.initial_value.astype(dtype, copy=False)
 
+        # broadcast scalars up to full size
         if initial_value.shape != shape:
             initial_value = np.resize(initial_value, shape)
 
@@ -538,37 +680,35 @@ def create_signals(sigs, plan, float_type=np.float32):
         sig_map[sig] = signals.TensorSignal(indices, key, label=sig.name)
 
     # add any signal views to the sig_map
-    for _, ops in plan:
-        for op in ops:
-            for sig in op.all_signals:
-                if sig.is_view:
-                    if sig.initial_value.ndim != sig.base.ndim:
-                        # reshape view
-                        if sig.size != sig.base.size:
-                            # TODO: support this?
-                            raise NotImplementedError(
-                                "Slicing and reshaping the same signal is not "
-                                "supported")
+    all_signals = [
+        sig for _, ops in plan for op in ops for sig in op.all_signals]
+    for sig in all_signals:
+        if sig.is_view:
+            if sig.initial_value.ndim != sig.base.ndim:
+                # reshape view
+                if sig.size != sig.base.size:
+                    raise NotImplementedError(
+                        "Slicing and reshaping the same signal is not "
+                        "supported")
 
-                        sig_map[sig] = sig_map[sig.base].reshape(sig.shape)
-                    else:
-                        # slice view
-                        assert np.all([x == 1 for x in sig.elemstrides[1:]])
+                sig_map[sig] = sig_map[sig.base].reshape(sig.shape)
+            else:
+                # slice view
+                assert np.all([x == 1 for x in sig.elemstrides[1:]])
 
-                        start = sig.elemoffset
-                        stride = sig.elemstrides[0]
-                        stop = start + sig.size * stride
-                        if stop < 0:
-                            stop = None
+                start = sig.elemoffset
+                stride = sig.elemstrides[0]
+                stop = start + sig.size * stride
+                if stop < 0:
+                    stop = None
 
-                        sig_map[sig] = sig_map[sig.base][
-                            slice(start, stop, stride)]
-                else:
-                    assert sig in sig_map
+                sig_map[sig] = sig_map[sig.base][slice(start, stop, stride)]
+        else:
+            # if it isn't a view, the signal should already be in sig_map
+            assert sig in sig_map
 
     # error checking
     for sig, tensor_sig in sig_map.items():
-
         if tensor_sig.shape != (sig.shape if sig.shape != () else (1,)):
             raise BuildError("TensorSignal shape %s does not match Signal "
                              "shape %s" % (tensor_sig.shape, sig.shape))

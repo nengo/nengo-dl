@@ -3,7 +3,7 @@ import tensorflow as tf
 from nengo_deeplearning import Simulator
 
 
-# TODO: set this up so step_blocks, loop_unroll can be controlled by
+# TODO: set this up so step_blocks, unroll_simulation can be controlled by
 # environment variables in travis ci
 
 class Simulator32(Simulator):

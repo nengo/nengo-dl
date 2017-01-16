@@ -2,7 +2,6 @@ from nengo.builder.learning_rules import SimBCM, SimOja, SimVoja
 import numpy as np
 import tensorflow as tf
 
-from nengo_deeplearning import utils, DEBUG
 from nengo_deeplearning.builder import Builder, OpBuilder
 
 

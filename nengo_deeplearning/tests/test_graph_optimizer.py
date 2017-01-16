@@ -1,5 +1,3 @@
-import itertools
-
 from nengo.neurons import LIF, LIFRate, Izhikevich, AdaptiveLIF
 from nengo.synapses import Lowpass, Triangle, Alpha
 from nengo.builder.operator import (SlicedCopy, SimPyFunc, DotInc,

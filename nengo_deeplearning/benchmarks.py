@@ -9,6 +9,23 @@ import nengo_deeplearning as nengo_dl
 
 
 def cconv(dimensions, neurons_per_d, neuron_type):
+    """Circular convolution (EnsembleArray) benchmark.
+
+    Parameters
+    ----------
+    dimensions : int
+        number of dimensions for vector values
+    neurons_per_d : int
+        number of neurons to use per vector dimension
+    neuron_type : nengo.neurons.NeuronType
+        simulation neuron type
+
+    Returns
+    -------
+    nengo.Network
+        benchmark network
+    """
+
     with nengo.Network(label="cconv") as net:
         net.config[nengo.Ensemble].neuron_type = neuron_type
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
@@ -27,6 +44,23 @@ def cconv(dimensions, neurons_per_d, neuron_type):
 
 
 def integrator(dimensions, neurons_per_d, neuron_type):
+    """Single integrator ensemble benchmark.
+
+    Parameters
+    ----------
+    dimensions : int
+        number of dimensions for vector values
+    neurons_per_d : int
+        number of neurons to use per vector dimension
+    neuron_type : nengo.neurons.NeuronType
+        simulation neuron type
+
+    Returns
+    -------
+    nengo.Network
+        benchmark network
+    """
+
     with nengo.Network(label="integrator") as net:
         net.config[nengo.Ensemble].neuron_type = neuron_type
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
@@ -44,6 +78,23 @@ def integrator(dimensions, neurons_per_d, neuron_type):
 
 
 def pes(dimensions, neurons_per_d, neuron_type):
+    """PES learning rule benchmark.
+
+    Parameters
+    ----------
+    dimensions : int
+        number of dimensions for vector values
+    neurons_per_d : int
+        number of neurons to use per vector dimension
+    neuron_type : nengo.neurons.NeuronType
+        simulation neuron type
+
+    Returns
+    -------
+    nengo.Network
+        benchmark network
+    """
+
     with nengo.Network(label="pes") as net:
         net.config[nengo.Ensemble].neuron_type = neuron_type
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
@@ -66,6 +117,16 @@ def pes(dimensions, neurons_per_d, neuron_type):
 
 
 def compare_backends(raw=False):
+    """Compare the run time of different backends across benchmarks and
+    a range of parameters.
+
+    Parameters
+    ----------
+    raw : bool
+        if True, run the benchmarks to collect data, otherwise load data from
+        file
+    """
+
     benchmarks = [pes, integrator, cconv]
     n_range = [32]
     d_range = [64, 128, 256]
@@ -117,7 +178,6 @@ def compare_backends(raw=False):
 
     f, axes = plt.subplots(1, 3)
 
-
     for i in range(len(benchmarks)):
         for j in range(len(neuron_types)):
             plt.figure()
@@ -143,8 +203,10 @@ def compare_backends(raw=False):
 
 
 def profiling():
-    # note: in order for profiling to work, you have to manually add
-    # ...\CUDA\v8.0\extras\CUPTI\libx64 to the path
+    """Run profiler on one of the benchmarks."""
+
+    # note: in order for GPU profiling to work, you have to manually add
+    # ...\CUDA\v8.0\extras\CUPTI\libx64 to your path
     net = pes(128, 32, nengo.RectifiedLinear())
     with nengo_dl.Simulator(net, tensorboard=True, step_blocks=50,
                             device="/gpu:0", unroll_simulation=True) as sim:
