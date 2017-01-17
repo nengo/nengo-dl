@@ -39,8 +39,8 @@ class SimProcessBuilder(OpBuilder):
             # make sure that TF_PROCESS_IMPL is kept up to date
 
             if self.process_type == Lowpass:
-                self.process = LinearFilter(ops, signals, self.input_data,
-                                            self.output_data)
+                self.process = LinearFilter(ops, signals.dt.dt_val,
+                                            self.input_data, self.output_data)
         else:
             # build the step function for each process
             step_fs = [
@@ -62,7 +62,10 @@ class SimProcessBuilder(OpBuilder):
                         func_input += [
                             input[input_offset:input_offset + input_shape]]
                         input_offset += input_shape
+
+                    # print("func input", func_input)
                     func_output += [step_fs[i](*func_input)]
+                    # print("func output", func_output[0][0], func_output[0].dtype)
 
                 return np.concatenate(func_output, axis=0)
 
@@ -87,19 +90,19 @@ class SimProcessBuilder(OpBuilder):
 
 
 class LinearFilter(object):
-    def __init__(self, ops, signals, input_data, output_data):
+    def __init__(self, ops, dt, input_data, output_data):
         self.input_data = input_data
         self.output_data = output_data
 
         nums = []
         dens = []
         for op in ops:
-            if op.process.tau <= 0.03 * signals.dt.dt_val:
+            if op.process.tau <= 0.03 * dt:
                 num = 1
                 den = 0
             else:
                 num, den, _ = cont2discrete((op.process.num, op.process.den),
-                                            signals.dt.dt_val, method="zoh")
+                                            dt, method="zoh")
                 num = num.flatten()
 
                 num = num[1:] if num[0] == 0 else num
@@ -112,6 +115,7 @@ class LinearFilter(object):
                 else:
                     assert len(den) == 1
                     den = den[0]
+                # TODO: implement general linear filter (using tensorarrays?)
 
             nums += [num] * op.input.shape[0]
             dens += [den] * op.input.shape[0]

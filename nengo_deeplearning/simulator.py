@@ -367,7 +367,8 @@ class Simulator(object):
                 period = (1 if self.model.probes[i].sample_every is None else
                           self.model.probes[i].sample_every / self.dt)
 
-                p = tf.cast(p, tf.float32)
+                if p.dtype != tf.float32:
+                    p = tf.cast(p, tf.float32)
 
                 if period == 1:
                     probe_arrays[i] = probe_arrays[i].write(loop_i, p)

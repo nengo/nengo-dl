@@ -614,7 +614,7 @@ def noop_order_signals(plan, **kwargs):
     return all_signals, plan
 
 
-def create_signals(sigs, plan, float_type=np.float32):
+def create_signals(sigs, plan, float_type):
     """Groups signals together into larger arrays, and represent each
     individual signal as a slice into that array.
 
@@ -625,7 +625,7 @@ def create_signals(sigs, plan, float_type=np.float32):
         memory (e.g., output from `order_signals`)
     plan : list of (type, list of `nengo.builder.operator.Operator`)
         operator execution plan (only used to get a list of all the operators)
-    float_type : np.float32 or np.float64, optional
+    float_type : np.float32 or np.float64
         floating point precision to use for signals
 
     Returns

@@ -268,6 +268,11 @@ class SignalDict(object):
 
         assert src.tf_indices is not None
 
+        if DEBUG:
+            print("gather")
+            print("src", src)
+            print("src base", self.bases[src.key])
+
         # we prefer to get the data via `strided_slice` if possible, as it
         # is more efficient
         if src.as_slice is not None:
