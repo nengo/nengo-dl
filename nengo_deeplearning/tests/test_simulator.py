@@ -6,7 +6,7 @@ from nengo.builder.operator import ElementwiseInc, DotInc
 from nengo.utils.testing import warns
 import numpy as np
 
-import nengo_deeplearning
+import nengo_deeplearning as nengo_dl
 
 try:
     from nengo.builder.operator import PreserveValue
@@ -18,7 +18,7 @@ def test_warn_on_opensim_del():
     with nengo.Network() as net:
         nengo.Ensemble(10, 1)
 
-    sim = nengo_deeplearning.Simulator(net)
+    sim = nengo_dl.Simulator(net)
     with warns(RuntimeWarning):
         sim.__del__()
     sim.close()
@@ -42,7 +42,7 @@ def test_args():
         v = nengo.Node(Fn(), size_in=1, size_out=0)
         nengo.Connection(u, v, synapse=None)
 
-    with nengo_deeplearning.Simulator(model) as sim:
+    with nengo_dl.Simulator(model) as sim:
         sim.run(0.01)
 
 
@@ -73,7 +73,7 @@ def test_signal_init_values():
     for p in probes:
         m.sig[p]['in'] = p.target
 
-    with nengo_deeplearning.Simulator(None, model=m) as sim:
+    with nengo_dl.Simulator(None, model=m) as sim:
         sim.run_steps(3)
         assert np.allclose(sim.data[probes[0]], 0)
         assert np.allclose(sim.data[probes[1]], 1)
@@ -85,6 +85,32 @@ def test_entry_point():
     sims = [ep.load() for ep in
             pkg_resources.iter_entry_points(group='nengo.backends')]
     assert nengo_dl.Simulator in sims
+
+
+def test_persistent_state():
+    """Make sure that state is preserved between runs."""
+
+    with nengo.Network(seed=0) as net:
+        inp = nengo.Node([1])
+        ens = nengo.Ensemble(1000, 1)
+        nengo.Connection(inp, ens)
+        p = nengo.Probe(ens)
+
+    with nengo_dl.Simulator(net, step_blocks=5) as sim:
+        sim.run_steps(100)
+        data = sim.data[p]
+        sim.reset()
+
+        sim.run_steps(100)
+        data2 = sim.data[p]
+        sim.reset()
+
+        for _ in range(20):
+            sim.run_steps(5)
+        data3 = sim.data[p]
+
+    assert np.allclose(data, data2)
+    assert np.allclose(data2, data3)
 
 
 def test_step_blocks():
