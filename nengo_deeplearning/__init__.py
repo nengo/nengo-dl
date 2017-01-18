@@ -2,7 +2,7 @@ import os
 import warnings
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
-DEBUG = True
+DEBUG = False
 # TODO: change the debug system to use a proper logger
 
 # check GPU support

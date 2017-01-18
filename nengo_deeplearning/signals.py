@@ -208,24 +208,26 @@ class SignalDict(object):
         if val.get_shape().ndims != len(dst_shape):
             val = tf.reshape(val, dst_shape)
 
-        if self.bases[dst.key].dtype._is_ref_dtype:
-            # for variables we can use the tensorflow sparse updates
-            if mode == "update":
-                scatter_f = tf.scatter_update
-            elif mode == "inc":
-                scatter_f = tf.scatter_add
-            elif mode == "mul":
-                scatter_f = tf.scatter_mul
-        else:
-            # for tensors we have to use our own version
-            # TODO: remove this once we're sure we don't want to use tensors
-            scatter_f = partial(self._scatter_f, mode=mode)
+        # if self.bases[dst.key].dtype._is_ref_dtype:
+        # for variables we can use the tensorflow sparse updates
+        if mode == "update":
+            scatter_f = tf.scatter_update
+        elif mode == "inc":
+            scatter_f = tf.scatter_add
+        elif mode == "mul":
+            scatter_f = tf.scatter_mul
+        # else:
+        #     # for tensors we have to use our own version
+        #     # TODO: remove this once we're sure we don't want to use tensors
+        #     scatter_f = partial(self._scatter_f, mode=mode)
 
         if DEBUG:
             print("scatter")
-            print("dst", dst)
             print("values", val)
+            print("dst", dst)
+            print("indices", dst.indices)
             print("dst base", self.bases[dst.key])
+            print("reads_by_base", self.reads_by_base[self.bases[dst.key]])
 
         # make sure that any reads to the target signal happen before this
         # write (note: this is only any reads that have happened since the
@@ -237,19 +239,19 @@ class SignalDict(object):
         if DEBUG:
             print("new dst base", self.bases[dst.key])
 
-    def _scatter_f(self, dst, idxs, src, mode="update"):
-        """Mimics the interface of `tf.scatter_update` etc., but operates
-        on Tensors instead of Variables."""
-
-        idxs = tf.expand_dims(idxs, 1)
-        scatter_src = tf.scatter_nd(idxs, src, dst.get_shape())
-        if mode == "update":
-            # TODO: is there a more efficient way to do this?
-            mask = tf.scatter_nd(idxs, tf.ones_like(src, dtype=tf.int32),
-                                 dst.get_shape())
-            return tf.where(mask > 0, scatter_src, dst)
-        elif mode == "inc":
-            return dst + scatter_src
+    # def _scatter_f(self, dst, idxs, src, mode="update"):
+    #     """Mimics the interface of `tf.scatter_update` etc., but operates
+    #     on Tensors instead of Variables."""
+    #
+    #     idxs = tf.expand_dims(idxs, 1)
+    #     scatter_src = tf.scatter_nd(idxs, src, dst.get_shape())
+    #     if mode == "update":
+    #         # TODO: is there a more efficient way to do this?
+    #         mask = tf.scatter_nd(idxs, tf.ones_like(src, dtype=tf.int32),
+    #                              dst.get_shape())
+    #         return tf.where(mask > 0, scatter_src, dst)
+    #     elif mode == "inc":
+    #         return dst + scatter_src
 
     def gather(self, src):
         """Fetches the data corresponding to `src` from the base array.
@@ -271,6 +273,7 @@ class SignalDict(object):
         if DEBUG:
             print("gather")
             print("src", src)
+            print("indices", src.indices)
             print("src base", self.bases[src.key])
 
         # we prefer to get the data via `strided_slice` if possible, as it
@@ -282,12 +285,16 @@ class SignalDict(object):
 
         # reshape the data according to the shape set in `src`, if there is
         # one, otherwise keep the shape of the base array
-        if src.shape is not None:
+        if src.display_shape is not None:
             result = tf.reshape(result, src.shape)
+        else:
+            result.set_shape(src.shape)
 
         # whenever we read from an array we use this to mark it as "read"
         # (so that any future writes to the array will be scheduled after
         # the read)
+        # TODO: we could store the indices as well, so that future writes are
+        # only delayed if they write to the same part of the array
         self.reads_by_base[self.bases[src.key]] += [result]
 
         return result

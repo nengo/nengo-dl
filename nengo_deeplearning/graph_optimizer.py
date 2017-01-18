@@ -6,6 +6,7 @@ from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 from nengo.exceptions import BuildError
 from nengo.utils.compat import iteritems
+from nengo.utils.graphs import toposort
 from nengo.utils.simulator import operator_depencency_graph
 import numpy as np
 
@@ -99,8 +100,6 @@ def greedy_planner(operators):
 
     return merged_ops
 
-
-# TODO: add a "noop" planner for testing/debugging
 
 def mergeable(op, chosen_ops):
     """Check if the given op can be merged with the candidate group
@@ -206,6 +205,14 @@ def mergeable(op, chosen_ops):
             return False
 
     return True
+
+
+def noop_planner(operators):
+    operators = [op for op in operators if not isinstance(op, TimeUpdate)]
+
+    dependency_graph = operator_depencency_graph(operators)
+
+    return [(type(op), (op,)) for op in toposort(dependency_graph)]
 
 
 def order_signals(plan, n_passes=10):

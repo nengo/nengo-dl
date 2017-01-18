@@ -104,6 +104,7 @@ class Simulator(object):
 
         # group mergeable operators
         plan = graph_optimizer.greedy_planner(self.model.operators)
+        # plan = graph_optimizer.noop_planner(self.model.operators)
 
         # order signals/operators to promote contiguous reads
         signals, self.plan = graph_optimizer.order_signals(plan, n_passes=10)
@@ -212,9 +213,6 @@ class Simulator(object):
             time step even if their output doesn't appear to be used
         """
 
-        # load base variables
-        self.signals.bases = self.get_base_variables(reuse=True)
-
         # build operators
         side_effects = []
         self.signals.reads_by_base = defaultdict(list)
@@ -233,6 +231,9 @@ class Simulator(object):
             if outputs is not None:
                 side_effects += outputs
 
+        if DEBUG:
+            print("=" * 30)
+            print("collecting probe tensors")
         probe_tensors = [self.signals[self.model.sig[p]["in"]]
                          for p in self.model.probes]
 
@@ -260,6 +261,9 @@ class Simulator(object):
         The number of timesteps that will be unrolled is defined by the
         `step_blocks` parameter on Simulator initialization.
         """
+
+        # load base variables
+        self.signals.bases = self.get_base_variables(reuse=True)
 
         # create arrays to store output of probe variables each timestep
         probe_arrays = [
@@ -352,7 +356,11 @@ class Simulator(object):
         def loop_condition(step, stop, *_):
             return step < stop
 
-        def loop_body(step, stop, loop_i, probe_arrays):
+        def loop_body(step, stop, loop_i, probe_arrays, base_vars):
+            self.signals.bases = OrderedDict(
+                [(k, v) for k, v in zip(self.base_arrays_init.keys(),
+                                        base_vars)])
+
             # note: nengo step counter is incremented at the beginning of the
             # timestep. we don't want to increment it yet, because we need
             # to figure out the side effects first, so we feed in step+1
@@ -382,8 +390,7 @@ class Simulator(object):
 
             # need to make sure that any operators that could have side
             # effects run each timestep, so we tie them to the step increment
-            with self.graph.control_dependencies(
-                            side_effects + list(self.signals.bases.values())):
+            with self.graph.control_dependencies(side_effects):
                 step += 1
 
             loop_i += 1
@@ -410,7 +417,8 @@ class Simulator(object):
             #
             # summary_op = tf.summary.merge_all()
 
-            return step, stop, loop_i, probe_arrays
+            return (step, stop, loop_i, probe_arrays,
+                    tuple(self.signals.bases.values()))
 
         self.step_var = tf.placeholder(tf.int32)
         self.stop_var = tf.placeholder(tf.int32)
@@ -447,14 +455,15 @@ class Simulator(object):
         # build while loop
         loop_output = tf.while_loop(
             loop_condition, loop_body,
-            loop_vars=(self.step_var, self.stop_var, loop_i, probe_arrays),
+            loop_vars=(self.step_var, self.stop_var, loop_i, probe_arrays,
+                       tuple(x._ref() for x in
+                             self.get_base_variables(reuse=True).values())),
             parallel_iterations=1,  # TODO: more parallel iterations
             back_prop=False)
 
         self.end_step = loop_output[0]
         self.probe_arrays = [p.pack() for p in loop_output[3]]
-        self.end_base_arrays = list(
-            self.get_base_variables(reuse=True).values())
+        self.end_base_arrays = loop_output[4:]
 
         if self.tensorboard:
             directory = "%s/%s" % (DATA_DIR, self.model.toplevel.label)
@@ -659,7 +668,7 @@ class Simulator(object):
             the sampling period of the probe to create a range for;
             if None, the simulator's ``dt`` will be used.
         """
-        
+
         dt = self.dt if dt is None else dt
         n_steps = int(self.n_steps * (self.dt / dt))
         return dt * np.arange(1, n_steps + 1)
