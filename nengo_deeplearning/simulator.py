@@ -29,22 +29,26 @@ class Simulator(object):
     unsupported = [
         ("nengo/tests/test_simulator.py:test_warn_on_opensim_del",
          "nengo_deeplearning raises a different (more visible) warning (see "
-         "tests/test_simulator.py:test_warn_on_opensim_del"),
+         "tests/test_nengo_tests.py:test_warn_on_opensim_del"),
 
         ("nengo/tests/test_simulator.py:test_signal_init_values",
          "different method required to manually step simulator (see "
-         "tests/test_simulator.py:test_signal_init_values"),
+         "tests/test_nengo_tests.py:test_signal_init_values"),
 
         ("nengo/tests/test_simulator.py:test_entry_point",
          "overridden so we can pass custom test simulators (see "
-         "tests/test_simulator.py:test_entry_point"),
+         "tests/test_nengo_tests.py:test_entry_point"),
 
         ("nengo/tests/test_builder.py:test_signal_init_values",
-         "duplicate of test_simulator.py:test_signal_init_values"),
+         "duplicate of test_nengo_tests.py:test_signal_init_values"),
 
         ("nengo/tests/test_node.py:test_args",
          "time is passed as np.float32, not a float (see "
-         "tests/test_simulator.py:test_args")
+         "tests/test_nengo_tests.py:test_args"),
+
+        ("nengo/tests/test_node.py:test_unconnected_node",
+         "need to set `step_blocks` to ensure node runs the correct number "
+         "of times (see tests/test_nengo_tests.py:test_unconnected_node"),
     ]
 
     """Simulate network using the `nengo_deeplearning` backend.
@@ -237,11 +241,6 @@ class Simulator(object):
         probe_tensors = [self.signals[self.model.sig[p]["in"]]
                          for p in self.model.probes]
 
-        # TODO: figure out why this is necessary, then a more graceful solution
-        # something to do with this telling tensorflow that the
-        # probe read needs to happen each iteration
-        probe_tensors = [p + 0 for p in probe_tensors]
-
         if DEBUG:
             print("build_step complete")
             print("probe_tensors", [str(x) for x in probe_tensors])
@@ -268,15 +267,10 @@ class Simulator(object):
         # create arrays to store output of probe variables each timestep
         probe_arrays = [
             tf.TensorArray(
-                utils.cast_dtype(self.model.sig[p]["in"].dtype,
-                                 tf.float32),
-                size=(0 if self.step_blocks is None else
-                      self.step_blocks),
-                dynamic_size=self.step_blocks is None,
-                clear_after_read=True)
-            for i, p in enumerate(self.model.probes)]
-        # self.probe_arrays_ph = [tf.placeholder(
-        #     tf.float32, shape=(None, p.size_in)) for p in self.model.probes]
+                self.dtype, clear_after_read=True,
+                size=0 if self.step_blocks is None else self.step_blocks,
+                dynamic_size=self.step_blocks is None)
+            for _ in self.model.probes]
 
         # step variable representing the current timestep (will be filled in
         # when `run_steps` is called)
@@ -302,24 +296,7 @@ class Simulator(object):
             # copy probe data to array
             probe_reads = [tf.identity(p) for p in probe_tensors]
             for i, p in enumerate(probe_reads):
-                period = (
-                    1 if self.model.probes[i].sample_every is None else
-                    self.model.probes[i].sample_every / self.dt)
-
-                if p.dtype != tf.float32:
-                    p = tf.cast(p, tf.float32)
-
-                if period == 1:
-                    probe_arrays[i] = probe_arrays[i].write(loop_i, p)
-                else:
-                    index = tf.cast(
-                        tf.cast(loop_i, tf.float32) / period,
-                        tf.int32)
-                    condition = tf.cast(step + 1, self.dtype) % period < 1
-                    probe_arrays[i] = tf.case(
-                        [(condition,
-                          lambda: probe_arrays[i].write(index, p))],
-                        default=lambda: probe_arrays[i])
+                probe_arrays[i] = probe_arrays[i].write(loop_i, p)
 
             # need to make sure that any operators that could have side
             # effects run each timestep, so we tie them to the step increment
@@ -330,7 +307,7 @@ class Simulator(object):
 
         self.end_step = step
         self.probe_arrays = [p.pack() for p in probe_arrays]
-        self.end_base_arrays = [b for b in self.signals.bases.values()]
+        self.end_base_arrays = list(self.signals.bases.values())
 
         if self.tensorboard:
             directory = "%s/%s" % (DATA_DIR, self.model.toplevel.label)
@@ -372,21 +349,7 @@ class Simulator(object):
 
             # copy probe data to array
             for i, p in enumerate(probe_tensors):
-                period = (1 if self.model.probes[i].sample_every is None else
-                          self.model.probes[i].sample_every / self.dt)
-
-                if p.dtype != tf.float32:
-                    p = tf.cast(p, tf.float32)
-
-                if period == 1:
-                    probe_arrays[i] = probe_arrays[i].write(loop_i, p)
-                else:
-                    index = tf.cast(tf.cast(loop_i, tf.float32) / period,
-                                    tf.int32)
-                    condition = tf.cast(step + 1, self.dtype) % period < 1
-                    probe_arrays[i] = tf.case(
-                        [(condition, lambda: probe_arrays[i].write(index, p))],
-                        default=lambda: probe_arrays[i])
+                probe_arrays[i] = probe_arrays[i].write(loop_i, p)
 
             # need to make sure that any operators that could have side
             # effects run each timestep, so we tie them to the step increment
@@ -424,46 +387,35 @@ class Simulator(object):
         self.stop_var = tf.placeholder(tf.int32)
         loop_i = tf.constant(0)
 
-        # note: probe_arrays need to be float32 because in the tensorflow
-        # case logic they end up comparing the tensorarray dtype to the
-        # tensorarray.flow dtype (which is always float32). could submit
-        # a patch to tensorflow if this is a significant issue, but
-        # it's probably a good idea to have the probe arrays be float32
-        # anyway
-        # for future reference, the patch would be in
-        # tensorflow/python/ops/control_flow_ops.py:2956
-        # def _correct_empty(v):
-        #     ...
-        #     else:
-        #         dtype = (v.flow.dtype if
-        #                  isinstance(v, tensor_array_ops.TensorArray)
-        #                  else v.dtype)
-        #         return array_ops.constant(dtype.as_numpy_dtype())
-        probe_arrays = []
-        for i, p in enumerate(self.model.probes):
-            probe_period = (1 if p.sample_every is None else
-                            int(p.sample_every / self.dt))
-            size = (0 if self.step_blocks is None else
-                    self.step_blocks // probe_period)
-            probe_arrays += [
-                tf.TensorArray(
-                    tf.float32, size=size,
-                    dynamic_size=self.step_blocks is None,
-                    clear_after_read=True)
-            ]
+        probe_arrays = [
+            tf.TensorArray(
+                self.dtype, clear_after_read=True,
+                size=0 if self.step_blocks is None else self.step_blocks,
+                dynamic_size=self.step_blocks is None)
+            for _ in self.model.probes]
 
         # build while loop
-        loop_output = tf.while_loop(
-            loop_condition, loop_body,
-            loop_vars=(self.step_var, self.stop_var, loop_i, probe_arrays,
-                       tuple(x._ref() for x in
-                             self.get_base_variables(reuse=True).values())),
-            parallel_iterations=1,  # TODO: more parallel iterations
-            back_prop=False)
+        loop_vars = (
+            self.step_var, self.stop_var, loop_i, probe_arrays,
+            tuple(x._ref() for x in
+                  self.get_base_variables(reuse=True).values()))
 
-        self.end_step = loop_output[0]
-        self.probe_arrays = [p.pack() for p in loop_output[3]]
-        self.end_base_arrays = loop_output[4:]
+        if self.unroll_simulation:
+            probe_reads = []
+            for n in range(self.step_blocks):
+                with self.graph.name_scope("iteration_%d" % n), \
+                     self.graph.control_dependencies(probe_reads):
+                    loop_vars = loop_body(*loop_vars)
+                    probe_reads = [tf.identity(p) for p in loop_vars[3]]
+        else:
+            loop_vars = tf.while_loop(
+                loop_condition, loop_body, loop_vars=loop_vars,
+                parallel_iterations=1,  # TODO: more parallel iterations
+                back_prop=False)
+
+            self.end_step = loop_vars[0]
+            self.probe_arrays = [p.pack() for p in loop_vars[3]]
+            self.end_base_arrays = loop_vars[4:]
 
         if self.tensorboard:
             directory = "%s/%s" % (DATA_DIR, self.model.toplevel.label)
@@ -516,21 +468,34 @@ class Simulator(object):
             raise SimulatorClosed("Simulator cannot run because it is closed.")
 
         if self.step_blocks is not None and n_steps % self.step_blocks != 0:
-            raise SimulationError(
-                "Number of steps (%d) must be an even multiple of "
-                "`step_blocks` (%d) " % (n_steps, self.step_blocks))
+            warnings.warn(
+                "Number of steps (%d) is not an even multiple of `step_blocks`"
+                " (%d).  Simulation will run for %d steps, which may have "
+                "unintended side effects." %
+                (n_steps, self.step_blocks,
+                 self.step_blocks * (n_steps // self.step_blocks + 1)))
 
         print("Simulation started")
         start = time.time()
 
         if self.step_blocks is None:
-            self._run_steps(n_steps, profile=profile)
+            probe_data = self._run_steps(n_steps, profile=profile)
+
+            self.update_probe_data(probe_data, self.n_steps - n_steps, n_steps)
         else:
             # break the run up into `step_blocks` sized chunks
             remaining_steps = n_steps
             while remaining_steps > 0:
-                self._run_steps(self.step_blocks, profile=profile)
+                probe_data = self._run_steps(self.step_blocks, profile=profile)
                 remaining_steps -= self.step_blocks
+
+                self.update_probe_data(
+                    probe_data, self.n_steps - self.step_blocks,
+                                self.step_blocks + min(remaining_steps, 0))
+
+            # update n_steps/time
+            self.n_steps += remaining_steps
+            self.time = self.n_steps * self.dt
 
         print("Simulation finished in %s" %
               datetime.timedelta(seconds=int(time.time() - start)))
@@ -576,14 +541,12 @@ class Simulator(object):
         self.n_steps = final_step
         self.time = self.n_steps * self.dt
 
-        # update probe data
-        for i, p in enumerate(self.model.probes):
-            self.model.params[p] += [probe_data[i]]
-
         if profile:
             timeline = Timeline(run_metadata.step_stats)
             with open("nengo_dl_profile.json", "w") as f:
                 f.write(timeline.generate_chrome_trace_format())
+
+        return probe_data
 
     def get_base_variables(self, reuse=False):
         """Loads the base variables used to store all simulation data.
@@ -672,6 +635,37 @@ class Simulator(object):
         dt = self.dt if dt is None else dt
         n_steps = int(self.n_steps * (self.dt / dt))
         return dt * np.arange(1, n_steps + 1)
+
+    def update_probe_data(self, probe_data, start, n_steps):
+        """Updates the stored probe data (since the last reset) with the data
+        from the latest run.
+
+        Downsamples the probe data returned from tensorflow (from every
+        simulation timestep) according to probe `sample_every` and the number
+        of steps run.
+
+        Parameters
+        ----------
+        probe_data : list of `np.ndarray`
+            probe data from every timestep
+        start : int
+            the simulation timestep at which probe data starts
+        n_steps : int
+            the number of timesteps over which we want to collect data
+        """
+
+        # first, remove any extra timesteps (due to `step_blocks` mismatch)
+        probe_data = [p[:n_steps] for p in probe_data]
+
+        for i, p in enumerate(self.model.probes):
+            if p.sample_every is not None:
+                # downsample probe according to `sample_every`
+                period = p.sample_every / self.dt
+                steps = np.arange(start, start + n_steps)
+                probe_data[i] = probe_data[i][(steps + 1) % period < 1]
+
+            # update stored probe data
+            self.model.params[p] += [probe_data[i]]
 
 
 class ProbeDict(Mapping):

@@ -5,12 +5,9 @@ import tensorflow as tf
 from nengo_deeplearning import Simulator
 
 
-# TODO: set this up so step_blocks, unroll_simulation can be controlled by
-# environment variables in travis ci
-
 class TestSimulator(Simulator):
     def __init__(self, *args, **kwargs):
-        if os.environ.get("NENGO_DL_TEST_PRECISION", "64") == "32":
+        if os.environ.get("NENGO_DL_TEST_PRECISION", "32") == "32":
             dtype = tf.float32
         else:
             dtype = tf.float64
@@ -20,7 +17,7 @@ class TestSimulator(Simulator):
         else:
             unroll = True
 
-        step_blocks = os.environ.get("NENGO_DL_TEST_STEP_BLOCKS", "None")
+        step_blocks = os.environ.get("NENGO_DL_TEST_STEP_BLOCKS", "50")
         if step_blocks == "None":
             step_blocks = None
         else:

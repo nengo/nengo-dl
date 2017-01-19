@@ -7,9 +7,9 @@ import pytest
 
 from nengo_deeplearning.tests import conftest
 
-os.environ["NENGO_DL_TEST_PRECISION"] = "64"
+os.environ["NENGO_DL_TEST_PRECISION"] = "32"
 os.environ["NENGO_DL_TEST_UNROLL"] = "False"
-os.environ["NENGO_DL_TEST_STEP_BLOCKS"] = "None"
+os.environ["NENGO_DL_TEST_STEP_BLOCKS"] = "50"
 
 # run nengo tests
 print("#" * 30, "NENGO TESTS", "#" * 30)
@@ -22,8 +22,8 @@ pytest.main([
 ])
 
 # run local tests
-# print("#" * 30, "NENGO_DEEPLEARNING TESTS", "#" * 30)
-# pytest.main()
+print("#" * 30, "NENGO_DEEPLEARNING TESTS", "#" * 30)
+pytest.main()
 
 # run flake8
 sys.argv += ["."]
