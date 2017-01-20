@@ -63,9 +63,7 @@ class SimProcessBuilder(OpBuilder):
                             input[input_offset:input_offset + input_shape]]
                         input_offset += input_shape
 
-                    # print("func input", func_input)
                     func_output += [step_fs[i](*func_input)]
-                    # print("func output", func_output[0][0], func_output[0].dtype)
 
                 return np.concatenate(func_output, axis=0)
 

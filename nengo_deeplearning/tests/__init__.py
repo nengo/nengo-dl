@@ -7,22 +7,26 @@ from nengo_deeplearning import Simulator
 
 class TestSimulator(Simulator):
     def __init__(self, *args, **kwargs):
-        if os.environ.get("NENGO_DL_TEST_PRECISION", "32") == "32":
-            dtype = tf.float32
-        else:
-            dtype = tf.float64
+        if "NENGO_DL_TEST_PRECISION" in os.environ:
+            if os.environ["NENGO_DL_TEST_PRECISION"] == "32":
+                kwargs.setdefault("dtype", tf.float32)
+            else:
+                kwargs.setdefault("dtype", tf.float64)
 
-        if os.environ.get("NENGO_DL_TEST_UNROLL", "False") == "False":
-            unroll = False
-        else:
-            unroll = True
+        if "NENGO_DL_TEST_UNROLL" in os.environ:
+            if os.environ["NENGO_DL_TEST_UNROLL"] == "True":
+                kwargs.setdefault("unroll_simulation", True)
+            else:
+                kwargs.setdefault("unroll_simulation", False)
 
-        step_blocks = os.environ.get("NENGO_DL_TEST_STEP_BLOCKS", "50")
-        if step_blocks == "None":
-            step_blocks = None
-        else:
-            step_blocks = int(step_blocks)
+        if "NENGO_DL_TEST_STEP_BLOCKS" in os.environ:
+            step_blocks = os.environ["NENGO_DL_TEST_STEP_BLOCKS"]
+            if step_blocks == "None":
+                kwargs.setdefault("step_blocks", None)
+            else:
+                kwargs.setdefault("step_blocks", int(step_blocks))
 
-        super(TestSimulator, self).__init__(
-            *args, dtype=dtype, unroll_simulation=unroll,
-            step_blocks=step_blocks, **kwargs)
+        if "NENGO_DL_TEST_DEVICE" in os.environ:
+            kwargs.setdefault("device", os.environ["NENGO_DL_TEST_DEVICE"])
+
+        super(TestSimulator, self).__init__(*args, **kwargs)

@@ -176,10 +176,7 @@ class Simulator(object):
                     Builder.pre_build(op_type, ops, self.signals, self.rng)
 
             # build stage
-            if self.unroll_simulation:
-                self.build_loop_unrolled()
-            else:
-                self.build_loop()
+            self.build_loop()
 
         print("Construction completed in %s " %
               datetime.timedelta(seconds=int(time.time() - start)))
@@ -238,8 +235,23 @@ class Simulator(object):
         if DEBUG:
             print("=" * 30)
             print("collecting probe tensors")
-        probe_tensors = [self.signals[self.model.sig[p]["in"]]
-                         for p in self.model.probes]
+
+        # TODO: better solution to avoid the forced_copy
+        # we need to make sure that probe reads occur before the
+        # probe value is overwritten on the next timestep. however,
+        # just blocking on the sliced value (probe_tensor) doesn't
+        # work, because slices of variables don't perform a
+        # copy, so the slice can be "executed" and then the value
+        # overwritten before the tensorarray write occurs. what we
+        # really want to do is block until the probe_arrays.write
+        # happens, but you can't block on probe_arrays (and blocking on
+        # probe_array.flow doesn't work, although I think it should).
+        # so by adding the copy here and then blocking on the copy, we make
+        # sure that the probe value is read before it can be overwritten.
+        probe_tensors = [
+            self.signals.gather(self.sig_map[self.model.sig[p]["in"]],
+                                force_copy=True)
+            for p in self.model.probes]
 
         if DEBUG:
             print("build_step complete")
@@ -248,86 +260,12 @@ class Simulator(object):
 
         return probe_tensors, side_effects
 
-    def build_loop_unrolled(self):
-        """Builds an unrolled version of the simulation loop (where each
-        iteration is explicitly represented in the graph).
-
-        Unrolling the simulation loop results in faster simulation, but
-        increases the graph construction time and memory usage.
-
-        Notes
-        -----
-        The number of timesteps that will be unrolled is defined by the
-        `step_blocks` parameter on Simulator initialization.
-        """
-
-        # load base variables
-        self.signals.bases = self.get_base_variables(reuse=True)
-
-        # create arrays to store output of probe variables each timestep
-        probe_arrays = [
-            tf.TensorArray(
-                self.dtype, clear_after_read=True,
-                size=0 if self.step_blocks is None else self.step_blocks,
-                dynamic_size=self.step_blocks is None)
-            for _ in self.model.probes]
-
-        # step variable representing the current timestep (will be filled in
-        # when `run_steps` is called)
-        self.step_var = tf.placeholder(tf.int32, shape=())
-        # TODO: is this identity necessary?
-        step = tf.identity(self.step_var)
-        loop_i = tf.constant(0)
-
-        # note: this isn't used, it is just for compatibility with build_loop()
-        self.stop_var = tf.placeholder(tf.int32)
-
-        probe_reads = []
-        for n in range(self.step_blocks):
-            self.signals.step = step + 1
-
-            # build the operators for a single step
-            # note: we have to make sure that all the probe values are read
-            # from the previous step before being overwritten in the next
-            with self.graph.name_scope("iteration_%d" % n), \
-                    self.graph.control_dependencies(probe_reads):
-                probe_tensors, side_effects = self.build_step()
-
-            # copy probe data to array
-            probe_reads = [tf.identity(p) for p in probe_tensors]
-            for i, p in enumerate(probe_reads):
-                probe_arrays[i] = probe_arrays[i].write(loop_i, p)
-
-            # need to make sure that any operators that could have side
-            # effects run each timestep, so we tie them to the step increment
-            with self.graph.control_dependencies(side_effects):
-                step += 1
-
-            loop_i += 1
-
-        self.end_step = step
-        self.probe_arrays = [p.pack() for p in probe_arrays]
-        self.end_base_arrays = list(self.signals.bases.values())
-
-        if self.tensorboard:
-            directory = "%s/%s" % (DATA_DIR, self.model.toplevel.label)
-            if os.path.isdir(directory):
-                run_number = max(
-                    [int(x[4:]) for x in os.listdir(directory)
-                     if x.startswith("run")]) + 1
-            else:
-                run_number = 0
-            self.summary = tf.summary.FileWriter(
-                "%s/run_%d" % (directory, run_number),
-                graph=self.graph)
-
     def build_loop(self):
         """Build simulation loop.
 
-        Uses tensorflow's symbolic while loop framework, which is more flexible
-        than `build_loop_unrolled` in that it allows the simulation to run
-        for an arbitrary number of timesteps in one graph execution.  However,
-        it does introduce some additional overhead.
+        Loop can be constructed using the `tf.while_loop` architecture, or
+        explicitly unrolled.  Unrolling increases graph construction time
+        and memory usage, but increases simulation speed.
         """
 
         def loop_condition(step, stop, *_):
@@ -345,15 +283,22 @@ class Simulator(object):
             self.signals.step = step + 1
 
             # build the operators for a single step
-            probe_tensors, side_effects = self.build_step()
+            # note: we tie things to the `step` variable so that we can be
+            # sure the other things we're tying to the step (side effects and
+            # probes) from the previous timestep are executed before the
+            # next step starts
+            with self.graph.control_dependencies([self.signals.step]):
+                probe_tensors, side_effects = self.build_step()
 
             # copy probe data to array
             for i, p in enumerate(probe_tensors):
                 probe_arrays[i] = probe_arrays[i].write(loop_i, p)
 
             # need to make sure that any operators that could have side
-            # effects run each timestep, so we tie them to the step increment
-            with self.graph.control_dependencies(side_effects):
+            # effects run each timestep, so we tie them to the step increment.
+            # we also need to make sure that all the probe reads happen before
+            # those values get overwritten on the next timestep
+            with self.graph.control_dependencies(side_effects + probe_tensors):
                 step += 1
 
             loop_i += 1
@@ -389,33 +334,30 @@ class Simulator(object):
 
         probe_arrays = [
             tf.TensorArray(
-                self.dtype, clear_after_read=True,
+                self.dtype, clear_after_read=False,
                 size=0 if self.step_blocks is None else self.step_blocks,
                 dynamic_size=self.step_blocks is None)
             for _ in self.model.probes]
 
-        # build while loop
+        # build simulation loop
         loop_vars = (
             self.step_var, self.stop_var, loop_i, probe_arrays,
             tuple(x._ref() for x in
                   self.get_base_variables(reuse=True).values()))
 
         if self.unroll_simulation:
-            probe_reads = []
             for n in range(self.step_blocks):
-                with self.graph.name_scope("iteration_%d" % n), \
-                     self.graph.control_dependencies(probe_reads):
+                with self.graph.name_scope("iteration_%d" % n):
                     loop_vars = loop_body(*loop_vars)
-                    probe_reads = [tf.identity(p) for p in loop_vars[3]]
         else:
             loop_vars = tf.while_loop(
                 loop_condition, loop_body, loop_vars=loop_vars,
                 parallel_iterations=1,  # TODO: more parallel iterations
                 back_prop=False)
 
-            self.end_step = loop_vars[0]
-            self.probe_arrays = [p.pack() for p in loop_vars[3]]
-            self.end_base_arrays = loop_vars[4:]
+        self.end_step = loop_vars[0]
+        self.probe_arrays = [p.pack() for p in loop_vars[3]]
+        self.end_base_arrays = loop_vars[4:]
 
         if self.tensorboard:
             directory = "%s/%s" % (DATA_DIR, self.model.toplevel.label)
@@ -491,7 +433,7 @@ class Simulator(object):
 
                 self.update_probe_data(
                     probe_data, self.n_steps - self.step_blocks,
-                                self.step_blocks + min(remaining_steps, 0))
+                    self.step_blocks + min(remaining_steps, 0))
 
             # update n_steps/time
             self.n_steps += remaining_steps

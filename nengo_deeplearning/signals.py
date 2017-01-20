@@ -1,5 +1,3 @@
-from functools import partial
-
 from nengo.builder.signal import Signal
 from nengo.exceptions import BuildError
 import numpy as np
@@ -108,40 +106,40 @@ class TensorSignal(object):
         step = (self.indices[1] - self.indices[0] if len(self.indices) > 1
                 else 1)
         if step != 0 and np.all(
-                        self.indices == np.arange(start, stop, step)):
+                self.indices == np.arange(start, stop, step)):
             self.as_slice = (tf.constant([start]), tf.constant([stop]),
                              tf.constant([step]))
         else:
             self.as_slice = None
 
-            # def broadcast(self, axis, length):
-            #     assert self.in_tf
-            #     assert axis in (0, 1)
-            #
-            #     indices = self.indices
-            #     indices = tf.stack([indices] * length, axis=axis)
-            #     indices = tf.reshape(indices, (-1,))
-            #
-            #     if axis == 1:
-            #         display_shape = self.shape + (length,)
-            #     else:
-            #         display_shape = (length,) + self.shape
-            #
-            #     return TensorSignal(
-            #         indices, self.key, display_shape=display_shape,
-            #         label=self.label + ".broadcast(%d, %d)" % (axis, length))
-            #
-            # def tile(self, length):
-            #     assert self.in_tf
-            #
-            #     # repeat along the first axis the given number of times
-            #     # note: we don't use tf.tile because it doesn't have a GPU kernel
-            #     indices = tf.concat(0, [self.indices] * length)
-            #     shape = (self.shape[0] * length,) + self.shape[1:]
-            #
-            #     return TensorSignal(
-            #         indices, self.key, display_shape=shape,
-            #         label=self.label + ".tile(%d)" % length)
+    # def broadcast(self, axis, length):
+    #     assert self.in_tf
+    #     assert axis in (0, 1)
+    #
+    #     indices = self.indices
+    #     indices = tf.stack([indices] * length, axis=axis)
+    #     indices = tf.reshape(indices, (-1,))
+    #
+    #     if axis == 1:
+    #         display_shape = self.shape + (length,)
+    #     else:
+    #         display_shape = (length,) + self.shape
+    #
+    #     return TensorSignal(
+    #         indices, self.key, display_shape=display_shape,
+    #         label=self.label + ".broadcast(%d, %d)" % (axis, length))
+    #
+    # def tile(self, length):
+    #     assert self.in_tf
+    #
+    #     # repeat along the first axis the given number of times
+    #     # note: we don't use tf.tile because it doesn't have a GPU kernel
+    #     indices = tf.concat(0, [self.indices] * length)
+    #     shape = (self.shape[0] * length,) + self.shape[1:]
+    #
+    #     return TensorSignal(
+    #         indices, self.key, display_shape=shape,
+    #         label=self.label + ".tile(%d)" % length)
 
 
 class SignalDict(object):
@@ -169,20 +167,6 @@ class SignalDict(object):
         self.dt = tf.constant(dt, dtype)
         self.dt.dt_val = dt  # store the actual value as well
 
-    def __getitem__(self, sigs):
-        if isinstance(sigs, (list, tuple)):
-            sigs = self.combine(sigs)
-        elif isinstance(sigs, Signal):
-            sigs = self.sig_map[sigs]
-
-        return self.gather(sigs)
-
-    def __setitem__(self, sigs, val):
-        if isinstance(sigs, (list, tuple)):
-            sigs = self.combine(sigs)
-
-        self.scatter(sigs, val, mode="update")
-
     def scatter(self, dst, val, mode="update"):
         """Updates the base data corresponding to `dst`.
 
@@ -208,18 +192,12 @@ class SignalDict(object):
         if val.get_shape().ndims != len(dst_shape):
             val = tf.reshape(val, dst_shape)
 
-        # if self.bases[dst.key].dtype._is_ref_dtype:
-        # for variables we can use the tensorflow sparse updates
         if mode == "update":
             scatter_f = tf.scatter_update
         elif mode == "inc":
             scatter_f = tf.scatter_add
         elif mode == "mul":
             scatter_f = tf.scatter_mul
-        # else:
-        #     # for tensors we have to use our own version
-        #     # TODO: remove this once we're sure we don't want to use tensors
-        #     scatter_f = partial(self._scatter_f, mode=mode)
 
         if DEBUG:
             print("scatter")
@@ -239,27 +217,17 @@ class SignalDict(object):
         if DEBUG:
             print("new dst base", self.bases[dst.key])
 
-    # def _scatter_f(self, dst, idxs, src, mode="update"):
-    #     """Mimics the interface of `tf.scatter_update` etc., but operates
-    #     on Tensors instead of Variables."""
-    #
-    #     idxs = tf.expand_dims(idxs, 1)
-    #     scatter_src = tf.scatter_nd(idxs, src, dst.get_shape())
-    #     if mode == "update":
-    #         # TODO: is there a more efficient way to do this?
-    #         mask = tf.scatter_nd(idxs, tf.ones_like(src, dtype=tf.int32),
-    #                              dst.get_shape())
-    #         return tf.where(mask > 0, scatter_src, dst)
-    #     elif mode == "inc":
-    #         return dst + scatter_src
-
-    def gather(self, src):
+    def gather(self, src, force_copy=False):
         """Fetches the data corresponding to `src` from the base array.
 
         Parameters
         ----------
         src : :class:`.TensorSignal`
             signal indicating the data to be read from base array
+        force_copy : bool, optional
+            if True, always perform a gather, not a slice (this forces a
+            copy). note that setting force_copy=False does not guarantee that
+            a copy won't be performed.
 
         Returns
         -------
@@ -278,10 +246,10 @@ class SignalDict(object):
 
         # we prefer to get the data via `strided_slice` if possible, as it
         # is more efficient
-        if src.as_slice is not None:
-            result = tf.strided_slice(self.bases[src.key], *src.as_slice)
-        else:
+        if force_copy or src.as_slice is None:
             result = tf.gather(self.bases[src.key], src.tf_indices)
+        else:
+            result = tf.strided_slice(self.bases[src.key], *src.as_slice)
 
         # reshape the data according to the shape set in `src`, if there is
         # one, otherwise keep the shape of the base array

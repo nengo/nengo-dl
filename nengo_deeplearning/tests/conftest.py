@@ -1,13 +1,11 @@
 import nengo
 import numpy as np
-import tensorflow as tf
+# import tensorflow as tf
 
-from nengo_deeplearning.tests import TestSimulator
+# from nengo_deeplearning.tests import TestSimulator
 
 
-# set looser tolerances on synapse tests (due to 32 bit precision); note this
-# is also necessary for the 64bit tests, because although we compute internally
-# in 64 bit precision the probe output is still 32bit.
+# set looser tolerances on synapse tests
 def allclose(*args, **kwargs):
     kwargs.setdefault('atol', 5e-7)
     return nengo.utils.testing.allclose(*args, **kwargs)
