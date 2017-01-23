@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import copy
 
 from nengo.builder.operator import (TimeUpdate, SimPyFunc, SlicedCopy, DotInc,
                                     ElementwiseInc, Copy)
@@ -89,7 +90,7 @@ def greedy_planner(operators):
             del successors_of[op]
 
     if DEBUG:
-        print("PLAN")
+        print("GREEDY PLAN")
         print("\n".join([str(x) for x in plan]))
 
     # note: -1 because we skip TimeUpdate
@@ -206,6 +207,108 @@ def mergeable(op, chosen_ops):
             return False
 
     return True
+
+
+def tree_planner(operators):
+    """Create merged execution plan through exhaustive tree search.
+
+    Unlike `greedy_planner`, this is guaranteed to find the shortest plan.
+    However, depending on the structure of the operator graph, it can take
+    a long time to execute.
+
+    Parameters
+     ----------
+     operators : list of nengo.builder.operator.Operator
+        all the `nengo` operators in a model (unordered)
+
+    Returns
+    -------
+    list of tuple of `nengo.builder.operator.Operator`
+        operators combined into mergeable groups and in execution order
+    """
+
+    def shortest_plan(ops, successors_of, predecessors_of, cache):
+        if DEBUG:
+            print("shortest_plan")
+            print(ops)
+
+        if len(ops) <= 1:
+            # normal termination
+            return [ops] if len(ops) == 1 else []
+        elif ops in cache:
+            # we've already found the shortest path for this set of ops
+            # (plans are markovian)
+            return cache[ops]
+
+        # get the groups that could be scheduled next
+        free = [op for op in ops if len(predecessors_of[op]) == 0]
+
+        if DEBUG:
+            print("free", free)
+
+        available = []
+        for op in free:
+            for i, group in enumerate(available):
+                if mergeable(op, group):
+                    available[i] += (op,)
+                    break
+            else:
+                available += [(op,)]
+
+        if DEBUG:
+            print("available")
+            print(available)
+
+        if len(available) == 0:
+            raise BuildError("Cycle detected during graph optimization")
+
+        # check what the shortest plan is after selecting each available group
+        shortest = None
+        for group in available:
+            pred = {k: copy.copy(v) for k, v in predecessors_of.items()}
+            for op in group:
+                for op2 in successors_of[op]:
+                    pred[op2].remove(op)
+
+            if DEBUG:
+                print("selecting", group)
+
+            result = shortest_plan(
+                tuple(op for op in ops if op not in group),
+                successors_of, pred, cache)
+
+            if shortest is None or len(result) + 1 < len(shortest):
+                shortest = [group] + result
+
+                if DEBUG:
+                    print("new shortest plan detected")
+                    print(shortest)
+
+        cache[ops] = shortest
+
+        return shortest
+
+    operators = [op for op in operators if not isinstance(op, TimeUpdate)]
+    dependency_graph = operator_depencency_graph(operators)
+
+    predecessors_of = {}
+    successors_of = {}
+    for op in operators:
+        predecessors_of[op] = set()
+        successors_of[op] = set()
+    for op in operators:
+        dests = dependency_graph[op]
+        for op2 in dests:
+            predecessors_of[op2].add(op)
+        successors_of[op].update(dests)
+
+    tmp = shortest_plan(tuple(operators), successors_of, predecessors_of, {})
+
+    if DEBUG:
+        print("TREE PLAN")
+        print("\n".join([str(x) for x in tmp]))
+
+    return tmp
 
 
 def noop_planner(operators):

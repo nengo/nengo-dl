@@ -108,6 +108,7 @@ class Simulator(object):
 
         # group mergeable operators
         plan = graph_optimizer.greedy_planner(self.model.operators)
+        # plan = graph_optimizer.tree_planner(self.model.operators)
         # plan = graph_optimizer.noop_planner(self.model.operators)
 
         # order signals/operators to promote contiguous reads

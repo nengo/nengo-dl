@@ -5,10 +5,11 @@ from nengo.builder.operator import (SlicedCopy, SimPyFunc, DotInc,
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 import numpy as np
+import pytest
 
 from nengo_deeplearning import builder
 from nengo_deeplearning.graph_optimizer import (
-    mergeable, greedy_planner, order_signals)
+    mergeable, greedy_planner, tree_planner, order_signals)
 
 
 class DummySignal(object):
@@ -165,52 +166,74 @@ def test_mergeable():
                      [SimProcess(Alpha(0), None, None, DummySignal())])
 
 
-def test_greedy_planner():
+@pytest.mark.parametrize("planner", [greedy_planner, tree_planner])
+def test_planner_timeupdate(planner):
     # test TimeUpdate exclusion
     input0 = DummySignal()
     input1 = DummySignal()
     output0 = DummySignal()
     operators = [TimeUpdate(input0, input1), SlicedCopy(input0, output0)]
-    plan = greedy_planner(operators)
+    plan = planner(operators)
     assert len(plan) == 1
     assert type(plan[0][0]) == SlicedCopy
 
+
+@pytest.mark.parametrize("planner", [greedy_planner, tree_planner])
+def test_planner_mergeable(planner):
     # check that mergeable operators are merged
+    input0 = DummySignal()
+    input1 = DummySignal()
+    output0 = DummySignal()
     output1 = DummySignal()
     operators = [SlicedCopy(input0, output0, inc=True),
                  SlicedCopy(input1, output1, inc=True)]
-    plan = greedy_planner(operators)
+    plan = planner(operators)
     assert len(plan) == 1
     assert type(plan[0][0]) == SlicedCopy
     assert len(plan[0]) == 2
 
+
+@pytest.mark.parametrize("planner", [greedy_planner, tree_planner])
+def test_planner_unmergeable(planner):
     # check that non-mergeable operators aren't merged
+    input0 = DummySignal()
     operators = [SlicedCopy(input0, DummySignal(dtype=np.float32)),
                  SlicedCopy(input0, DummySignal(dtype=np.int32))]
-    plan = greedy_planner(operators)
+    plan = planner(operators)
     assert len(plan) == 2
     assert type(plan[0][0]) == SlicedCopy
     assert len(plan[0]) == 1
     assert type(plan[1][0]) == SlicedCopy
     assert len(plan[1]) == 1
 
+
+@pytest.mark.parametrize("planner", [greedy_planner])
+def test_planner_size(planner):
     # check that operators are selected according to number of available ops
+    input0 = DummySignal()
     operators = [SlicedCopy(input0, DummySignal(), inc=True)
                  for _ in range(2)]
     operators += [Copy(input0, DummySignal())]
     operators += [DotInc(input0, DummySignal(), DummySignal())
                   for _ in range(3)]
-    plan = greedy_planner(operators)
+    plan = planner(operators)
     assert len(plan) == 3
     assert len(plan[0]) == 3
     assert len(plan[1]) == 2
     assert len(plan[2]) == 1
 
+
+@pytest.mark.parametrize("planner", [greedy_planner, tree_planner])
+def test_planner_chain(planner):
     # test a chain
+    input0 = DummySignal()
+    input1 = DummySignal()
+    output0 = DummySignal()
+    output1 = DummySignal()
     operators = [SlicedCopy(input0, input1, inc=True)]
     operators += [SlicedCopy(input1, output0, inc=True) for _ in range(2)]
     operators += [SlicedCopy(output0, output1, inc=True) for _ in range(3)]
-    plan = greedy_planner(operators)
+    plan = planner(operators)
     assert len(plan) == 3
     assert len(plan[0]) == 1
     assert len(plan[1]) == 2
