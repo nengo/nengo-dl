@@ -170,10 +170,10 @@ class Simulator(object):
             init_op = tf.global_variables_initializer()
 
             # pre-build stage
-            for op_type, ops in self.plan:
-                with self.graph.name_scope(
-                        utils.sanitize_name(op_type.__name__)):
-                    Builder.pre_build(op_type, ops, self.signals, self.rng)
+            for ops in self.plan:
+                with self.graph.name_scope(utils.sanitize_name(
+                        Builder.builders[type(ops[0])].__name__)):
+                    Builder.pre_build(ops, self.signals, self.rng)
 
             # build stage
             self.build_loop()
@@ -225,8 +225,9 @@ class Simulator(object):
         self.signals.time = tf.cast(self.signals.step,
                                     self.signals.dtype) * self.dt
 
-        for op_type, ops in self.plan:
-            with self.graph.name_scope(utils.sanitize_name(op_type.__name__)):
+        for ops in self.plan:
+            with self.graph.name_scope(utils.sanitize_name(
+                    Builder.builders[type(ops[0])].__name__)):
                 outputs = Builder.build(ops, self.signals)
 
             if outputs is not None:

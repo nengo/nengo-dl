@@ -1,4 +1,4 @@
-import nengo
+import nengo.tests.test_synapses
 import numpy as np
 # import tensorflow as tf
 

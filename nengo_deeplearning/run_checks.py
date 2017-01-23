@@ -2,12 +2,12 @@ import os
 import sys
 
 import flake8.main
-import nengo.tests.test_synapses
+import nengo
 import pytest
 
 from nengo_deeplearning.tests import conftest  # noqa : F401
 
-os.environ["NENGO_DL_TEST_PRECISION"] = "64"
+os.environ["NENGO_DL_TEST_PRECISION"] = "32"
 os.environ["NENGO_DL_TEST_UNROLL"] = "True"
 os.environ["NENGO_DL_TEST_STEP_BLOCKS"] = "10"
 os.environ["NENGO_DL_TEST_DEVICE"] = "/cpu:0"

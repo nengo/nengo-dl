@@ -6,6 +6,7 @@ from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 import numpy as np
 
+from nengo_deeplearning import builder
 from nengo_deeplearning.graph_optimizer import (
     mergeable, greedy_planner, order_signals)
 
@@ -51,6 +52,11 @@ class DummyOp(object):
             rep += "updates=%s" % self.updates
         rep += ")"
         return rep
+
+
+@builder.Builder.register(DummyOp)
+class DummyBuilder(builder.OpBuilder):
+    pass
 
 
 def test_mergeable():
@@ -167,7 +173,7 @@ def test_greedy_planner():
     operators = [TimeUpdate(input0, input1), SlicedCopy(input0, output0)]
     plan = greedy_planner(operators)
     assert len(plan) == 1
-    assert plan[0][0] == SlicedCopy
+    assert type(plan[0][0]) == SlicedCopy
 
     # check that mergeable operators are merged
     output1 = DummySignal()
@@ -175,18 +181,18 @@ def test_greedy_planner():
                  SlicedCopy(input1, output1, inc=True)]
     plan = greedy_planner(operators)
     assert len(plan) == 1
-    assert plan[0][0] == SlicedCopy
-    assert len(plan[0][1]) == 2
+    assert type(plan[0][0]) == SlicedCopy
+    assert len(plan[0]) == 2
 
     # check that non-mergeable operators aren't merged
     operators = [SlicedCopy(input0, DummySignal(dtype=np.float32)),
                  SlicedCopy(input0, DummySignal(dtype=np.int32))]
     plan = greedy_planner(operators)
     assert len(plan) == 2
-    assert plan[0][0] == SlicedCopy
-    assert len(plan[0][1]) == 1
-    assert plan[1][0] == SlicedCopy
-    assert len(plan[1][1]) == 1
+    assert type(plan[0][0]) == SlicedCopy
+    assert len(plan[0]) == 1
+    assert type(plan[1][0]) == SlicedCopy
+    assert len(plan[1]) == 1
 
     # check that operators are selected according to number of available ops
     operators = [SlicedCopy(input0, DummySignal(), inc=True)
@@ -196,9 +202,9 @@ def test_greedy_planner():
                   for _ in range(3)]
     plan = greedy_planner(operators)
     assert len(plan) == 3
-    assert len(plan[0][1]) == 3
-    assert len(plan[1][1]) == 2
-    assert len(plan[2][1]) == 1
+    assert len(plan[0]) == 3
+    assert len(plan[1]) == 2
+    assert len(plan[2]) == 1
 
     # test a chain
     operators = [SlicedCopy(input0, input1, inc=True)]
@@ -206,9 +212,9 @@ def test_greedy_planner():
     operators += [SlicedCopy(output0, output1, inc=True) for _ in range(3)]
     plan = greedy_planner(operators)
     assert len(plan) == 3
-    assert len(plan[0][1]) == 1
-    assert len(plan[1][1]) == 2
-    assert len(plan[2][1]) == 3
+    assert len(plan[0]) == 1
+    assert len(plan[1]) == 2
+    assert len(plan[2]) == 3
 
 
 def contiguous(sigs, all_signals):
@@ -216,9 +222,7 @@ def contiguous(sigs, all_signals):
     return indices == list(range(np.min(indices), np.max(indices) + 1))
 
 
-def ordered(group, all_signals, block=None):
-    _, ops = group
-
+def ordered(ops, all_signals, block=None):
     if block is None:
         read_indices = [
             [all_signals.index(op.reads[i].base) * 10000 +
@@ -237,8 +241,8 @@ def test_order_signals_disjoint():
     inputs = [DummySignal(label=str(i)) for i in range(10)]
 
     plan = [
-        (DummyOp, tuple(DummyOp(reads=[inputs[i]]) for i in range(5))),
-        (DummyOp, tuple(DummyOp(reads=[inputs[5 + i]]) for i in range(5)))]
+        tuple(DummyOp(reads=[inputs[i]]) for i in range(5)),
+        tuple(DummyOp(reads=[inputs[5 + i]]) for i in range(5))]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:5], sigs)
     assert contiguous(inputs[5:], sigs)
@@ -252,8 +256,8 @@ def test_order_signals_partial():
     # two overlapping sets (A, A/B, B)
     inputs = [DummySignal(label=str(i)) for i in range(10)]
     plan = [
-        (DummyOp, tuple(DummyOp(reads=[inputs[i]]) for i in range(4))),
-        (DummyOp, tuple(DummyOp(reads=[inputs[2 + i]]) for i in range(4)))]
+        tuple(DummyOp(reads=[inputs[i]]) for i in range(4)),
+        tuple(DummyOp(reads=[inputs[2 + i]]) for i in range(4))]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:4], sigs)
     assert contiguous(inputs[2:6], sigs)
@@ -266,9 +270,9 @@ def test_order_signals_partial_complex():
     # (A, A/B, B/C, C)
     inputs = [DummySignal(label=str(i)) for i in range(10)]
     plan = [
-        (DummyOp, tuple(DummyOp(reads=[inputs[i]]) for i in range(5))),
-        (DummyOp, tuple(DummyOp(reads=[inputs[2 + i]]) for i in range(5))),
-        (DummyOp, tuple(DummyOp(reads=[inputs[5 + i]]) for i in range(5))),
+        tuple(DummyOp(reads=[inputs[i]]) for i in range(5)),
+        tuple(DummyOp(reads=[inputs[2 + i]]) for i in range(5)),
+        tuple(DummyOp(reads=[inputs[5 + i]]) for i in range(5)),
     ]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:5], sigs)
@@ -286,9 +290,9 @@ def test_order_signals_partial_unsatisfiable():
     # (A, A/B, A/C, B)
     inputs = [DummySignal(label=str(i)) for i in range(10)]
     plan = [
-        (DummyOp, tuple(DummyOp(reads=[inputs[i]]) for i in range(7))),
-        (DummyOp, tuple(DummyOp(reads=[inputs[5 + i]]) for i in range(5))),
-        (DummyOp, tuple(DummyOp(reads=[inputs[i]]) for i in range(3))),
+        tuple(DummyOp(reads=[inputs[i]]) for i in range(7)),
+        tuple(DummyOp(reads=[inputs[5 + i]]) for i in range(5)),
+        tuple(DummyOp(reads=[inputs[i]]) for i in range(3)),
     ]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:7], sigs)
@@ -303,8 +307,8 @@ def test_order_signals_subset():
     # (A, A/B)
     inputs = [DummySignal(label=str(i)) for i in range(10)]
     plan = [
-        (DummyOp, tuple(DummyOp(reads=[inputs[i]]) for i in range(10))),
-        (DummyOp, tuple(DummyOp(reads=[inputs[4 - i]]) for i in range(5))),
+        tuple(DummyOp(reads=[inputs[i]]) for i in range(10)),
+        tuple(DummyOp(reads=[inputs[4 - i]]) for i in range(5)),
     ]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:5], sigs)
@@ -319,9 +323,8 @@ def test_order_signals_multiread():
     # (A, B, C) (where A and C are from the same op)
     inputs = [DummySignal(label=str(i)) for i in range(10)]
     plan = [
-        (DummyOp, tuple(DummyOp(reads=[inputs[i], inputs[5 + i]])
-                        for i in range(3))),
-        (DummyOp, tuple(DummyOp(reads=[inputs[i]]) for i in range(3, 5))),
+        tuple(DummyOp(reads=[inputs[i], inputs[5 + i]]) for i in range(3)),
+        tuple(DummyOp(reads=[inputs[i]]) for i in range(3, 5)),
     ]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:3], sigs)
@@ -337,9 +340,8 @@ def test_order_signals_multiread_complex():
     # (C, B/C, A) (where A and B are from the same op)
     inputs = [DummySignal(label=str(i)) for i in range(10)]
     plan = [
-        (DummyOp, tuple(DummyOp(reads=[inputs[i], inputs[5 + i]])
-                        for i in range(3))),
-        (DummyOp, tuple(DummyOp(reads=[inputs[i + 5]]) for i in range(5))),
+        tuple(DummyOp(reads=[inputs[i], inputs[5 + i]]) for i in range(3)),
+        tuple(DummyOp(reads=[inputs[i + 5]]) for i in range(5)),
     ]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:3], sigs)
@@ -353,9 +355,8 @@ def test_order_signals_multiread_complex2():
     # (B, B/A, A, A/C, C) (where A and B are from the same op)
     inputs = [DummySignal(label=str(i)) for i in range(10)]
     plan = [
-        (DummyOp, tuple(DummyOp(reads=[inputs[2 + i], inputs[i]])
-                        for i in range(4))),
-        (DummyOp, tuple(DummyOp(reads=[inputs[5 + i]]) for i in range(3))),
+        tuple(DummyOp(reads=[inputs[2 + i], inputs[i]]) for i in range(4)),
+        tuple(DummyOp(reads=[inputs[5 + i]]) for i in range(3)),
     ]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:4], sigs)
@@ -376,10 +377,8 @@ def test_order_signals_multiread_unsatisfiable():
     # (A, A/C, B, B/D)
     inputs = [DummySignal(label=str(i)) for i in range(10)]
     plan = [
-        (DummyOp, tuple(DummyOp(reads=[inputs[i], inputs[5 + i]])
-                        for i in range(5))),
-        (DummyOp, tuple(DummyOp(reads=[inputs[1 - i], inputs[5 + i]])
-                        for i in range(2))),
+        tuple(DummyOp(reads=[inputs[i], inputs[5 + i]]) for i in range(5)),
+        tuple(DummyOp(reads=[inputs[1 - i], inputs[5 + i]]) for i in range(2)),
     ]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:5], sigs)
@@ -401,11 +400,11 @@ def test_order_signals_views():
     for v in views:
         v.base = base
     plan = [
-        (DummyOp, (DummyOp(reads=[base]), DummyOp(reads=[views[1]]),
-                   DummyOp(reads=[views[0]]), DummyOp(reads=[sig2]))),
-        (DummyOp, (DummyOp(reads=[base]), DummyOp(reads=[sig]))),
-        (DummyOp, tuple(DummyOp(reads=[views[i]]) for i in range(4, 2, -1))),
-        (DummyOp, (DummyOp(reads=[views[4]]), DummyOp(reads=[sig])))]
+        (DummyOp(reads=[base]), DummyOp(reads=[views[1]]),
+         DummyOp(reads=[views[0]]), DummyOp(reads=[sig2])),
+        (DummyOp(reads=[base]), DummyOp(reads=[sig])),
+        tuple(DummyOp(reads=[views[i]]) for i in range(4, 2, -1)),
+        (DummyOp(reads=[views[4]]), DummyOp(reads=[sig]))]
     sigs, new_plan = order_signals(plan)
     assert contiguous([base, sig, sig2], sigs)
     assert ordered(new_plan[0], sigs)
@@ -418,10 +417,10 @@ def test_order_signals_duplicates():
     # test where read blocks contain duplicate signals
     inputs = [DummySignal(label=str(i)) for i in range(4)]
     plan = [
-        (DummyOp, tuple(DummyOp(reads=[inputs[0]])
-                        for _ in range(2)) + (DummyOp(reads=[inputs[2]]),)),
-        (DummyOp, tuple(DummyOp(reads=[inputs[1]])
-                        for _ in range(2)) + (DummyOp(reads=[inputs[3]]),))
+        tuple(DummyOp(reads=[inputs[0]]) for _ in range(2)) +
+        (DummyOp(reads=[inputs[2]]),),
+        tuple(DummyOp(reads=[inputs[1]]) for _ in range(2)) +
+        (DummyOp(reads=[inputs[3]]),)
     ]
     sigs, new_plan = order_signals(plan)
     assert contiguous([inputs[0], inputs[2]], sigs)
@@ -437,10 +436,8 @@ def test_order_signals_noreads():
     # test with ops that don't have any reads
     inputs = [DummySignal(label=str(i)) for i in range(10)]
     plan = [
-        (DummyOp, tuple(DummyOp(reads=[inputs[i]])
-                        for i in range(5))),
-        (DummyOp, tuple(DummyOp(sets=[inputs[5 + i]])
-                        for i in range(5))),
+        tuple(DummyOp(reads=[inputs[i]]) for i in range(5)),
+        tuple(DummyOp(sets=[inputs[5 + i]]) for i in range(5)),
     ]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:5], sigs)
@@ -449,8 +446,8 @@ def test_order_signals_noreads():
 
 def test_order_signals_neuron_states():
     # test with neuron states (should be treated as reads)
-    pass
+    assert False
 
 
 def test_create_signals():
-    pass
+    assert False

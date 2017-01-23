@@ -15,11 +15,11 @@ if not any(["gpu" in x.name for x in device_lib.list_local_devices()]):
 else:
     default_device = "/gpu:0"
 
-from nengo_deeplearning.simulator import Simulator  # noqa: F401
-
 # need to explicitly import these to trigger the builder registration
 from nengo_deeplearning import (  # noqa: F401
     operators, neurons, processes, learning_rules)
+
+from nengo_deeplearning.simulator import Simulator  # noqa: F401
 
 # check nengo version
 import nengo  # noqa: E402

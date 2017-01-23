@@ -1,7 +1,7 @@
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict
 
 from nengo.builder.operator import (TimeUpdate, SimPyFunc, SlicedCopy, DotInc,
-                                    ElementwiseInc)
+                                    ElementwiseInc, Copy)
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 from nengo.exceptions import BuildError
@@ -10,7 +10,7 @@ from nengo.utils.graphs import toposort
 from nengo.utils.simulator import operator_depencency_graph
 import numpy as np
 
-from nengo_deeplearning import signals, neurons, processes, DEBUG
+from nengo_deeplearning import signals, neurons, processes, builder, DEBUG
 
 
 def greedy_planner(operators):
@@ -24,7 +24,7 @@ def greedy_planner(operators):
 
     Returns
     -------
-    list of (type, list of nengo.builder.operator.Operator)
+    list of tuple of `nengo.builder.operator.Operator`
         operators combined into mergeable groups and in execution order
 
     Notes
@@ -50,55 +50,52 @@ def greedy_planner(operators):
         successors_of[op].update(dests)
 
     # the ops in `available` are ready to be scheduled (all predecessors
-    # have been scheduled). they're grouped by op type (so we can try to
-    # merge all the operators with the same type)
+    # have been scheduled).
     # initialize it with the ops that have no predecessors
-    available = defaultdict(set)
-    for op in (op for op, dep in iteritems(predecessors_of) if len(dep) == 0):
-        available[type(op)].add(op)
+    available = [op for op, dep in iteritems(predecessors_of) if len(dep) == 0]
 
-    merged_ops = ()
+    plan = []
+    groups = []
     while len(predecessors_of) > 0:
-        if len(available) == 0:
+        # sort the available ops into mergeable groups
+        for op in available:
+            for g in groups:
+                if mergeable(op, g):
+                    g += [op]
+                    break
+            else:
+                groups += [[op]]
+
+        if len(groups) == 0:
             raise BuildError("Cycle detected during graph optimization")
 
-        # pick the type that has the largest number of available ops
-        chosen_type = sorted(available.items(), key=lambda x: len(x[1]))[-1][0]
-        candidates = available[chosen_type]
+        # pick the group that has the largest number of available ops
+        groups = sorted(groups, key=lambda x: len(x))
+        chosen = groups[-1]
+        groups = groups[:-1]
 
-        # figure out which ops can be merged
-        chosen = ()
+        plan += [tuple(chosen)]
 
-        for op in candidates:
-            if mergeable(op, chosen):
-                # add op
-                chosen += (op,)
-
-        assert len(chosen) > 0
-        merged_ops += ((chosen_type, chosen),)
-
-        # update predecessors and successors of remaining ops
-        available[chosen_type].difference_update(chosen)
-        if len(available[chosen_type]) == 0:
-            del available[chosen_type]
-
+        # update predecessors and successors of remaining ops, and check for
+        # any newly available ops
+        available = []
         for op in chosen:
             for op2 in successors_of[op]:
                 preds = predecessors_of[op2]
                 preds.remove(op)
                 if len(preds) == 0:
-                    available[type(op2)].add(op2)
+                    available += [op2]
             del predecessors_of[op]
             del successors_of[op]
 
     if DEBUG:
         print("PLAN")
-        print("\n".join([str(x) for x in merged_ops]))
+        print("\n".join([str(x) for x in plan]))
 
     # note: -1 because we skip TimeUpdate
-    assert len(operators) == sum(len(p[1]) for p in merged_ops)
+    assert len(operators) == sum(len(ops) for ops in plan)
 
-    return merged_ops
+    return plan
 
 
 def mergeable(op, chosen_ops):
@@ -124,6 +121,10 @@ def mergeable(op, chosen_ops):
     # since we know the rest all match
     c = chosen_ops[0]
 
+    # must share the same builder
+    if builder.Builder.builders[type(op)] != builder.Builder.builders[type(c)]:
+        return False
+
     # sets/incs/reads/updates must all match
     if (len(op.sets) != len(c.sets) or len(op.incs) != len(c.incs) or
             len(op.reads) != len(c.reads) or
@@ -146,9 +147,9 @@ def mergeable(op, chosen_ops):
             return False
 
     # operator-specific checks
-    if isinstance(op, SlicedCopy):
+    if isinstance(op, (SlicedCopy, Copy)):
         # can't merge incs and updates
-        if op.inc != c.inc:
+        if getattr(op, "inc", False) != getattr(c, "inc", False):
             return False
     elif isinstance(op, (DotInc, ElementwiseInc)):
         # for these operations we also enforce that the first dimensions
@@ -212,7 +213,7 @@ def noop_planner(operators):
 
     dependency_graph = operator_depencency_graph(operators)
 
-    return [(type(op), (op,)) for op in toposort(dependency_graph)]
+    return [(op,) for op in toposort(dependency_graph)]
 
 
 def order_signals(plan, n_passes=10):
@@ -221,7 +222,7 @@ def order_signals(plan, n_passes=10):
 
     Parameters
     ----------
-    plan : list of (type, list of `nengo.builder.operator.Operator`)
+    plan : list of tuple of `nengo.builder.operator.Operator`
         operator execution plan (e.g., output from `greedy_planner`)
     n_passes : int
         number of repeated passes through the operator reordering stage
@@ -231,7 +232,7 @@ def order_signals(plan, n_passes=10):
     list of `nengo.builder.signal.Signal`
         signals organized into the order in which we want them arranged in
         memory
-    list of (type, list of `nengo.builder.operator.Operator`)
+    list of tuple of `nengo.builder.operator.Operator`
         input plan with operators reordered within groups to align with order
         of signals
     """
@@ -239,8 +240,8 @@ def order_signals(plan, n_passes=10):
     # figure out all the read blocks in the plan (in theory we would like each
     # block to become a contiguous chunk in the base array)
     read_blocks = []
-    for op_type, ops in plan:
-        if op_type == SimNeurons:
+    for ops in plan:
+        if type(ops[0]) == SimNeurons:
             # state signals are technically reads as well, they just aren't
             # marked as such, so we add them to the reads list
             for op in ops:
@@ -262,7 +263,7 @@ def order_signals(plan, n_passes=10):
     read_blocks = read_blocks[::-1]
 
     # get all the unique base signals
-    all_signals = list(set([s.base for op_type, ops in plan for op in ops
+    all_signals = list(set([s.base for ops in plan for op in ops
                             for s in op.all_signals]))
 
     # mark the signals according to which blocks they are in
@@ -281,7 +282,7 @@ def order_signals(plan, n_passes=10):
         print("signal blocks")
         print(signal_blocks)
 
-    sorted_reads = [(ops, i) for _, ops in plan
+    sorted_reads = [(ops, i) for ops in plan
                     for i in range(len(ops[0].reads))]
     # note: we're sorting by the view size, not the base size
     sorted_reads = sorted(
@@ -313,7 +314,7 @@ def order_signals(plan, n_passes=10):
     # on the next pass we can put the first group back into a valid ordering
     # based on the order established by the later group.
 
-    new_plan = {ops: ops for _, ops in plan}
+    new_plan = {ops: ops for ops in plan}
     for n in range(n_passes):
         # TODO: detect if ops order didn't change (early termination)
         # TODO: every few iterations, eliminate the smallest unsatisfied block
@@ -344,10 +345,9 @@ def order_signals(plan, n_passes=10):
         print("final sorted signals")
         print(all_signals)
         print("new plan")
-        print("\n".join([str((op_type, new_plan[ops]))
-                         for op_type, ops in plan]))
+        print("\n".join([str(new_plan[ops]) for ops in plan]))
 
-    return all_signals, [(op_type, new_plan[ops]) for op_type, ops in plan]
+    return all_signals, [new_plan[ops] for ops in plan]
 
 
 def hamming_sort(signals, blocks):
@@ -616,7 +616,7 @@ def noop_order_signals(plan, **kwargs):
     """A version of `order_signals` that doesn't do any reordering, for
     debugging."""
 
-    all_signals = list(set([s.base for op_type, ops in plan for op in ops
+    all_signals = list(set([s.base for ops in plan for op in ops
                             for s in op.all_signals]))
     return all_signals, plan
 
@@ -630,7 +630,7 @@ def create_signals(sigs, plan, float_type):
     signals : list of `nengo.builder.operator.Signal`
         base signals arranged into the order in which they should reside in
         memory (e.g., output from `order_signals`)
-    plan : list of (type, list of `nengo.builder.operator.Operator`)
+    plan : list of tuple of `nengo.builder.operator.Operator`
         operator execution plan (only used to get a list of all the operators)
     float_type : np.float32 or np.float64
         floating point precision to use for signals
@@ -687,8 +687,7 @@ def create_signals(sigs, plan, float_type):
         sig_map[sig] = signals.TensorSignal(indices, key, label=sig.name)
 
     # add any signal views to the sig_map
-    all_signals = [
-        sig for _, ops in plan for op in ops for sig in op.all_signals]
+    all_signals = [sig for ops in plan for op in ops for sig in op.all_signals]
     for sig in all_signals:
         if sig.is_view:
             if sig.initial_value.ndim != sig.base.ndim:

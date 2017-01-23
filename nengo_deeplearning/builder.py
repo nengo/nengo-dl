@@ -14,7 +14,7 @@ class Builder(object):
     op_builds = {}
 
     @classmethod
-    def pre_build(cls, op_type, ops, signals, rng):
+    def pre_build(cls, ops, signals, rng):
         """Setup step for build classes, in which they compute any of the
         values that are constant across simulation timesteps.
 
@@ -38,10 +38,11 @@ class Builder(object):
             print("reads", [op.reads for op in ops])
             print("updates", [op.updates for op in ops])
 
-        if op_type not in cls.builders:
-            raise BuildError("Cannot build operators of type %r" % op_type)
+        if type(ops[0]) not in cls.builders:
+            raise BuildError("Cannot build operators of type %r" %
+                             type(ops[0]))
 
-        BuildClass = cls.builders[op_type]
+        BuildClass = cls.builders[type(ops[0])]
 
         kwargs = {}
         if BuildClass.pass_rng:
