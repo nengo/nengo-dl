@@ -81,11 +81,14 @@ class Simulator(object):
         (up to `step_blocks`) into the computation graph. if False, use a
         symbolic loop, which is more general and produces a simpler graph, but
         is likely to be slower to simulate
+    minibatch_size : int, optional
+        the number of simultaneous inputs that will be passed through the
+        network
     """
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
                  tensorboard=False, dtype=tf.float32, step_blocks=50,
-                 device=None, unroll_simulation=True):
+                 device=None, unroll_simulation=True, minibatch_size=1):
         self.closed = None
         self.sess = None
         self.tensorboard = tensorboard
@@ -106,19 +109,23 @@ class Simulator(object):
         if network is not None:
             self.model.build(network, progress_bar=False)
 
+        # mark trainable signals
+        signals.mark_signals(self.model)
+
         # group mergeable operators
         plan = graph_optimizer.greedy_planner(self.model.operators)
         # plan = graph_optimizer.tree_planner(self.model.operators)
         # plan = graph_optimizer.noop_planner(self.model.operators)
 
         # order signals/operators to promote contiguous reads
-        signals, self.plan = graph_optimizer.order_signals(plan, n_passes=10)
+        sigs, self.plan = graph_optimizer.order_signals(plan, n_passes=10)
         # signals, self.plan = graph_optimizer.noop_order_signals(plan)
 
         # create base arrays and map Signals to TensorSignals (views on those
         # base arrays)
         self.base_arrays_init, self.sig_map = graph_optimizer.create_signals(
-            signals, self.plan, float_type=dtype.as_numpy_dtype)
+            sigs, self.plan, float_type=dtype.as_numpy_dtype,
+            minibatch_size=minibatch_size)
 
         self.data = ProbeDict(self.model.params)
 
@@ -217,7 +224,6 @@ class Simulator(object):
 
         # build operators
         side_effects = []
-        self.signals.reads_by_base = defaultdict(list)
 
         # manually build TimeUpdate. we don't include this in the plan,
         # because loop variables (`step`) are (semi?) pinned to the CPU, which
@@ -333,6 +339,7 @@ class Simulator(object):
         self.step_var = tf.placeholder(tf.int32)
         self.stop_var = tf.placeholder(tf.int32)
         loop_i = tf.constant(0)
+        self.signals.reads_by_base = defaultdict(list)
 
         probe_arrays = [
             tf.TensorArray(
@@ -356,6 +363,8 @@ class Simulator(object):
                 loop_condition, loop_body, loop_vars=loop_vars,
                 parallel_iterations=1,  # TODO: more parallel iterations
                 back_prop=False)
+
+        del self.signals.reads_by_base
 
         self.end_step = loop_vars[0]
         self.probe_arrays = [p.pack() for p in loop_vars[3]]
@@ -503,17 +512,18 @@ class Simulator(object):
 
         Returns
         -------
-        dict of {(dtype, tuple of int): `tf.Variable`}
-            base variables, keyed by the dtype and shape of data stored in
-            this variable
+        dict of {tuple: `tf.Variable`}
+            base variables, keyed by the properties of the base array
         """
 
         with tf.variable_scope("base_vars", reuse=reuse):
             bases = OrderedDict(
                 [(k, tf.get_variable(
-                    "%s_%s" % (k[0].__name__, "_".join(str(x) for x in k[1])),
+                    "%s_%s_%s" % (k[0].__name__,
+                                  "_".join(str(x) for x in k[1]),
+                                  k[2]),
                     initializer=tf.constant_initializer(v),
-                    dtype=v.dtype, shape=v.shape))
+                    dtype=v.dtype, shape=v.shape, trainable=k[2]))
                  for k, v in self.base_arrays_init.items()])
 
         return bases

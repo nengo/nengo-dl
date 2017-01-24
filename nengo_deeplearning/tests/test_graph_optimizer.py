@@ -24,6 +24,7 @@ class DummySignal(object):
         self.ndim = len(self.shape)
         self.is_view = base_shape is not None
         self.size = np.prod(self.shape)
+        self.trainable = False
 
     def may_share_memory(self, other):
         return False

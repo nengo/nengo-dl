@@ -1,5 +1,8 @@
+import warnings
+
 from nengo.builder.signal import Signal
 from nengo.exceptions import BuildError
+from nengo.neurons import Direct
 import numpy as np
 import tensorflow as tf
 
@@ -14,7 +17,7 @@ class TensorSignal(object):
     indices : tuple or list or :class:`~numpy:numpy.ndarray` of int
         indices along the first axis of the base array corresponding to the
         data for this signal
-    key : (tf.DType, (tuple of int))
+    key : tuple
         dtype and shape of base array, used as key to find the base
     display_shape : tuple of int, optional
         view shape of this signal (may differ from shape of base array)
@@ -50,6 +53,10 @@ class TensorSignal(object):
     @property
     def base_shape(self):
         return self.key[1]
+
+    @property
+    def trainable(self):
+        return self.key[2]
 
     @property
     def shape(self):
@@ -105,8 +112,7 @@ class TensorSignal(object):
         stop = self.indices[-1] + 1
         step = (self.indices[1] - self.indices[0] if len(self.indices) > 1
                 else 1)
-        if step != 0 and np.all(
-                self.indices == np.arange(start, stop, step)):
+        if step != 0 and np.all(self.indices == np.arange(start, stop, step)):
             self.as_slice = (tf.constant([start]), tf.constant([stop]),
                              tf.constant([step]))
         else:
@@ -322,3 +328,28 @@ class SignalDict(object):
 
         return "\n".join(["%s: %s" % (repr(k), repr(self[k]))
                           for k in self])
+
+
+def mark_signals(model):
+    # TODO: documentation/tests
+
+    # mark everything as not trainable by default
+    for op in model.operators:
+        for sig in op.all_signals:
+            sig.trainable = False
+
+    if model.toplevel is None:
+        warnings.warn("No top-level network in model")
+    else:
+        for ens in model.toplevel.all_ensembles:
+            model.sig[ens]["encoders"].trainable = True
+
+            if not isinstance(ens.neuron_type, Direct):
+                model.sig[ens.neurons]["bias"].trainable = True
+
+        for conn in model.toplevel.all_connections:
+            # note: this doesn't include probe connections, since they aren't
+            # added to the network
+            # TODO: should we disable training on connections to learning
+            # rules?
+            model.sig[conn]["weights"].trainable = True

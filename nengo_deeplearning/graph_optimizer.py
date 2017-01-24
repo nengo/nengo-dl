@@ -147,6 +147,10 @@ def mergeable(op, chosen_ops):
         if s0.shape[1:] != s1.shape[1:]:
             return False
 
+        # trainable must match
+        if s0.trainable != s1.trainable:
+            return False
+
     # operator-specific checks
     if isinstance(op, (SlicedCopy, Copy)):
         # can't merge incs and updates
@@ -724,7 +728,7 @@ def noop_order_signals(plan, **kwargs):
     return all_signals, plan
 
 
-def create_signals(sigs, plan, float_type):
+def create_signals(sigs, plan, float_type, minibatch_size):
     """Groups signals together into larger arrays, and represent each
     individual signal as a slice into that array.
 
@@ -737,19 +741,18 @@ def create_signals(sigs, plan, float_type):
         operator execution plan (only used to get a list of all the operators)
     float_type : np.float32 or np.float64
         floating point precision to use for signals
+    minibatch_size : int
+        number of items in each minibatch
 
     Returns
     -------
-    base_arrays : dict of {(dtype, shape) : :class:`~numpy:numpy.ndarray`}
+    base_arrays : dict of {tuple : :class:`~numpy:numpy.ndarray`}
         combined arrays, containing the initial values for all signals
     sig_map : dict of {`nengo.builder.signal.Signal`:
                        :class:`.signals.TensorSignal}
         mapping from `nengo` `Signals` to `nengo_dl` `TensorSignals` (views
         into the base arrays)
     """
-
-    # TODO: we don't need to separate base arrays by shape, we can just flatten
-    # them all, and keep track of the shape inside the TensorSignal
 
     base_arrays = OrderedDict()
     sig_map = {}
@@ -770,7 +773,7 @@ def create_signals(sigs, plan, float_type):
         shape = sig.shape if sig.shape != () else (1,)
 
         # key used to map signals to base arrays
-        key = (dtype, (None,) + shape[1:])
+        key = (dtype, (None,) + shape[1:], sig.trainable)
 
         initial_value = sig.initial_value.astype(dtype, copy=False)
 
@@ -788,6 +791,11 @@ def create_signals(sigs, plan, float_type):
                             base_arrays[key].shape[0])
 
         sig_map[sig] = signals.TensorSignal(indices, key, label=sig.name)
+
+        if DEBUG:
+            print("created base signal")
+            print(sig)
+            print(sig_map[sig])
 
     # add any signal views to the sig_map
     all_signals = [sig for ops in plan for op in ops for sig in op.all_signals]
