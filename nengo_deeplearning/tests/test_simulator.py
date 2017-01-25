@@ -71,3 +71,6 @@ def test_unroll_simulation():
         sim2.close()
 
         assert np.allclose(sim1.data[p], sim2.data[p])
+
+
+# TODO: tests for minibatching (operators, processes, neurons, learning rules)

@@ -118,6 +118,7 @@ class OpBuilder(object):
     signals : signals.SignalDict
         dictionary mapping Signals to Tensors (updated by operations)
     """
+
     def __init__(self, ops, signals):
         pass
 

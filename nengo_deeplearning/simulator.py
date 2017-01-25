@@ -5,7 +5,10 @@ import os
 import time
 import warnings
 
+from nengo import Process
 from nengo.builder import Model
+from nengo.builder.operator import TimeUpdate, SimPyFunc
+from nengo.builder.processes import SimProcess
 from nengo.exceptions import (ReadonlyError, SimulatorClosed, NengoWarning,
                               SimulationError)
 import numpy as np
@@ -88,7 +91,7 @@ class Simulator(object):
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
                  tensorboard=False, dtype=tf.float32, step_blocks=50,
-                 device=None, unroll_simulation=True, minibatch_size=1):
+                 device=None, unroll_simulation=True, minibatch_size=None):
         self.closed = None
         self.sess = None
         self.tensorboard = tensorboard
@@ -96,6 +99,7 @@ class Simulator(object):
         self.step_blocks = step_blocks
         self.device = device
         self.unroll_simulation = unroll_simulation
+        self.minibatch_size = 1 if minibatch_size is None else minibatch_size
 
         # build model (uses default nengo builder)
         if model is None:
@@ -109,13 +113,35 @@ class Simulator(object):
         if network is not None:
             self.model.build(network, progress_bar=False)
 
+        # find invariant inputs (nodes that don't receive any input other
+        # than the simulation time). we'll compute these outside the simulation
+        # and feed in the result.
+        if self.model.toplevel is None:
+            self.invariant_inputs = []
+        else:
+            self.invariant_inputs = [n for n in self.model.toplevel.all_nodes
+                                     if n.size_in == 0]
+
         # mark trainable signals
         signals.mark_signals(self.model)
 
+        # filter unused operators
+        # remove TimeUpdate because it is executed as part of the simulation
+        # loop, not part of the step plan. remove input nodes because they
+        # are executed outside the simulation.
+        node_processes = [n.output for n in self.invariant_inputs
+                          if isinstance(n.output, Process)]
+        operators = [
+            op for op in self.model.operators if not (
+                isinstance(op, TimeUpdate) or
+                (isinstance(op, SimPyFunc) and op.x is None) or
+                (isinstance(op, SimProcess) and op.input is None and
+                 op.process in node_processes))]
+
         # group mergeable operators
-        plan = graph_optimizer.greedy_planner(self.model.operators)
-        # plan = graph_optimizer.tree_planner(self.model.operators)
-        # plan = graph_optimizer.noop_planner(self.model.operators)
+        plan = graph_optimizer.greedy_planner(operators)
+        # plan = graph_optimizer.tree_planner(operators)
+        # plan = graph_optimizer.noop_planner(operators)
 
         # order signals/operators to promote contiguous reads
         sigs, self.plan = graph_optimizer.order_signals(plan, n_passes=10)
@@ -125,9 +151,12 @@ class Simulator(object):
         # base arrays)
         self.base_arrays_init, self.sig_map = graph_optimizer.create_signals(
             sigs, self.plan, float_type=dtype.as_numpy_dtype,
-            minibatch_size=minibatch_size)
+            minibatch_size=self.minibatch_size)
 
-        self.data = ProbeDict(self.model.params)
+        self.data = ProbeDict(
+            self.model.params,
+            {p: (minibatch_size if self.model.sig[p]["in"].minibatched
+                 else -1) for p in self.model.probes})
 
         if seed is None:
             seed = np.random.randint(np.iinfo(np.int32).max)
@@ -167,8 +196,8 @@ class Simulator(object):
                 self.model.params[p] = []
 
             # create signal dict
-            self.signals = signals.SignalDict(self.sig_map, self.dtype,
-                                              self.dt)
+            self.signals = signals.SignalDict(
+                self.sig_map, self.dtype, self.dt, self.minibatch_size)
 
             # create base variables
             base_vars = self.get_base_variables()
@@ -176,6 +205,9 @@ class Simulator(object):
                 print("created variables")
                 print([(k, v.name) for k, v in base_vars.items()])
             init_op = tf.global_variables_initializer()
+
+            # set up invariant inputs
+            self.build_inputs()
 
             # pre-build stage
             for ops in self.plan:
@@ -232,6 +264,7 @@ class Simulator(object):
         self.signals.time = tf.cast(self.signals.step,
                                     self.signals.dtype) * self.dt
 
+        # build operators
         for ops in self.plan:
             with self.graph.name_scope(utils.sanitize_name(
                     Builder.builders[type(ops[0])].__name__)):
@@ -285,17 +318,21 @@ class Simulator(object):
                                         base_vars)])
 
             # note: nengo step counter is incremented at the beginning of the
-            # timestep. we don't want to increment it yet, because we need
-            # to figure out the side effects first, so we feed in step+1
-            # here and then increment it later
-            self.signals.step = step + 1
+            # timestep
+            step += 1
+            self.signals.step = step
 
             # build the operators for a single step
             # note: we tie things to the `step` variable so that we can be
             # sure the other things we're tying to the step (side effects and
             # probes) from the previous timestep are executed before the
             # next step starts
-            with self.graph.control_dependencies([self.signals.step]):
+            with self.graph.control_dependencies([loop_i]):
+                # fill in invariant input data
+                if self.invariant_ph is not None:
+                    self.signals.scatter(self.invariant_ph[0],
+                                         self.invariant_ph[1][loop_i])
+
                 probe_tensors, side_effects = self.build_step()
 
             # copy probe data to array
@@ -303,13 +340,11 @@ class Simulator(object):
                 probe_arrays[i] = probe_arrays[i].write(loop_i, p)
 
             # need to make sure that any operators that could have side
-            # effects run each timestep, so we tie them to the step increment.
+            # effects run each timestep, so we tie them to the loop increment.
             # we also need to make sure that all the probe reads happen before
             # those values get overwritten on the next timestep
             with self.graph.control_dependencies(side_effects + probe_tensors):
-                step += 1
-
-            loop_i += 1
+                loop_i += 1
 
             # set up tensorboard output
             # if self.tensorboard:
@@ -382,6 +417,28 @@ class Simulator(object):
                 "%s/run_%d" % (directory, run_number),
                 graph=self.graph)
 
+    def build_inputs(self):
+        invariant_data = self.signals.combine(
+            [self.model.sig[n]["out"] for n in self.invariant_inputs
+             if self.model.sig[n]["out"] in self.sig_map])
+        self.invariant_funcs = {}
+        for n in self.invariant_inputs:
+            if isinstance(n.output, Process):
+                self.invariant_funcs[n] = n.output.make_step(
+                    (n.size_in,), (n.size_out,), self.dt,
+                    n.output.get_rng(self.rng))
+            elif n.size_out > 0:
+                self.invariant_funcs[n] = utils.align_func(
+                    (n.size_out,), self.dtype)(n.output)
+            else:
+                self.invariant_funcs[n] = n.output
+        self.invariant_ph = (
+            None if invariant_data == [] else
+            (invariant_data,
+             tf.placeholder(self.dtype,
+                            (self.step_blocks, invariant_data.shape[0],
+                             self.minibatch_size))))
+
     def step(self):
         """Run the simulation for one time step."""
 
@@ -399,16 +456,15 @@ class Simulator(object):
         steps = int(np.round(float(time_in_seconds) / self.dt))
         self.run_steps(steps)
 
-    def run_steps(self, n_steps, profile=False):
+    def run_steps(self, n_steps, **kwargs):
         """Simulate for the given number of steps.
 
         Parameters
         ----------
         n_steps : int
             the number of simulation steps to be executed
-        profile : bool, optional
-            if True, collect tensorflow profiling information while the
-            simulation is running (this will slow down the simulation)
+        kwargs : dict
+            see :func:`._run_steps`
 
         Notes
         -----
@@ -432,19 +488,19 @@ class Simulator(object):
         start = time.time()
 
         if self.step_blocks is None:
-            probe_data = self._run_steps(n_steps, profile=profile)
+            probe_data = self._run_steps(n_steps, **kwargs)
 
             self.update_probe_data(probe_data, self.n_steps - n_steps, n_steps)
         else:
             # break the run up into `step_blocks` sized chunks
             remaining_steps = n_steps
             while remaining_steps > 0:
-                probe_data = self._run_steps(self.step_blocks, profile=profile)
+                probe_data = self._run_steps(self.step_blocks, **kwargs)
                 remaining_steps -= self.step_blocks
 
                 self.update_probe_data(
                     probe_data, self.n_steps - self.step_blocks,
-                    self.step_blocks + min(remaining_steps, 0))
+                                self.step_blocks + min(remaining_steps, 0))
 
             # update n_steps/time
             self.n_steps += remaining_steps
@@ -453,7 +509,7 @@ class Simulator(object):
         print("Simulation finished in %s" %
               datetime.timedelta(seconds=int(time.time() - start)))
 
-    def _run_steps(self, n_steps, profile=False):
+    def _run_steps(self, n_steps, profile=False, input_feeds=None):
         """Execute `step_blocks` sized segments of the simulation.
 
         Parameters
@@ -472,14 +528,47 @@ class Simulator(object):
             run_options = None
             run_metadata = None
 
+        # generate node feeds
+        if input_feeds is None:
+            input_feeds = {}
+        feed_vals = []
+        for n in self.invariant_inputs:
+            if n in input_feeds:
+                # move minibatch dimension to the end
+                feed_val = np.moveaxis(input_feeds[n], 0, -1)
+            elif isinstance(n.output, np.ndarray):
+                feed_val = np.tile(n.output[None, :, None],
+                                   (n_steps, 1, self.minibatch_size))
+            else:
+                func = self.invariant_funcs[n]
+
+                feed_val = []
+                for i in range(self.n_steps + 1, self.n_steps + n_steps + 1):
+                    func_out = func(i * self.dt)
+                    if func_out is not None:
+                        # note: need to copy the output of func
+                        feed_val += [np.array(func_out)]
+
+                if self.model.sig[n]["out"] in self.sig_map:
+                    feed_val = np.stack(feed_val, axis=0)
+                    feed_val = np.tile(feed_val[..., None],
+                                       (1, 1, self.minibatch_size))
+
+            if self.model.sig[n]["out"] in self.sig_map:
+                feed_vals += [feed_val]
+
         # execute the loop
+        feed_dict = {
+            self.step_var: self.n_steps,
+            self.stop_var: self.n_steps + n_steps,
+        }
+        if self.invariant_ph is not None:
+            feed_dict[self.invariant_ph[1]] = np.concatenate(feed_vals, axis=1)
+
         try:
             final_step, probe_data, final_bases = self.sess.run(
                 [self.end_step, self.probe_arrays, self.end_base_arrays],
-                feed_dict={
-                    self.step_var: self.n_steps,
-                    self.stop_var: self.n_steps + n_steps,
-                },
+                feed_dict=feed_dict,
                 options=run_options, run_metadata=run_metadata)
         except tf.errors.InternalError as e:
             if e.op.type == "PyFunc":
@@ -631,8 +720,9 @@ class ProbeDict(Mapping):
     is readonly, which is more appropriate for its purpose.
     """
 
-    def __init__(self, raw):
+    def __init__(self, raw, minibatches):
         self.raw = raw
+        self.minibatches = minibatches
         self._cache = {}
 
     def __getitem__(self, key):
@@ -641,7 +731,17 @@ class ProbeDict(Mapping):
         if cache_miss:
             rval = self.raw[key]
             if isinstance(rval, list):
+                # combine data from _run_steps iterations
                 rval = np.concatenate(rval, axis=0)
+
+                if self.minibatches[key] != -1:
+                    if self.minibatches[key] is None:
+                        # get rid of batch dimension
+                        rval = rval[..., 0]
+                    else:
+                        # move batch dimension to front
+                        rval = np.moveaxis(rval, -1, 0)
+
                 rval.setflags(write=False)
             self._cache[key] = rval
         return self._cache[key]

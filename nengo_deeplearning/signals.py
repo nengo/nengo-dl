@@ -59,6 +59,10 @@ class TensorSignal(object):
         return self.key[2]
 
     @property
+    def minibatched(self):
+        return not self.trainable
+
+    @property
     def shape(self):
         if self.display_shape is None:
             return (len(self.indices),) + self.base_shape[1:]
@@ -118,23 +122,22 @@ class TensorSignal(object):
         else:
             self.as_slice = None
 
-    # def broadcast(self, axis, length):
-    #     assert self.in_tf
-    #     assert axis in (0, 1)
-    #
-    #     indices = self.indices
-    #     indices = tf.stack([indices] * length, axis=axis)
-    #     indices = tf.reshape(indices, (-1,))
-    #
-    #     if axis == 1:
-    #         display_shape = self.shape + (length,)
-    #     else:
-    #         display_shape = (length,) + self.shape
-    #
-    #     return TensorSignal(
-    #         indices, self.key, display_shape=display_shape,
-    #         label=self.label + ".broadcast(%d, %d)" % (axis, length))
-    #
+    def broadcast(self, axis, length):
+        assert axis in (0, -1)
+
+        indices = self.indices
+        indices = np.stack([indices] * length, axis=axis)
+        indices = np.reshape(indices, (-1,))
+
+        if axis == -1:
+            display_shape = self.shape + (length,)
+        else:
+            display_shape = (length,) + self.shape
+
+        return TensorSignal(
+            indices, self.key, display_shape=display_shape,
+            label=self.label + ".broadcast(%d, %d)" % (axis, length))
+
     # def tile(self, length):
     #     assert self.in_tf
     #
@@ -162,11 +165,14 @@ class SignalDict(object):
         floating point precision used in signals
     dt : float
         simulation timestep
+    minibatch_size : int
+        number of items in each minibatch
     """
 
-    def __init__(self, sig_map, dtype, dt):
+    def __init__(self, sig_map, dtype, dt, minibatch_size):
         self.dtype = dtype
         self.sig_map = sig_map
+        self.minibatch_size = minibatch_size
 
         # create this constant once here so we don't end up creating a new
         # dt constant in each operator
@@ -193,8 +199,10 @@ class SignalDict(object):
             raise BuildError("Tensor detected with wrong dtype (%s), should "
                              "be %s." % (val.dtype.base_dtype, self.dtype))
 
-        # undo any reshaping that has happened relative to the base array
-        dst_shape = (val.get_shape().as_list()[0],) + dst.base_shape[1:]
+        # align val shape with dst base shape
+        dst_shape = (dst.shape[0],) + dst.base_shape[1:]
+        if dst.minibatched:
+            dst_shape += (self.minibatch_size,)
         if val.get_shape().ndims != len(dst_shape):
             val = tf.reshape(val, dst_shape)
 
@@ -259,10 +267,13 @@ class SignalDict(object):
 
         # reshape the data according to the shape set in `src`, if there is
         # one, otherwise keep the shape of the base array
+        src_shape = src.shape
+        if src.minibatched:
+            src_shape += (self.minibatch_size,)
         if src.display_shape is not None:
-            result = tf.reshape(result, src.shape)
+            result = tf.reshape(result, src_shape)
         else:
-            result.set_shape(src.shape)
+            result.set_shape(src_shape)
 
         # whenever we read from an array we use this to mark it as "read"
         # (so that any future writes to the array will be scheduled after
@@ -333,11 +344,6 @@ class SignalDict(object):
 def mark_signals(model):
     # TODO: documentation/tests
 
-    # mark everything as not trainable by default
-    for op in model.operators:
-        for sig in op.all_signals:
-            sig.trainable = False
-
     if model.toplevel is None:
         warnings.warn("No top-level network in model")
     else:
@@ -353,3 +359,28 @@ def mark_signals(model):
             # TODO: should we disable training on connections to learning
             # rules?
             model.sig[conn]["weights"].trainable = True
+
+            # parameters can't be modified by an online Nengo learning rule
+            # and offline training at the same time. (it is possible in theory,
+            # but it complicates things a lot and is probably not a common
+            # use case).
+            rule = conn.learning_rule
+            if rule is not None:
+                if isinstance(rule, dict):
+                    rule = list(rule.values())
+                elif not isinstance(rule, list):
+                    rule = [rule]
+                for r in rule:
+                    if r.modifies == "weights" or r.modifies == "decoders":
+                        model.sig[conn]["weights"].trainable = False
+                    elif r.modifies == "encoders":
+                        model.sig[conn.post_obj]["encoders"].trainable = False
+                    else:
+                        raise NotImplementedError
+
+    # mark everything as not trainable by default
+    for op in model.operators:
+        for sig in op.all_signals:
+            if not hasattr(sig, "trainable"):
+                sig.trainable = False
+            sig.minibatched = not sig.trainable

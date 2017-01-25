@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import copy
 
-from nengo.builder.operator import (TimeUpdate, SimPyFunc, SlicedCopy, DotInc,
+from nengo.builder.operator import (SimPyFunc, SlicedCopy, DotInc,
                                     ElementwiseInc, Copy)
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
@@ -32,10 +32,6 @@ def greedy_planner(operators):
     -----
     Originally based on `nengo_ocl` greedy planner
      """
-
-    # TimeUpdate is executed as part of the simulation loop, not part
-    # of the step plan
-    operators = [op for op in operators if not isinstance(op, TimeUpdate)]
 
     dependency_graph = operator_depencency_graph(operators)
 
@@ -128,8 +124,8 @@ def mergeable(op, chosen_ops):
 
     # sets/incs/reads/updates must all match
     if (len(op.sets) != len(c.sets) or len(op.incs) != len(c.incs) or
-            len(op.reads) != len(c.reads) or
-            len(op.updates) != len(c.updates)):
+                len(op.reads) != len(c.reads) or
+                len(op.updates) != len(c.updates)):
         return False
 
     for s0, s1 in zip(op.all_signals, c.all_signals):
@@ -292,7 +288,6 @@ def tree_planner(operators):
 
         return shortest
 
-    operators = [op for op in operators if not isinstance(op, TimeUpdate)]
     dependency_graph = operator_depencency_graph(operators)
 
     predecessors_of = {}
@@ -316,8 +311,6 @@ def tree_planner(operators):
 
 
 def noop_planner(operators):
-    operators = [op for op in operators if not isinstance(op, TimeUpdate)]
-
     dependency_graph = operator_depencency_graph(operators)
 
     return [(op,) for op in toposort(dependency_graph)]
@@ -379,7 +372,7 @@ def order_signals(plan, n_passes=10):
 
     if len(read_blocks) == 0:
         # no reads, so nothing to reorder
-        return plan, all_signals
+        return all_signals, plan
 
     if DEBUG:
         print("all signals")
@@ -698,8 +691,8 @@ def sort_signals_by_ops(sorted_reads, signals, new_plan, blocks):
                 move = True
 
                 if (0 < r_index < len(signals) and
-                        blocks[signals[r_index]] !=
-                        blocks[signals[r_index - 1]]):
+                            blocks[signals[r_index]] !=
+                            blocks[signals[r_index - 1]]):
                     break
 
             # if DEBUG:
@@ -781,6 +774,12 @@ def create_signals(sigs, plan, float_type, minibatch_size):
         if initial_value.shape != shape:
             initial_value = np.resize(initial_value, shape)
 
+        if sig.minibatched:
+            # duplicate along minibatch dimension
+            initial_value = np.tile(
+                initial_value[..., None],
+                tuple(1 for _ in shape) + (minibatch_size,))
+
         if key in base_arrays:
             base_arrays[key] = np.concatenate(
                 (base_arrays[key], initial_value), axis=0)
@@ -829,8 +828,13 @@ def create_signals(sigs, plan, float_type, minibatch_size):
         if tensor_sig.shape != (sig.shape if sig.shape != () else (1,)):
             raise BuildError("TensorSignal shape %s does not match Signal "
                              "shape %s" % (tensor_sig.shape, sig.shape))
+
+        initial_value = sig.initial_value
+        if sig.minibatched:
+            initial_value = initial_value[..., None]
+
         if not np.allclose(base_arrays[tensor_sig.key][tensor_sig.indices],
-                           sig.initial_value):
+                           initial_value):
             raise BuildError("TensorSignal values don't match Signal values")
 
     # copy the base arrays to make them contiguous in memory

@@ -13,7 +13,7 @@ class SimBCMBuilder(OpBuilder):
         self.theta_data = signals.combine([op.theta for op in ops])
 
         self.learning_rate = tf.constant(
-            [op.learning_rate for op in ops
+            [[op.learning_rate] for op in ops
              for _ in range(op.post_filtered.shape[0])],
             dtype=signals.dtype)
 
@@ -21,11 +21,12 @@ class SimBCMBuilder(OpBuilder):
 
     def build_step(self, signals):
         pre = signals.gather(self.pre_data)
-        pre = tf.expand_dims(pre, 0)
         post = signals.gather(self.post_data)
         theta = signals.gather(self.theta_data)
 
         post = self.learning_rate * signals.dt * post * (post - theta)
+
+        pre = tf.expand_dims(pre, 0)
         post = tf.expand_dims(post, 1)
 
         signals.scatter(self.output_data, post * pre)
@@ -40,12 +41,12 @@ class SimOjaBuilder(OpBuilder):
         self.output_data = signals.combine([op.delta for op in ops])
 
         self.learning_rate = tf.constant(
-            [op.learning_rate for op in ops
+            [[op.learning_rate] for op in ops
              for _ in range(op.post_filtered.shape[0])],
             dtype=signals.dtype)
 
         self.beta = tf.constant(
-            [[op.beta] for op in ops for _ in
+            [[[op.beta]] for op in ops for _ in
              range(op.post_filtered.shape[0])],
             dtype=signals.dtype)
 
@@ -74,11 +75,11 @@ class SimVojaBuilder(OpBuilder):
         self.output_data = signals.combine([op.delta for op in ops])
 
         self.scale = tf.constant(
-            np.concatenate([op.scale[:, None] for op in ops], axis=0),
+            np.concatenate([op.scale[:, None, None] for op in ops], axis=0),
             dtype=signals.dtype)
 
         self.learning_rate = tf.constant(
-            [op.learning_rate for op in ops
+            [[op.learning_rate] for op in ops
              for _ in range(op.post_filtered.shape[0])], dtype=signals.dtype)
 
     def build_step(self, signals):

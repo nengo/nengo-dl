@@ -22,6 +22,13 @@ class ResetBuilder(OpBuilder):
             [np.resize(np.asarray(op.value).astype(dtype), op.dst.shape)
              for op in ops], axis=0)
 
+        if ops[0].dst.minibatched:
+            # TODO: do we need to do the tile, or will the scatter assignment
+            # do some broadcasting?
+            value = np.tile(
+                value[..., None],
+                tuple(1 for _ in value.shape) + (signals.minibatch_size,))
+
         self.dst_data = signals.combine([x.dst for x in ops])
         self.reset_val = tf.constant(value)
 
@@ -55,8 +62,15 @@ class SlicedCopyBuilder(OpBuilder):
 
         self.mode = "inc" if getattr(ops[0], "inc", False) else "update"
 
-        self.src_data = signals.combine(srcs)
+        self.src_data = signals.combine(srcs, load_indices=False)
         self.dst_data = signals.combine(dsts)
+
+        if not self.src_data.minibatched and self.dst_data.minibatched:
+            # broadcast indices so that the un-minibatched src data gets
+            # copied to each minibatch dimension in dst
+            self.src_data = self.src_data.broadcast(-1, signals.minibatch_size)
+
+        self.src_data.load_indices()
 
     def build_step(self, signals):
         signals.scatter(self.dst_data, signals.gather(self.src_data),
@@ -156,6 +170,12 @@ class DotIncBuilder(OpBuilder):
 
             self.reduce = False
 
+        # add broadcast dimension for minibatch, if needed
+        if not self.A_data.minibatched and self.X_data.minibatched:
+            self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
+        elif self.A_data.minibatched and not self.X_data.minibatched:
+            self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
+
         self.A_data.load_indices()
         self.X_data.load_indices()
 
@@ -169,9 +189,8 @@ class DotIncBuilder(OpBuilder):
         dot = tf.mul(A, X)
 
         if self.reduce:
-            dot = tf.reduce_sum(dot, axis=-1)
-
-        dot = tf.reshape(dot, self.Y_data.shape)
+            dot = tf.reduce_sum(dot, axis=-2)
+        dot = tf.reshape(dot, self.Y_data.shape + (signals.minibatch_size,))
 
         signals.scatter(self.Y_data, dot, mode="inc")
 
@@ -187,8 +206,7 @@ class SimPyFuncBuilder(OpBuilder):
             print("fn", [op.fn for op in ops])
 
         self.time_input = ops[0].t is not None
-        self.input_data = (None if ops[0].x is None else
-                           signals.combine([op.x for op in ops]))
+        self.input_data = signals.combine([op.x for op in ops])
 
         if ops[0].output is not None:
             self.output_data = signals.combine([op.output for op in ops])
@@ -207,29 +225,31 @@ class SimPyFuncBuilder(OpBuilder):
                     func = utils.align_func(
                         op.output.shape, self.output_dtype)(op.fn)
 
-                if op.x is None:
-                    output = func(time)
-                else:
-                    func_input = inputs[offset:offset + op.x.shape[0]]
-                    offset += op.x.shape[0]
+                func_input = inputs[offset:offset + op.x.shape[0]]
+                offset += op.x.shape[0]
+
+                mini_out = []
+                for j in range(signals.minibatch_size):
                     if op.t is None:
-                        output = func(func_input)
+                        func_out = func(func_input[..., j])
                     else:
-                        output = func(time, func_input)
+                        func_out = func(time, func_input[..., j])
 
-                if op.output is None:
-                    # just return time as a noop (since we need to return
-                    # something)
-                    output = [time]
+                    if op.output is None:
+                        # just return time as a noop (since we need to
+                        # return something)
+                        func_out = time
+                    mini_out += [func_out]
+                outputs += [np.stack(mini_out, axis=-1)]
 
-                outputs += [output]
             return np.concatenate(outputs, axis=0)
 
         self.merged_func = merged_func
         self.merged_func.__name__ == "_".join(
             [utils.function_name(op.fn) for op in ops])
-        self.output_shape = (len(ops) if self.output_data is None else
+        self.output_shape = ((len(ops),) if self.output_data is None else
                              self.output_data.shape)
+        self.output_shape += (signals.minibatch_size,)
 
     def build_step(self, signals):
         time = signals.time if self.time_input else []

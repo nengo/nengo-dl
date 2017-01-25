@@ -35,7 +35,7 @@ def test_args():
             assert isinstance(x, np.ndarray)
             assert self.last_x is not x  # x should be a new copy on each call
             self.last_x = x
-            assert x[0] == t
+            assert np.allclose(x[0], t)
 
     with nengo.Network() as model:
         u = nengo.Node(lambda t: t)
