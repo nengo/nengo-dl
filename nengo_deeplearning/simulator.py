@@ -111,7 +111,11 @@ class Simulator(object):
             self.model = model
 
         if network is not None:
+            print("Building network", end="")
+            start = time.time()
             self.model.build(network, progress_bar=False)
+            print("\rBuilding completed in %s " %
+                  datetime.timedelta(seconds=int(time.time() - start)))
 
         # find invariant inputs (nodes that don't receive any input other
         # than the simulation time). we'll compute these outside the simulation
@@ -187,7 +191,7 @@ class Simulator(object):
         # (re)build graph
         self.graph = tf.Graph()
 
-        print("Constructing graph")
+        print("Constructing graph", end="")
         start = time.time()
         with self.graph.as_default(), tf.device(self.device):
             # clear probe data
@@ -218,7 +222,7 @@ class Simulator(object):
             # build stage
             self.build_loop()
 
-        print("Construction completed in %s " %
+        print("\rConstruction completed in %s " %
               datetime.timedelta(seconds=int(time.time() - start)))
 
         # start session
@@ -229,8 +233,6 @@ class Simulator(object):
 
         self.sess = tf.Session(graph=self.graph, config=config)
         self.closed = False
-
-        print("Session initialized")
 
         # initialize variables
         self.sess.run(init_op)
@@ -484,7 +486,7 @@ class Simulator(object):
                 (n_steps, self.step_blocks,
                  self.step_blocks * (n_steps // self.step_blocks + 1)))
 
-        print("Simulation started")
+        print("Simulation started", end="")
         start = time.time()
 
         if self.step_blocks is None:
@@ -500,13 +502,13 @@ class Simulator(object):
 
                 self.update_probe_data(
                     probe_data, self.n_steps - self.step_blocks,
-                                self.step_blocks + min(remaining_steps, 0))
+                    self.step_blocks + min(remaining_steps, 0))
 
             # update n_steps/time
             self.n_steps += remaining_steps
             self.time = self.n_steps * self.dt
 
-        print("Simulation finished in %s" %
+        print("\rSimulation completed in %s" %
               datetime.timedelta(seconds=int(time.time() - start)))
 
     def _run_steps(self, n_steps, profile=False, input_feeds=None):

@@ -131,7 +131,7 @@ def compare_backends(raw=False):
     n_range = [32]
     d_range = [64, 128, 256]
     neuron_types = [nengo.RectifiedLinear]
-    backends = [nengo_dl, nengo, nengo_ocl]
+    backends = [nengo_dl, None, nengo_ocl]
 
     if raw:
         data = np.zeros((len(benchmarks), len(n_range), len(d_range),
@@ -150,18 +150,29 @@ def compare_backends(raw=False):
 
                         for m, backend in enumerate(backends):
                             print(backend)
+
+                            if backend is None:
+                                continue
+
                             if backend == nengo_dl:
                                 kwargs = {"step_blocks": 50,
                                           "unroll_simulation": True,
+                                          "minibatch_size": 100,
                                           # "device": "/cpu:0"
                                           }
                             else:
-                                kwargs = {}
+                                kwargs = {"progress_bar": None}
+
+                            reps = 1 if backend == nengo_dl else 100
+
                             try:
                                 with backend.Simulator(None, model=model,
                                                        **kwargs) as sim:
                                     start = time.time()
-                                    sim.run(5.0)
+                                    for r in range(reps):
+                                        # if r > 0:
+                                        #     sim.reset()
+                                        sim.run(1.0)
                                     data[i, j, k, l, m] = time.time() - start
                                     print("time", data[i, j, k, l, m])
                             except Exception as e:
@@ -208,7 +219,7 @@ def profiling():
     # note: in order for GPU profiling to work, you have to manually add
     # ...\CUDA\v8.0\extras\CUPTI\libx64 to your path
     net = pes(128, 32, nengo.RectifiedLinear())
-    with nengo_dl.Simulator(net, tensorboard=True, step_blocks=50,
+    with nengo_dl.Simulator(net, tensorboard=False, step_blocks=50,
                             device="/gpu:0", unroll_simulation=True) as sim:
         sim.run_steps(50, profile=True)
 

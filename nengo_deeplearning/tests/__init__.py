@@ -25,9 +25,12 @@ class TestSimulator(Simulator):
                 kwargs.setdefault("step_blocks", None)
             else:
                 kwargs.setdefault("step_blocks", int(step_blocks))
+        else:
+            kwargs.setdefault("step_blocks", 10)
 
-        kwargs.setdefault("device", "/cpu:0")
         if "NENGO_DL_TEST_DEVICE" in os.environ:
             kwargs.setdefault("device", os.environ["NENGO_DL_TEST_DEVICE"])
+        else:
+            kwargs.setdefault("device", "/cpu:0")
 
         super(TestSimulator, self).__init__(*args, **kwargs)

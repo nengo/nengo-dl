@@ -124,8 +124,8 @@ def mergeable(op, chosen_ops):
 
     # sets/incs/reads/updates must all match
     if (len(op.sets) != len(c.sets) or len(op.incs) != len(c.incs) or
-                len(op.reads) != len(c.reads) or
-                len(op.updates) != len(c.updates)):
+            len(op.reads) != len(c.reads) or
+            len(op.updates) != len(c.updates)):
         return False
 
     for s0, s1 in zip(op.all_signals, c.all_signals):
@@ -691,8 +691,8 @@ def sort_signals_by_ops(sorted_reads, signals, new_plan, blocks):
                 move = True
 
                 if (0 < r_index < len(signals) and
-                            blocks[signals[r_index]] !=
-                            blocks[signals[r_index - 1]]):
+                        blocks[signals[r_index]] !=
+                        blocks[signals[r_index - 1]]):
                     break
 
             # if DEBUG:
