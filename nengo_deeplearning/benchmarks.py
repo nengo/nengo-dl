@@ -28,8 +28,8 @@ def cconv(dimensions, neurons_per_d, neuron_type):
 
     with nengo.Network(label="cconv") as net:
         net.config[nengo.Ensemble].neuron_type = neuron_type
-        net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
-        net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
+        net.config[nengo.Ensemble].gain = nengo.dists.Choice([1, -1])
+        net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-1, 1)
 
         cconv = nengo.networks.CircularConvolution(neurons_per_d, dimensions)
 
@@ -63,8 +63,8 @@ def integrator(dimensions, neurons_per_d, neuron_type):
 
     with nengo.Network(label="integrator") as net:
         net.config[nengo.Ensemble].neuron_type = neuron_type
-        net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
-        net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
+        net.config[nengo.Ensemble].gain = nengo.dists.Choice([1, -1])
+        net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-1, 1)
 
         integ = nengo.networks.Integrator(0.1, neurons_per_d * dimensions,
                                           dimensions)
@@ -97,8 +97,8 @@ def pes(dimensions, neurons_per_d, neuron_type):
 
     with nengo.Network(label="pes") as net:
         net.config[nengo.Ensemble].neuron_type = neuron_type
-        net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
-        net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
+        net.config[nengo.Ensemble].gain = nengo.dists.Choice([1, -1])
+        net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-1, 1)
 
         inp = nengo.Node([1] * dimensions)
         pre = nengo.Ensemble(neurons_per_d * dimensions, dimensions)
@@ -130,7 +130,7 @@ def compare_backends(raw=False):
     benchmarks = [pes, integrator, cconv]
     n_range = [32]
     d_range = [64, 128, 256]
-    neuron_types = [nengo.RectifiedLinear]
+    neuron_types = [nengo.RectifiedLinear, nengo.LIF]
     backends = [nengo_dl, None, nengo_ocl]
 
     if raw:
@@ -157,13 +157,13 @@ def compare_backends(raw=False):
                             if backend == nengo_dl:
                                 kwargs = {"step_blocks": 50,
                                           "unroll_simulation": True,
-                                          "minibatch_size": 100,
-                                          # "device": "/cpu:0"
+                                          "minibatch_size": 50,
+                                          "device": "/gpu:0"
                                           }
                             else:
                                 kwargs = {"progress_bar": None}
 
-                            reps = 1 if backend == nengo_dl else 100
+                            reps = 1 if backend == nengo_dl else 50
 
                             try:
                                 with backend.Simulator(None, model=model,
@@ -208,7 +208,7 @@ def compare_backends(raw=False):
             axes[i].set_xlabel("dimensions")
             axes[i].set_ylabel("seconds")
             axes[i].legend(["nengo_dl", "nengo", "nengo_ocl"])
-            axes[i].set_ylim([0, 50])
+            axes[i].set_ylim([0, 300])
 
     plt.show()
 

@@ -78,7 +78,7 @@ class SlicedCopyBuilder(OpBuilder):
 
 
 @Builder.register(ElementwiseInc)
-@Builder.register(DotInc)
+# @Builder.register(DotInc)
 class ElementwiseIncBuilder(OpBuilder):
     def __init__(self, ops, signals):
         if DEBUG:
@@ -134,7 +134,7 @@ class ElementwiseIncBuilder(OpBuilder):
         signals.scatter(self.Y_data, result, mode="inc")
 
 
-# @Builder.register(DotInc)
+@Builder.register(DotInc)
 class DotIncBuilder(OpBuilder):
     def __init__(self, ops, signals):
         if DEBUG:
@@ -175,6 +175,9 @@ class DotIncBuilder(OpBuilder):
         if not self.A_data.minibatched and self.X_data.minibatched:
             dot = tf.batch_matmul(A, X)
         else:
+            # TODO: double check that this is faster than doing matmul
+            # with a vector. if so, we probably also want to do it this way for
+            # small minibatch sizes
             dot = tf.mul(A, X)
             dot = tf.reduce_sum(dot, axis=-2)
 

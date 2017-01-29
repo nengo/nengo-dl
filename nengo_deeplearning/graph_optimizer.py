@@ -340,15 +340,22 @@ def order_signals(plan, n_passes=10):
     # figure out all the read blocks in the plan (in theory we would like each
     # block to become a contiguous chunk in the base array)
     read_blocks = []
+    # note: reads[op] is essentially equivalent to op.reads, with the only
+    # exception that it includes SimNeurons states. we don't want to modify
+    # op.reads itself, because then if you pass the same model to the
+    # Simulator the operators keep getting modified in-place.
+    reads = {}
     for ops in plan:
-        if type(ops[0]) == SimNeurons:
-            # state signals are technically reads as well, they just aren't
-            # marked as such, so we add them to the reads list
-            for op in ops:
-                op.reads += op.states
+        for op in ops:
+            if type(op) == SimNeurons:
+                # state signals are technically reads as well, they just aren't
+                # marked as such, so we add them to the reads list
+                reads[op] = op.reads + op.states
+            else:
+                reads[op] = op.reads
 
-        for i in range(len(ops[0].reads)):
-            read_blocks += [set(op.reads[i].base for op in ops)]
+        for i in range(len(reads[ops[0]])):
+            read_blocks += [set(reads[op][i].base for op in ops)]
 
     # get rid of duplicate read blocks
     read_blocks = [
@@ -383,10 +390,10 @@ def order_signals(plan, n_passes=10):
         print(signal_blocks)
 
     sorted_reads = [(ops, i) for ops in plan
-                    for i in range(len(ops[0].reads))]
+                    for i in range(len(reads[ops[0]]))]
     # note: we're sorting by the view size, not the base size
     sorted_reads = sorted(
-        sorted_reads, key=lambda p: np.sum([op.reads[p[1]].size
+        sorted_reads, key=lambda p: np.sum([reads[op][p[1]].size
                                             for op in p[0]]))
 
     if DEBUG:
@@ -424,7 +431,7 @@ def order_signals(plan, n_passes=10):
         # reorder ops by signal order. this leaves the overall
         # hamming sort block order unchanged.
         new_plan, all_signals = sort_ops_by_signals(
-            sorted_reads, all_signals, new_plan, signal_blocks)
+            sorted_reads, all_signals, new_plan, signal_blocks, reads)
 
         if DEBUG:
             print("resorted ops")
@@ -551,7 +558,7 @@ def hamming_sort(signals, blocks):
     return sorted_signals
 
 
-def sort_ops_by_signals(sorted_reads, signals, new_plan, blocks):
+def sort_ops_by_signals(sorted_reads, signals, new_plan, blocks, reads):
     """Rearrange operators to match the order of signals.
 
     Note: the same operators can be associated with multiple read blocks if
@@ -574,6 +581,8 @@ def sort_ops_by_signals(sorted_reads, signals, new_plan, blocks):
         mapping from original operator group to the sorted operators
     blocks : dict of {Signal: tuple of bool}
         indicates which read blocks each signal participates in
+    reads : dict of {Operator: list of Signal}
+        the signals read by each operator
 
     Returns
     -------
@@ -589,7 +598,7 @@ def sort_ops_by_signals(sorted_reads, signals, new_plan, blocks):
     for old_ops, read_block in sorted_reads:
         if DEBUG:
             print("sorting ops", new_plan[old_ops])
-            print("by", [op.reads[read_block] for op in new_plan[old_ops]])
+            print("by", [reads[op][read_block] for op in new_plan[old_ops]])
 
         if len(old_ops) == 1:
             # then we have nothing to sort
@@ -601,7 +610,7 @@ def sort_ops_by_signals(sorted_reads, signals, new_plan, blocks):
         # TODO: do we want to do this? I don't think so, because there is
         # a chance that non-contiguous signals could become contiguous after
         # the sort
-        # reads = [op.reads[read_block].base for op in ops]
+        # reads = [reads[op][read_block].base for op in ops]
         # indices = sorted([signals.index(s) for s in reads])
         # if indices != list(range(np.min(indices), np.max(indices) + 1)):
         #     continue
@@ -610,8 +619,8 @@ def sort_ops_by_signals(sorted_reads, signals, new_plan, blocks):
         # sorted first by the order of the signals in the list, then by
         # the order of the views within each signal
         sorted_ops = sorted(
-            ops, key=lambda op: (signals.index(op.reads[read_block].base),
-                                 op.reads[read_block].elemoffset))
+            ops, key=lambda op: (signals.index(reads[op][read_block].base),
+                                 reads[op][read_block].elemoffset))
 
         new_plan[old_ops] = tuple(sorted_ops)
 
@@ -628,12 +637,12 @@ def sort_ops_by_signals(sorted_reads, signals, new_plan, blocks):
         signals = sort_signals_by_ops(
             [x for x in sorted_reads
              if x[0] == old_ops and x[1] != read_block],
-            signals, new_plan, blocks)
+            signals, new_plan, blocks, reads)
 
     return new_plan, signals
 
 
-def sort_signals_by_ops(sorted_reads, signals, new_plan, blocks):
+def sort_signals_by_ops(sorted_reads, signals, new_plan, blocks, reads):
     """Attempts to rearrange `signals` so that it is in the same order as
     operator reads, without changing the overall block order.
 
@@ -650,6 +659,8 @@ def sort_signals_by_ops(sorted_reads, signals, new_plan, blocks):
         mapping from original operator group to the sorted operators
     blocks : dict of {Signal: tuple of bool}
         indicates which read blocks each signal participates in
+    reads : dict of {Operator: list of Signal}
+        the signals read by each operator
 
     Returns
     -------
@@ -659,12 +670,12 @@ def sort_signals_by_ops(sorted_reads, signals, new_plan, blocks):
 
     for old_ops, read_block in sorted_reads:
         if DEBUG:
-            print("sorting signals", [op.reads[read_block]
+            print("sorting signals", [reads[op][read_block]
                                       for op in new_plan[old_ops]])
             print(read_block, new_plan[old_ops])
 
         ops = new_plan[old_ops]
-        op_reads = [op.reads[read_block].base for op in ops]
+        op_reads = [reads[op][read_block].base for op in ops]
 
         if len(set(op_reads)) == 1:
             # only one read signal, so nothing to sort

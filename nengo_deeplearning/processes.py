@@ -23,92 +23,94 @@ class SimProcessBuilder(OpBuilder):
             print("output", [op.output for op in ops])
             print("t", [op.t for op in ops])
 
+        process_type = type(ops[0].process)
+
+        # if we have a custom tensorflow implementation for this process type,
+        # then we build that. otherwise we'll just execute the process step
+        # function externally (using `tf.py_func`), so we just need to set up
+        # the inputs/outputs for that.
+        if process_type in TF_PROCESS_IMPL:
+            # note: we do this two-step check (even though it's redundant) to
+            # make sure that TF_PROCESS_IMPL is kept up to date
+
+            if process_type == Lowpass:
+                self.built_process = LinearFilter(ops, signals)
+        else:
+            self.built_process = GenericProcessBuilder(ops, signals, rng)
+
+    def build_step(self, signals):
+        self.built_process.build_step(signals)
+
+
+class GenericProcessBuilder(object):
+    def __init__(self, ops, signals, rng):
         self.input_data = (None if ops[0].input is None else
                            signals.combine([op.input for op in ops]))
         self.output_data = signals.combine([op.output for op in ops])
         self.output_shape = self.output_data.shape + (signals.minibatch_size,)
         self.mode = "inc" if ops[0].mode == "inc" else "update"
 
-        self.process_type = type(ops[0].process)
+        # build the step function for each process
+        step_fs = [
+            [op.process.make_step(
+                op.input.shape if op.input is not None else (0,),
+                op.output.shape, signals.dt.dt_val,
+                op.process.get_rng(rng))
+             for _ in range(signals.minibatch_size)] for op in ops]
 
-        # if we have a custom tensorflow implementation for this process type,
-        # then we build that. otherwise we'll just execute the process step
-        # function externally (using `tf.py_func`), so we just need to set up
-        # the inputs/outputs for that.
-        if self.process_type in TF_PROCESS_IMPL:
-            # note: we do this two-step check (even though it's redundant) to
-            # make sure that TF_PROCESS_IMPL is kept up to date
+        # `merged_func` calls the step function for each process and
+        # combines the result
+        @utils.align_func(self.output_shape, self.output_data.dtype)
+        def merged_func(time, input):
+            input_offset = 0
+            func_output = []
+            for i, op in enumerate(ops):
+                if op.input is not None:
+                    input_shape = op.input.shape[0]
+                    func_input = input[input_offset:input_offset + input_shape]
+                    input_offset += input_shape
 
-            if self.process_type == Lowpass:
-                self.process = LinearFilter(ops, signals.dt.dt_val,
-                                            self.input_data, self.output_data,
-                                            signals.minibatch_size)
-        else:
-            # build the step function for each process
-            step_fs = [
-                [op.process.make_step(
-                    op.input.shape if op.input is not None else (0,),
-                    op.output.shape, signals.dt.dt_val,
-                    op.process.get_rng(rng))
-                 for _ in range(signals.minibatch_size)] for op in ops]
+                mini_out = []
+                for j in range(signals.minibatch_size):
+                    x = [] if op.input is None else [func_input[..., j]]
+                    mini_out += [step_fs[i][j](*([time] + x))]
+                func_output += [np.stack(mini_out, axis=-1)]
 
-            # `merged_func` calls the step function for each process and
-            # combines the result
-            @utils.align_func(self.output_shape, self.output_data.dtype)
-            def merged_func(time, input):
-                input_offset = 0
-                func_output = []
-                for i, op in enumerate(ops):
-                    if op.input is not None:
-                        input_shape = op.input.shape[0]
-                        func_input = input[
-                            input_offset:input_offset + input_shape]
-                        input_offset += input_shape
+            return np.concatenate(func_output, axis=0)
 
-                    mini_out = []
-                    for j in range(signals.minibatch_size):
-                        x = [] if op.input is None else [func_input[..., j]]
-                        mini_out += [step_fs[i][j](*([time] + x))]
-                    func_output += [np.stack(mini_out, axis=-1)]
-
-                return np.concatenate(func_output, axis=0)
-
-            self.merged_func = merged_func
-            self.merged_func.__name__ = utils.sanitize_name(
-                "_".join([type(op.process).__name__ for op in ops]))
+        self.merged_func = merged_func
+        self.merged_func.__name__ = utils.sanitize_name(
+            "_".join([type(op.process).__name__ for op in ops]))
 
     def build_step(self, signals):
-        if self.process_type in TF_PROCESS_IMPL:
-            if self.process_type == Lowpass:
-                self.process.build_step(signals)
-        else:
-            input = ([] if self.input_data is None
-                     else signals.gather(self.input_data))
+        input = ([] if self.input_data is None
+                 else signals.gather(self.input_data))
 
-            result = tf.py_func(
-                self.merged_func, [signals.time, input],
-                self.output_data.dtype, name=self.merged_func.__name__)
-            result.set_shape(self.output_shape)
+        result = tf.py_func(
+            self.merged_func, [signals.time, input],
+            self.output_data.dtype, name=self.merged_func.__name__)
+        result.set_shape(self.output_shape)
 
-            signals.scatter(self.output_data, result, mode=self.mode)
+        signals.scatter(self.output_data, result, mode=self.mode)
 
 
 class LinearFilter(object):
-    def __init__(self, ops, dt, input_data, output_data, minibatch_size):
+    def __init__(self, ops, signals):
         # TODO: implement general linear filter (using tensorarrays?)
 
-        self.input_data = input_data
-        self.output_data = output_data
+        self.input_data = (None if ops[0].input is None else
+                           signals.combine([op.input for op in ops]))
+        self.output_data = signals.combine([op.output for op in ops])
 
         nums = []
         dens = []
         for op in ops:
-            if op.process.tau <= 0.03 * dt:
+            if op.process.tau <= 0.03 * signals.dt.dt_val:
                 num = 1
                 den = 0
             else:
                 num, den, _ = cont2discrete((op.process.num, op.process.den),
-                                            dt, method="zoh")
+                                            signals.dt.dt_val, method="zoh")
                 num = num.flatten()
 
                 num = num[1:] if num[0] == 0 else num
@@ -130,10 +132,10 @@ class LinearFilter(object):
         # note: applying the negative here
         dens = -np.asarray(dens)[:, None]
         # need to manually broadcast for scatter_mul
-        dens = np.tile(dens, (1, minibatch_size))
+        dens = np.tile(dens, (1, signals.minibatch_size))
 
-        self.nums = tf.constant(nums, dtype=output_data.dtype)
-        self.dens = tf.constant(dens, dtype=output_data.dtype)
+        self.nums = tf.constant(nums, dtype=self.output_data.dtype)
+        self.dens = tf.constant(dens, dtype=self.output_data.dtype)
 
     def build_step(self, signals):
         input = signals.gather(self.input_data)
