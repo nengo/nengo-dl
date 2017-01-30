@@ -111,7 +111,7 @@ class Simulator(object):
             self.model = model
 
         if network is not None:
-            print("Building network", end="")
+            print("Building network", end="", flush=True)
             start = time.time()
             self.model.build(network, progress_bar=False)
             print("\rBuilding completed in %s " %
@@ -191,7 +191,7 @@ class Simulator(object):
         # (re)build graph
         self.graph = tf.Graph()
 
-        print("Constructing graph", end="")
+        print("Constructing graph", end="", flush=True)
         start = time.time()
         with self.graph.as_default(), tf.device(self.device):
             # clear probe data
@@ -486,7 +486,7 @@ class Simulator(object):
                 (n_steps, self.step_blocks,
                  self.step_blocks * (n_steps // self.step_blocks + 1)))
 
-        print("Simulation started", end="")
+        print("Simulation started", end="", flush=True)
         start = time.time()
 
         if self.step_blocks is None:

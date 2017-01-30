@@ -207,8 +207,9 @@ class LIFBuilder(object):
 
         # note: this scatter/gather approach is slower than just doing the
         # computation on the whole array (even though we're not using the
-        # result for any of the neurons that didn't spike). there may be some
-        # cases where this is more efficient? (e.g. for large, sparse arrays)
+        # result for any of the neurons that didn't spike).
+        # this is because there is no GPU kernel for scatter/gather_nd. so if
+        # that gets implemented in the future, this may be faster.
         # indices = tf.cast(tf.where(spiked), tf.int32)
         # tau_rc = tf.gather_nd(self.tau_rc, tf.expand_dims(indices[:, 0], 1))
         # tau_ref = tf.gather_nd(

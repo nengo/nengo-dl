@@ -169,9 +169,8 @@ def compare_backends(raw=False):
                                 with backend.Simulator(None, model=model,
                                                        **kwargs) as sim:
                                     start = time.time()
+                                    # sim.run(50)
                                     for r in range(reps):
-                                        # if r > 0:
-                                        #     sim.reset()
                                         sim.run(1.0)
                                     data[i, j, k, l, m] = time.time() - start
                                     print("time", data[i, j, k, l, m])
@@ -185,12 +184,11 @@ def compare_backends(raw=False):
         data = np.load("benchmark_data.npz")["arr_0"]
 
     bench_names = ["pes", "integrator", "cconv"]
-    neuron_names = ["relu"]
+    neuron_names = ["relu", "lif"]
 
-    f, axes = plt.subplots(1, 3)
-
-    for i in range(len(benchmarks)):
-        for j in range(len(neuron_types)):
+    for j in range(len(neuron_types)):
+        f, axes = plt.subplots(1, 3)
+        for i in range(len(benchmarks)):
             plt.figure()
             plt.title("%s (%s)" % (bench_names[i], neuron_names[j]))
             plt.plot(d_range, data[i, 0, :, j, 0] / data[i, 0, :, j, 1])
@@ -208,7 +206,7 @@ def compare_backends(raw=False):
             axes[i].set_xlabel("dimensions")
             axes[i].set_ylabel("seconds")
             axes[i].legend(["nengo_dl", "nengo", "nengo_ocl"])
-            axes[i].set_ylim([0, 300])
+            axes[i].set_ylim([0, 100])
 
     plt.show()
 
@@ -225,5 +223,5 @@ def profiling():
 
 
 if __name__ == "__main__":
-    compare_backends(raw=True)
+    compare_backends(raw=False)
     # profiling()
