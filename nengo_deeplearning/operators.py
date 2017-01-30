@@ -213,7 +213,7 @@ class DotIncBuilder(OpBuilder):
         if self.using_matmul:
             dot = tf.batch_matmul(A, X)
         else:
-            dot = tf.mul(A, X)
+            dot = tf.multiply(A, X)
             reduce_axis = -1 - (self.A_data.minibatched or
                                 self.X_data.minibatched)
             dot = tf.reduce_sum(dot, axis=reduce_axis)

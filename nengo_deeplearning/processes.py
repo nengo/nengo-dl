@@ -139,5 +139,9 @@ class LinearFilter(object):
 
     def build_step(self, signals):
         input = signals.gather(self.input_data)
-        signals.scatter(self.output_data, self.dens, mode="mul")
-        signals.scatter(self.output_data, self.nums * input, mode="inc")
+        # signals.scatter(self.output_data, self.dens, mode="mul")
+        # signals.scatter(self.output_data, self.nums * input, mode="inc")
+
+        output = signals.gather(self.output_data)
+        signals.scatter(self.output_data,
+                        self.dens * output + self.nums * input)

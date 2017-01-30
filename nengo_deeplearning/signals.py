@@ -31,6 +31,7 @@ class TensorSignal(object):
         self._indices = np.asarray(indices)
         self._indices.flags.writeable = False
         self.tf_indices = None
+        self.full_indices = None
 
         self.key = key
 
@@ -105,23 +106,6 @@ class TensorSignal(object):
             self.indices, self.key, display_shape=shape,
             label=self.label + ".reshape(%s)" % (shape,))
 
-    def load_indices(self):
-        """Loads the indices for this signal into tensorflow, and if the
-        indices form a contiguous slice then also loads the start/stop/step of
-        that slice."""
-
-        self.tf_indices = tf.constant(self.indices)
-
-        start = self.indices[0]
-        stop = self.indices[-1] + 1
-        step = (self.indices[1] - self.indices[0] if len(self.indices) > 1
-                else 1)
-        if step != 0 and np.all(self.indices == np.arange(start, stop, step)):
-            self.as_slice = (tf.constant([start]), tf.constant([stop]),
-                             tf.constant([step]))
-        else:
-            self.as_slice = None
-
     def broadcast(self, axis, length):
         assert axis in (0, -1)
 
@@ -138,17 +122,26 @@ class TensorSignal(object):
             indices, self.key, display_shape=display_shape,
             label=self.label + ".broadcast(%d, %d)" % (axis, length))
 
-    # def tile(self, length):
-    #     assert self.in_tf
-    #
-    #     # repeat along the first axis the given number of times
-    #     # note: we don't use tf.tile because it doesn't have a GPU kernel
-    #     indices = tf.concat(0, [self.indices] * length)
-    #     shape = (self.shape[0] * length,) + self.shape[1:]
-    #
-    #     return TensorSignal(
-    #         indices, self.key, display_shape=shape,
-    #         label=self.label + ".tile(%d)" % length)
+    def load_indices(self):
+        """Loads the indices for this signal into tensorflow, and if the
+        indices form a contiguous slice then also loads the start/stop/step of
+        that slice."""
+
+        self.tf_indices = tf.constant(self.indices)
+
+        self.full_indices = tf.constant(np.dstack(np.meshgrid(
+            self.indices, *[range(n) for n in self.base_shape[1:]],
+            indexing="ij")).reshape(-1, len(self.base_shape)), dtype=tf.int64)
+
+        start = self.indices[0]
+        stop = self.indices[-1] + 1
+        step = (self.indices[1] - self.indices[0] if len(self.indices) > 1
+                else 1)
+        if step != 0 and np.all(self.indices == np.arange(start, stop, step)):
+            self.as_slice = (tf.constant([start]), tf.constant([stop]),
+                             tf.constant([step]))
+        else:
+            self.as_slice = None
 
 
 class SignalDict(object):
@@ -187,6 +180,7 @@ class SignalDict(object):
         """
 
         assert dst.tf_indices is not None
+        assert not dst.key[2]  # should never be assigning to a trainable var
 
         if val.dtype.is_floating and val.dtype.base_dtype != self.dtype:
             raise BuildError("Tensor detected with wrong dtype (%s), should "
@@ -199,12 +193,16 @@ class SignalDict(object):
         if val.get_shape().ndims != len(dst_shape):
             val = tf.reshape(val, dst_shape)
 
-        if mode == "update":
-            scatter_f = tf.scatter_update
-        elif mode == "inc":
-            scatter_f = tf.scatter_add
-        elif mode == "mul":
-            scatter_f = tf.scatter_mul
+        # TODO: until tensorflow implements scatter_nd kernel for GPU, users
+        # will have to train on CPU (using tensors/scatter_nd), but can still
+        # do inference on GPU (using variables/scatter)
+
+        # if mode == "update":
+        #     scatter_f = tf.scatter_update
+        # elif mode == "inc":
+        #     scatter_f = tf.scatter_add
+        # elif mode == "mul":
+        #     scatter_f = tf.scatter_mul
 
         if DEBUG:
             print("scatter")
@@ -218,11 +216,53 @@ class SignalDict(object):
         # write (note: this is only any reads that have happened since the
         # last write, since each write changes the base array object)
         with tf.control_dependencies(self.reads_by_base[self.bases[dst.key]]):
-            self.bases[dst.key] = scatter_f(
-                self.bases[dst.key], dst.tf_indices, val)
+            # self.bases[dst.key] = scatter_f(
+            #     self.bases[dst.key], dst.tf_indices, val)
+            # self.bases[dst.key] = self._scatter_f(
+            #     self.bases[dst.key], dst.tf_indices, val, mode=mode)
+            self.bases[dst.key] = self._scatter_f2(dst, val, mode=mode)
 
         if DEBUG:
             print("new dst base", self.bases[dst.key])
+
+    def _scatter_f(self, dst, idxs, src, mode="update"):
+        if mode == "update":
+            tmp = tf.dynamic_stitch([tf.range(dst.get_shape()[0]), idxs],
+                                    [dst, src])
+            tmp.set_shape(dst.get_shape())
+
+            return tmp
+
+        elif mode == "inc":
+            # src = tf.reshape(src, (-1,))
+            # tmp = tf.SparseTensor(
+            #     idxs, src,
+            #     dst.get_shape()[:1].concatenate(src.get_shape()[1:]))
+            # return tf.sparse_add(dst, tmp)
+
+            idxs = tf.expand_dims(idxs, 1)
+            return dst + tf.scatter_nd(idxs, src, dst.get_shape())
+        else:
+            raise NotImplementedError
+
+    def _scatter_f2(self, dst, src, mode="update"):
+        base_idxs = tf.range(self.bases[dst.key].get_shape()[0])
+        if mode == "update":
+            result = tf.dynamic_stitch([base_idxs, dst.tf_indices],
+                                       [self.bases[dst.key], src])
+        elif mode == "inc":
+            x = self.gather(dst)
+            result = tf.dynamic_stitch([base_idxs, dst.tf_indices],
+                                       [self.bases[dst.key], x + src])
+        # elif mode == "mul":
+        #     x = self.gather(dst)
+        #     result = tf.dynamic_stitch([base_idxs, dst.tf_indices],
+        #                                [self.bases[dst.key], x * src])
+        else:
+            raise NotImplementedError
+
+        result.set_shape(self.bases[dst.key].get_shape())
+        return result
 
     def gather(self, src, force_copy=False):
         """Fetches the data corresponding to `src` from the base array.

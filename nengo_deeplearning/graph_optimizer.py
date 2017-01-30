@@ -147,6 +147,15 @@ def mergeable(op, chosen_ops):
         if s0.trainable != s1.trainable:
             return False
 
+    # check that none of the ops increment the same value
+    # note: this is only necessary with the dynamic_stitch scatter_inc approach
+    # (because it does a gather beforehand); otherwise the incs just get
+    # applied in random order, which is fine.
+    for op2 in chosen_ops:
+        for s0, s1 in zip(op.incs, op2.incs):
+            if s0.base is s1.base and s0.may_share_memory(s1):
+                return False
+
     # operator-specific checks
     if isinstance(op, (SlicedCopy, Copy)):
         # can't merge incs and updates
@@ -757,6 +766,10 @@ def create_signals(sigs, plan, float_type, minibatch_size):
         mapping from `nengo` `Signals` to `nengo_dl` `TensorSignals` (views
         into the base arrays)
     """
+
+    # TODO: there isn't really any advantage to having huge monolithic base
+    # arrays, it just makes things less agile. we should partition the arrays
+    # up into all the non-overlapping chunks.
 
     base_arrays = OrderedDict()
     sig_map = {}
