@@ -22,17 +22,17 @@ from nengo_deeplearning import (  # noqa: F401
 from nengo_deeplearning.simulator import Simulator  # noqa: F401
 
 # check nengo version
-import nengo  # noqa: E402
+from nengo.version import version_info  # noqa: E402
 
 minimum_nengo_version = (2, 3, 0)
 latest_nengo_version = (2, 3, 1)
-if nengo.version.version_info < minimum_nengo_version:
+if version_info < minimum_nengo_version:
     raise ValueError(
         "`nengo_deeplearning` does not support `nengo` version %s. Upgrade "
         "with 'pip install --upgrade --no-deps nengo'."
-        % nengo.__version__)
-elif nengo.version.version_info > latest_nengo_version:
+        % version_info)
+elif version_info > latest_nengo_version:
     warnings.warn("This version of `nengo_deeplearning` has not been tested "
                   "with your `nengo` version (%s). The latest fully "
                   "supported version is %s" % (
-                      nengo.__version__, latest_nengo_version))
+                      version_info, latest_nengo_version))

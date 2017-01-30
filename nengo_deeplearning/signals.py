@@ -163,21 +163,14 @@ class SignalDict(object):
         mapping from `nengo` signals to `nengo_dl` signals
     dtype : tf.DType
         floating point precision used in signals
-    dt : float
-        simulation timestep
     minibatch_size : int
         number of items in each minibatch
     """
 
-    def __init__(self, sig_map, dtype, dt, minibatch_size):
+    def __init__(self, sig_map, dtype, minibatch_size):
         self.dtype = dtype
         self.sig_map = sig_map
         self.minibatch_size = minibatch_size
-
-        # create this constant once here so we don't end up creating a new
-        # dt constant in each operator
-        self.dt = tf.constant(dt, dtype)
-        self.dt.dt_val = dt  # store the actual value as well
 
     def scatter(self, dst, val, mode="update"):
         """Updates the base data corresponding to `dst`.

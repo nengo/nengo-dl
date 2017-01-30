@@ -54,7 +54,7 @@ class GenericProcessBuilder(object):
         step_fs = [
             [op.process.make_step(
                 op.input.shape if op.input is not None else (0,),
-                op.output.shape, signals.dt.dt_val,
+                op.output.shape, signals.dt_val,
                 op.process.get_rng(rng))
              for _ in range(signals.minibatch_size)] for op in ops]
 
@@ -105,12 +105,12 @@ class LinearFilter(object):
         nums = []
         dens = []
         for op in ops:
-            if op.process.tau <= 0.03 * signals.dt.dt_val:
+            if op.process.tau <= 0.03 * signals.dt_val:
                 num = 1
                 den = 0
             else:
                 num, den, _ = cont2discrete((op.process.num, op.process.den),
-                                            signals.dt.dt_val, method="zoh")
+                                            signals.dt_val, method="zoh")
                 num = num.flatten()
 
                 num = num[1:] if num[0] == 0 else num

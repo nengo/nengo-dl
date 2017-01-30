@@ -157,7 +157,8 @@ class LIFRateBuilder(object):
         j = J - 1
 
         # indices = tf.cast(tf.where(j > 0), tf.int32)
-        # tau_ref = tf.gather_nd(self.tau_ref, tf.expand_dims(indices[:, 0], 1))
+        # tau_ref = tf.gather_nd(
+        #     self.tau_ref, tf.expand_dims(indices[:, 0], 1))
         # tau_rc = tf.gather_nd(self.tau_rc, tf.expand_dims(indices[:, 0], 1))
         # j = tf.gather_nd(j, indices)
         #
