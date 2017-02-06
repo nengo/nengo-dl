@@ -3,6 +3,7 @@ from collections import defaultdict, OrderedDict
 from nengo import Process
 from nengo.builder.operator import TimeUpdate, SimPyFunc
 from nengo.builder.processes import SimProcess
+import numpy as np
 import tensorflow as tf
 
 from nengo_deeplearning import (builder, graph_optimizer, signals, utils,
@@ -78,12 +79,17 @@ class TensorGraph(object):
                 if k[2]:
                     # trainable signal, so create Variable
                     with tf.variable_scope("base_vars", reuse=False):
-                        self.base_vars += [tf.get_variable(
+                        var = tf.get_variable(
                             name, initializer=tf.constant_initializer(v),
-                            dtype=v.dtype, shape=v.shape, trainable=k[2])]
+                            dtype=v.dtype, shape=v.shape, trainable=k[2])
                 else:
-                    self.base_vars += [tf.placeholder(k[0], shape=v.shape,
-                                                      name=name)]
+                    var = tf.placeholder(k[0], shape=v.shape, name=name)
+
+                # pre-compute indices for the full range (used in scatter_f2)
+                self.signals.base_ranges[k] = tf.range(v.shape[0])
+
+                self.base_vars += [var]
+
             if DEBUG:
                 print("created variables")
                 print([str(x) for x in self.base_vars])
@@ -285,6 +291,38 @@ class TensorGraph(object):
             (invariant_data, tf.placeholder(
                 self.dtype, (self.step_blocks, invariant_data.shape[0],
                              self.minibatch_size), name="input_data")))
+
+    def build_optimizer(self, optimizer, targets, objective):
+        self.target_phs = {}
+        with self.graph.as_default(), tf.device(self.device):
+            # compute loss
+            loss = []
+            for p in targets:
+                probe_index = self.model.probes.index(p)
+                self.target_phs[p] = tf.placeholder(
+                    self.dtype, (self.step_blocks, p.size_in,
+                                 self.minibatch_size), name="targets")
+
+                if objective == "mse":
+                    loss += [tf.square(self.target_phs[p] -
+                                       self.probe_arrays[probe_index])]
+                elif callable(objective):
+                    loss += objective(self.probe_arrays[probe_index],
+                                      self.target_phs[p])
+                else:
+                    raise NotImplementedError
+
+            loss = tf.reduce_mean(loss)
+
+            # create optimizer operator
+            self.opt_op = optimizer.minimize(
+                loss, var_list=tf.trainable_variables())
+
+            # get any new variables created by optimizer (so they can be
+            # initialized)
+            self.opt_slots_init = tf.variables_initializer(
+                [optimizer.get_slot(v, name) for v in tf.trainable_variables()
+                 for name in optimizer.get_slot_names()])
 
     def get_base_variables(self, reuse=False):
         """Loads the base variables used to store all simulation data.

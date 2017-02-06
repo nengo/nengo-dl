@@ -1,8 +1,11 @@
+import datetime
 import re
+import time
 
 from nengo.exceptions import SimulationError
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.framework.ops import get_gradient_function
 
 
 def sanitize_name(name):
@@ -122,3 +125,101 @@ def cast_dtype(dtype, target):
         dtype = target
 
     return dtype
+
+
+def minibatch_generator(inputs, targets, minibatch_size, shuffle=True):
+    n_inputs = next(iter(inputs.values())).shape[0]
+
+    if shuffle:
+        perm = np.random.permutation(n_inputs)
+
+    for i in range(0, n_inputs - n_inputs % minibatch_size, minibatch_size):
+        yield ({n: inputs[n][perm[i:i + minibatch_size]] for n in inputs},
+               {p: targets[p][perm[i:i + minibatch_size]] for p in targets})
+
+
+def find_non_differentiable(inputs, outputs):
+    for o in outputs:
+        if o in inputs:
+            continue
+        else:
+            try:
+                get_gradient_function(o.op)
+                find_non_differentiable(inputs, o.op.inputs)
+            except LookupError as e:
+                print(e)
+                raise SimulationError(
+                    "Graph contains non-differentiable "
+                    "elements: %s" % o.op) from None
+
+
+class ProgressBar(object):
+    """Displays a progress bar and ETA for tracked steps.
+
+    Parameters
+    ----------
+    max_steps : int
+        number of steps required to complete the tracked process
+    """
+
+    def __init__(self, max_steps, label=None):
+        self.max_steps = max_steps
+        self.width = 30
+        self.label = label
+
+        self.reset()
+
+    def reset(self):
+        """Reset the tracker to initial conditions."""
+
+        self.curr_step = 0
+        self.start_time = time.time()
+        self.progress = -1
+
+        print("[%s] ETA: unknown" % (" " * self.width), end="", flush=True)
+
+    def stop(self):
+        """Stop the progress tracker.
+
+        Normally this will be called automatically when `max_steps` is reached,
+        but it can be called manually to trigger an early finish.
+        """
+
+        line = "\n"
+        line += ("Completed" if self.label is None else
+                 self.label + " completed")
+        line += " in %s" % datetime.timedelta(
+            seconds=int(time.time() - self.start_time))
+        print(line)
+        self.curr_step = None
+
+    def step(self, msg=None):
+        """Increment the progress tracker one step.
+
+        Parameters
+        ----------
+        msg : str, optional
+            display the given string at the end of the progress bar
+        """
+
+        self.curr_step += 1
+
+        tmp = int(self.width * self.curr_step / self.max_steps)
+        if tmp > self.progress:
+            self.progress = tmp
+        else:
+            return
+
+        eta = int((time.time() - self.start_time) *
+                  (self.max_steps - self.curr_step) / self.curr_step)
+
+        line = "\r[%s%s] ETA: %s" % ("#" * self.progress,
+                                     " " * (self.width - self.progress),
+                                     datetime.timedelta(seconds=eta))
+        if msg is not None or self.label is not None:
+            line += " (%s)" % self.label if msg is None else msg
+
+        print(line, end="", flush=True)
+
+        if self.curr_step == self.max_steps:
+            self.stop()

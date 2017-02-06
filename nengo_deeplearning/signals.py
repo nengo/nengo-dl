@@ -164,6 +164,8 @@ class SignalDict(object):
         self.dtype = dtype
         self.sig_map = sig_map
         self.minibatch_size = minibatch_size
+        self.base_ranges = {}
+        self.bases = None
 
     def scatter(self, dst, val, mode="update"):
         """Updates the base data corresponding to `dst`.
@@ -246,7 +248,7 @@ class SignalDict(object):
             raise NotImplementedError
 
     def _scatter_f2(self, dst, src, mode="update"):
-        base_idxs = tf.range(self.bases[dst.key].get_shape()[0])
+        base_idxs = self.base_ranges[dst.key]
         if mode == "update":
             result = tf.dynamic_stitch([base_idxs, dst.tf_indices],
                                        [self.bases[dst.key], src])
