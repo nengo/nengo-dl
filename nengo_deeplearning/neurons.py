@@ -47,15 +47,15 @@ class GenericNeuronBuilder(object):
     def __init__(self, ops, signals):
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
+        self.state_data = [signals.combine([op.states[i] for op in ops])
+                           for i in range(len(ops[0].states))]
 
-        # we combine all the state signals into a single tensor
-        self.state_data = signals.combine([s for op in ops
-                                           for s in op.states])
+        self.prev_result = []
 
-        def neuron_step_math(dt, J, states):
+        def neuron_step_math(dt, J, *states):
             output = None
             J_offset = 0
-            state_offset = 0
+            state_offset = [0 for _ in states]
             for i, op in enumerate(ops):
                 # slice out the individual state vectors from the overall
                 # array
@@ -63,10 +63,10 @@ class GenericNeuronBuilder(object):
                 J_offset += op.J.shape[0]
 
                 op_states = []
-                for s in op.states:
-                    op_states += [
-                        states[state_offset:state_offset + s.shape[0]]]
-                    state_offset += s.shape[0]
+                for j, s in enumerate(op.states):
+                    op_states += [states[j][state_offset[j]:
+                                  state_offset[j] + s.shape[0]]]
+                    state_offset[j] += s.shape[0]
 
                 # call step_math function
                 # note: `op_states` are views into `states`, which will
@@ -88,7 +88,7 @@ class GenericNeuronBuilder(object):
                     output = np.concatenate((output, neuron_output),
                                             axis=0)
 
-            return output, states
+            return (output,) + states
 
         self.neuron_step_math = neuron_step_math
         self.neuron_step_math.__name__ = utils.sanitize_name(
@@ -96,23 +96,26 @@ class GenericNeuronBuilder(object):
 
     def build_step(self, signals):
         J = signals.gather(self.J_data)
-        states = ([] if self.state_data == [] else
-                  [signals.gather(self.state_data)])
-        states_dtype = ([] if self.state_data == [] else
-                        [self.state_data.dtype])
+        states = [signals.gather(x) for x in self.state_data]
+        states_dtype = [x.dtype for x in self.state_data]
 
-        neuron_out, state_out = tf.py_func(
-            self.neuron_step_math, [signals.dt, J] + states,
-                                   [self.output_data.dtype] + states_dtype,
-            name=self.neuron_step_math.__name__)
+        # note: we need to make sure that the previous call to this function
+        # has completed before the next starts, since we don't know that the
+        # functions are thread safe
+        with tf.control_dependencies(self.prev_result):
+            neuron_out, *state_out = tf.py_func(
+                self.neuron_step_math, [signals.dt, J] + states,
+                [self.output_data.dtype] + states_dtype,
+                name=self.neuron_step_math.__name__)
+        self.prev_result = [neuron_out]
+
         neuron_out.set_shape(
             self.output_data.shape + (signals.minibatch_size,))
-        state_out.set_shape(
-            self.state_data.shape + (signals.minibatch_size,))
-
         signals.scatter(self.output_data, neuron_out)
-        if self.state_data is not None:
-            signals.scatter(self.state_data, state_out)
+
+        for i, s in enumerate(self.state_data):
+            state_out[i].set_shape(s.shape + (signals.minibatch_size,))
+            signals.scatter(s, state_out[i])
 
 
 class RectifiedLinearBuilder(object):

@@ -37,16 +37,12 @@ def test_step_blocks():
         nengo.Connection(inp, ens)
         p = nengo.Probe(ens)
 
-    sim1 = TestSimulator(net, step_blocks=25)
-    sim2 = TestSimulator(net, step_blocks=10)
-    sim3 = TestSimulator(net, unroll_simulation=False, step_blocks=None)
-
-    sim1.run_steps(50)
-    sim2.run_steps(50)
-    sim3.run_steps(50)
-    sim1.close()
-    sim2.close()
-    sim3.close()
+    with TestSimulator(net, step_blocks=25) as sim1:
+        sim1.run_steps(50)
+    with TestSimulator(net, step_blocks=10) as sim2:
+        sim2.run_steps(50)
+    with TestSimulator(net, unroll_simulation=False, step_blocks=None) as sim3:
+        sim3.run_steps(50)
 
     assert np.allclose(sim1.data[p], sim2.data[p])
     assert np.allclose(sim2.data[p], sim3.data[p])
@@ -62,13 +58,13 @@ def test_unroll_simulation():
             nengo.Connection(inp, ens)
             p = nengo.Probe(ens)
 
-        sim1 = TestSimulator(net, step_blocks=10, unroll_simulation=False)
-        sim2 = TestSimulator(net, step_blocks=10, unroll_simulation=True)
+        with TestSimulator(net, step_blocks=10,
+                           unroll_simulation=False) as sim1:
+            sim1.run_steps(50)
 
-        sim1.run_steps(50)
-        sim2.run_steps(50)
-        sim1.close()
-        sim2.close()
+        with TestSimulator(net, step_blocks=10,
+                           unroll_simulation=True) as sim2:
+            sim2.run_steps(50)
 
         assert np.allclose(sim1.data[p], sim2.data[p])
 

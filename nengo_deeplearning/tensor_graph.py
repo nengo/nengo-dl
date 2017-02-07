@@ -3,7 +3,6 @@ from collections import defaultdict, OrderedDict
 from nengo import Process
 from nengo.builder.operator import TimeUpdate, SimPyFunc
 from nengo.builder.processes import SimProcess
-import numpy as np
 import tensorflow as tf
 
 from nengo_deeplearning import (builder, graph_optimizer, signals, utils,
@@ -46,9 +45,11 @@ class TensorGraph(object):
         # group mergeable operators
         plan = graph_optimizer.greedy_planner(operators)
         # plan = graph_optimizer.tree_planner(operators)
+        # plan = graph_optimizer.noop_planner(operators)
 
         # order signals/operators to promote contiguous reads
         sigs, self.plan = graph_optimizer.order_signals(plan, n_passes=10)
+        # sigs, self.plan = graph_optimizer.noop_order_signals(plan)
 
         # create base arrays and map Signals to TensorSignals (views on those
         # base arrays)
@@ -62,7 +63,9 @@ class TensorGraph(object):
                                           self.minibatch_size)
 
         with self.graph.as_default(), tf.device(self.device):
-            # clear probe data
+            # make sure indices are loaded for all probe signals (they won't
+            # have been loaded if this signal is only accessed as part of a
+            # larger block during the simulation)
             for p in self.model.probes:
                 self.sig_map[self.model.sig[p]["in"]].load_indices()
 
@@ -73,17 +76,19 @@ class TensorGraph(object):
 
             # create base variables
             self.base_vars = []
-            for k, v in self.base_arrays_init.items():
-                name = "%s_%s_%s" % (
-                    k[0].__name__, "_".join(str(x) for x in k[1]), k[2])
-                if k[2]:
+            for k, (v, trainable) in self.base_arrays_init.items():
+                name = "%s_%s_%s_%s" % (
+                    v.dtype, "_".join(str(x) for x in v.shape), trainable,
+                    str(k)[-9:-1])
+                if trainable:
                     # trainable signal, so create Variable
                     with tf.variable_scope("base_vars", reuse=False):
                         var = tf.get_variable(
                             name, initializer=tf.constant_initializer(v),
-                            dtype=v.dtype, shape=v.shape, trainable=k[2])
+                            dtype=v.dtype, shape=v.shape, trainable=True)
                 else:
-                    var = tf.placeholder(k[0], shape=v.shape, name=name)
+                    var = tf.placeholder(tf.as_dtype(v.dtype), shape=v.shape,
+                                         name=name)
 
                 # pre-compute indices for the full range (used in scatter_f2)
                 self.signals.base_ranges[k] = tf.range(v.shape[0])
@@ -197,9 +202,13 @@ class TensorGraph(object):
             # next step starts
             with self.graph.control_dependencies([loop_i]):
                 # fill in invariant input data
-                if self.invariant_ph is not None:
-                    self.signals.scatter(self.invariant_ph[0],
-                                         self.invariant_ph[1][loop_i])
+                # if self.invariant_ph is not None:
+                #     self.signals.scatter(self.invariant_ph[0],
+                #                          self.invariant_ph[1][loop_i])
+                for n in self.invariant_ph:
+                    self.signals.scatter(
+                        self.sig_map[self.model.sig[n]["out"]],
+                        self.invariant_ph[n][loop_i])
 
                 probe_tensors, side_effects = self.build_step()
 
@@ -272,11 +281,18 @@ class TensorGraph(object):
         self.end_base_arrays = loop_vars[4]
 
     def build_inputs(self, rng):
-        invariant_data = self.signals.combine(
-            [self.model.sig[n]["out"] for n in self.invariant_inputs
-             if self.model.sig[n]["out"] in self.sig_map])
+        # invariant_data = [self.sig_map[self.model.sig[n]["out"]]
+        #                   for n in self.invariant_inputs
+        #                   if self.model.sig[n]["out"] in self.sig_map]
         self.invariant_funcs = {}
+        self.invariant_ph = {}
         for n in self.invariant_inputs:
+            if self.model.sig[n]["out"] in self.sig_map:
+                self.sig_map[self.model.sig[n]["out"]].load_indices()
+                self.invariant_ph[n] = tf.placeholder(
+                    self.dtype, (self.step_blocks, n.size_out,
+                                 self.minibatch_size))
+
             if isinstance(n.output, Process):
                 self.invariant_funcs[n] = n.output.make_step(
                     (n.size_in,), (n.size_out,), self.dt,
@@ -286,11 +302,11 @@ class TensorGraph(object):
                     (n.size_out,), self.dtype)(n.output)
             else:
                 self.invariant_funcs[n] = n.output
-        self.invariant_ph = (
-            None if invariant_data == [] else
-            (invariant_data, tf.placeholder(
-                self.dtype, (self.step_blocks, invariant_data.shape[0],
-                             self.minibatch_size), name="input_data")))
+        # self.invariant_ph = (
+        #     None if invariant_data == [] else
+        #     (invariant_data, tf.placeholder(
+        #         self.dtype, (self.step_blocks, invariant_data.shape[0],
+        #                      self.minibatch_size), name="input_data")))
 
     def build_optimizer(self, optimizer, targets, objective):
         self.target_phs = {}
@@ -312,53 +328,14 @@ class TensorGraph(object):
                 else:
                     raise NotImplementedError
 
-            loss = tf.reduce_mean(loss)
+            self.loss = tf.reduce_mean(loss)
 
             # create optimizer operator
             self.opt_op = optimizer.minimize(
-                loss, var_list=tf.trainable_variables())
+                self.loss, var_list=tf.trainable_variables())
 
             # get any new variables created by optimizer (so they can be
             # initialized)
             self.opt_slots_init = tf.variables_initializer(
                 [optimizer.get_slot(v, name) for v in tf.trainable_variables()
                  for name in optimizer.get_slot_names()])
-
-    def get_base_variables(self, reuse=False):
-        """Loads the base variables used to store all simulation data.
-
-        Parameters
-        ----------
-        reuse : bool, optional
-            if False, create new Variables, otherwise look up the previously
-            created Variables
-
-        Returns
-        -------
-        dict of {tuple: `tf.Variable` or `tf.Tensor`}
-            base variables, keyed by the properties of the base array
-        """
-
-        bases = []
-
-        if not reuse:
-            self.base_tensors = {}
-
-        for k, v in self.base_arrays_init.items():
-            name = "%s_%s_%s" % (
-                k[0].__name__, "_".join(str(x) for x in k[1]), k[2])
-            if k[2]:
-                # trainable signal, so create Variable
-                with tf.variable_scope("base_vars", reuse=reuse):
-                    bases += [tf.get_variable(
-                        name, initializer=tf.constant_initializer(v),
-                        dtype=v.dtype, shape=v.shape, trainable=k[2])]
-            else:
-                if reuse:
-                    assert k in self.base_tensors
-                else:
-                    self.base_tensors[k] = tf.placeholder(k[0], shape=v.shape,
-                                                          name=name)
-                bases += [self.base_tensors[k]]
-
-        return bases

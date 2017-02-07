@@ -182,7 +182,8 @@ class Simulator(object):
             log_device_placement=False,
         )
 
-        self.sess = tf.Session(graph=self.tensor_graph.graph, config=config)
+        self.sess = tf.InteractiveSession(graph=self.tensor_graph.graph,
+                                          config=config)
         self.closed = False
 
         # initialize variables
@@ -190,7 +191,8 @@ class Simulator(object):
 
         self.n_steps = 0
         self.time = 0.0
-        self.final_bases = list(self.tensor_graph.base_arrays_init.values())
+        self.final_bases = [
+            x[0] for x in self.tensor_graph.base_arrays_init.values()]
 
     def step(self):
         """Run the simulation for one time step."""
@@ -366,22 +368,23 @@ class Simulator(object):
                 "GPU; try `Simulator(..., device='/cpu:0')`") from None
 
         progress = utils.ProgressBar(n_epochs, "Training")
+        # fill in placeholder inputs
+        feed_dict = {
+            self.tensor_graph.step_var: 0,
+            self.tensor_graph.stop_var: self.step_blocks,
+        }
+
+        # fill in base variables
+        feed_dict.update(
+            {k: v for k, v in zip(
+                self.tensor_graph.base_vars,
+                [x[0] for x in
+                 self.tensor_graph.base_arrays_init.values()])
+             if k.op.type == "Placeholder"})
+
         for n in range(n_epochs):
             for inp, tar in utils.minibatch_generator(inputs, targets,
                                                       self.minibatch_size):
-                # fill in placeholder inputs
-                feed_dict = {
-                    self.tensor_graph.step_var: 0,
-                    self.tensor_graph.stop_var: self.step_blocks,
-                }
-
-                # fill in base variables
-                feed_dict.update(
-                    {k: v for k, v in zip(
-                        self.tensor_graph.base_vars,
-                        self.tensor_graph.base_arrays_init.values())
-                     if k.op.type == "Placeholder"})
-
                 # fill in inputs
                 feed_dict.update(self.generate_inputs(inp, self.step_blocks))
 
@@ -397,7 +400,16 @@ class Simulator(object):
     def generate_inputs(self, input_feeds, n_steps):
         if input_feeds is None:
             input_feeds = {}
-        feed_vals = []
+        else:
+            # validate inputs
+            for n, v in input_feeds.items():
+                target_shape = (self.minibatch_size, n_steps, n.size_out)
+                if v.shape != target_shape:
+                    raise SimulationError(
+                        "Input feed for node %s has wrong shape; expected %s, "
+                        "saw %s" % (n, target_shape, v.shape))
+
+        feed_vals = {}
         for n in self.tensor_graph.invariant_inputs:
             # if the output signal is not in sig map, that means no operators
             # use the output of this node. similarly, if node.size_out is 0,
@@ -426,7 +438,7 @@ class Simulator(object):
                     feed_val = np.tile(feed_val[..., None],
                                        (1, 1, self.minibatch_size))
 
-                feed_vals += [feed_val]
+                feed_vals[self.tensor_graph.invariant_ph[n]] = feed_val
             elif (not isinstance(n.output, np.ndarray) and
                   n.output in self.tensor_graph.invariant_funcs.values()):
                 # note: we still call the function even if the output
@@ -435,11 +447,12 @@ class Simulator(object):
                 for i in range(self.n_steps + 1, self.n_steps + n_steps + 1):
                     func(i * self.dt)
 
-        if len(feed_vals) == 0:
-            return {}
-        else:
-            return {self.tensor_graph.invariant_ph[1]:
-                    np.concatenate(feed_vals, axis=1)}
+        # if len(feed_vals) == 0:
+        #     return {}
+        # else:
+        #     return {self.tensor_graph.invariant_ph[1]:
+        #             np.concatenate(feed_vals, axis=1)}
+        return feed_vals
 
     def save_params(self, path):
         if self.closed:

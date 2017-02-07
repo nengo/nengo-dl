@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from nengo.builder.operator import (
     Reset, Copy, ElementwiseInc, DotInc, SlicedCopy, SimPyFunc)
 import numpy as np
@@ -18,26 +20,30 @@ class ResetBuilder(OpBuilder):
 
         dtype = utils.cast_dtype(np.asarray(ops[0].value).dtype,
                                  signals.dtype).as_numpy_dtype
-        value = np.concatenate(
-            [np.resize(np.asarray(op.value).astype(dtype), op.dst.shape)
-             for op in ops], axis=0)
 
-        if ops[0].dst.minibatched:
-            # TODO: do we need to do the tile, or will the scatter assignment
-            # do some broadcasting?
+        # unlike other ops, Reset signals might be spread across multiple
+        # bases, which we need to handle
+        scatters = defaultdict(list)
+        for op in ops:
+            scatters[signals.sig_map[op.dst].key] += [op]
+        self.scatters = []
+        for group in scatters.values():
+            value = np.concatenate(
+                [np.resize(np.asarray(x.value).astype(dtype), x.dst.shape)
+                 for x in group], axis=0)
             value = np.tile(
                 value[..., None],
                 tuple(1 for _ in value.shape) + (signals.minibatch_size,))
-
-        self.dst_data = signals.combine([x.dst for x in ops])
-        self.reset_val = tf.constant(value)
+            self.scatters += [(signals.combine([x.dst for x in group]),
+                               tf.constant(value))]
 
         if DEBUG:
-            print("dst_data", self.dst_data)
-            print("reset_val", self.reset_val)
+            print("scatters")
+            print("\n".join([str(x) for x in self.scatters]))
 
     def build_step(self, signals):
-        signals.scatter(self.dst_data, self.reset_val)
+        for data, val in self.scatters:
+            signals.scatter(data, val)
 
 
 @Builder.register(SlicedCopy)

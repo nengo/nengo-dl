@@ -3,6 +3,7 @@ import os
 import tensorflow as tf
 
 from nengo_deeplearning import Simulator
+from nengo_deeplearning.tests import conftest  # noqa : F401
 
 
 class TestSimulator(Simulator):

@@ -17,15 +17,20 @@ class TensorSignal(object):
     indices : tuple or list or :class:`~numpy:numpy.ndarray` of int
         indices along the first axis of the base array corresponding to the
         data for this signal
-    key : tuple
-        dtype and shape of base array, used as key to find the base
-    display_shape : tuple of int, optional
+    key : object
+        key used to look up base array for this signal
+    dtype: numpy dtype
+        dtype of the values represented by this signal
+    shape : tuple of int
         view shape of this signal (may differ from shape of base array)
+    minibatched: bool
+        if True then this signal contains a minibatch dimension
     label : str, optional
         name for this signal, used to make debugging easier
     """
 
-    def __init__(self, indices, key, display_shape=None, label="TensorSignal"):
+    def __init__(self, indices, key, dtype, shape, minibatched,
+                 label="TensorSignal"):
         # make indices read-only
         assert isinstance(indices, (tuple, list, np.ndarray))
         self._indices = np.asarray(indices)
@@ -34,8 +39,9 @@ class TensorSignal(object):
         self.full_indices = None
 
         self.key = key
-
-        self.display_shape = display_shape
+        self.dtype = dtype
+        self.shape = shape
+        self.minibatched = minibatched
 
         self.label = label
 
@@ -46,29 +52,6 @@ class TensorSignal(object):
     @indices.setter
     def indices(self, val):
         raise BuildError("Indices are read only")
-
-    @property
-    def dtype(self):
-        return self.key[0]
-
-    @property
-    def base_shape(self):
-        return self.key[1]
-
-    @property
-    def trainable(self):
-        return self.key[2]
-
-    @property
-    def minibatched(self):
-        return not self.trainable
-
-    @property
-    def shape(self):
-        if self.display_shape is None:
-            return (len(self.indices),) + self.base_shape[1:]
-        else:
-            return self.display_shape
 
     @property
     def ndim(self):
@@ -85,8 +68,11 @@ class TensorSignal(object):
         if indices is Ellipsis:
             return self
 
-        return TensorSignal(self.indices[indices], self.key,
-                            label=self.label + ".slice")
+        new_indices = self.indices[indices]
+        return TensorSignal(
+            new_indices, self.key, self.dtype,
+            (len(new_indices),) + self.shape[1:], self.minibatched,
+            label=self.label + ".slice")
 
     def reshape(self, shape):
         """Create a new TensorSignal representing a reshaped view of the
@@ -103,7 +89,7 @@ class TensorSignal(object):
             raise BuildError("Number of elements don't match in reshape")
 
         return TensorSignal(
-            self.indices, self.key, display_shape=shape,
+            self.indices, self.key, self.dtype, shape, self.minibatched,
             label=self.label + ".reshape(%s)" % (shape,))
 
     def broadcast(self, axis, length):
@@ -119,7 +105,7 @@ class TensorSignal(object):
             display_shape = (length,) + self.shape
 
         return TensorSignal(
-            indices, self.key, display_shape=display_shape,
+            indices, self.key, self.dtype, display_shape, self.minibatched,
             label=self.label + ".broadcast(%d, %d)" % (axis, length))
 
     def load_indices(self):
@@ -128,10 +114,6 @@ class TensorSignal(object):
         that slice."""
 
         self.tf_indices = tf.constant(self.indices)
-
-        self.full_indices = tf.constant(np.dstack(np.meshgrid(
-            self.indices, *[range(n) for n in self.base_shape[1:]],
-            indexing="ij")).reshape(-1, len(self.base_shape)), dtype=tf.int64)
 
         start = self.indices[0]
         stop = self.indices[-1] + 1
@@ -182,17 +164,18 @@ class SignalDict(object):
         """
 
         assert dst.tf_indices is not None
-        assert not dst.key[2]  # should never be assigning to a trainable var
+        assert dst.minibatched  # should never be assigning to a trainable var
 
         if val.dtype.is_floating and val.dtype.base_dtype != self.dtype:
             raise BuildError("Tensor detected with wrong dtype (%s), should "
                              "be %s." % (val.dtype.base_dtype, self.dtype))
 
         # align val shape with dst base shape
-        dst_shape = (dst.shape[0],) + dst.base_shape[1:]
-        if dst.minibatched:
-            dst_shape += (self.minibatch_size,)
-        if val.get_shape().ndims != len(dst_shape):
+        self.bases[dst.key].get_shape().assert_is_fully_defined()
+        val.get_shape().assert_is_fully_defined()
+        dst_shape = ((dst.shape[0],) +
+                     tuple(self.bases[dst.key].get_shape().as_list()[1:]))
+        if val.get_shape() != dst_shape:
             val = tf.reshape(val, dst_shape)
 
         # TODO: until tensorflow implements scatter_nd kernel for GPU, users
@@ -218,11 +201,18 @@ class SignalDict(object):
         # write (note: this is only any reads that have happened since the
         # last write, since each write changes the base array object)
         with tf.control_dependencies(self.reads_by_base[self.bases[dst.key]]):
-            # self.bases[dst.key] = scatter_f(
-            #     self.bases[dst.key], dst.tf_indices, val)
-            # self.bases[dst.key] = self._scatter_f(
-            #     self.bases[dst.key], dst.tf_indices, val, mode=mode)
-            self.bases[dst.key] = self._scatter_f2(dst, val, mode=mode)
+            if np.all(np.arange(self.bases[dst.key].get_shape()[0].value) ==
+                      dst.indices):
+                if mode == "update":
+                    self.bases[dst.key] = tf.identity(val)
+                elif mode == "inc":
+                    self.bases[dst.key] += val
+            else:
+                # self.bases[dst.key] = scatter_f(
+                #     self.bases[dst.key], dst.tf_indices, val)
+                # self.bases[dst.key] = self._scatter_f(
+                #     self.bases[dst.key], dst.tf_indices, val, mode=mode)
+                self.bases[dst.key] = self._scatter_f2(dst, val, mode=mode)
 
         if DEBUG:
             print("new dst base", self.bases[dst.key])
@@ -297,18 +287,24 @@ class SignalDict(object):
         # is more efficient
         if force_copy or src.as_slice is None:
             result = tf.gather(self.bases[src.key], src.tf_indices)
+        elif np.all(np.arange(self.bases[src.key].get_shape()[0].value) ==
+                    src.indices):
+            result = tf.identity(self.bases[src.key])
         else:
             result = tf.strided_slice(self.bases[src.key], *src.as_slice)
+
+        # for some reason the shape inference doesn't work in some cases,
+        # and tensorflow loses track of the shape
+        result.set_shape(src.tf_indices.get_shape()[:1].concatenate(
+            self.bases[src.key].get_shape()[1:]))
 
         # reshape the data according to the shape set in `src`, if there is
         # one, otherwise keep the shape of the base array
         src_shape = src.shape
         if src.minibatched:
             src_shape += (self.minibatch_size,)
-        if src.display_shape is not None:
+        if result.get_shape() != src_shape:
             result = tf.reshape(result, src_shape)
-        else:
-            result.set_shape(src_shape)
 
         # whenever we read from an array we use this to mark it as "read"
         # (so that any future writes to the array will be scheduled after
@@ -352,17 +348,14 @@ class SignalDict(object):
 
         indices = np.concatenate([s.indices for s in sigs], axis=0)
 
-        # check if any of the signals have been reshaped
-        if np.any([s.display_shape is not None for s in sigs]):
-            # make sure they all have the same shape for axes > 0 (they're
-            # concatenated along the first dimension)
-            assert all([s.shape[1:] == sigs[0].shape[1:] for s in sigs])
+        # make sure all signals have the same shape (except first axis,
+        # which we're concatenating along); note, this can fail even if they
+        # all have the same base, due to reshaping
+        assert all([s.shape[1:] == sigs[0].shape[1:] for s in sigs])
+        shape = (np.sum([s.shape[0] for s in sigs]),) + sigs[0].shape[1:]
 
-            shape = (np.sum([s.shape[0] for s in sigs]),) + sigs[0].shape[1:]
-        else:
-            shape = None
-
-        output = TensorSignal(indices, key, display_shape=shape)
+        output = TensorSignal(indices, key, sigs[0].dtype, shape,
+                              sigs[0].minibatched)
 
         if load_indices:
             output.load_indices()

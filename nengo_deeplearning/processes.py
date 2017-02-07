@@ -49,6 +49,7 @@ class GenericProcessBuilder(object):
         self.output_data = signals.combine([op.output for op in ops])
         self.output_shape = self.output_data.shape + (signals.minibatch_size,)
         self.mode = "inc" if ops[0].mode == "inc" else "update"
+        self.prev_result = []
 
         # build the step function for each process
         step_fs = [
@@ -86,10 +87,15 @@ class GenericProcessBuilder(object):
         input = ([] if self.input_data is None
                  else signals.gather(self.input_data))
 
-        result = tf.py_func(
-            self.merged_func, [signals.time, input],
-            self.output_data.dtype, name=self.merged_func.__name__)
+        # note: we need to make sure that the previous call to this function
+        # has completed before the next starts, since we don't know that the
+        # functions are thread safe
+        with tf.control_dependencies(self.prev_result):
+            result = tf.py_func(
+                self.merged_func, [signals.time, input],
+                self.output_data.dtype, name=self.merged_func.__name__)
         result.set_shape(self.output_shape)
+        self.prev_result = [result]
 
         signals.scatter(self.output_data, result, mode=self.mode)
 

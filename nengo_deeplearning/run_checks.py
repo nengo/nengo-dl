@@ -5,8 +5,6 @@ import flake8.main
 import nengo
 import pytest
 
-from nengo_deeplearning.tests import conftest  # noqa : F401
-
 os.environ["NENGO_DL_TEST_PRECISION"] = "32"
 os.environ["NENGO_DL_TEST_UNROLL"] = "True"
 os.environ["NENGO_DL_TEST_STEP_BLOCKS"] = "10"

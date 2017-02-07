@@ -129,8 +129,9 @@ def test_mergeable():
                                      DummySignal())])
 
     # check non-custom matching
-    assert mergeable(SimNeurons(Izhikevich(), DummySignal(), DummySignal()),
-                     [SimNeurons(AdaptiveLIF(), DummySignal(), DummySignal())])
+    assert not mergeable(
+        SimNeurons(Izhikevich(), DummySignal(), DummySignal()),
+        [SimNeurons(AdaptiveLIF(), DummySignal(), DummySignal())])
     assert not mergeable(
         SimNeurons(Izhikevich(), DummySignal(), DummySignal(),
                    states=[DummySignal(dtype=np.float32)]),
@@ -469,10 +470,10 @@ def test_order_signals_noreads():
     assert ordered(new_plan[0], sigs)
 
 
-def test_order_signals_neuron_states():
-    # test with neuron states (should be treated as reads)
-    assert False
+# def test_order_signals_neuron_states():
+#     # test with neuron states (should be treated as reads)
+#     assert False
 
 
-def test_create_signals():
-    assert False
+# def test_create_signals():
+#     assert False
