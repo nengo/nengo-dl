@@ -9,7 +9,20 @@ from tensorflow.python.framework.ops import get_gradient_function
 
 
 def sanitize_name(name):
-    """Remove illegal tensorflow name characters from string."""
+    """Remove illegal Tensorflow name characters from string.
+
+    Valid Tensorflow name characters are ``[A-Za-z0-9_.\\-/]``
+
+    Parameters
+    ----------
+    name : str
+        name to be sanitized
+
+    Returns
+    -------
+    str
+        sanitized name
+    """
 
     if not isinstance(name, str):
         name = str(name)
@@ -23,19 +36,19 @@ def sanitize_name(name):
 
 
 def function_name(func, sanitize=True):
-    """Get the name of the callable object `func`.
+    """Get the name of the callable object ``func``.
 
     Parameters
     ----------
     func : callable
         callable object (e.g., function, callable class)
     sanitize : bool, optional
-        if True, remove any illegal tensorflow name characters from name
+        if True, remove any illegal Tensorflow name characters from name
 
     Returns
     -------
     str
-        (sanitized) name of `func`
+        (sanitized) name of ``func``
     """
 
     name = getattr(func, "__name__", func.__class__.__name__)
@@ -46,8 +59,20 @@ def function_name(func, sanitize=True):
 
 
 def align_func(output_shape, output_dtype):
-    """Decorator that ensures the output of `func` has the given shape and
-    dtype."""
+    """Decorator that ensures the output of ``func`` is an
+    :class:`~numpy:numpy.ndarray` with the given shape and dtype.
+
+    Raises a ``SimulationError`` if the
+    function returns ``None``.
+
+    Parameters
+    ----------
+    output_shape : tuple of int
+        desired shape for function output (must have the same size as actual
+        function output)
+    output_dtype : ``tf.DType`` or :class:`~numpy:numpy.dtype`
+        desired dtype of function output
+    """
 
     if isinstance(output_dtype, tf.DType):
         output_dtype = output_dtype.as_numpy_dtype
@@ -73,20 +98,21 @@ def print_op(input, message):
 
     Parameters
     ----------
-    input : `tf.Tensor`
+    input : ``tf.Tensor``
         the value of this tensor will be printed whenever it is computed
         in the graph
     message : str
-        string prepended to the value of `input`, to help with identification
+        string prepended to the value of ``input``, to help with logging
 
     Returns
     -------
-    `tf.Tensor`
-        new tensor representing the print operation applied to `input`
+    ``tf.Tensor``
+        new tensor representing the print operation applied to ``input``
 
     Notes
     -----
-    This is what `tf.Print` is supposed to do, but it didn't work for me.
+    This is what ``tf.Print`` is supposed to do, but it doesn't seem to work
+    consistently.
     """
 
     def print_func(x):
@@ -103,19 +129,19 @@ def cast_dtype(dtype, target):
     """Changes float dtypes to the target dtype, leaves others unchanged.
 
     Used to map all float values to a target precision.  Also casts numpy
-    dtypes to tensorflow dtypes.
+    dtypes to Tensorflow dtypes.
 
     Parameters
     ----------
-    dtype : `tf.DType` or numpy dtype
+    dtype : ``tf.DType`` or :class:`~numpy:numpy.dtype`
         input dtype to be converted
-    target: `tf.DType`
+    target : ``tf.DType``
         floating point dtype to which all floating types should be converted
 
     Returns
     -------
-    `tf.DType`
-        input dtype, converted to `target` type if necessary
+    ``tf.DType``
+        input dtype, converted to ``target`` type if necessary
     """
 
     if not isinstance(dtype, tf.DType):
@@ -127,18 +153,18 @@ def cast_dtype(dtype, target):
     return dtype
 
 
-def minibatch_generator(inputs, targets, minibatch_size, shuffle=True):
-    n_inputs = next(iter(inputs.values())).shape[0]
-
-    if shuffle:
-        perm = np.random.permutation(n_inputs)
-
-    for i in range(0, n_inputs - n_inputs % minibatch_size, minibatch_size):
-        yield ({n: inputs[n][perm[i:i + minibatch_size]] for n in inputs},
-               {p: targets[p][perm[i:i + minibatch_size]] for p in targets})
-
-
 def find_non_differentiable(inputs, outputs):
+    """Searches through a Tensorflow graph to find non-differentiable elements
+    between ``inputs`` and ``outputs`` (elements that would prevent us from
+    computing ``d_outputs / d_inputs``.
+
+    Parameters
+    ----------
+    inputs : list of ``tf.Tensor``
+        input tensors
+    outputs : list of ``tf.Tensor``
+        output tensors
+    """
     for o in outputs:
         if o in inputs:
             continue
@@ -160,6 +186,8 @@ class ProgressBar(object):
     ----------
     max_steps : int
         number of steps required to complete the tracked process
+    label : str, optional
+        a description of what is being tracked
     """
 
     def __init__(self, max_steps, label=None):
@@ -181,8 +209,8 @@ class ProgressBar(object):
     def stop(self):
         """Stop the progress tracker.
 
-        Normally this will be called automatically when `max_steps` is reached,
-        but it can be called manually to trigger an early finish.
+        Normally this will be called automatically when ``max_steps`` is
+        reached, but it can be called manually to trigger an early finish.
         """
 
         line = "\n"

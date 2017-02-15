@@ -1,6 +1,11 @@
 import os
 import warnings
 
+__copyright__ = "2015, Applied Brain Research"
+__license__ = ("Free for non-commercial use; see "
+               "https://pythonhosted.org/nengo/license.html")
+from .version import version as __version__ # noqa: E402,F401
+
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 DEBUG = False
 # TODO: change the debug system to use a proper logger

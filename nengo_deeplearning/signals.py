@@ -10,7 +10,7 @@ from nengo_deeplearning import DEBUG
 
 
 class TensorSignal(object):
-    """Represents a tensor as an indexed view into a base variable.
+    """Represents a tensor as an indexed view into a base array.
 
     Parameters
     ----------
@@ -18,12 +18,12 @@ class TensorSignal(object):
         indices along the first axis of the base array corresponding to the
         data for this signal
     key : object
-        key used to look up base array for this signal
-    dtype: numpy dtype
+        key mapping to the base array that contains the data for this signal
+    dtype : :class:`~numpy:numpy.dtype`
         dtype of the values represented by this signal
     shape : tuple of int
         view shape of this signal (may differ from shape of base array)
-    minibatched: bool
+    minibatched : bool
         if True then this signal contains a minibatch dimension
     label : str, optional
         name for this signal, used to make debugging easier
@@ -63,7 +63,18 @@ class TensorSignal(object):
 
     def __getitem__(self, indices):
         """Create a new TensorSignal representing a subset (slice or advanced
-        indexing) of the indices of this TensorSignal."""
+        indexing) of the indices of this TensorSignal.
+
+        Parameters
+        ----------
+        indices : slice or list of int
+            the desired subset of the indices in this TensorSignal
+
+        Returns
+        -------
+        :class:`.signals.TensorSignal`
+            a new TensorSignal representing the subset of this TensorSignal
+        """
 
         if indices is Ellipsis:
             return self
@@ -76,7 +87,20 @@ class TensorSignal(object):
 
     def reshape(self, shape):
         """Create a new TensorSignal representing a reshaped view of the
-        same data as this TensorSignal."""
+        same data in this TensorSignal (size of data must remain unchanged).
+
+        Parameters
+        ----------
+        shape : tuple of int
+            new shape for the signal (one dimension can be -1 to indicate
+            an inferred dimension size, as in numpy)
+
+        Returns
+        -------
+        :class:`.signals.TensorSignal`
+            new TensorSignal representing the same data as this signal but
+            with the given shape
+        """
 
         # replace -1 with inferred dimension
         assert shape.count(-1) <= 1
@@ -93,6 +117,24 @@ class TensorSignal(object):
             label=self.label + ".reshape(%s)" % (shape,))
 
     def broadcast(self, axis, length):
+        """Add a new dimension by broadcasting this signal along ``axis``
+        for the given length.
+
+        Parameters
+        ----------
+        axis : 0 or -1
+            where to insert the new dimension (currently only supports either
+            the beginning or end of the array)
+        length : int
+            the number of times to duplicate signal along the broadcast
+            dimension
+
+        Returns
+        -------
+        :class:`.signals.TensorSignal`
+            TensorSignal with new broadcasted shape
+        """
+
         assert axis in (0, -1)
 
         indices = self.indices
@@ -127,16 +169,18 @@ class TensorSignal(object):
 
 
 class SignalDict(object):
-    """Map from Signal -> Tensor
+    """Handles the mapping from :class:`~nengo:nengo.builder.Signal`
+    to ``tf.Tensor``.
 
-    Takes care of scatter/gather logic to read/write signals within the base
+    Takes care of gather/scatter logic to read/write signals within the base
     arrays.
 
     Parameters
     ----------
-    sig_map : dict of {`nengo.builder.signal.Signal`: `TensorSignal`}
-        mapping from `nengo` signals to `nengo_dl` signals
-    dtype : tf.DType
+    sig_map : dict of {:class:`~nengo:nengo.builder.Signal`: \
+                       :class:`.TensorSignal`}
+        mapping from ``nengo`` signals to ``nengo_dl`` signals
+    dtype : ``tf.DType``
         floating point precision used in signals
     minibatch_size : int
         number of items in each minibatch
@@ -156,11 +200,11 @@ class SignalDict(object):
         ----------
         dst : :class:`.TensorSignal`
             signal indicating the data to be modified in base array
-        val : `tf.Tensor`
-            update data (same shape as `dst`, i.e. a dense array <= the size of
-            the base array)
-        mode: "update" or "inc" or "mul"
-            overwrite/add/multiply the data at `dst` with `val`
+        val : ``tf.Tensor``
+            update data (same shape as ``dst``, i.e. a dense array <= the size
+            of the base array)
+        mode : "update" or "inc" or "mul"
+            overwrite/add/multiply the data at ``dst`` with ``val``
         """
 
         assert dst.tf_indices is not None
@@ -257,7 +301,7 @@ class SignalDict(object):
         return result
 
     def gather(self, src, force_copy=False):
-        """Fetches the data corresponding to `src` from the base array.
+        """Fetches the data corresponding to ``src`` from the base array.
 
         Parameters
         ----------
@@ -265,12 +309,12 @@ class SignalDict(object):
             signal indicating the data to be read from base array
         force_copy : bool, optional
             if True, always perform a gather, not a slice (this forces a
-            copy). note that setting force_copy=False does not guarantee that
-            a copy won't be performed.
+            copy). note that setting ``force_copy=False`` does not guarantee
+            that a copy won't be performed.
 
         Returns
         -------
-        `tf.Tensor`
+        ``tf.Tensor``
             tensor object corresponding to a dense subset of data from the
             base array
         """
@@ -316,12 +360,13 @@ class SignalDict(object):
         return result
 
     def combine(self, sigs, load_indices=True):
-        """Concatenates several TensorSignals into one by concatenating along
+        """Combines several TensorSignals into one by concatenating along
         the first axis.
 
         Parameters
         ----------
-        list of :class:`.TensorSignal` or `nengo.builder.signal.Signal`
+        sigs : list of :class:`.TensorSignal` or \
+                       :class:`~nengo:nengo.builder.Signal`
             signals to be combined
         load_indices : bool, optional
             if True, load the indices for the new signal into tensorflow right
@@ -330,8 +375,8 @@ class SignalDict(object):
         Returns
         -------
         :class:`.TensorSignal`
-            new `TensorSignal` representing the concatenation of the data in
-            `sigs`
+            new TensorSignal representing the concatenation of the data in
+            ``sigs``
         """
 
         if len(sigs) == 0:
@@ -370,7 +415,20 @@ class SignalDict(object):
 
 
 def mark_signals(model):
-    # TODO: documentation/tests
+    """Mark all the signals in ``model`` according to whether they represent
+    trainable parameters of the model (parameters that can be optimized by
+    deep learning methods).
+
+    Trainable parameters include connection weights, ensemble encoders, and
+    neuron biases.  Unless one of those signals is targeted by a Nengo learning
+    rule (otherwise the learning rule update conflicts with the deep learning
+    optimization).
+
+    Parameters
+    ----------
+    model : class:`~nengo:nengo.builder.Model`
+        built Nengo model
+    """
 
     if model.toplevel is None:
         warnings.warn("No top-level network in model")
@@ -398,6 +456,7 @@ def mark_signals(model):
                     rule = list(rule.values())
                 elif not isinstance(rule, list):
                     rule = [rule]
+
                 for r in rule:
                     if r.modifies == "weights" or r.modifies == "decoders":
                         model.sig[conn]["weights"].trainable = False
@@ -411,4 +470,7 @@ def mark_signals(model):
         for sig in op.all_signals:
             if not hasattr(sig, "trainable"):
                 sig.trainable = False
+
+            # at the moment minibatched is just the opposite of trainable, but
+            # it could be the case that the two are independent
             sig.minibatched = not sig.trainable

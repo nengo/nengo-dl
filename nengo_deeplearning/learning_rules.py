@@ -7,6 +7,9 @@ from nengo_deeplearning.builder import Builder, OpBuilder
 
 @Builder.register(SimBCM)
 class SimBCMBuilder(OpBuilder):
+    """Build a group of :class:`~nengo:nengo.builder.learning_rules.SimBCM`
+    operators."""
+
     def __init__(self, ops, signals):
         self.pre_data = signals.combine([op.pre_filtered for op in ops])
         self.post_data = signals.combine([op.post_filtered for op in ops])
@@ -34,6 +37,9 @@ class SimBCMBuilder(OpBuilder):
 
 @Builder.register(SimOja)
 class SimOjaBuilder(OpBuilder):
+    """Build a group of :class:`~nengo:nengo.builder.learning_rules.SimOja`
+        operators."""
+
     def __init__(self, ops, signals):
         self.pre_data = signals.combine([op.pre_filtered for op in ops])
         self.post_data = signals.combine([op.post_filtered for op in ops])
@@ -65,6 +71,9 @@ class SimOjaBuilder(OpBuilder):
 
 @Builder.register(SimVoja)
 class SimVojaBuilder(OpBuilder):
+    """Build a group of :class:`~nengo:nengo.builder.learning_rules.SimVoja`
+        operators."""
+
     def __init__(self, ops, signals):
         self.pre_data = signals.combine([op.pre_decoded for op in ops])
         self.post_data = signals.combine([op.post_filtered for op in ops])

@@ -16,8 +16,6 @@ def read(*filenames, **kwargs):
 
 
 root = os.path.dirname(os.path.realpath(__file__))
-# version_module = imp.load_source(
-#     'version', os.path.join(root, 'nengo_deeplearning', 'version.py'))
 version = runpy.run_path(os.path.join(root, 'nengo_deeplearning',
                                       'version.py'))['version']
 description = "Deep learning in Nengo"
@@ -27,7 +25,7 @@ url = "https://github.com/nengo/nengo_deeplearning"
 setup(
     name="nengo_deeplearning",
     version=version,
-    author="Nengo developers",
+    author="Daniel Rasmussen",
     author_email="daniel.rasmussen@appliedbrainresearch.com",
     packages=find_packages(),
     include_package_data=True,

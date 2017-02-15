@@ -17,7 +17,7 @@ def cconv(dimensions, neurons_per_d, neuron_type):
         number of dimensions for vector values
     neurons_per_d : int
         number of neurons to use per vector dimension
-    neuron_type : nengo.neurons.NeuronType
+    neuron_type : :class:`~nengo:nengo.neurons.NeuronType`
         simulation neuron type
 
     Returns
@@ -52,7 +52,7 @@ def integrator(dimensions, neurons_per_d, neuron_type):
         number of dimensions for vector values
     neurons_per_d : int
         number of neurons to use per vector dimension
-    neuron_type : nengo.neurons.NeuronType
+    neuron_type : :class:`~nengo:nengo.neurons.NeuronType`
         simulation neuron type
 
     Returns
@@ -86,7 +86,7 @@ def pes(dimensions, neurons_per_d, neuron_type):
         number of dimensions for vector values
     neurons_per_d : int
         number of neurons to use per vector dimension
-    neuron_type : nengo.neurons.NeuronType
+    neuron_type : :class:`~nengo:nengo.neurons.NeuronType`
         simulation neuron type
 
     Returns

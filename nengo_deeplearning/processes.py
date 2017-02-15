@@ -7,11 +7,21 @@ import tensorflow as tf
 from nengo_deeplearning import utils, DEBUG
 from nengo_deeplearning.builder import Builder, OpBuilder
 
-TF_PROCESS_IMPL = (Lowpass,)
-
 
 @Builder.register(SimProcess)
 class SimProcessBuilder(OpBuilder):
+    """Builds a group of :class:`~nengo:nengo.builder.processes.SimProcess`
+    operators.
+
+    Calls the appropriate sub-build class for the different process types.
+
+    Attributes
+    ----------
+    TF_PROCESS_IMPL : list of :class:`~nengo:nengo.Process`
+        the process types that have a custom implementation
+    """
+
+    TF_PROCESS_IMPL = (Lowpass,)
     pass_rng = True
 
     def __init__(self, ops, signals, rng):
@@ -29,7 +39,7 @@ class SimProcessBuilder(OpBuilder):
         # then we build that. otherwise we'll just execute the process step
         # function externally (using `tf.py_func`), so we just need to set up
         # the inputs/outputs for that.
-        if process_type in TF_PROCESS_IMPL:
+        if process_type in self.TF_PROCESS_IMPL:
             # note: we do this two-step check (even though it's redundant) to
             # make sure that TF_PROCESS_IMPL is kept up to date
 
@@ -43,6 +53,16 @@ class SimProcessBuilder(OpBuilder):
 
 
 class GenericProcessBuilder(object):
+    """Builds all process types for which there is no custom Tensorflow
+    implementation.
+
+    Notes
+    -----
+    These will be executed as native Python functions, requiring execution to
+    move in and out of Tensorflow.  This can significantly slow down the
+    simulation, so any performance-critical processes should consider
+    adding a custom Tensorflow implementation for their type instead.
+    """
     def __init__(self, ops, signals, rng):
         self.input_data = (None if ops[0].input is None else
                            signals.combine([op.input for op in ops]))
@@ -101,6 +121,8 @@ class GenericProcessBuilder(object):
 
 
 class LinearFilter(object):
+    """Build a group of :class:`~nengo:nengo.LinearFilter`
+    neuron operators."""
     def __init__(self, ops, signals):
         # TODO: implement general linear filter (using tensorarrays?)
 

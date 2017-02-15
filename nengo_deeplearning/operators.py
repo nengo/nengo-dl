@@ -11,6 +11,8 @@ from nengo_deeplearning.builder import Builder, OpBuilder
 
 @Builder.register(Reset)
 class ResetBuilder(OpBuilder):
+    """Build a group of :class:`~nengo:nengo.builder.operator.Reset`
+    operators."""
     def __init__(self, ops, signals):
         if DEBUG:
             print("reset")
@@ -49,6 +51,8 @@ class ResetBuilder(OpBuilder):
 @Builder.register(SlicedCopy)
 @Builder.register(Copy)
 class SlicedCopyBuilder(OpBuilder):
+    """Build a group of :class:`~nengo:nengo.builder.operator.Copy` and
+    :class:`~nengo:nengo.builder.operator.SlicedCopy` operators."""
     def __init__(self, ops, signals):
         if DEBUG:
             print("sliced_copy")
@@ -86,6 +90,8 @@ class SlicedCopyBuilder(OpBuilder):
 @Builder.register(ElementwiseInc)
 # @Builder.register(DotInc)
 class ElementwiseIncBuilder(OpBuilder):
+    """Build a group of :class:`~nengo:nengo.builder.operator.ElementwiseInc`
+    operators."""
     def __init__(self, ops, signals):
         if DEBUG:
             print("elementwise_inc"), len(ops)
@@ -130,7 +136,7 @@ class ElementwiseIncBuilder(OpBuilder):
         A = signals.gather(self.A_data)
         X = signals.gather(self.X_data)
 
-        result = tf.mul(A, X)
+        result = tf.multiply(A, X)
 
         if self.dot_inc:
             reduce_axis = -1 - (self.A_data.minibatched or
@@ -142,6 +148,8 @@ class ElementwiseIncBuilder(OpBuilder):
 
 @Builder.register(DotInc)
 class DotIncBuilder(OpBuilder):
+    """Build a group of :class:`~nengo:nengo.builder.operator.DotInc`
+    operators."""
     def __init__(self, ops, signals):
         if DEBUG:
             print("dot_inc"), len(ops)
@@ -217,7 +225,7 @@ class DotIncBuilder(OpBuilder):
 
         # approach #3: mix of batch_matmul and manual multiply/reduce
         if self.using_matmul:
-            dot = tf.batch_matmul(A, X)
+            dot = tf.matmul(A, X)
         else:
             dot = tf.multiply(A, X)
             reduce_axis = -1 - (self.A_data.minibatched or
@@ -229,6 +237,8 @@ class DotIncBuilder(OpBuilder):
 
 @Builder.register(SimPyFunc)
 class SimPyFuncBuilder(OpBuilder):
+    """Build a group of :class:`~nengo:nengo.builder.operator.SimPyFunc`
+    operators."""
     def __init__(self, ops, signals):
         if DEBUG:
             print("sim_py_func")

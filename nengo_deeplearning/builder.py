@@ -7,8 +7,8 @@ from nengo_deeplearning import DEBUG
 
 
 class Builder(object):
-    """Manages the operator build classes known to the nengo_deeplearning build
-    process."""
+    """Manages the operator build classes known to the ``nengo_deeplearning``
+    build process."""
 
     builders = {}
     op_builds = {}
@@ -20,12 +20,11 @@ class Builder(object):
 
         Parameters
         ----------
-        op_type : type
-            `nengo` operator type
-        ops : list of nengo.builder.operators.Operator
+        ops : list of :class:`~nengo:nengo.builder.Operator`
             the operator group to build into the model
-        signals : signals.SignalDict
-            dictionary mapping Signals to Tensors (updated by operations)
+        signals : :class:`.signals.SignalDict`
+            mapping from :class:`~nengo:nengo.builder.Signal` to
+            ``tf.Tensor`` (updated by operations)
         rng : :class:`~numpy:numpy.random.RandomState`
             random number generator instance
         """
@@ -39,7 +38,7 @@ class Builder(object):
             print("updates", [op.updates for op in ops])
 
         if type(ops[0]) not in cls.builders:
-            raise BuildError("Cannot build operators of type %r" %
+            raise BuildError("No registered builder for operators of type %r" %
                              type(ops[0]))
 
         BuildClass = cls.builders[type(ops[0])]
@@ -56,10 +55,11 @@ class Builder(object):
 
         Parameters
         ----------
-        ops : list of nengo.builder.operators.Operator
+        ops : list of :class:`~nengo:nengo.builder.Operator`
             the operator group to build into the model
-        signals : signals.SignalDict
-            dictionary mapping Signals to Tensors (updated by operations)
+        signals : :class:`.signals.SignalDict`
+            mapping from :class:`~nengo:nengo.builder.Signal` to
+            ``tf.Tensor`` (updated by operations)
         """
 
         if DEBUG:
@@ -85,7 +85,7 @@ class Builder(object):
 
         Parameters
         ----------
-        nengo_op : nengo.builder.operators.Operator
+        nengo_op : :class:`~nengo:nengo.builder.Operator`
             The operator associated with the build function being decorated.
         """
 
@@ -104,20 +104,25 @@ class Builder(object):
 
 
 class OpBuilder(object):
-    # set pass_rng to True if this build class requires the simulation
-    # random number generator to be passed to the constructor
-    pass_rng = False
-
     """The constructor should set up any computations that are fixed for
     this op (i.e., things that do not need to be recomputed each timestep).
 
     Parameters
     ----------
-    ops : list of nengo.builder.operators.Operator
+    ops : list of :class:`~nengo:nengo.builder.Operator`
         the operator group to build into the model
-    signals : signals.SignalDict
-        dictionary mapping Signals to Tensors (updated by operations)
+    signals : :class:`.signals.SignalDict`
+        mapping from :class:`~nengo:nengo.builder.Signal` to
+        ``tf.Tensor`` (updated by operations)
+
+    Attributes
+    ----------
+    pass_rng : bool
+        set to True if this build class requires the simulation
+        random number generator to be passed to the constructor
     """
+
+    pass_rng = False
 
     def __init__(self, ops, signals):
         pass
@@ -128,12 +133,13 @@ class OpBuilder(object):
 
         Parameters
         ----------
-        signals : signals.SignalDict
-            dictionary mapping Signals to Tensors (updated by operations)
+        signals : :class:`.signals.SignalDict`
+            mapping from :class:`~nengo:nengo.builder.Signal` to
+            ``tf.Tensor`` (updated by operations)
 
         Returns
         -------
-        list of `tf.Tensor`, optional
+        list of ``tf.Tensor``, optional
             if not None, the returned tensors correspond to outputs with
             possible side-effects, i.e. computations that need to be executed
             in the tensorflow graph even if their output doesn't appear to be

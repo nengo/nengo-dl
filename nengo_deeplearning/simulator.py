@@ -24,6 +24,40 @@ except:
 
 
 class Simulator(object):
+    """Simulate network using the ``nengo_deeplearning`` backend.
+
+    Parameters
+    ----------
+    network : :class:`~nengo:nengo.Network` or None
+        a network object to be built and then simulated. If None,
+        then a built model must be passed to ``model`` instead
+    dt : float, optional
+        length of a simulator timestep, in seconds
+    seed : int, optional
+        seed for all stochastic operators used in this simulator
+    model : :class:`~nengo:nengo.builder.Model`, optional
+        pre-built model object
+    tensorboard : bool, optional
+        if True, save network output in the Tensorflow summary format,
+        which can be loaded into Tensorboard
+    dtype : ``tf.DType``, optional
+        floating point precision to use for simulation
+    step_blocks : int, optional
+        controls how many simulation steps run each time the graph is
+        executed (affects memory usage and graph construction time)
+    device : None or ``"/cpu:0"`` or ``"/gpu:[0-n]"``, optional
+        device on which to execute computations (if None then uses the
+        default device as determined by Tensorflow)
+    unroll_simulation : bool, optional
+        if True, unroll simulation loop by explicitly building each iteration
+        (up to ``step_blocks``) into the computation graph. if False, use a
+        symbolic loop, which is more general and produces a simpler graph, but
+        is likely to be slower to simulate
+    minibatch_size : int, optional
+        the number of simultaneous inputs that will be passed through the
+        network
+    """
+
     # unsupported unit tests
     unsupported = [
         ("nengo/tests/test_simulator.py:test_warn_on_opensim_del",
@@ -38,9 +72,6 @@ class Simulator(object):
          "overridden so we can pass custom test simulators (see "
          "tests/test_nengo_tests.py:test_entry_point"),
 
-        ("nengo/tests/test_builder.py:test_signal_init_values",
-         "duplicate of test_nengo_tests.py:test_signal_init_values"),
-
         ("nengo/tests/test_node.py:test_args",
          "time is passed as np.float32, not a float (see "
          "tests/test_nengo_tests.py:test_args"),
@@ -49,41 +80,6 @@ class Simulator(object):
          "need to set `step_blocks` to ensure node runs the correct number "
          "of times (see tests/test_nengo_tests.py:test_unconnected_node"),
     ]
-
-    """Simulate network using the `nengo_deeplearning` backend.
-
-    Parameters
-    ----------
-    network : `nengo.Network` or None
-        a network object to be built and then simulated. If None,
-        then a `nengo.builder.Model` with the build model must be provided
-        instead
-    dt : float, optional
-        length of a simulator timestep, in seconds
-    seed : int, optional
-        seed for all stochastic operators used in this simulator
-    model : `nengo.builder.Model`, optional
-        pre-built model object
-    tensorboard : bool, optional
-        if True, save network output in the tensorflow summary format, which
-        can be loaded into Tensorboard
-    dtype : tf.DType, optional
-        floating point precision to use for simulation
-    step_blocks : int, optional
-        controls how many simulation steps run each time the graph is executed
-        (affects memory usage and graph construction time)
-    device : None or "/cpu:0" or "/gpu:[0-n]", optional
-        device on which to execute computations (if None then uses the default
-        device as determined by tensorflow)
-    unroll_simulation : bool, optional
-        if True, unroll simulation loop by explicitly building each iteration
-        (up to `step_blocks`) into the computation graph. if False, use a
-        symbolic loop, which is more general and produces a simpler graph, but
-        is likely to be slower to simulate
-    minibatch_size : int, optional
-        the number of simultaneous inputs that will be passed through the
-        network
-    """
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
                  tensorboard=False, dtype=tf.float32, step_blocks=50,
@@ -194,22 +190,30 @@ class Simulator(object):
         self.final_bases = [
             x[0] for x in self.tensor_graph.base_arrays_init.values()]
 
-    def step(self):
-        """Run the simulation for one time step."""
+    def step(self, **kwargs):
+        """Run the simulation for one time step.
 
-        self.run_steps(1)
+        Parameters
+        ----------
+        kwargs : dict
+            see :meth:`._run_steps`
+        """
 
-    def run(self, time_in_seconds):
+        self.run_steps(1, **kwargs)
+
+    def run(self, time_in_seconds, **kwargs):
         """Simulate for the given length of time.
 
         Parameters
         ----------
         time_in_seconds : float
-            Amount of time to run the simulation for.
+            amount of time to run the simulation for
+        kwargs : dict
+            see :meth:`._run_steps`
         """
 
         steps = int(np.round(float(time_in_seconds) / self.dt))
-        self.run_steps(steps)
+        self.run_steps(steps, **kwargs)
 
     def run_steps(self, n_steps, **kwargs):
         """Simulate for the given number of steps.
@@ -219,13 +223,13 @@ class Simulator(object):
         n_steps : int
             the number of simulation steps to be executed
         kwargs : dict
-            see :func:`._run_steps`
+            see :meth:`._run_steps`
 
         Notes
         -----
-        If `step_blocks` is specified, and `n_steps > step_blocks`, this will
-        repeatedly execute `step_blocks` timesteps until the the number of
-        steps executed is >= `n_steps`.
+        If ``step_blocks`` is specified, and ``n_steps > step_blocks``, this
+        will repeatedly execute ``step_blocks`` timesteps until the the number
+        of steps executed is >= ``n_steps``.
         """
 
         if self.closed:
@@ -245,7 +249,8 @@ class Simulator(object):
         if self.step_blocks is None:
             probe_data = self._run_steps(n_steps, **kwargs)
 
-            self.update_probe_data(probe_data, self.n_steps - n_steps, n_steps)
+            self._update_probe_data(probe_data, self.n_steps - n_steps,
+                                    n_steps)
         else:
             # break the run up into `step_blocks` sized chunks
             remaining_steps = n_steps
@@ -253,7 +258,7 @@ class Simulator(object):
                 probe_data = self._run_steps(self.step_blocks, **kwargs)
                 remaining_steps -= self.step_blocks
 
-                self.update_probe_data(
+                self._update_probe_data(
                     probe_data, self.n_steps - self.step_blocks,
                     self.step_blocks + min(remaining_steps, 0))
 
@@ -265,15 +270,32 @@ class Simulator(object):
               datetime.timedelta(seconds=int(time.time() - start)))
 
     def _run_steps(self, n_steps, profile=False, input_feeds=None):
-        """Execute `step_blocks` sized segments of the simulation.
+        """Execute ``step_blocks`` sized segments of the simulation.
 
         Parameters
         ----------
         n_steps : int
             the number of simulation steps to be executed
         profile : bool, optional
-            if True, collect tensorflow profiling information while the
+            if True, collect Tensorflow profiling information while the
             simulation is running (this will slow down the simulation)
+        input_feeds : dict of {:class:`~nengo:nengo.Node`: \
+                               :class:`~numpy:numpy.ndarray`}
+            override the values of input Nodes with the given data.  arrays
+            should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
+
+        Notes
+        -----
+        - This function should not be called directly; run the simulator
+          through :meth:`.Simulator.step`, :meth:`.Simulator.run_steps`, or
+          :meth:`.Simulator.run`.
+
+        - The ``input_feeds`` argument allows the user to pass several
+          simultaneous input sequences through the model.  That is, instead of
+          running the model ``n`` times with 1 input at a time, the model
+          can be run once with ``n`` inputs at a time.  Only the values of
+          input nodes (nodes with no incoming Connections) can be overwritten
+          in this way.
         """
 
         if profile:
@@ -296,7 +318,7 @@ class Simulator(object):
                 self.final_bases) if k.op.type == "Placeholder"})
 
         # fill in input values
-        feed_dict.update(self.generate_inputs(input_feeds, n_steps))
+        feed_dict.update(self._generate_inputs(input_feeds, n_steps))
 
         # execute the simulation loop
         try:
@@ -326,6 +348,57 @@ class Simulator(object):
         return probe_data
 
     def train(self, inputs, targets, optimizer, n_epochs=1, objective="mse"):
+        """Optimize the trainable parameters of the network using the given
+        optimization method, minimizing the objective value over the given
+        inputs and targets.
+
+        Parameters
+        ----------
+        inputs : dict of {:class:`~nengo:nengo.Node`: \
+                          :class:`~numpy:numpy.ndarray`}
+            input values for Nodes in the network; arrays should have shape
+            ``(batch_size, sim.step_blocks, node.size_out)``
+        targets : dict of {:class:`~nengo:nengo.Probe`: \
+                           :class:`~numpy:numpy.ndarray`}
+            desired output value at Probes, corresponding to each value in
+            ``inputs``; arrays should have shape
+            ``(batch_size, sim.step_blocks, probe.size_in)``
+        optimizer : ``tf.train.Optimizer``
+            Tensorflow optimizer, e.g.
+            ``tf.train.GradientDescentOptimizer(learning_rate=0.1)``
+        n_epochs : int, optional
+            run training for the given number of epochs (complete passes
+            through ``inputs``)
+        objective : ``"mse"`` or callable
+            the objective to be minimized. passing ``"mse"`` will train with
+            mean squared error. a custom function
+            ``f(output, target) -> loss`` can be passed that consumes the
+            actual output and target output for a probe in ``targets``
+            and returns a ``tf.Tensor`` representing the scalar loss value for
+            that Probe (loss will be averaged across Probes).
+
+        Notes
+        -----
+        - Deep learning methods require the network to be differentiable, which
+          means that trying to train a network with non-differentiable elements
+          will result in an error.  Examples of common non-differentiable
+          elements include :class:`~nengo:nengo.LIF`,
+          :class:`~nengo:nengo.Direct`, or processes/neurons that don't have a
+          custom Tensorflow implementation (see
+          :class:`.processes.SimProcessBuilder`/
+          :class:`.neurons.SimNeuronsBuilder`)
+
+        - Most Tensorflow optimizers do not have GPU support for networks with
+          sparse reads, which are a common element in Nengo models.  If your
+          network contains sparse reads then training will have to be
+          executed on the CPU (by creating the simulator via
+          ``nengo_dl.Simulator(..., device="/cpu:0")``), or is limited to
+          optimizers with GPU support (currently this is only
+          ``tf.train.GradientDescentOptimizer``). Follow `this issue
+          <https://github.com/tensorflow/tensorflow/issues/2314>`_ for updates
+          on Tensorflow GPU support.
+        """
+
         if self.closed:
             raise SimulatorClosed("Simulator cannot be trained because it is "
                                   "closed.")
@@ -382,22 +455,49 @@ class Simulator(object):
                  self.tensor_graph.base_arrays_init.values()])
              if k.op.type == "Placeholder"})
 
+        # generator to sample minibatch_sized subsets from inputs and targets
+        def minibatch_generator(inp, tar, minibatch_size, shuffle=True):
+            n_inputs = next(iter(inp.values())).shape[0]
+
+            if shuffle:
+                perm = np.random.permutation(n_inputs)
+
+            for i in range(0, n_inputs - n_inputs % minibatch_size,
+                           minibatch_size):
+                yield (
+                    {n: inputs[n][perm[i:i + minibatch_size]] for n in inp},
+                    {p: targets[p][perm[i:i + minibatch_size]] for p in tar})
+
         for n in range(n_epochs):
-            for inp, tar in utils.minibatch_generator(inputs, targets,
-                                                      self.minibatch_size):
+            for inp, tar in minibatch_generator(inputs, targets,
+                                                self.minibatch_size):
                 # fill in inputs
-                feed_dict.update(self.generate_inputs(inp, self.step_blocks))
+                feed_dict.update(self._generate_inputs(inp, self.step_blocks))
 
                 # fill in targets
                 feed_dict.update(
                     {self.tensor_graph.target_phs[p]: np.moveaxis(t, 0, -1)
                      for p, t in tar.items()})
 
+                # TODO: set up queue to feed in data more efficiently
                 self.sess.run([self.tensor_graph.opt_op],
                               feed_dict=feed_dict)
             progress.step()
 
-    def generate_inputs(self, input_feeds, n_steps):
+    def _generate_inputs(self, input_feeds, n_steps):
+        """Generate inputs for the network (the output values of each Node with
+        no incoming connections).
+
+        Parameters
+        ----------
+        input_feeds : dict of {:class:`~nengo:nengo.Node`: \
+                               :class:`~numpy:numpy.ndarray`}
+            override the values of input Nodes with the given data.  arrays
+            should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
+        n_steps : int
+            number of simulation timesteps for which to generate input data
+        """
+
         if input_feeds is None:
             input_feeds = {}
         else:
@@ -431,7 +531,8 @@ class Simulator(object):
                     feed_val = []
                     for i in range(self.n_steps + 1,
                                    self.n_steps + n_steps + 1):
-                        # note: need to copy the output of func
+                        # note: need to copy the output of func, as func
+                        # may mutate its outputs in-place on subsequent calls
                         feed_val += [np.array(func(i * self.dt))]
 
                     feed_val = np.stack(feed_val, axis=0)
@@ -447,23 +548,62 @@ class Simulator(object):
                 for i in range(self.n_steps + 1, self.n_steps + n_steps + 1):
                     func(i * self.dt)
 
-        # if len(feed_vals) == 0:
-        #     return {}
-        # else:
-        #     return {self.tensor_graph.invariant_ph[1]:
-        #             np.concatenate(feed_vals, axis=1)}
         return feed_vals
 
+    def _update_probe_data(self, probe_data, start, n_steps):
+        """Updates the stored probe data (since the last reset) with the data
+        from the latest run.
+
+        Downsamples the probe data returned from tensorflow (from every
+        simulation timestep) according to probe `sample_every` and the number
+        of steps run.
+
+        Parameters
+        ----------
+        probe_data : list of `np.ndarray`
+            probe data from every timestep
+        start : int
+            the simulation timestep at which probe data starts
+        n_steps : int
+            the number of timesteps over which we want to collect data
+        """
+
+        # first, remove any extra timesteps (due to `step_blocks` mismatch)
+        probe_data = [p[:n_steps] for p in probe_data]
+
+        for i, p in enumerate(self.model.probes):
+            if p.sample_every is not None:
+                # downsample probe according to `sample_every`
+                period = p.sample_every / self.dt
+                steps = np.arange(start, start + n_steps)
+                probe_data[i] = probe_data[i][(steps + 1) % period < 1]
+
+            # update stored probe data
+            self.model.params[p] += [probe_data[i]]
+
     def save_params(self, path):
+        """Save trainable network parameters to the given ``path``.
+
+        Parameters
+        ----------
+        path : str
+            filepath of parameter output file
+        """
         if self.closed:
             raise SimulationError("Simulation has been closed, cannot save "
                                   "parameters")
 
-        path = tf.train.Saver().save(
-            self.sess, "%s/%s" % (path, self.model.toplevel.label))
+        path = tf.train.Saver().save(self.sess, path)
         print("Model parameters saved to %s" % path)
 
     def load_params(self, path):
+        """Load trainable network parameters from the given ``path``.
+        
+        Parameters
+        ----------
+        path : str
+            filepath of parameter input file
+        """
         if self.closed:
             raise SimulationError("Simulation has been closed, cannot load "
                                   "parameters")
@@ -471,6 +611,15 @@ class Simulator(object):
         tf.train.Saver().restore(self.sess, path)
 
     def print_params(self, msg=None):
+        """Print current values of trainable network parameters.
+        
+        Parameters
+        ----------
+        msg : str, optional
+            title for print output, useful to differentiate multiple print
+            calls
+        """
+
         if self.closed:
             raise SimulationError("Simulation has been closed, cannot print "
                                   "parameters")
@@ -524,7 +673,8 @@ class Simulator(object):
         raise ReadonlyError(attr='dt', obj=self)
 
     def __del__(self):
-        """Raise a RuntimeWarning if we are deallocated while open."""
+        """Raise a RuntimeWarning if the Simulator is deallocated while open.
+        """
 
         if self.closed is not None and not self.closed:
             warnings.warn(
@@ -550,45 +700,30 @@ class Simulator(object):
         n_steps = int(self.n_steps * (self.dt / dt))
         return dt * np.arange(1, n_steps + 1)
 
-    def update_probe_data(self, probe_data, start, n_steps):
-        """Updates the stored probe data (since the last reset) with the data
-        from the latest run.
-
-        Downsamples the probe data returned from tensorflow (from every
-        simulation timestep) according to probe `sample_every` and the number
-        of steps run.
-
-        Parameters
-        ----------
-        probe_data : list of `np.ndarray`
-            probe data from every timestep
-        start : int
-            the simulation timestep at which probe data starts
-        n_steps : int
-            the number of timesteps over which we want to collect data
-        """
-
-        # first, remove any extra timesteps (due to `step_blocks` mismatch)
-        probe_data = [p[:n_steps] for p in probe_data]
-
-        for i, p in enumerate(self.model.probes):
-            if p.sample_every is not None:
-                # downsample probe according to `sample_every`
-                period = p.sample_every / self.dt
-                steps = np.arange(start, start + n_steps)
-                probe_data[i] = probe_data[i][(steps + 1) % period < 1]
-
-            # update stored probe data
-            self.model.params[p] += [probe_data[i]]
-
 
 class ProbeDict(Mapping):
-    """Map from Probe -> ndarray
+    """Map from :class:`~nengo:nengo.Probe` -> :class:`~numpy:numpy.ndarray`,
+    used to access output of the model after simulation.
 
     This is more like a view on the dict that the simulator manipulates.
     However, for speed reasons, the simulator uses Python lists,
     and we want to return NumPy arrays. Additionally, this mapping
     is readonly, which is more appropriate for its purpose.
+
+    Parameters
+    ----------
+    raw : dict of {:class:`~nengo:nengo.Probe`: \
+                   list of :class:`~numpy:numpy.ndarray`}
+        the raw probe output from the simulator (a list of arrays containing
+        the output from each ``step_blocks`` execution segment)
+    minibatches : dict of {:class:`~nengo:nengo.Probe`: int or None}
+        the minibatch size for each probe in the dictionary (or -1 if the
+        probed signal does not have a minibatch dimension)
+
+    Notes
+    -----
+    ProbeDict should never be created/accessed directly by the user, but rather
+    via ``sim.data`` (which is an instance of ProbeDict).
     """
 
     def __init__(self, raw, minibatches):

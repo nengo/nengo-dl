@@ -14,101 +14,20 @@ import numpy as np
 from nengo_deeplearning import signals, processes, builder, DEBUG
 
 
-def greedy_planner(operators):
-    """Combine mergeable operators into groups that will be executed as a
-     single computation.
-
-     Parameters
-     ----------
-     operators : list of nengo.builder.operator.Operator
-        all the `nengo` operators in a model (unordered)
-
-    Returns
-    -------
-    list of tuple of `nengo.builder.operator.Operator`
-        operators combined into mergeable groups and in execution order
-
-    Notes
-    -----
-    Originally based on `nengo_ocl` greedy planner
-     """
-
-    dependency_graph = operator_depencency_graph(operators)
-
-    # map unscheduled ops to their direct predecessors and successors
-    predecessors_of = {}
-    successors_of = {}
-    for op in operators:
-        predecessors_of[op] = set()
-        successors_of[op] = set()
-    for op, dests in iteritems(dependency_graph):
-        for op2 in dests:
-            predecessors_of[op2].add(op)
-        successors_of[op].update(dests)
-
-    # the ops in `available` are ready to be scheduled (all predecessors
-    # have been scheduled).
-    # initialize it with the ops that have no predecessors
-    available = [op for op, dep in iteritems(predecessors_of) if len(dep) == 0]
-
-    plan = []
-    groups = []
-    while len(predecessors_of) > 0:
-        # sort the available ops into mergeable groups
-        for op in available:
-            for g in groups:
-                if mergeable(op, g):
-                    g += [op]
-                    break
-            else:
-                groups += [[op]]
-
-        if len(groups) == 0:
-            raise BuildError("Cycle detected during graph optimization")
-
-        # pick the group that has the largest number of available ops
-        groups = sorted(groups, key=lambda x: len(x))
-        chosen = groups[-1]
-        groups = groups[:-1]
-
-        plan += [tuple(chosen)]
-
-        # update predecessors and successors of remaining ops, and check for
-        # any newly available ops
-        available = []
-        for op in chosen:
-            for op2 in successors_of[op]:
-                preds = predecessors_of[op2]
-                preds.remove(op)
-                if len(preds) == 0:
-                    available += [op2]
-            del predecessors_of[op]
-            del successors_of[op]
-
-    if DEBUG:
-        print("GREEDY PLAN")
-        print("\n".join([str(x) for x in plan]))
-
-    # note: -1 because we skip TimeUpdate
-    assert len(operators) == sum(len(ops) for ops in plan)
-
-    return plan
-
-
 def mergeable(op, chosen_ops):
     """Check if the given op can be merged with the candidate group
 
     Parameters
     ----------
-    op : nengo.builder.operator.Operator
+    op : :class:`~nengo:nengo.builder.Operator`
         the operator to be merged
-    chosen_ops : list of nengo.builder.operator.Operator
+    chosen_ops : list of :class:`~nengo:nengo.builder.Operator`
         the operator group to be merged in to
 
     Returns
     -------
     bool
-        True if `op` can be merged into `chosen_ops`, else False
+        True if ``op`` can be merged into ``chosen_ops``, else False
     """
 
     if len(chosen_ops) == 0:
@@ -180,18 +99,18 @@ def mergeable(op, chosen_ops):
         if op.t != c.t:
             return False
     elif isinstance(op, SimNeurons):
+        # neuron ops must all have the same type
         if type(c.neurons) != type(op.neurons):
             return False
     elif isinstance(op, SimProcess):
-        # as with SimNeurons, we can merge ops if they have a custom
-        # implementation, or merge generic processes, but can't mix
-        # the two
+        # we can merge ops if they have a custom implementation, or merge
+        # generic processes, but can't mix the two
 
-        if type(c.process) in processes.TF_PROCESS_IMPL:
+        if type(c.process) in processes.SimProcessBuilder.TF_PROCESS_IMPL:
             if type(c.process) != type(op.process):
                 return False
         else:
-            if type(op.process) in processes.TF_PROCESS_IMPL:
+            if type(op.process) in processes.SimProcessBuilder.TF_PROCESS_IMPL:
                 return False
 
         # processes must also have the same mode
@@ -201,21 +120,101 @@ def mergeable(op, chosen_ops):
     return True
 
 
-def tree_planner(operators):
-    """Create merged execution plan through exhaustive tree search.
-
-    Unlike `greedy_planner`, this is guaranteed to find the shortest plan.
-    However, depending on the structure of the operator graph, it can take
-    a long time to execute.
+def greedy_planner(operators):
+    """Combine mergeable operators into groups that will be executed as a
+    single computation.
 
     Parameters
-     ----------
-     operators : list of nengo.builder.operator.Operator
-        all the `nengo` operators in a model (unordered)
+    ----------
+    operators : list of :class:`~nengo:nengo.builder.Operator`
+        all the ``nengo`` operators in a model (unordered)
 
     Returns
     -------
-    list of tuple of `nengo.builder.operator.Operator`
+    list of tuple of :class:`~nengo:nengo.builder.Operator`
+        operators combined into mergeable groups and in execution order
+
+    Notes
+    -----
+    Originally based on ``nengo_ocl`` greedy planner
+    """
+
+    dependency_graph = operator_depencency_graph(operators)
+
+    # map unscheduled ops to their direct predecessors and successors
+    predecessors_of = {}
+    successors_of = {}
+    for op in operators:
+        predecessors_of[op] = set()
+        successors_of[op] = set()
+    for op, dests in iteritems(dependency_graph):
+        for op2 in dests:
+            predecessors_of[op2].add(op)
+        successors_of[op].update(dests)
+
+    # the ops in `available` are ready to be scheduled (all predecessors
+    # have been scheduled).
+    # initialize it with the ops that have no predecessors
+    available = [op for op, dep in iteritems(predecessors_of) if len(dep) == 0]
+
+    plan = []
+    groups = []
+    while len(predecessors_of) > 0:
+        # sort the available ops into mergeable groups
+        for op in available:
+            for g in groups:
+                if mergeable(op, g):
+                    g += [op]
+                    break
+            else:
+                groups += [[op]]
+
+        if len(groups) == 0:
+            raise BuildError("Cycle detected during graph optimization")
+
+        # pick the group that has the largest number of available ops
+        groups = sorted(groups, key=lambda x: len(x))
+        chosen = groups[-1]
+        groups = groups[:-1]
+
+        plan += [tuple(chosen)]
+
+        # update predecessors and successors of remaining ops, and check for
+        # any newly available ops
+        available = []
+        for op in chosen:
+            for op2 in successors_of[op]:
+                preds = predecessors_of[op2]
+                preds.remove(op)
+                if len(preds) == 0:
+                    available += [op2]
+            del predecessors_of[op]
+            del successors_of[op]
+
+    if DEBUG:
+        print("GREEDY PLAN")
+        print("\n".join([str(x) for x in plan]))
+
+    assert len(operators) == sum(len(ops) for ops in plan)
+
+    return plan
+
+
+def tree_planner(operators):
+    """Create merged execution plan through exhaustive tree search.
+
+    Unlike :func:`.graph_optimizer.greedy_planner`, this is guaranteed to find
+    the shortest plan. However, depending on the structure of the operator
+    graph, it can take a long time to execute.
+
+    Parameters
+    ----------
+    operators : list of :class:`~nengo:nengo.builder.Operator`
+        all the ``nengo`` operators in a model (unordered)
+
+    Returns
+    -------
+    list of tuple of :class:`~nengo:nengo.builder.Operator`
         operators combined into mergeable groups and in execution order
     """
 
@@ -303,6 +302,20 @@ def tree_planner(operators):
 
 
 def noop_planner(operators):
+    """Orders operators into a valid execution order, but does not perform
+    any merging.
+
+    Parameters
+    ----------
+    operators : list of :class:`~nengo:nengo.builder.Operator`
+        all the ``nengo`` operators in a model (unordered)
+
+    Returns
+    -------
+    list of tuple of :class:`~nengo:nengo.builder.Operator`
+        operators in execution order
+    """
+
     dependency_graph = operator_depencency_graph(operators)
 
     return [(op,) for op in toposort(dependency_graph)]
@@ -314,17 +327,17 @@ def order_signals(plan, n_passes=10):
 
     Parameters
     ----------
-    plan : list of tuple of `nengo.builder.operator.Operator`
-        operator execution plan (e.g., output from `greedy_planner`)
-    n_passes : int
+    plan : list of tuple of :class:`~nengo:nengo.builder.Operator`
+        operator execution plan (e.g., output from ``greedy_planner``)
+    n_passes : int, optional
         number of repeated passes through the operator reordering stage
 
     Returns
     -------
-    list of `nengo.builder.signal.Signal`
+    list of :class:`~nengo:nengo.builder.Signal`
         signals organized into the order in which we want them arranged in
         memory
-    list of tuple of `nengo.builder.operator.Operator`
+    list of tuple of :class:`~nengo:nengo.builder.Operator`
         input plan with operators reordered within groups to align with order
         of signals
     """
@@ -339,12 +352,15 @@ def order_signals(plan, n_passes=10):
     reads = {}
     for ops in plan:
         for op in ops:
+            reads[op] = op.reads
             if type(op) == SimNeurons:
                 # state signals are technically reads as well, they just aren't
                 # marked as such, so we add them to the reads list
-                reads[op] = op.reads + op.states
-            else:
-                reads[op] = op.reads
+                reads[op] += op.states
+            # TODO: for the dynamic_stitch scatter implementation, we could add
+            # any increment inputs to the reads as well
+            # TODO: could also add linear synapse outputs (depending on
+            # implementation)
 
         for i in range(len(reads[ops[0]])):
             read_blocks += [set(reads[op][i].base for op in ops)]
@@ -456,9 +472,9 @@ def hamming_sort(signals, blocks):
 
     Parameters
     ----------
-    list of `nengo.builder.signal.Signal`
+    signals : list of :class:`~nengo:nengo.builder.Signal`
         the signals to be sorted
-    dict of {Signal: tuple of bool}
+    blocks : dict of {:class:`~nengo:nengo.builder.Signal`: tuple of bool}
         dictionary indicating which read blocks each signal is a part of
     """
 
@@ -561,26 +577,30 @@ def sort_ops_by_signals(sorted_reads, signals, new_plan, blocks, reads):
 
     Parameters
     ----------
-    sorted_reads : list of (tuple of `nengo.builder.operator.Operator`, int)
+    sorted_reads : list of tuple of (:class:`~nengo:nengo.builder.Operator`, \
+                                     int)
         the operators that form each read block, sorted by increasing size of
         the read block. in the case that a group of operators participate in
         multiple read blocks, the integer distinguishes which one of those
         inputs this block is associated with.
-    signals : list of `nengo.builder.operator.Signal`
+    signals : list of :class:`~nengo:nengo.builder.Signal`
         signals that have been arranged into a given order by other parts
         of the algorithm
-    new_plan : dict of {tuple of Operator: tuple of Operator}
+    new_plan : dict of {tuple of :class:`~nengo:nengo.builder.Operator`: \
+                        tuple of :class:`~nengo:nengo.builder.Operator`}
         mapping from original operator group to the sorted operators
-    blocks : dict of {Signal: tuple of bool}
+    blocks : dict of {:class:`~nengo:nengo.builder.Signal`: tuple of bool}
         indicates which read blocks each signal participates in
-    reads : dict of {Operator: list of Signal}
+    reads : dict of {:class:`~nengo:nengo.builder.Operator`: \
+                     list of :class:`~nengo:nengo.builder.Signal`}
         the signals read by each operator
 
     Returns
     -------
-    new_plan : dict of {tuple of Operator: tuple of Operator}
+    new_plan : dict of {tuple of :class:`~nengo:nengo.builder.Operator`: \
+                        tuple of :class:`~nengo:nengo.builder.Operator`}
         mapping from original operator group to the sorted operators
-    signals : list of `nengo.builder.operator.Signal`
+    signals : list of :class:`~nengo:nengo.builder.Signal`
         signals list, possibly rearranged to match new operator order
     """
 
@@ -597,15 +617,6 @@ def sort_ops_by_signals(sorted_reads, signals, new_plan, blocks, reads):
             continue
 
         ops = new_plan[old_ops]
-
-        # check if op reads are contiguous
-        # TODO: do we want to do this? I don't think so, because there is
-        # a chance that non-contiguous signals could become contiguous after
-        # the sort
-        # reads = [reads[op][read_block].base for op in ops]
-        # indices = sorted([signals.index(s) for s in reads])
-        # if indices != list(range(np.min(indices), np.max(indices) + 1)):
-        #     continue
 
         # note: the key is (signal index, view offset), so ops will be
         # sorted first by the order of the signals in the list, then by
@@ -635,28 +646,31 @@ def sort_ops_by_signals(sorted_reads, signals, new_plan, blocks, reads):
 
 
 def sort_signals_by_ops(sorted_reads, signals, new_plan, blocks, reads):
-    """Attempts to rearrange `signals` so that it is in the same order as
+    """Attempts to rearrange ``signals`` so that it is in the same order as
     operator reads, without changing the overall block order.
 
     Parameters
     ----------
-    sorted_reads : list of (tuple of `nengo.builder.operator.Operator`, int)
+    sorted_reads : list of tuple of (:class:`~nengo:nengo.builder.Operator`, \
+                                     int)
         the operators that form each read block, sorted by increasing size of
         the read block. in the case that a group of operators participate in
         multiple read blocks, the integer distinguishes which one of those
         inputs this block is associated with.
-    signals : list of `nengo.builder.operator.Signal`
+    signals : list of :class:`~nengo:nengo.builder.Signal`
         signals to be sorted
-    new_plan : dict of {tuple of Operator: tuple of Operator}
+    new_plan : dict of {tuple of :class:`~nengo:nengo.builder.Operator`: \
+                        tuple of :class:`~nengo:nengo.builder.Operator`}
         mapping from original operator group to the sorted operators
-    blocks : dict of {Signal: tuple of bool}
+    blocks : dict of {:class:`~nengo:nengo.builder.Signal`: tuple of bool}
         indicates which read blocks each signal participates in
-    reads : dict of {Operator: list of Signal}
+    reads : dict of {:class:`~nengo:nengo.builder.Operator`: \
+                     list of :class:`~nengo:nengo.builder.Signal`}
         the signals read by each operator
 
     Returns
     -------
-    list of `nengo.builder.operator.Signal`
+    list of :class:`~nengo:nengo.builder.Signal`
         sorted signals
     """
 
@@ -716,8 +730,8 @@ def sort_signals_by_ops(sorted_reads, signals, new_plan, blocks, reads):
 
 
 def noop_order_signals(plan, **kwargs):
-    """A version of `order_signals` that doesn't do any reordering, for
-    debugging."""
+    """A version of :func:`.graph_optimizer.order_signals` that doesn't do any
+    reordering, for debugging."""
 
     all_signals = list(set([s.base for ops in plan for op in ops
                             for s in op.all_signals]))
@@ -725,41 +739,37 @@ def noop_order_signals(plan, **kwargs):
 
 
 def create_signals(sigs, plan, float_type, minibatch_size):
-    """Groups signals together into larger arrays, and represent each
+    """Groups signal data together into larger arrays, and represent each
     individual signal as a slice into that array.
 
     Parameters
     ----------
-    signals : list of `nengo.builder.operator.Signal`
+    signals : list of :class:`~nengo:nengo.builder.Signal`
         base signals arranged into the order in which they should reside in
-        memory (e.g., output from `order_signals`)
-    plan : list of tuple of `nengo.builder.operator.Operator`
+        memory (e.g., output from ``order_signals``)
+    plan : list of tuple of :class:`~nengo:nengo.builder.Operator`
         operator execution plan (only used to get a list of all the operators)
-    float_type : np.float32 or np.float64
+    float_type : ``np.float32`` or ``np.float64``
         floating point precision to use for signals
     minibatch_size : int
         number of items in each minibatch
 
     Returns
     -------
-    base_arrays : dict of {tuple : :class:`~numpy:numpy.ndarray`}
+    base_arrays : dict of {object : :class:`~numpy:numpy.ndarray`}
         combined arrays, containing the initial values for all signals
-    sig_map : dict of {`nengo.builder.signal.Signal`:
-                       :class:`.signals.TensorSignal}
-        mapping from `nengo` `Signals` to `nengo_dl` `TensorSignals` (views
+    sig_map : dict of {:class:`~nengo:nengo.builder.Signal`: \
+                       :class:`.signals.TensorSignal`}
+        mapping from ``nengo`` Signals to ``nengo_dl`` TensorSignals (views
         into the base arrays)
     """
-
-    # TODO: there isn't really any advantage to having huge monolithic base
-    # arrays, it just makes things less agile. we should partition the arrays
-    # up into all the non-overlapping chunks.
 
     base_arrays = OrderedDict()
     curr_keys = {}
     sig_map = {}
 
     # find the non-overlapping partitions of the signals
-    # TODO: alternatively, we could just partition based on reads, and allow
+    # TODO: we could just partition based on reads, and allow
     # sets to happen across base arrays (how much of a performance hit would
     # we get from that?)
     breaks = []
@@ -776,6 +786,7 @@ def create_signals(sigs, plan, float_type, minibatch_size):
     starts = np.asarray(starts)
     stops = np.asarray(stops)
 
+    # find the partition points in signal list
     open = 0
     for i in range(len(sigs)):
         open += np.sum(starts == i)
@@ -790,9 +801,11 @@ def create_signals(sigs, plan, float_type, minibatch_size):
         assert not sig.is_view
 
         if i in breaks:
+            # start a new array for all current bases
             for k in curr_keys:
                 curr_keys[k] = object()
 
+        # convert to appropriate dtype
         if sig.dtype in (np.float32, np.float64):
             dtype = float_type
         elif sig.dtype in (np.int32, np.int64):
@@ -804,7 +817,7 @@ def create_signals(sigs, plan, float_type, minibatch_size):
         shape = sig.shape if sig.shape != () else (1,)
 
         # parameters of signal that affect the base array
-        array_params = (dtype, (None,) + shape[1:], sig.trainable)
+        array_params = (dtype, shape[1:], sig.trainable)
 
         # key used to map signals to base arrays
         if array_params not in curr_keys:

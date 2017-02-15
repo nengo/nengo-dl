@@ -10,6 +10,31 @@ from nengo_deeplearning import (builder, graph_optimizer, signals, utils,
 
 
 class TensorGraph(object):
+    """Manages the construction of the Tensorflow symbolic computation graph.
+
+    Parameters
+    ----------
+    model : :class:`~nengo:nengo.builder.Model`
+        pre-built Nengo model describing the network to be simulated
+    dt : float
+        length of a simulator timestep, in seconds
+    step_blocks : int
+        controls how many simulation steps run each time the graph is
+        executed (affects memory usage and graph construction time)
+    unroll_simulation : bool
+        if True, unroll simulation loop by explicitly building each iteration
+        (up to ``step_blocks``) into the computation graph. if False, use a
+        symbolic loop, which is more general and produces a simpler graph, but
+        is likely to be slower to simulate
+    dtype : ``tf.DType``
+        floating point precision to use for simulation
+    minibatch_size : int
+        the number of simultaneous inputs that will be passed through the
+        network
+    device : None or ``"/cpu:0"`` or ``"/gpu:[0-n]"``
+        device on which to execute computations (if None then uses the
+        default device as determined by Tensorflow)
+    """
     def __init__(self, model, dt, step_blocks, unroll_simulation, dtype,
                  minibatch_size, device):
         self.model = model
@@ -58,6 +83,14 @@ class TensorGraph(object):
             minibatch_size=self.minibatch_size)
 
     def build(self, rng):
+        """Constructs a new graph to simulate the model.
+
+        Parameters
+        ----------
+        rng : :class:`~numpy:numpy.random.RandomState`
+            the Simulator's random number generator
+        """
+
         self.graph = tf.Graph()
         self.signals = signals.SignalDict(self.sig_map, self.dtype,
                                           self.minibatch_size)
@@ -74,7 +107,7 @@ class TensorGraph(object):
             self.signals.dt = tf.constant(self.dt, self.dtype)
             self.signals.dt_val = self.dt  # store the actual value as well
 
-            # create base variables
+            # create base arrays
             self.base_vars = []
             for k, (v, trainable) in self.base_arrays_init.items():
                 name = "%s_%s_%s_%s" % (
@@ -96,7 +129,7 @@ class TensorGraph(object):
                 self.base_vars += [var]
 
             if DEBUG:
-                print("created variables")
+                print("created base arrays")
                 print([str(x) for x in self.base_vars])
             self.init_op = tf.global_variables_initializer()
 
@@ -118,13 +151,14 @@ class TensorGraph(object):
 
         Returns
         -------
-        probe_tensors : list of `tf.Tensor`
+        probe_tensors : list of ``tf.Tensor``
             the Tensor objects representing the data required for each model
             Probe
-        side_effects : list of `tf.Tensor`
+        side_effects : list of ``tf.Tensor``
             the output Tensors of computations that may have side-effects
-            (e.g., `Node` functions), meaning that they must be executed each
-            time step even if their output doesn't appear to be used
+            (e.g., :class:`~nengo:nengo.Node` functions), meaning that they
+            must be executed each time step even if their output doesn't appear
+            to be used in the simulation
         """
 
         # build operators
@@ -177,7 +211,7 @@ class TensorGraph(object):
     def build_loop(self):
         """Build simulation loop.
 
-        Loop can be constructed using the `tf.while_loop` architecture, or
+        Loop can be constructed using the ``tf.while_loop`` architecture, or
         explicitly unrolled.  Unrolling increases graph construction time
         and memory usage, but increases simulation speed.
         """
@@ -196,15 +230,12 @@ class TensorGraph(object):
             self.signals.step = step
 
             # build the operators for a single step
-            # note: we tie things to the `step` variable so that we can be
-            # sure the other things we're tying to the step (side effects and
-            # probes) from the previous timestep are executed before the
-            # next step starts
+            # note: we tie things to the `loop_i` variable so that we can be
+            # sure the other things we're tying to the simulation step (side
+            # effects and probes) from the previous timestep are executed
+            # before the next step starts
             with self.graph.control_dependencies([loop_i]):
                 # fill in invariant input data
-                # if self.invariant_ph is not None:
-                #     self.signals.scatter(self.invariant_ph[0],
-                #                          self.invariant_ph[1][loop_i])
                 for n in self.invariant_ph:
                     self.signals.scatter(
                         self.sig_map[self.model.sig[n]["out"]],
@@ -277,22 +308,35 @@ class TensorGraph(object):
                 back_prop=False)
 
         self.end_step = loop_vars[0]
-        self.probe_arrays = [p.pack() for p in loop_vars[3]]
+        self.probe_arrays = [p.stack() for p in loop_vars[3]]
         self.end_base_arrays = loop_vars[4]
 
     def build_inputs(self, rng):
-        # invariant_data = [self.sig_map[self.model.sig[n]["out"]]
-        #                   for n in self.invariant_inputs
-        #                   if self.model.sig[n]["out"] in self.sig_map]
+        """Sets up the inputs in the model (which will be computed outside of
+        Tensorflow and fed in each simulation block).
+
+        Parameters
+        ----------
+        rng : :class:`~numpy:numpy.random.RandomState`
+            the Simulator's random number generator
+        """
+
         self.invariant_funcs = {}
         self.invariant_ph = {}
         for n in self.invariant_inputs:
             if self.model.sig[n]["out"] in self.sig_map:
+                # make sure the indices for this input are loaded into
+                # Tensorflow (they may not be, if the output of this node is
+                # only read as part of a larger block during the simulation)
                 self.sig_map[self.model.sig[n]["out"]].load_indices()
+
+                # set up a placeholder input for this node
                 self.invariant_ph[n] = tf.placeholder(
                     self.dtype, (self.step_blocks, n.size_out,
                                  self.minibatch_size))
 
+            # build the node functions, which will be called offline to
+            # generate the input values
             if isinstance(n.output, Process):
                 self.invariant_funcs[n] = n.output.make_step(
                     (n.size_in,), (n.size_out,), self.dt,
@@ -302,23 +346,37 @@ class TensorGraph(object):
                     (n.size_out,), self.dtype)(n.output)
             else:
                 self.invariant_funcs[n] = n.output
-        # self.invariant_ph = (
-        #     None if invariant_data == [] else
-        #     (invariant_data, tf.placeholder(
-        #         self.dtype, (self.step_blocks, invariant_data.shape[0],
-        #                      self.minibatch_size), name="input_data")))
 
     def build_optimizer(self, optimizer, targets, objective):
+        """Adds elements into the graph to execute the given optimizer.
+
+        Parameters
+        ----------
+        optimizer : ``tf.train.Optimizer``
+            instance of a Tensorflow optimizer class
+        targets : list of :class:`~nengo:nengo.Probe`
+            the Probes corresponding to the output signals being optimized
+        objective : ``"mse"`` or callable
+            the objective to be minimized. passing ``"mse"`` will train with
+            mean squared error. a custom function
+            ``f(output, target) -> loss`` can be passed that consumes the
+            actual output and target output for a probe in ``targets``
+            and returns a ``tf.Tensor`` representing the scalar loss value for
+            that Probe (loss will be averaged across Probes).
+        """
+
         self.target_phs = {}
         with self.graph.as_default(), tf.device(self.device):
-            # compute loss
             loss = []
             for p in targets:
                 probe_index = self.model.probes.index(p)
+
+                # create a placeholder for the target values
                 self.target_phs[p] = tf.placeholder(
                     self.dtype, (self.step_blocks, p.size_in,
                                  self.minibatch_size), name="targets")
 
+                # compute loss
                 if objective == "mse":
                     loss += [tf.square(self.target_phs[p] -
                                        self.probe_arrays[probe_index])]
@@ -328,6 +386,8 @@ class TensorGraph(object):
                 else:
                     raise NotImplementedError
 
+            # average loss across probes (note: this will also average across
+            # the output of `objective` if it doesn't return a scalar)
             self.loss = tf.reduce_mean(loss)
 
             # create optimizer operator

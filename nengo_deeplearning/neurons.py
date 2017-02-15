@@ -6,12 +6,22 @@ import tensorflow as tf
 from nengo_deeplearning import utils, DEBUG
 from nengo_deeplearning.builder import Builder, OpBuilder
 
-# the neuron types for which we have a custom tensorflow implementation
-TF_NEURON_IMPL = (RectifiedLinear, Sigmoid, LIF, LIFRate)
-
 
 @Builder.register(SimNeurons)
 class SimNeuronsBuilder(OpBuilder):
+    """Builds a group of :class:`~nengo:nengo.builder.neurons.SimNeurons`
+    operators.
+
+    Calls the appropriate sub-build class for the different neuron types.
+
+    Attributes
+    ----------
+    TF_NEURON_IMPL : list of :class:`~nengo:nengo.neurons.NeuronType`
+        the neuron types that have a custom implementation
+    """
+
+    TF_NEURON_IMPL = (RectifiedLinear, Sigmoid, LIF, LIFRate)
+
     def __init__(self, ops, signals):
         if DEBUG:
             print("sim_neurons")
@@ -24,7 +34,7 @@ class SimNeuronsBuilder(OpBuilder):
         # then we build that. otherwise we'll just execute the neuron step
         # function externally (using `tf.py_func`), so we just need to set up
         # the inputs/outputs for that.
-        if neuron_type in TF_NEURON_IMPL:
+        if neuron_type in self.TF_NEURON_IMPL:
             # note: we do this two-step check (even though it's redundant) to
             # make sure that TF_NEURON_IMPL is kept up to date
 
@@ -44,6 +54,16 @@ class SimNeuronsBuilder(OpBuilder):
 
 
 class GenericNeuronBuilder(object):
+    """Builds all neuron types for which there is no custom Tensorflow
+    implementation.
+
+    Notes
+    -----
+    These will be executed as native Python functions, requiring execution to
+    move in and out of Tensorflow.  This can significantly slow down the
+    simulation, so any performance-critical neuron models should consider
+    adding a custom Tensorflow implementation for their neuron type instead.
+    """
     def __init__(self, ops, signals):
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
@@ -119,6 +139,8 @@ class GenericNeuronBuilder(object):
 
 
 class RectifiedLinearBuilder(object):
+    """Build a group of :class:`~nengo:nengo.RectifiedLinear`
+    neuron operators."""
     def __init__(self, ops, signals):
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
@@ -129,6 +151,8 @@ class RectifiedLinearBuilder(object):
 
 
 class SigmoidBuilder(object):
+    """Build a group of :class:`~nengo:nengo.Sigmoid`
+    neuron operators."""
     def __init__(self, ops, signals):
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
@@ -142,6 +166,8 @@ class SigmoidBuilder(object):
 
 
 class LIFRateBuilder(object):
+    """Build a group of :class:`~nengo:nengo.LIFRate`
+    neuron operators."""
     def __init__(self, ops, signals):
         self.tau_ref = tf.constant(
             [[op.neurons.tau_ref] for op in ops
@@ -175,6 +201,8 @@ class LIFRateBuilder(object):
 
 
 class LIFBuilder(object):
+    """Build a group of :class:`~nengo:nengo.LIF`
+    neuron operators."""
     def __init__(self, ops, signals):
         self.tau_ref = tf.constant(
             [[op.neurons.tau_ref] for op in ops
