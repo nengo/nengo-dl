@@ -4,6 +4,7 @@ NengoDL
 .. toctree::
     :maxdepth: 3
 
+    installation
     frontend
     backend
 
