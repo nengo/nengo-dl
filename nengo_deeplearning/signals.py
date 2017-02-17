@@ -1,3 +1,4 @@
+from collections import defaultdict
 import warnings
 
 from nengo.builder.signal import Signal
@@ -103,10 +104,12 @@ class TensorSignal(object):
         """
 
         # replace -1 with inferred dimension
-        assert shape.count(-1) <= 1
+        if shape.count(-1) > 1:
+            raise BuildError("Only one inferred dimension allowed in reshape")
         n_elem = np.prod(self.shape)
         n_shape = np.prod([x for x in shape if x != -1])
-        assert n_elem % n_shape == 0
+        if n_elem % n_shape != 0:
+            raise BuildError("No valid length for inferred dimension")
         shape = tuple([x if x != -1 else n_elem // n_shape for x in shape])
 
         if np.prod(shape) != np.prod(self.shape):
@@ -136,6 +139,8 @@ class TensorSignal(object):
         """
 
         assert axis in (0, -1)
+        # this only works on vectors
+        assert self.ndim == 1 and not self.minibatched
 
         indices = self.indices
         indices = np.stack([indices] * length, axis=axis)
@@ -192,6 +197,7 @@ class SignalDict(object):
         self.minibatch_size = minibatch_size
         self.base_ranges = {}
         self.bases = None
+        self.reads_by_base = defaultdict(list)
 
     def scatter(self, dst, val, mode="update"):
         """Updates the base data corresponding to `dst`.
@@ -207,9 +213,11 @@ class SignalDict(object):
             overwrite/add/multiply the data at ``dst`` with ``val``
         """
 
-        assert dst.tf_indices is not None
-        assert dst.minibatched  # should never be assigning to a trainable var
-
+        if dst.tf_indices is None:
+            raise BuildError("Indices for %s have not been loaded into "
+                             "Tensorflow" % dst)
+        if not dst.minibatched:
+            raise BuildError("Assigning to a trainable variable")
         if val.dtype.is_floating and val.dtype.base_dtype != self.dtype:
             raise BuildError("Tensor detected with wrong dtype (%s), should "
                              "be %s." % (val.dtype.base_dtype, self.dtype))
@@ -319,7 +327,9 @@ class SignalDict(object):
             base array
         """
 
-        assert src.tf_indices is not None
+        if src.tf_indices is None:
+            raise BuildError("Indices for %s have not been loaded into "
+                             "Tensorflow" % src)
 
         if DEBUG:
             print("gather")
@@ -468,9 +478,10 @@ def mark_signals(model):
     # mark everything as not trainable by default
     for op in model.operators:
         for sig in op.all_signals:
-            if not hasattr(sig, "trainable"):
-                sig.trainable = False
+            for x in (sig, sig.base):
+                if not hasattr(x, "trainable"):
+                    x.trainable = False
 
-            # at the moment minibatched is just the opposite of trainable, but
-            # it could be the case that the two are independent
-            sig.minibatched = not sig.trainable
+                # at the moment minibatched is just the opposite of trainable,
+                # but it could be the case that the two are independent
+                x.minibatched = not sig.trainable

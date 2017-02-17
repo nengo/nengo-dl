@@ -189,9 +189,9 @@ class DotIncBuilder(OpBuilder):
 
             # add empty minibatch dimension if needed
             if not self.A_data.minibatched and self.X_data.minibatched:
-                self.A_data = self.A_data.broadcast(-1, 1)
+                self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
             if self.A_data.minibatched and not self.X_data.minibatched:
-                self.X_data = self.X_data.broadcast(-1, 1)
+                self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
 
         self.A_data.load_indices()
         self.X_data.load_indices()

@@ -1,4 +1,4 @@
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict
 
 from nengo import Process
 from nengo.builder.operator import TimeUpdate, SimPyFunc
@@ -35,6 +35,7 @@ class TensorGraph(object):
         device on which to execute computations (if None then uses the
         default device as determined by Tensorflow)
     """
+
     def __init__(self, model, dt, step_blocks, unroll_simulation, dtype,
                  minibatch_size, device):
         self.model = model
@@ -110,9 +111,22 @@ class TensorGraph(object):
             # create base arrays
             self.base_vars = []
             for k, (v, trainable) in self.base_arrays_init.items():
-                name = "%s_%s_%s_%s" % (
-                    v.dtype, "_".join(str(x) for x in v.shape), trainable,
-                    str(k)[-9:-1])
+                unique_idx = 0
+                duplicate = True
+                while duplicate:
+                    name = "%s_%s_%s_%s" % (
+                        v.dtype, "_".join(str(x) for x in v.shape), trainable,
+                        unique_idx)
+
+                    if any([name in x.name for x in tf.global_variables()]):
+                        unique_idx += 1
+                    else:
+                        try:
+                            self.graph.get_tensor_by_name(name + ":0")
+                            unique_idx += 1
+                        except KeyError:
+                            duplicate = False
+
                 if trainable:
                     # trainable signal, so create Variable
                     with tf.variable_scope("base_vars", reuse=False):
@@ -282,7 +296,6 @@ class TensorGraph(object):
         self.step_var = tf.placeholder(tf.int32, shape=(), name="step")
         self.stop_var = tf.placeholder(tf.int32, shape=(), name="stop")
         loop_i = tf.constant(0)
-        self.signals.reads_by_base = defaultdict(list)
 
         probe_arrays = [
             tf.TensorArray(
@@ -365,30 +378,8 @@ class TensorGraph(object):
             that Probe (loss will be averaged across Probes).
         """
 
-        self.target_phs = {}
         with self.graph.as_default(), tf.device(self.device):
-            loss = []
-            for p in targets:
-                probe_index = self.model.probes.index(p)
-
-                # create a placeholder for the target values
-                self.target_phs[p] = tf.placeholder(
-                    self.dtype, (self.step_blocks, p.size_in,
-                                 self.minibatch_size), name="targets")
-
-                # compute loss
-                if objective == "mse":
-                    loss += [tf.square(self.target_phs[p] -
-                                       self.probe_arrays[probe_index])]
-                elif callable(objective):
-                    loss += objective(self.probe_arrays[probe_index],
-                                      self.target_phs[p])
-                else:
-                    raise NotImplementedError
-
-            # average loss across probes (note: this will also average across
-            # the output of `objective` if it doesn't return a scalar)
-            self.loss = tf.reduce_mean(loss)
+            self.loss = self.build_loss(objective, targets)
 
             # create optimizer operator
             self.opt_op = optimizer.minimize(
@@ -399,3 +390,48 @@ class TensorGraph(object):
             self.opt_slots_init = tf.variables_initializer(
                 [optimizer.get_slot(v, name) for v in tf.trainable_variables()
                  for name in optimizer.get_slot_names()])
+
+    def build_loss(self, objective, targets):
+        """Adds elements into the graph to compute the given objective.
+
+        Parameters
+        ----------
+        objective : ``"mse"`` or callable
+            the objective used to compute loss. passing ``"mse"`` will use
+            mean squared error. a custom function
+            ``f(output, target) -> loss`` can be passed that consumes the
+            actual output and target output for a probe in ``targets``
+            and returns a ``tf.Tensor`` representing the scalar loss value for
+            that Probe (loss will be averaged across Probes).
+        targets : list of :class:`~nengo:nengo.Probe`
+            the Probes corresponding to target values in objective
+        """
+
+        with self.graph.as_default(), tf.device(self.device):
+            loss = []
+            self.target_phs = {}
+            for p in targets:
+                probe_index = self.model.probes.index(p)
+
+                # create a placeholder for the target values
+                self.target_phs[p] = tf.placeholder(
+                    self.dtype, (self.step_blocks, p.size_in,
+                                 self.minibatch_size), name="targets")
+
+                # compute loss
+                if objective == "mse":
+                    loss += [tf.reduce_mean(tf.square(
+                        self.target_phs[p] - self.probe_arrays[probe_index]))]
+                elif callable(objective):
+                    # move minibatch dimension back to the front
+                    x = tf.transpose(self.probe_arrays[probe_index], (2, 0, 1))
+                    t = tf.transpose(self.target_phs[p], (2, 0, 1))
+                    loss += [objective(x, t)]
+                else:
+                    raise NotImplementedError
+
+        # average loss across probes (note: this will also average across
+        # the output of `objective` if it doesn't return a scalar)
+        loss = tf.reduce_mean(loss)
+
+        return loss

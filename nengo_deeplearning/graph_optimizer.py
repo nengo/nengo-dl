@@ -858,15 +858,15 @@ def create_signals(sigs, plan, float_type, minibatch_size):
     all_signals = [sig for ops in plan for op in ops for sig in op.all_signals]
     for sig in all_signals:
         if sig.is_view:
-            if sig.initial_value.ndim != sig.base.ndim:
+            if sig.size == sig.base.size:
                 # reshape view
-                if sig.size != sig.base.size:
+                sig_map[sig] = sig_map[sig.base].reshape(sig.shape)
+            else:
+                if sig.shape[1:] != sig.base.shape[1:]:
                     raise NotImplementedError(
                         "Slicing and reshaping the same signal is not "
                         "supported")
 
-                sig_map[sig] = sig_map[sig.base].reshape(sig.shape)
-            else:
                 # slice view
                 assert np.all([x == 1 for x in sig.elemstrides[1:]])
 

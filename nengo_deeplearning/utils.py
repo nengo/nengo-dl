@@ -30,7 +30,7 @@ def sanitize_name(name):
     name = name.replace(" ", "_")
     name = name.replace(":", "_")
 
-    valid_exp = re.compile("[A-Za-z0-9_.\\-/]")
+    valid_exp = re.compile(r"[A-Za-z0-9_.\-/]")
 
     return "".join([c for c in name if valid_exp.match(c)])
 
@@ -251,3 +251,48 @@ class ProgressBar(object):
 
         if self.curr_step == self.max_steps:
             self.stop()
+
+
+# generator to sample minibatch_sized subsets from inputs and targets
+def minibatch_generator(inputs, targets, minibatch_size, shuffle=True):
+    """Generator to yield ``minibatch_sized`` subsets from ``inputs`` and
+    ``targets``.
+
+    Parameters
+    ----------
+    inputs : dict of {:class:`~nengo:nengo.Node`: \
+                      :class:`~numpy:numpy.ndarray`}
+        input values for Nodes in the network
+    targets : dict of {:class:`~nengo:nengo.Probe`: \
+                       :class:`~numpy:numpy.ndarray`}
+        desired output value at Probes, corresponding to each value in
+        ``inputs``
+    minibatch_size : int
+        the number of items in each minibatch
+    shuffle : bool, optional
+        if True, the division of items into minibatches will be randomized each
+        time the generator is created
+
+    Yields
+    ------
+    inputs : dict of {:class:`~nengo:nengo.Node`: \
+                      :class:`~numpy:numpy.ndarray`}
+        the same structure as ``inputs``, but with each array reduced to
+        ``minibatch_size`` elements along the first dimension
+    targets : dict of {:class:`~nengo:nengo.Probe`: \
+                       :class:`~numpy:numpy.ndarray`}
+        the same structure as ``targets``, but with each array reduced to
+        ``minibatch_size`` elements along the first dimension
+    """
+
+    n_inputs = next(iter(inputs.values())).shape[0]
+
+    if shuffle:
+        perm = np.random.permutation(n_inputs)
+    else:
+        perm = np.arange(n_inputs)
+
+    for i in range(0, n_inputs - n_inputs % minibatch_size,
+                   minibatch_size):
+        yield ({n: inputs[n][perm[i:i + minibatch_size]] for n in inputs},
+               {p: targets[p][perm[i:i + minibatch_size]] for p in targets})

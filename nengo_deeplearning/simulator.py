@@ -305,27 +305,13 @@ class Simulator(object):
             run_options = None
             run_metadata = None
 
-        # fill in placeholder inputs
-        feed_dict = {
-            self.tensor_graph.step_var: self.n_steps,
-            self.tensor_graph.stop_var: self.n_steps + n_steps,
-        }
-
-        # fill in values for base variables from previous run
-        feed_dict.update(
-            {k: v for k, v in zip(
-                self.tensor_graph.base_vars,
-                self.final_bases) if k.op.type == "Placeholder"})
-
-        # fill in input values
-        feed_dict.update(self._generate_inputs(input_feeds, n_steps))
-
         # execute the simulation loop
         try:
             final_step, probe_data, self.final_bases = self.sess.run(
                 [self.tensor_graph.end_step, self.tensor_graph.probe_arrays,
                  self.tensor_graph.end_base_arrays],
-                feed_dict=feed_dict,
+                feed_dict=self._fill_feed(n_steps, input_feeds,
+                                          start=self.n_steps),
                 options=run_options, run_metadata=run_metadata)
         except tf.errors.InternalError as e:
             if e.op.type == "PyFunc":
@@ -410,18 +396,18 @@ class Simulator(object):
                     "`step_blocks` (%s)" % (x.shape[1], self.step_blocks))
             if x.shape[2] != n.size_out:
                 raise SimulationError(
-                    "Dimensionality of input sequence (%s) does not match "
-                    "node.size_out" % (x.shape[2], n.size_out))
+                    "Dimensionality of input sequence (%d) does not match "
+                    "node.size_out (%d)" % (x.shape[2], n.size_out))
 
         for p, x in targets.items():
             if x.shape[1] != self.step_blocks:
                 raise SimulationError(
                     "Length of target sequence (%s) does not match "
                     "`step_blocks` (%s)" % (x.shape[1], self.step_blocks))
-            if x.shape[2] != n.size_out:
+            if x.shape[2] != p.size_in:
                 raise SimulationError(
-                    "Dimensionality of target sequence (%s) does not match "
-                    "probe.size_in" % (x.shape[2], p.size_in))
+                    "Dimensionality of target sequence (%d) does not match "
+                    "probe.size_in (%d)" % (x.shape[2], p.size_in))
 
         # check for non-differentiable elements in graph
         # utils.find_non_differentiable(
@@ -441,48 +427,128 @@ class Simulator(object):
                 "GPU; try `Simulator(..., device='/cpu:0')`") from None
 
         progress = utils.ProgressBar(n_epochs, "Training")
-        # fill in placeholder inputs
+
+        for n in range(n_epochs):
+            for inp, tar in utils.minibatch_generator(inputs, targets,
+                                                      self.minibatch_size):
+                # TODO: set up queue to feed in data more efficiently
+                self.sess.run(
+                    [self.tensor_graph.opt_op],
+                    feed_dict=self._fill_feed(self.step_blocks, inp, tar))
+            progress.step()
+
+    def loss(self, inputs, targets, objective=None):
+        """Compute the loss value for the given objective and inputs/targets.
+
+        Parameters
+        ----------
+        inputs : dict of {:class:`~nengo:nengo.Node`: \
+                          :class:`~numpy:numpy.ndarray`}
+            input values for Nodes in the network; arrays should have shape
+            ``(batch_size, sim.step_blocks, node.size_out)``
+        targets : dict of {:class:`~nengo:nengo.Probe`: \
+                           :class:`~numpy:numpy.ndarray`}
+            desired output value at Probes, corresponding to each value in
+            ``inputs``; arrays should have shape
+            ``(batch_size, sim.step_blocks, probe.size_in)``
+        objective : ``"mse"`` or callable, optional
+            the objective used to compute loss. passing ``"mse"`` will use
+            mean squared error. a custom function
+            ``f(output, target) -> loss`` can be passed that consumes the
+            actual output and target output for a probe in ``targets``
+            and returns a ``tf.Tensor`` representing the scalar loss value for
+            that Probe (loss will be averaged across Probes). passing None will
+            use the objective passed to the last call of
+            :meth:`.Simulator.train`.
+        """
+
+        if self.closed:
+            raise SimulatorClosed("Loss cannot be computed after simulator is "
+                                  "closed.")
+
+        for n, x in inputs.items():
+            if x.shape[1] != self.step_blocks:
+                raise SimulationError(
+                    "Length of input sequence (%s) does not match "
+                    "`step_blocks` (%s)" % (x.shape[1], self.step_blocks))
+            if x.shape[2] != n.size_out:
+                raise SimulationError(
+                    "Dimensionality of input sequence (%d) does not match "
+                    "node.size_out (%d)" % (x.shape[2], n.size_out))
+
+        for p, x in targets.items():
+            if x.shape[1] != self.step_blocks:
+                raise SimulationError(
+                    "Length of target sequence (%s) does not match "
+                    "`step_blocks` (%s)" % (x.shape[1], self.step_blocks))
+            if x.shape[2] != p.size_in:
+                raise SimulationError(
+                    "Dimensionality of target sequence (%d) does not match "
+                    "probe.size_in (%d)" % (x.shape[2], p.size_in))
+
+        # build optimizer op
+        if objective is None:
+            loss = self.tensor_graph.loss
+        else:
+            loss = self.tensor_graph.build_loss(objective, targets)
+
+        loss_val = 0
+        for i, (inp, tar) in enumerate(utils.minibatch_generator(
+                inputs, targets, self.minibatch_size)):
+            loss_val += self.sess.run(
+                loss, feed_dict=self._fill_feed(self.step_blocks, inp, tar))
+        loss_val /= i + 1
+
+        return loss_val
+
+    def _fill_feed(self, n_steps, inputs, targets=None, start=0):
+        """Create a feed dictionary containing values for all the placeholder
+        inputs in the network, which will be passed to ``tf.Session.run``.
+
+        Parameters
+        ----------
+        n_steps : int
+            the number of execution steps
+        input_feeds : dict of {:class:`~nengo:nengo.Node`: \
+                               :class:`~numpy:numpy.ndarray`}
+            override the values of input Nodes with the given data.  arrays
+            should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
+        targets : dict of {:class:`~nengo:nengo.Probe`: \
+                           :class:`~numpy:numpy.ndarray`}, optional
+            values for target placeholders (only necessary if loss is being
+            computed, e.g. when training the network)
+        start : int, optional
+            initial value of simulator timestep
+
+        Returns
+        -------
+        dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}
+            feed values for placeholder tensors in the network
+        """
+
+        # fill in loop variables
         feed_dict = {
-            self.tensor_graph.step_var: 0,
-            self.tensor_graph.stop_var: self.step_blocks,
+            self.tensor_graph.step_var: start,
+            self.tensor_graph.stop_var: start + n_steps
         }
 
-        # fill in base variables
+        # fill in values for base variables from previous run
         feed_dict.update(
             {k: v for k, v in zip(
                 self.tensor_graph.base_vars,
-                [x[0] for x in
-                 self.tensor_graph.base_arrays_init.values()])
-             if k.op.type == "Placeholder"})
+                self.final_bases) if k.op.type == "Placeholder"})
 
-        # generator to sample minibatch_sized subsets from inputs and targets
-        def minibatch_generator(inp, tar, minibatch_size, shuffle=True):
-            n_inputs = next(iter(inp.values())).shape[0]
+        # fill in input values
+        tmp = self._generate_inputs(inputs, n_steps)
+        feed_dict.update(tmp)
 
-            if shuffle:
-                perm = np.random.permutation(n_inputs)
+        # fill in target values
+        if targets is not None:
+            feed_dict.update(
+                {self.tensor_graph.target_phs[p]: np.moveaxis(t, 0, -1)
+                 for p, t in targets.items()})
 
-            for i in range(0, n_inputs - n_inputs % minibatch_size,
-                           minibatch_size):
-                yield (
-                    {n: inputs[n][perm[i:i + minibatch_size]] for n in inp},
-                    {p: targets[p][perm[i:i + minibatch_size]] for p in tar})
-
-        for n in range(n_epochs):
-            for inp, tar in minibatch_generator(inputs, targets,
-                                                self.minibatch_size):
-                # fill in inputs
-                feed_dict.update(self._generate_inputs(inp, self.step_blocks))
-
-                # fill in targets
-                feed_dict.update(
-                    {self.tensor_graph.target_phs[p]: np.moveaxis(t, 0, -1)
-                     for p, t in tar.items()})
-
-                # TODO: set up queue to feed in data more efficiently
-                self.sess.run([self.tensor_graph.opt_op],
-                              feed_dict=feed_dict)
-            progress.step()
+        return feed_dict
 
     def _generate_inputs(self, input_feeds, n_steps):
         """Generate inputs for the network (the output values of each Node with
@@ -598,7 +664,7 @@ class Simulator(object):
 
     def load_params(self, path):
         """Load trainable network parameters from the given ``path``.
-        
+
         Parameters
         ----------
         path : str
@@ -612,7 +678,7 @@ class Simulator(object):
 
     def print_params(self, msg=None):
         """Print current values of trainable network parameters.
-        
+
         Parameters
         ----------
         msg : str, optional
@@ -625,7 +691,7 @@ class Simulator(object):
                                   "parameters")
 
         params = {k: v for k, v in self.tensor_graph.signals.bases.items()
-                  if k[2]}
+                  if v.dtype._is_ref_dtype}
         param_sigs = {k: v for k, v in self.tensor_graph.sig_map.items()
                       if k.trainable}
 
@@ -699,6 +765,42 @@ class Simulator(object):
         dt = self.dt if dt is None else dt
         n_steps = int(self.n_steps * (self.dt / dt))
         return dt * np.arange(1, n_steps + 1)
+
+    def check_gradients(self, atol=1e-4, rtol=1e-3):
+        """Perform gradient checks for the network (used to verify that the
+        analytic gradients are correct).
+
+        Raises a simulation error if the difference between analytic and
+        numeric gradient is greater than ``atol + rtol * numeric_grad``
+        (elementwise).
+
+        Parameters
+        ----------
+        atol : float, optional
+            absolute error tolerance
+        rtol : float, optional
+            relative (to numeric grad) error tolerance
+        """
+
+        feed = self._fill_feed(
+            self.step_blocks, {n: np.zeros((self.minibatch_size,
+                                            self.step_blocks, n.size_out))
+                               for n in self.tensor_graph.invariant_inputs},
+            {p: np.zeros((self.minibatch_size, self.step_blocks, p.size_in))
+             for p in self.model.probes})
+
+        # check gradient wrt inp
+        for node, inp in self.tensor_graph.invariant_ph.items():
+            analytic, numeric = tf.test.compute_gradient(
+                inp, inp.get_shape().as_list(), self.tensor_graph.loss, (1,),
+                extra_feed_dict=feed)
+            if np.any(np.isnan(analytic)) or np.any(np.isnan(numeric)):
+                raise SimulationError("NaNs detected in gradient")
+            if np.any(abs(analytic - numeric) >= atol + rtol * abs(numeric)):
+                raise SimulationError(
+                    "Gradient check failed for input %s\n"
+                    "numeric gradient:\n%s\n"
+                    "analytic gradient:\n%s\n" % (node, numeric, analytic))
 
 
 class ProbeDict(Mapping):

@@ -1,5 +1,5 @@
-Simulator
-=========
+NengoDL Simulator
+=================
 
 This is the class that allows users to access the ``nengo_deeplearning``
 backend.  This can be used as a drop-in replacement for ``nengo.Simulator``

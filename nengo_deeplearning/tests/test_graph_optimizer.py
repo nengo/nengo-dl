@@ -1,7 +1,6 @@
 from nengo.neurons import LIF, LIFRate, Izhikevich, AdaptiveLIF
 from nengo.synapses import Lowpass, Triangle, Alpha
-from nengo.builder.operator import (SlicedCopy, SimPyFunc, DotInc,
-                                    TimeUpdate, Copy)
+from nengo.builder.operator import (SlicedCopy, SimPyFunc, DotInc, Copy, Reset)
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 import numpy as np
@@ -9,29 +8,33 @@ import pytest
 
 from nengo_deeplearning import builder
 from nengo_deeplearning.graph_optimizer import (
-    mergeable, greedy_planner, tree_planner, order_signals)
+    mergeable, greedy_planner, tree_planner, order_signals, create_signals)
 
 
 class DummySignal(object):
     def __init__(self, shape=None, dtype=None, base_shape=None, offset=0,
-                 label=""):
+                 trainable=False, label=""):
         self.shape = (1,) if shape is None else shape
         self.dtype = np.float32 if dtype is None else dtype
         self.base = (self if base_shape is None else
                      DummySignal(shape=base_shape, dtype=self.dtype))
         self.elemoffset = offset
-        self.label = label
+        self.name = label
         self.ndim = len(self.shape)
         self.is_view = base_shape is not None
         self.size = np.prod(self.shape)
-        self.trainable = False
-        self.minibatched = True
+        self.trainable = trainable
+        self.minibatched = not trainable
+
+    @property
+    def initial_value(self):
+        return np.zeros(self.base.shape, self.dtype)
 
     def may_share_memory(self, other):
         return False
 
     def __repr__(self):
-        return "DummySignal(%s)" % self.label
+        return "DummySignal(%s)" % self.name
 
 
 class DummyOp(object):
@@ -167,18 +170,6 @@ def test_mergeable():
     # check non-custom matching
     assert mergeable(SimProcess(Triangle(0), None, None, DummySignal()),
                      [SimProcess(Alpha(0), None, None, DummySignal())])
-
-
-# @pytest.mark.parametrize("planner", [greedy_planner, tree_planner])
-# def test_planner_timeupdate(planner):
-#     # test TimeUpdate exclusion
-#     input0 = DummySignal()
-#     input1 = DummySignal()
-#     output0 = DummySignal()
-#     operators = [TimeUpdate(input0, input1), SlicedCopy(input0, output0)]
-#     plan = planner(operators)
-#     assert len(plan) == 1
-#     assert type(plan[0][0]) == SlicedCopy
 
 
 @pytest.mark.parametrize("planner", [greedy_planner, tree_planner])
@@ -470,10 +461,127 @@ def test_order_signals_noreads():
     assert ordered(new_plan[0], sigs)
 
 
-# def test_order_signals_neuron_states():
-#     # test with neuron states (should be treated as reads)
-#     assert False
+def test_order_signals_neuron_states():
+    # test with neuron states (should be treated as reads)
+
+    inputs = [DummySignal(label=str(i)) for i in range(10)]
+    plan = [
+        tuple(SimNeurons(None, inputs[0], inputs[1], states=[x])
+              for x in inputs[2::2]),
+        tuple(SimNeurons(None, inputs[0], inputs[1], states=[x])
+              for x in inputs[3::2])]
+    sigs, new_plan = order_signals(plan)
+
+    assert contiguous(inputs[2::2], sigs)
+    assert contiguous(inputs[3::2], sigs)
+    # note: block=0 is just a single signal, so it's always "ordered"
+    assert ordered(new_plan[0], sigs, block=1)
+    assert ordered(new_plan[1], sigs, block=1)
 
 
-# def test_create_signals():
-#     assert False
+def test_create_signals():
+    # check that floats/ints get split into different arrays
+    sigs = [DummySignal(dtype=np.float32), DummySignal(dtype=np.float32),
+            DummySignal(dtype=np.int32), DummySignal(dtype=np.int32)]
+    plan = [tuple(DummyOp(reads=[x]) for x in sigs)]
+    bases, sig_map = create_signals(sigs, plan, np.float32, 10)
+    assert sig_map[sigs[0]].key == sig_map[sigs[1]].key
+    assert sig_map[sigs[1]].key != sig_map[sigs[2]].key
+    assert sig_map[sigs[2]].key == sig_map[sigs[3]].key
+
+    # check that floats all get converted to same precision and combined
+    sigs = [DummySignal(dtype=np.float32), DummySignal(dtype=np.float32),
+            DummySignal(dtype=np.float64), DummySignal(dtype=np.float64)]
+    plan = [tuple(DummyOp(reads=[x]) for x in sigs)]
+    bases, sig_map = create_signals(sigs, plan, np.float32, 10)
+    assert np.all([sig_map[x].dtype == np.float32 for x in sigs])
+    assert sig_map[sigs[0]].key == sig_map[sigs[1]].key
+    assert sig_map[sigs[1]].key == sig_map[sigs[2]].key
+    assert sig_map[sigs[2]].key == sig_map[sigs[3]].key
+
+    # check that ints all get converted to same precision and combined
+    sigs = [DummySignal(dtype=np.int32), DummySignal(dtype=np.int32),
+            DummySignal(dtype=np.int64), DummySignal(dtype=np.int64)]
+    plan = [tuple(DummyOp(reads=[x]) for x in sigs)]
+    bases, sig_map = create_signals(sigs, plan, np.float32, 10)
+    assert np.all([sig_map[x].dtype == np.int32 for x in sigs])
+    assert sig_map[sigs[0]].key == sig_map[sigs[1]].key
+    assert sig_map[sigs[1]].key == sig_map[sigs[2]].key
+    assert sig_map[sigs[2]].key == sig_map[sigs[3]].key
+
+    # check that different shapes go in different groups
+    sigs = [DummySignal(shape=(10,)), DummySignal(shape=(5,)),
+            DummySignal(shape=(10, 1)), DummySignal(shape=(5, 1))]
+    plan = [tuple(DummyOp(reads=[x]) for x in sigs)]
+    bases, sig_map = create_signals(sigs, plan, np.float32, 10)
+    assert bases[sig_map[sigs[0]].key][0].shape == (15, 10)
+    assert bases[sig_map[sigs[2]].key][0].shape == (15, 1, 10)
+    assert sig_map[sigs[0]].key == sig_map[sigs[1]].key
+    assert sig_map[sigs[1]].key != sig_map[sigs[2]].key
+    assert sig_map[sigs[2]].key == sig_map[sigs[3]].key
+
+    # check trainable
+    sigs = [DummySignal(trainable=True), DummySignal(trainable=True),
+            DummySignal(trainable=False), DummySignal(trainable=False)]
+    plan = [tuple(DummyOp(reads=[x]) for x in sigs)]
+    bases, sig_map = create_signals(sigs, plan, np.float32, 10)
+    assert bases[sig_map[sigs[0]].key][0].shape == (2,)
+    assert bases[sig_map[sigs[2]].key][0].shape == (2, 10)
+    assert sig_map[sigs[0]].key == sig_map[sigs[1]].key
+    assert sig_map[sigs[1]].key != sig_map[sigs[2]].key
+    assert sig_map[sigs[2]].key == sig_map[sigs[3]].key
+
+    # check that scalars get upsized
+    sigs = [DummySignal(shape=()), DummySignal(shape=(4,))]
+    plan = [tuple(DummyOp(reads=[x]) for x in sigs)]
+    bases, sig_map = create_signals(sigs, plan, np.float32, 10)
+    assert list(bases.values())[0][0].shape == (5, 10)
+
+
+def test_create_signals_views():
+    sigs = [DummySignal(shape=(2, 2), base_shape=(4,)),
+            DummySignal(shape=(2, 2), base_shape=(4,))]
+    sigs += [sigs[0].base, sigs[1].base]
+    plan = [tuple(DummyOp(reads=[x]) for x in sigs)]
+    bases, sig_map = create_signals(sigs[2:], plan, np.float32, 10)
+    assert list(bases.values())[0][0].shape == (8, 10)
+    assert sig_map[sigs[0]].key == sig_map[sigs[1]].key
+    assert sig_map[sigs[1]].key == sig_map[sigs[2]].key
+    assert sig_map[sigs[2]].key == sig_map[sigs[3]].key
+    assert np.all(sig_map[sigs[0]].indices == (0, 1, 2, 3))
+    assert np.all(sig_map[sigs[1]].indices == (4, 5, 6, 7))
+    assert np.all(sig_map[sigs[0]].indices == sig_map[sigs[2]].indices)
+    assert np.all(sig_map[sigs[1]].indices == sig_map[sigs[3]].indices)
+
+
+def test_create_signals_partition():
+    # check that signals are partitioned based on plan
+    sigs = [DummySignal(), DummySignal(),
+            DummySignal(), DummySignal()]
+    plan = [tuple(DummyOp(reads=[x]) for x in sigs[:2]),
+            tuple(DummyOp(reads=[x]) for x in sigs[2:])]
+    bases, sig_map = create_signals(sigs, plan, np.float32, 10)
+    assert sig_map[sigs[0]].key == sig_map[sigs[1]].key
+    assert sig_map[sigs[1]].key != sig_map[sigs[2]].key
+    assert sig_map[sigs[2]].key == sig_map[sigs[3]].key
+
+    # check that signals are partioned for different read blocks
+    plan = [tuple(DummyOp(reads=[sigs[i], sigs[2 + i]]) for i in range(2))]
+    bases, sig_map = create_signals(sigs, plan, np.float32, 10)
+    assert sig_map[sigs[0]].key == sig_map[sigs[1]].key
+    assert sig_map[sigs[1]].key != sig_map[sigs[2]].key
+    assert sig_map[sigs[2]].key == sig_map[sigs[3]].key
+
+    # check that signals are partioned for different sig types
+    plan = [tuple(DummyOp(reads=[sigs[i]], sets=[sigs[2 + i]])
+                  for i in range(2))]
+    bases, sig_map = create_signals(sigs, plan, np.float32, 10)
+    assert sig_map[sigs[0]].key == sig_map[sigs[1]].key
+    assert sig_map[sigs[1]].key != sig_map[sigs[2]].key
+    assert sig_map[sigs[2]].key == sig_map[sigs[3]].key
+
+    # check that resets are ignored
+    sigs = [DummySignal(), DummySignal(), DummySignal(), DummySignal()]
+    plan = [tuple(Reset(x) for x in sigs)]
+    bases, sig_map = create_signals(sigs, plan, np.float32, 10)
+    assert len(bases) == 4

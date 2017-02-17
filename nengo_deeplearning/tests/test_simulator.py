@@ -1,5 +1,10 @@
+import os
+import shutil
+
 import nengo
 import numpy as np
+import pytest
+import tensorflow as tf
 
 from nengo_deeplearning.tests import TestSimulator
 
@@ -107,4 +112,221 @@ def test_minibatch():
     assert np.allclose(sim.data[ps[1]], probe_data[1])
     assert np.allclose(sim.data[ps[2]], probe_data[2])
 
-# TODO: test input_feeds
+
+def test_input_feeds():
+    minibatch_size = 10
+    step_blocks = 5
+
+    with nengo.Network() as net:
+        inp = nengo.Node([0, 0, 0])
+        out = nengo.Node(size_in=3)
+        nengo.Connection(inp, out, synapse=None)
+        p = nengo.Probe(out)
+
+    with TestSimulator(net, minibatch_size=minibatch_size,
+                       step_blocks=step_blocks) as sim:
+        val = np.random.randn(minibatch_size, step_blocks, 3)
+        sim.run_steps(step_blocks, input_feeds={inp: val})
+        assert np.allclose(sim.data[p], val)
+
+        with pytest.raises(nengo.exceptions.SimulationError):
+            sim.run_steps(step_blocks, input_feeds={
+                inp: np.random.randn(minibatch_size, step_blocks + 1, 3)})
+
+
+@pytest.mark.parametrize("neurons", (True, False))
+def test_train_ff(neurons):
+    minibatch_size = 4
+    step_blocks = 1
+    n_hidden = 5
+
+    with nengo.Network() as net:
+        net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
+        net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-0.1, 0.1)
+        net.config[nengo.Connection].synapse = None
+
+        inp = nengo.Node([0, 0])
+        ens = nengo.Ensemble(n_hidden, n_hidden,
+                             neuron_type=nengo.Sigmoid(tau_ref=1))
+        out = nengo.Ensemble(1, 1, neuron_type=nengo.Sigmoid(tau_ref=1))
+        nengo.Connection(
+            inp, ens.neurons if neurons else ens,
+            transform=np.random.uniform(-1, 1, size=(n_hidden, 2)))
+        nengo.Connection(
+            ens.neurons if neurons else ens, out.neurons if neurons else out,
+            transform=np.random.uniform(-1, 1, size=(1, n_hidden)))
+
+        # TODO: why does training fail if we probe out instead of out.neurons?
+        p = nengo.Probe(out.neurons)
+
+    with TestSimulator(net, minibatch_size=minibatch_size,
+                       step_blocks=step_blocks) as sim:
+        x = np.asarray([[[0, 0]], [[0, 1]], [[1, 0]], [[1, 1]]])
+        y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
+
+        sim.train({inp: x}, {p: y}, tf.train.GradientDescentOptimizer(1),
+                  n_epochs=10000)
+
+        sim.check_gradients()
+
+        sim.step(input_feeds={inp: x})
+
+        assert np.allclose(sim.data[p], y, atol=1e-4)
+
+
+@pytest.mark.parametrize("neurons", (True, False))
+def test_train_recurrent(neurons):
+    batch_size = 100
+    minibatch_size = 10
+    step_blocks = 10
+    n_hidden = 20
+
+    with nengo.Network(seed=0) as net:
+        inp = nengo.Node([0])
+        ens = nengo.Ensemble(
+            n_hidden, 1, neuron_type=nengo.Sigmoid(tau_ref=1),
+            gain=nengo.dists.Choice([1]), bias=nengo.dists.Uniform(-1, 1))
+        out = nengo.Node(size_in=1)
+
+        if neurons:
+            rng = np.random.RandomState(0)
+            nengo.Connection(
+                inp, ens.neurons, synapse=None,
+                transform=rng.uniform(-1, 1, size=(n_hidden, 1)))
+            nengo.Connection(ens, ens, synapse=0,
+                             solver=nengo.solvers.LstsqL2(weights=True))
+            nengo.Connection(
+                ens.neurons, out, synapse=None,
+                transform=rng.uniform(-1, 1, size=(1, n_hidden)))
+        else:
+            nengo.Connection(inp, ens, synapse=None)
+            nengo.Connection(ens, ens, synapse=0)
+            nengo.Connection(ens, out, synapse=None)
+
+        p = nengo.Probe(out)
+
+    with TestSimulator(net, minibatch_size=minibatch_size,
+                       step_blocks=step_blocks, dt=1) as sim:
+        x = np.outer(np.linspace(0.1, 0.9, batch_size),
+                     np.ones(step_blocks))[:, :, None]
+        y = np.outer(np.linspace(0.1, 0.9, batch_size),
+                     np.linspace(0, 1, step_blocks))[:, :, None]
+
+        sim.train({inp: x}, {p: y}, tf.train.GradientDescentOptimizer(1e-2),
+                  n_epochs=1000)
+
+        sim.check_gradients(rtol=1e-2)
+
+        sim.run_steps(step_blocks, input_feeds={inp: x[:minibatch_size]})
+
+    assert np.sqrt(np.sum((sim.data[p] - y[:minibatch_size]) ** 2)) < 0.4
+
+
+def test_train_objective():
+    minibatch_size = 1
+    step_blocks = 10
+    n_hidden = 20
+
+    with nengo.Network() as net:
+        inp = nengo.Node([1])
+        ens = nengo.Ensemble(n_hidden, 1, neuron_type=nengo.RectifiedLinear())
+        nengo.Connection(inp, ens, synapse=0.01)
+        p = nengo.Probe(ens)
+
+    with TestSimulator(net, minibatch_size=minibatch_size,
+                       step_blocks=step_blocks) as sim:
+        x = np.ones((minibatch_size, step_blocks, 1))
+        y = np.zeros((minibatch_size, step_blocks, 1))
+
+        def obj(output, target):
+            return tf.reduce_mean((output[:, -1] - 0.5 - target[:, -1]) ** 2)
+
+        sim.train({inp: x}, {p: y}, tf.train.GradientDescentOptimizer(1e-2),
+                  n_epochs=1000, objective=obj)
+
+        sim.check_gradients()
+
+        sim.run_steps(step_blocks, input_feeds={inp: x})
+
+        assert np.allclose(sim.data[p][:, -1], y[:, -1] + 0.5,
+                           atol=1e-3)
+
+
+def test_loss():
+    with nengo.Network() as net:
+        inp = nengo.Node([0])
+        out = nengo.Node(size_in=1)
+        nengo.Connection(inp, out, synapse=None)
+        p = nengo.Probe(out)
+
+    with TestSimulator(net, step_blocks=1) as sim:
+        assert sim.loss({inp: np.ones((4, 1, 1))},
+                        {p: np.zeros((4, 1, 1))}, "mse") == 1
+
+        assert sim.loss({inp: np.ones((4, 1, 1))},
+                        {p: np.zeros((4, 1, 1))},
+                        objective=lambda x,y: tf.constant(2)) == 2
+
+
+def test_generate_inputs():
+    with nengo.Network() as net:
+        proc = nengo.processes.WhiteNoise(seed=0)
+        inp = [nengo.Node([1]), nengo.Node(np.sin), nengo.Node(proc),
+               nengo.Node([2])]
+
+        p = [nengo.Probe(x) for x in inp]
+
+    with TestSimulator(net, minibatch_size=2, step_blocks=3) as sim:
+        feed = sim._generate_inputs({inp[0]: np.zeros((2, 3, 1))}, 3)
+
+        ph = [sim.tensor_graph.invariant_ph[x] for x in inp]
+
+        assert len(sim.tensor_graph.invariant_inputs) == len(inp)
+        assert len(feed) == len(inp)
+
+        sim.reset()
+        sim.run_steps(3, input_feeds={inp[0]: np.zeros((2, 3, 1))})
+
+        vals = [np.zeros((3, 1, 2)),
+                np.tile(np.sin(sim.trange())[:, None, None], (1, 1, 2)),
+                np.tile(proc.run_steps(3)[:, :, None], (1, 1, 2)),
+                np.ones((3, 1, 2)) * 2]
+        for i, x in enumerate(vals):
+            assert np.allclose(feed[ph[i]], x)
+            assert np.allclose(sim.data[p[i]], x.transpose(2, 0, 1))
+
+
+def test_save_load_params():
+    with nengo.Network(seed=0) as net:
+        out = nengo.Node(size_in=1)
+        ens = nengo.Ensemble(10, 1)
+        conn0 = nengo.Connection(ens, out)
+
+    with nengo.Network(seed=1) as net2:
+        out = nengo.Node(size_in=1)
+        ens = nengo.Ensemble(10, 1)
+        conn1 = nengo.Connection(ens, out)
+
+    if not os.path.exists("./tmp"):
+        os.makedirs("tmp")
+
+    with TestSimulator(net) as sim:
+        weights0 = sim.sess.run(
+            sim.tensor_graph.signals.bases[sim.tensor_graph.sig_map[
+                sim.model.sig[conn0]["weights"]].key])
+        sim.save_params("./tmp/tmp")
+
+    with TestSimulator(net2) as sim:
+        weights1 = sim.sess.run(
+            sim.tensor_graph.signals.bases[sim.tensor_graph.sig_map[
+                sim.model.sig[conn1]["weights"]].key])
+        assert not np.allclose(weights0, weights1)
+
+        sim.load_params("./tmp/tmp")
+
+        weights2 = sim.sess.run(
+            sim.tensor_graph.signals.bases[sim.tensor_graph.sig_map[
+                sim.model.sig[conn1]["weights"]].key])
+        assert np.allclose(weights0, weights2)
+
+    shutil.rmtree("./tmp")
