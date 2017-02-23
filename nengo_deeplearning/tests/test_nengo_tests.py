@@ -6,10 +6,6 @@ from nengo.builder.operator import ElementwiseInc, DotInc
 from nengo.utils.testing import warns
 import numpy as np
 
-try:
-    from nengo.builder.operator import PreserveValue
-except:
-    PreserveValue = None
 
 import nengo_deeplearning as nengo_dl
 from nengo_deeplearning.tests import TestSimulator
@@ -65,8 +61,6 @@ def test_signal_init_values():
     m = nengo.builder.Model(dt=0)
     m.operators += [ElementwiseInc(zero, zero, five),
                     DotInc(zeroarray, one, array)]
-    if PreserveValue is not None:
-        m.operators += [PreserveValue(five), PreserveValue(array)]
 
     probes = [DummyProbe(zero), DummyProbe(one), DummyProbe(five),
               DummyProbe(array)]

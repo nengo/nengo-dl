@@ -1,6 +1,6 @@
 from nengo.neurons import LIF, LIFRate, Izhikevich, AdaptiveLIF
 from nengo.synapses import Lowpass, Triangle, Alpha
-from nengo.builder.operator import (SlicedCopy, SimPyFunc, DotInc, Copy, Reset)
+from nengo.builder.operator import (SimPyFunc, DotInc, Copy, Reset)
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 import numpy as np
@@ -94,11 +94,11 @@ def test_mergeable():
     assert mergeable(DummyOp(sets=[DummySignal(shape=(3, 2))]),
                      [DummyOp(sets=[DummySignal(shape=(4, 2))])])
 
-    # slicedcopy (inc must match)
-    assert mergeable(SlicedCopy(DummySignal(), DummySignal(), inc=True),
-                     [SlicedCopy(DummySignal(), DummySignal(), inc=True)])
-    assert not mergeable(SlicedCopy(DummySignal(), DummySignal(), inc=True),
-                         [SlicedCopy(DummySignal(), DummySignal(), inc=False)])
+    # Copy (inc must match)
+    assert mergeable(Copy(DummySignal(), DummySignal(), inc=True),
+                     [Copy(DummySignal(), DummySignal(), inc=True)])
+    assert not mergeable(Copy(DummySignal(), DummySignal(), inc=True),
+                         [Copy(DummySignal(), DummySignal(), inc=False)])
 
     # elementwise/dotinc (first dimension must match)
     assert mergeable(DotInc(DummySignal(), DummySignal(), DummySignal()),
@@ -179,11 +179,11 @@ def test_planner_mergeable(planner):
     input1 = DummySignal()
     output0 = DummySignal()
     output1 = DummySignal()
-    operators = [SlicedCopy(input0, output0, inc=True),
-                 SlicedCopy(input1, output1, inc=True)]
+    operators = [Copy(input0, output0, inc=True),
+                 Copy(input1, output1, inc=True)]
     plan = planner(operators)
     assert len(plan) == 1
-    assert type(plan[0][0]) == SlicedCopy
+    assert type(plan[0][0]) == Copy
     assert len(plan[0]) == 2
 
 
@@ -191,13 +191,13 @@ def test_planner_mergeable(planner):
 def test_planner_unmergeable(planner):
     # check that non-mergeable operators aren't merged
     input0 = DummySignal()
-    operators = [SlicedCopy(input0, DummySignal(dtype=np.float32)),
-                 SlicedCopy(input0, DummySignal(dtype=np.int32))]
+    operators = [Copy(input0, DummySignal(dtype=np.float32)),
+                 Copy(input0, DummySignal(dtype=np.int32))]
     plan = planner(operators)
     assert len(plan) == 2
-    assert type(plan[0][0]) == SlicedCopy
+    assert type(plan[0][0]) == Copy
     assert len(plan[0]) == 1
-    assert type(plan[1][0]) == SlicedCopy
+    assert type(plan[1][0]) == Copy
     assert len(plan[1]) == 1
 
 
@@ -205,7 +205,7 @@ def test_planner_unmergeable(planner):
 def test_planner_size(planner):
     # check that operators are selected according to number of available ops
     input0 = DummySignal()
-    operators = [SlicedCopy(input0, DummySignal(), inc=True)
+    operators = [Copy(input0, DummySignal(), inc=True)
                  for _ in range(2)]
     operators += [Copy(input0, DummySignal())]
     operators += [DotInc(input0, DummySignal(), DummySignal())
@@ -224,9 +224,9 @@ def test_planner_chain(planner):
     input1 = DummySignal()
     output0 = DummySignal()
     output1 = DummySignal()
-    operators = [SlicedCopy(input0, input1, inc=True)]
-    operators += [SlicedCopy(input1, output0, inc=True) for _ in range(2)]
-    operators += [SlicedCopy(output0, output1, inc=True) for _ in range(3)]
+    operators = [Copy(input0, input1, inc=True)]
+    operators += [Copy(input1, output0, inc=True) for _ in range(2)]
+    operators += [Copy(output0, output1, inc=True) for _ in range(3)]
     plan = planner(operators)
     assert len(plan) == 3
     assert len(plan[0]) == 1

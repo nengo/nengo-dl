@@ -77,7 +77,7 @@ class TensorSignal(object):
             a new TensorSignal representing the subset of this TensorSignal
         """
 
-        if indices is Ellipsis:
+        if indices is Ellipsis or indices is None:
             return self
 
         new_indices = self.indices[indices]

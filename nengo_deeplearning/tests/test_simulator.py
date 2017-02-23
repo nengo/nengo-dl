@@ -265,7 +265,7 @@ def test_loss():
 
         assert sim.loss({inp: np.ones((4, 1, 1))},
                         {p: np.zeros((4, 1, 1))},
-                        objective=lambda x,y: tf.constant(2)) == 2
+                        objective=lambda x, y: tf.constant(2)) == 2
 
 
 def test_generate_inputs():

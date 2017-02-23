@@ -17,11 +17,6 @@ from nengo_deeplearning.tensor_graph import TensorGraph
 
 logger = logging.getLogger(__name__)
 
-try:
-    from nengo.builder.operator import PreserveValue
-except:
-    PreserveValue = None
-
 
 class Simulator(object):
     """Simulate network using the ``nengo_deeplearning`` backend.

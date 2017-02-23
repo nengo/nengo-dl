@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from nengo.builder.operator import (
-    Reset, Copy, ElementwiseInc, DotInc, SlicedCopy, SimPyFunc)
+    Reset, Copy, ElementwiseInc, DotInc, SimPyFunc)
 import numpy as np
 import tensorflow as tf
 
@@ -48,11 +48,10 @@ class ResetBuilder(OpBuilder):
             signals.scatter(data, val)
 
 
-@Builder.register(SlicedCopy)
 @Builder.register(Copy)
-class SlicedCopyBuilder(OpBuilder):
-    """Build a group of :class:`~nengo:nengo.builder.operator.Copy` and
-    :class:`~nengo:nengo.builder.operator.SlicedCopy` operators."""
+class CopyBuilder(OpBuilder):
+    """Build a group of :class:`~nengo:nengo.builder.operator.Copy`
+    operators."""
     def __init__(self, ops, signals):
         if DEBUG:
             print("sliced_copy")
@@ -65,12 +64,10 @@ class SlicedCopyBuilder(OpBuilder):
         srcs = []
         dsts = []
         for op in ops:
-            src_slice = getattr(op, "src_slice", Ellipsis)
-            dst_slice = getattr(op, "dst_slice", Ellipsis)
-            srcs += [signals.sig_map[op.src][src_slice]]
-            dsts += [signals.sig_map[op.dst][dst_slice]]
+            srcs += [signals.sig_map[op.src][op.src_slice]]
+            dsts += [signals.sig_map[op.dst][op.dst_slice]]
 
-        self.mode = "inc" if getattr(ops[0], "inc", False) else "update"
+        self.mode = "inc" if ops[0].inc else "update"
 
         self.src_data = signals.combine(srcs, load_indices=False)
         self.dst_data = signals.combine(dsts)

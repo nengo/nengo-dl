@@ -1,8 +1,8 @@
 from collections import OrderedDict
 import copy
 
-from nengo.builder.operator import (SimPyFunc, SlicedCopy, DotInc,
-                                    ElementwiseInc, Copy, Reset)
+from nengo.builder.operator import (SimPyFunc, DotInc, ElementwiseInc, Copy,
+                                    Reset)
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 from nengo.exceptions import BuildError
@@ -76,9 +76,9 @@ def mergeable(op, chosen_ops):
                 return False
 
     # operator-specific checks
-    if isinstance(op, (SlicedCopy, Copy)):
+    if isinstance(op, Copy):
         # can't merge incs and updates
-        if getattr(op, "inc", False) != getattr(c, "inc", False):
+        if op.inc != c.inc:
             return False
     elif isinstance(op, (DotInc, ElementwiseInc)):
         # for these operations we also enforce that the first dimensions
