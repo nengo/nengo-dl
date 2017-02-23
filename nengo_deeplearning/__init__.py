@@ -20,12 +20,6 @@ if not any(["gpu" in x.name for x in device_lib.list_local_devices()]):
 else:
     default_device = "/gpu:0"
 
-# need to explicitly import these to trigger the builder registration
-from nengo_deeplearning import (  # noqa: F401
-    operators, neurons, processes, learning_rules)
-
-from nengo_deeplearning.simulator import Simulator  # noqa: F401
-
 # check nengo version
 from nengo.version import version_info  # noqa: E402
 
@@ -41,6 +35,14 @@ elif version_info > latest_nengo_version:
                   "with your `nengo` version (%s). The latest fully "
                   "supported version is %s" % (
                       version_info, latest_nengo_version))
+
+# need to explicitly import these to trigger the builder registration
+from nengo_deeplearning import (  # noqa: F401
+    operators, neurons, processes, learning_rules)
+
+# import into top-level namespace
+from nengo_deeplearning.simulator import Simulator  # noqa: F401
+from nengo_deeplearning.tensor_node import TensorNode  # noqa: F401
 
 # fix tensorflow bugs
 from nengo_deeplearning import tensorflow_patch  # noqa: E402

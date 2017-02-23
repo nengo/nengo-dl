@@ -9,6 +9,7 @@ import pytest
 from nengo_deeplearning import builder
 from nengo_deeplearning.graph_optimizer import (
     mergeable, greedy_planner, tree_planner, order_signals, create_signals)
+from nengo_deeplearning.tensor_node import SimTensorNode
 
 
 class DummySignal(object):
@@ -170,6 +171,10 @@ def test_mergeable():
     # check non-custom matching
     assert mergeable(SimProcess(Triangle(0), None, None, DummySignal()),
                      [SimProcess(Alpha(0), None, None, DummySignal())])
+
+    # simtensornode
+    a = SimTensorNode(None, DummySignal(), None, DummySignal())
+    assert not mergeable(a, [a])
 
 
 @pytest.mark.parametrize("planner", [greedy_planner, tree_planner])

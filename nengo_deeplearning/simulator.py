@@ -77,8 +77,8 @@ class Simulator(object):
     ]
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
-                 tensorboard=False, dtype=tf.float32, step_blocks=None,
-                 device=None, unroll_simulation=False, minibatch_size=None):
+                 tensorboard=False, dtype=tf.float32, step_blocks=50,
+                 device=None, unroll_simulation=True, minibatch_size=None):
         self.closed = None
         self.sess = None
         self.tensorboard = tensorboard
@@ -87,6 +87,9 @@ class Simulator(object):
 
         # TODO: allow the simulator to be called flexibly with/without
         # minibatching
+
+        # TODO: there's some possible bugs with device=None and
+        # unroll_simulation=False
 
         # build model (uses default nengo builder)
         if model is None:

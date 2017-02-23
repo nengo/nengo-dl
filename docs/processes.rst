@@ -1,5 +1,5 @@
 Processes
 =========
-Build Nengo Processes into the Tensorflow graph.
+Build Nengo Processes into the TensorFlow graph.
 
 .. automodule:: nengo_deeplearning.processes

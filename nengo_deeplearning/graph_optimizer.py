@@ -11,7 +11,7 @@ from nengo.utils.graphs import toposort
 from nengo.utils.simulator import operator_depencency_graph
 import numpy as np
 
-from nengo_deeplearning import signals, processes, builder, DEBUG
+from nengo_deeplearning import signals, processes, builder, tensor_node, DEBUG
 
 
 def mergeable(op, chosen_ops):
@@ -116,6 +116,12 @@ def mergeable(op, chosen_ops):
         # processes must also have the same mode
         if op.mode != c.mode:
             return False
+    elif isinstance(op, tensor_node.SimTensorNode):
+        # not possible to merge TensorNodes, since each one can be performing
+        # an entirely different function. and unlike SimPyFunc, there is no
+        # point trying to execute all those functions at once, because they're
+        # already integrated into the Tensorflow graph.
+        return False
 
     return True
 

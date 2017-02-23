@@ -6,7 +6,7 @@ from nengo.builder.processes import SimProcess
 import tensorflow as tf
 
 from nengo_deeplearning import (builder, graph_optimizer, signals, utils,
-                                DEBUG)
+                                tensor_node, DEBUG)
 
 
 class TensorGraph(object):
@@ -53,7 +53,8 @@ class TensorGraph(object):
             self.invariant_inputs = []
         else:
             self.invariant_inputs = [n for n in self.model.toplevel.all_nodes
-                                     if n.size_in == 0]
+                                     if n.size_in == 0 and
+                                     not isinstance(n, tensor_node.TensorNode)]
 
         # filter unused operators
         # remove TimeUpdate because it is executed as part of the simulation
@@ -145,7 +146,6 @@ class TensorGraph(object):
             if DEBUG:
                 print("created base arrays")
                 print([str(x) for x in self.base_vars])
-            self.init_op = tf.global_variables_initializer()
 
             # set up invariant inputs
             self.build_inputs(rng)
@@ -158,6 +158,9 @@ class TensorGraph(object):
 
             # build stage
             self.build_loop()
+
+            # op for initializing variables (will be called by simulator)
+            self.init_op = tf.global_variables_initializer()
 
     def build_step(self):
         """Build the operators that execute a single simulation timestep
