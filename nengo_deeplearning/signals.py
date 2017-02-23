@@ -160,7 +160,7 @@ class TensorSignal(object):
         indices form a contiguous slice then also loads the start/stop/step of
         that slice."""
 
-        self.tf_indices = tf.constant(self.indices)
+        self.tf_indices = tf.constant(self.indices, dtype=tf.int32)
 
         start = self.indices[0]
         stop = self.indices[-1] + 1

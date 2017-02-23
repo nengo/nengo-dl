@@ -77,8 +77,8 @@ class Simulator(object):
     ]
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
-                 tensorboard=False, dtype=tf.float32, step_blocks=50,
-                 device=None, unroll_simulation=True, minibatch_size=None):
+                 tensorboard=False, dtype=tf.float32, step_blocks=None,
+                 device=None, unroll_simulation=False, minibatch_size=None):
         self.closed = None
         self.sess = None
         self.tensorboard = tensorboard
@@ -383,6 +383,11 @@ class Simulator(object):
         if self.closed:
             raise SimulatorClosed("Simulator cannot be trained because it is "
                                   "closed.")
+
+        if not self.tensor_graph.unroll_simulation:
+            raise SimulationError(
+                "Simulation must be unrolled for training "
+                "(`Simulator(..., unroll_simulation=True)`)")
 
         for n, x in inputs.items():
             if x.shape[1] != self.step_blocks:

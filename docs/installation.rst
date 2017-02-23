@@ -3,9 +3,10 @@ Installation
 
 Requirements
 ------------
+- ``python >= 3.4``
 - ``numpy >= 1.11.0``
 - ``nengo >= 2.3.1``
-- ``tensorflow`` (custom fork, see below)
+- ``tensorflow >= 1.0.0``
 
 See the
 `Nengo documentation <https://pythonhosted.org/nengo/getting_started.html>`_
@@ -13,33 +14,18 @@ for instructions on installing ``numpy`` and ``nengo``.
 
 Installing TensorFlow
 ---------------------
-In theory, TensorFlow can be installed through PyPI, via
-``pip install tensorflow`` or ``pip install tensorflow-gpu`` (depending on
-whether or not you want GPU support).
+Use ``pip install tensorflow`` to install the minimal version of TensorFlow,
+or ``pip install tensorflow-gpu`` to include GPU support.
 
-However, the current released version of TensorFlow (1.0.0) contains a serious
-bug in its automatic differentiation, which means that if you try to train
-a model using a gradient-based optimization method (which includes all the
-standard deep learning optimization methods) the optimization will be
-incorrect.
-
-Fortunately, this bug is fixed in our `custom fork of TensorFlow
-<https://github.com/drasmuss/tensorflow>`_. Unfortunately, this means that
-TensorFlow needs to be installed from source, which is significantly more
-complicated.
+It is also possible to install TensorFlow from source.  This is significantly
+more complicated but allows you to customize the installation to your
+computer, which can improve simulation speeds.
 
 `Instructions for installing on Ubuntu or Mac OS
 <https://www.tensorflow.org/install/install_sources>`_.
 
 `Instructions for installing on Windows
 <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/cmake/README.md>`_.
-
-Note that wherever it says to use ``https://github.com/tensorflow/tensorflow``,
-you will instead use ``https://github.com/drasmuss/tensorflow``.
-
-Once this bug is fixed in a released version of TensorFlow this custom
-installation will no longer be necessary. Follow `this issue on GitHub
-<https://github.com/tensorflow/tensorflow/issues/7397>`_ for updates.
 
 Installing NengoDL
 ------------------

@@ -1,13 +1,11 @@
 import nengo
 import numpy as np
-import pytest
 import tensorflow as tf
 
 from nengo_deeplearning.tests import TestSimulator
 
 
-@pytest.mark.parametrize("device", ("/cpu:0", "/gpu:0"))
-def test_gradients(device):
+def test_gradients():
     step_blocks = 10
     minibatch_size = 20
 
@@ -41,7 +39,7 @@ def test_gradients(device):
         p = nengo.Probe(ens)
         p2 = nengo.Probe(ens2)
 
-    with TestSimulator(net, step_blocks=step_blocks, device=device,
+    with TestSimulator(net, step_blocks=step_blocks, unroll_simulation=True,
                        minibatch_size=minibatch_size) as sim:
         sim.tensor_graph.build_optimizer(
             tf.train.GradientDescentOptimizer(0.1),

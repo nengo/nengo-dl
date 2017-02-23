@@ -27,7 +27,7 @@ def test_args():
             self.last_x = None
 
         def __call__(self, t, x):
-            assert isinstance(t, np.float32)
+            assert t.dtype == x.dtype
             assert t.shape == ()
             assert isinstance(x, np.ndarray)
             assert self.last_x is not x  # x should be a new copy on each call

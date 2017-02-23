@@ -11,24 +11,24 @@ dist: trusty
 env:
   global:
     - STATIC="false"
+    - PYTHON_VERSION="3.5"
+    - NENGO_DL_TEST_PRECISION="32"
+    - NENGO_DL_TEST_UNROLL="False"
+    - NENGO_DL_TEST_STEP_BLOCKS="None"
+    - NUMPY_VERSION="numpy"
+    - TF_VERSION="tensorflow"
+    - NENGO_VERSION="nengo"
 
   matrix:
-    - CONDA_DEPS="numpy==1.11"
-      PYTHON_VERSION="3.5"
-      PRECISION="64"
-    - CONDA_DEPS="numpy"
-      PYTHON_VERSION="3.5"
-      PRECISION="64"
-    - CONDA_DEPS="numpy"
-      PYTHON_VERSION="3.4"
-      PRECISION="64"
-    - CONDA_DEPS="numpy"
-      PYTHON_VERSION="3.5"
-      PRECISION="32"
-    - CONDA_DEPS="numpy"
-      PYTHON_VERSION="3.5"
-      PRECISION="64"
-      STATIC="true"
+    - STATIC="true"
+    - # default build
+    - NENGO_DL_TEST_PRECISION="64"
+    - NENGO_DL_TEST_UNROLL="True"
+      NENGO_DL_TEST_STEP_BLOCKS="10"
+    - PYTHON_VERSION="3.4"
+    - NUMPY_VERSION="numpy==1.11.0"
+    - TF_VERSION="tensorflow==1.0.0"
+    - NENGO_VERSION="nengo==2.3.1"
 
 # Setup Miniconda
 before_install:
@@ -38,11 +38,13 @@ before_install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - conda create -q -n test python=$PYTHON_VERSION pip $CONDA_DEPS
+  - conda create -q -n test python=$PYTHON_VERSION pip $NUMPY_VERSION
   - source activate test
 
-# install requirements that weren't installed in CONDA_DEPS
+# install requirements that weren't installed via conda
 install:
+  - pip install $TF_VERSION
+  - pip install $NENGO_VERSION
   - pip install -r requirements.txt
   - pip install -r requirements-test.txt
 
@@ -50,7 +52,8 @@ install:
 script:
   - if [[ "$STATIC" == "false" ]]; then
       python setup.py develop;
-      py.test --pyargs nengo --simulator nengo_deeplearning.tests.Simulator$PRECISION --ref-simulator nengo_deeplearning.tests.Simulator$PRECISION -p nengo.tests.options;
+      py.test --pyargs nengo --simulator nengo_deeplearning.tests.TestSimulator --ref-simulator nengo_deeplearning.tests.TestSimulator -p nengo.tests.options;
+      py.test;
     else
-      flake8;
+      flake8 --ignore E721;
     fi

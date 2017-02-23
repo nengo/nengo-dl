@@ -160,7 +160,7 @@ def test_train_ff(neurons):
         p = nengo.Probe(out.neurons)
 
     with TestSimulator(net, minibatch_size=minibatch_size,
-                       step_blocks=step_blocks) as sim:
+                       step_blocks=step_blocks, unroll_simulation=True) as sim:
         x = np.asarray([[[0, 0]], [[0, 1]], [[1, 0]], [[1, 1]]])
         y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
 
@@ -206,7 +206,7 @@ def test_train_recurrent(neurons):
         p = nengo.Probe(out)
 
     with TestSimulator(net, minibatch_size=minibatch_size,
-                       step_blocks=step_blocks, dt=1) as sim:
+                       step_blocks=step_blocks, unroll_simulation=True) as sim:
         x = np.outer(np.linspace(0.1, 0.9, batch_size),
                      np.ones(step_blocks))[:, :, None]
         y = np.outer(np.linspace(0.1, 0.9, batch_size),
@@ -234,7 +234,7 @@ def test_train_objective():
         p = nengo.Probe(ens)
 
     with TestSimulator(net, minibatch_size=minibatch_size,
-                       step_blocks=step_blocks) as sim:
+                       step_blocks=step_blocks, unroll_simulation=True) as sim:
         x = np.ones((minibatch_size, step_blocks, 1))
         y = np.zeros((minibatch_size, step_blocks, 1))
 
@@ -300,33 +300,31 @@ def test_save_load_params():
     with nengo.Network(seed=0) as net:
         out = nengo.Node(size_in=1)
         ens = nengo.Ensemble(10, 1)
-        conn0 = nengo.Connection(ens, out)
+        nengo.Connection(ens, out)
 
     with nengo.Network(seed=1) as net2:
         out = nengo.Node(size_in=1)
         ens = nengo.Ensemble(10, 1)
-        conn1 = nengo.Connection(ens, out)
+        nengo.Connection(ens, out)
 
     if not os.path.exists("./tmp"):
         os.makedirs("tmp")
 
     with TestSimulator(net) as sim:
-        weights0 = sim.sess.run(
-            sim.tensor_graph.signals.bases[sim.tensor_graph.sig_map[
-                sim.model.sig[conn0]["weights"]].key])
+        weights_var = [x for x in sim.tensor_graph.base_vars
+                       if x.get_shape() == (1, 10)][0]
+        weights0 = sim.sess.run(weights_var)
         sim.save_params("./tmp/tmp")
 
     with TestSimulator(net2) as sim:
-        weights1 = sim.sess.run(
-            sim.tensor_graph.signals.bases[sim.tensor_graph.sig_map[
-                sim.model.sig[conn1]["weights"]].key])
+        weights_var = [x for x in sim.tensor_graph.base_vars
+                       if x.get_shape() == (1, 10)][0]
+        weights1 = sim.sess.run(weights_var)
         assert not np.allclose(weights0, weights1)
 
         sim.load_params("./tmp/tmp")
 
-        weights2 = sim.sess.run(
-            sim.tensor_graph.signals.bases[sim.tensor_graph.sig_map[
-                sim.model.sig[conn1]["weights"]].key])
+        weights2 = sim.sess.run(weights_var)
         assert np.allclose(weights0, weights2)
 
     shutil.rmtree("./tmp")

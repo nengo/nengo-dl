@@ -29,8 +29,8 @@ from nengo_deeplearning.simulator import Simulator  # noqa: F401
 # check nengo version
 from nengo.version import version_info  # noqa: E402
 
-minimum_nengo_version = (2, 3, 0)
-latest_nengo_version = (2, 3, 1)
+minimum_nengo_version = (2, 3, 1)
+latest_nengo_version = (2, 3, 2)
 if version_info < minimum_nengo_version:
     raise ValueError(
         "`nengo_deeplearning` does not support `nengo` version %s. Upgrade "
@@ -41,3 +41,7 @@ elif version_info > latest_nengo_version:
                   "with your `nengo` version (%s). The latest fully "
                   "supported version is %s" % (
                       version_info, latest_nengo_version))
+
+# fix tensorflow bugs
+from nengo_deeplearning import tensorflow_patch  # noqa: E402
+tensorflow_patch.patch_dynamic_stitch_grad()
