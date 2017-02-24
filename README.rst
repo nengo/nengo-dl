@@ -1,23 +1,46 @@
-**********************
-Deep learning in Nengo
-**********************
+NengoDL: Deep learning integration for Nengo
+============================================
 
-A backend that allows users to incorporate deep learning networks
-in Nengo, as well as use deep learning training procedures to optimize
-Nengo model parameters.
+NengoDL is a simulator for Nengo models.  That means it takes a Nengo network
+as input, and allows the user to simulate that network
+using some underlying computational framework (in this case, TensorFlow).
 
-See https://github.com/nengo/nengo_deeplearning/blob/master/docs/demo.ipynb for a demonstration of usage.
+In practice, what that means is that your code for constructing a Nengo model
+is exactly the same as it would be for the standard Nengo simulator.  All that
+changes is that we use a different Simulator class to execute the
+model.
+
+For example:
+
+.. code-block:: python
+
+    import nengo
+    import nengo_deeplearning as nengo_dl
+    import numpy as np
+
+    with nengo.Network() as net:
+        inp = nengo.Node(output=np.sin)
+        ens = nengo.Ensemble(50, 1, neuron_type=nengo.LIF())
+        nengo.Connection(inp, ens, synapse=0.1)
+        p = nengo.Probe(ens)
+
+    with nengo_dl.Simulator(net) as sim: # this is the only line that changes
+        sim.run(1.0)
+
+    print(sim.data[p])
+
+However, NengoDL is not simply a duplicate of the Nengo simulator.  It also
+adds a number of unique features, such as:
+
+- optimizing the parameters of a model through deep learning
+  training methods
+- faster simulation speed, on both CPU and GPU
+- inserting networks defined using TensorFlow (such as
+  convolutional neural networks) directly into a Nengo model
+
+More details can be found in the `NengoDL documentation <TODO: upload>`_.
 
 Installation
-============
+------------
 
-Clone this repository and then run ``python setup.py develop``.
-
-Requirements
-============
-
-Theano
-
-Lasagne
-
-CUDA (if you want to take advantage of the GPU acceleration)
+Installation instructions can be found `here <TODO: upload>`_
