@@ -227,7 +227,7 @@ def test_train_objective():
     step_blocks = 10
     n_hidden = 20
 
-    with nengo.Network() as net:
+    with nengo.Network(seed=0) as net:
         inp = nengo.Node([1])
         ens = nengo.Ensemble(n_hidden, 1, neuron_type=nengo.RectifiedLinear())
         nengo.Connection(inp, ens, synapse=0.01)

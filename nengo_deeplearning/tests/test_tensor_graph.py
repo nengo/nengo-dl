@@ -9,7 +9,7 @@ def test_gradients():
     step_blocks = 10
     minibatch_size = 20
 
-    with nengo.Network() as net:
+    with nengo.Network(seed=1) as net:
         inp = nengo.Node([0])
         inp2 = nengo.Node([0, 0])
 

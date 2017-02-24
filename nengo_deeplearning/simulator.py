@@ -144,7 +144,7 @@ class Simulator(object):
         if seed is not None:
             self.seed = seed
 
-        rng = np.random.RandomState(self.seed)
+        self.rng = np.random.RandomState(self.seed)
 
         # clear probe data
         for p in self.model.probes:
@@ -153,7 +153,7 @@ class Simulator(object):
         # (re)build graph
         print("Constructing graph", end="", flush=True)
         start = time.time()
-        self.tensor_graph.build(rng)
+        self.tensor_graph.build(self.rng)
         print("\rConstruction completed in %s " %
               datetime.timedelta(seconds=int(time.time() - start)))
 
@@ -432,8 +432,8 @@ class Simulator(object):
         progress = utils.ProgressBar(n_epochs, "Training")
 
         for n in range(n_epochs):
-            for inp, tar in utils.minibatch_generator(inputs, targets,
-                                                      self.minibatch_size):
+            for inp, tar in utils.minibatch_generator(
+                    inputs, targets, self.minibatch_size, rng=self.rng):
                 # TODO: set up queue to feed in data more efficiently
                 self.sess.run(
                     [self.tensor_graph.opt_op],
@@ -497,7 +497,7 @@ class Simulator(object):
 
         loss_val = 0
         for i, (inp, tar) in enumerate(utils.minibatch_generator(
-                inputs, targets, self.minibatch_size)):
+                inputs, targets, self.minibatch_size, rng=self.rng)):
             loss_val += self.sess.run(
                 loss, feed_dict=self._fill_feed(self.step_blocks, inp, tar))
         loss_val /= i + 1

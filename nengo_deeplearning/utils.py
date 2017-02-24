@@ -254,7 +254,8 @@ class ProgressBar(object):
 
 
 # generator to sample minibatch_sized subsets from inputs and targets
-def minibatch_generator(inputs, targets, minibatch_size, shuffle=True):
+def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
+                        rng=None):
     """Generator to yield ``minibatch_sized`` subsets from ``inputs`` and
     ``targets``.
 
@@ -272,6 +273,8 @@ def minibatch_generator(inputs, targets, minibatch_size, shuffle=True):
     shuffle : bool, optional
         if True, the division of items into minibatches will be randomized each
         time the generator is created
+    rng : :class:`~numpy:numpy.random.RandomState`, optional
+        random number generator
 
     Yields
     ------
@@ -286,9 +289,11 @@ def minibatch_generator(inputs, targets, minibatch_size, shuffle=True):
     """
 
     n_inputs = next(iter(inputs.values())).shape[0]
+    if rng is None:
+        rng = np.random
 
     if shuffle:
-        perm = np.random.permutation(n_inputs)
+        perm = rng.permutation(n_inputs)
     else:
         perm = np.arange(n_inputs)
 
