@@ -22,7 +22,7 @@ def test_function_names():
             return x
 
     assert utils.function_name(my_func) == "my_func"
-    assert utils.function_name(MyFunc) == "MyFunc"
+    assert utils.function_name(MyFunc()) == "MyFunc"
 
 
 def test_align_func():
