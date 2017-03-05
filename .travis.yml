@@ -25,6 +25,7 @@ env:
     - NENGO_DL_TEST_PRECISION="64"
     - NENGO_DL_TEST_UNROLL="True"
       NENGO_DL_TEST_STEP_BLOCKS="10"
+    - PYTHON_VERSION="2.7"
     - PYTHON_VERSION="3.4"
     - NUMPY_VERSION="numpy==1.11.0"
     - TF_VERSION="tensorflow==1.0.0"

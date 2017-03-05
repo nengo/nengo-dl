@@ -123,10 +123,11 @@ class GenericNeuronBuilder(object):
         # has completed before the next starts, since we don't know that the
         # functions are thread safe
         with tf.control_dependencies(self.prev_result):
-            neuron_out, *state_out = tf.py_func(
+            ret = tf.py_func(
                 self.neuron_step_math, [signals.dt, J] + states,
                 [self.output_data.dtype] + states_dtype,
                 name=self.neuron_step_math.__name__)
+            neuron_out, state_out = ret[0], ret[1:]
         self.prev_result = [neuron_out]
 
         neuron_out.set_shape(

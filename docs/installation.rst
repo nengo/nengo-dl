@@ -3,7 +3,7 @@ Installation
 
 Requirements
 ------------
-- ``python >= 3.4``
+- ``python 2.7`` or ``python >= 3.4``
 - ``numpy >= 1.11.0``
 - ``nengo >= 2.3.1``
 - ``tensorflow >= 1.0.0``

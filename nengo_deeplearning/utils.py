@@ -1,11 +1,27 @@
+from __future__ import print_function
+
 import datetime
 import re
+import sys
 import time
 
 from nengo.exceptions import SimulationError
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework.ops import get_gradient_function
+
+
+if sys.version_info[:2] < (3, 3):
+
+    def print_and_flush(*args, **kwargs):
+        print(*args, **kwargs)
+        file = kwargs.get('file', sys.stdout)
+        file.flush()
+
+else:
+
+    def print_and_flush(*args, **kwargs):
+        print(*args, flush=True, **kwargs)
 
 
 def sanitize_name(name):
@@ -176,7 +192,7 @@ def find_non_differentiable(inputs, outputs):
                 print(e)
                 raise SimulationError(
                     "Graph contains non-differentiable "
-                    "elements: %s" % o.op) from None
+                    "elements: %s" % o.op)
 
 
 class ProgressBar(object):
@@ -204,7 +220,7 @@ class ProgressBar(object):
         self.start_time = time.time()
         self.progress = -1
 
-        print("[%s] ETA: unknown" % (" " * self.width), end="", flush=True)
+        print_and_flush("[%s] ETA: unknown" % (" " * self.width), end="")
 
     def stop(self):
         """Stop the progress tracker.
@@ -247,7 +263,7 @@ class ProgressBar(object):
         if msg is not None or self.label is not None:
             line += " (%s)" % self.label if msg is None else msg
 
-        print(line, end="", flush=True)
+        print_and_flush(line, end="")
 
         if self.curr_step == self.max_steps:
             self.stop()

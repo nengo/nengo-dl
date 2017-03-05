@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from collections import Mapping
 import datetime
 import logging
@@ -14,6 +16,7 @@ from tensorflow.python.client.timeline import Timeline
 
 from nengo_deeplearning import signals, utils, DATA_DIR
 from nengo_deeplearning.tensor_graph import TensorGraph
+from nengo_deeplearning.utils import print_and_flush
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +104,7 @@ class Simulator(object):
             self.model = model
 
         if network is not None:
-            print("Building network", end="", flush=True)
+            print_and_flush("Building network", end="")
             start = time.time()
             self.model.build(network, progress_bar=False)
             print("\rBuilding completed in %s " %
@@ -151,7 +154,7 @@ class Simulator(object):
             self.model.params[p] = []
 
         # (re)build graph
-        print("Constructing graph", end="", flush=True)
+        print_and_flush("Constructing graph", end="")
         start = time.time()
         self.tensor_graph.build(self.rng)
         print("\rConstruction completed in %s " %
@@ -241,7 +244,7 @@ class Simulator(object):
                 (n_steps, self.step_blocks,
                  self.step_blocks * (n_steps // self.step_blocks + 1)))
 
-        print("Simulation started", end="", flush=True)
+        print_and_flush("Simulation started", end="")
         start = time.time()
 
         if self.step_blocks is None:
@@ -315,7 +318,7 @@ class Simulator(object):
             if e.op.type == "PyFunc":
                 raise SimulationError(
                     "Function '%s' caused an error "
-                    "(see error log above)" % e.op.name) from None
+                    "(see error log above)" % e.op.name)
             else:
                 raise e
 
@@ -427,7 +430,7 @@ class Simulator(object):
         except tf.errors.InvalidArgumentError:
             raise SimulationError(
                 "Tensorflow does not yet support this optimizer on the "
-                "GPU; try `Simulator(..., device='/cpu:0')`") from None
+                "GPU; try `Simulator(..., device='/cpu:0')`")
 
         progress = utils.ProgressBar(n_epochs, "Training")
 
