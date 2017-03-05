@@ -14,8 +14,8 @@ os.environ["NENGO_DL_TEST_DEVICE"] = "/cpu:0"
 print("#" * 30, "NENGO TESTS", "#" * 30)
 pytest.main([
     os.path.dirname(nengo.__file__),
-    '--simulator', 'nengo_deeplearning.tests.TestSimulator',
-    '--ref-simulator', 'nengo_deeplearning.tests.TestSimulator',
+    '--simulator', 'nengo_deeplearning.tests.Simulator',
+    '--ref-simulator', 'nengo_deeplearning.tests.Simulator',
     '-p', 'nengo.tests.options',
 ])
 

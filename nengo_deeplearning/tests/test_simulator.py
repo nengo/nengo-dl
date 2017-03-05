@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_deeplearning.tests import TestSimulator
+from nengo_deeplearning.tests import Simulator
 
 
 def test_persistent_state():
@@ -18,7 +18,7 @@ def test_persistent_state():
         nengo.Connection(inp, ens)
         p = nengo.Probe(ens)
 
-    with TestSimulator(net, step_blocks=5) as sim:
+    with Simulator(net, step_blocks=5) as sim:
         sim.run_steps(100)
         data = sim.data[p]
         sim.reset()
@@ -42,11 +42,11 @@ def test_step_blocks():
         nengo.Connection(inp, ens)
         p = nengo.Probe(ens)
 
-    with TestSimulator(net, step_blocks=25) as sim1:
+    with Simulator(net, step_blocks=25) as sim1:
         sim1.run_steps(50)
-    with TestSimulator(net, step_blocks=10) as sim2:
+    with Simulator(net, step_blocks=10) as sim2:
         sim2.run_steps(50)
-    with TestSimulator(net, unroll_simulation=False, step_blocks=None) as sim3:
+    with Simulator(net, unroll_simulation=False, step_blocks=None) as sim3:
         sim3.run_steps(50)
 
     assert np.allclose(sim1.data[p], sim2.data[p])
@@ -63,12 +63,10 @@ def test_unroll_simulation():
             nengo.Connection(inp, ens)
             p = nengo.Probe(ens)
 
-        with TestSimulator(net, step_blocks=10,
-                           unroll_simulation=False) as sim1:
+        with Simulator(net, step_blocks=10, unroll_simulation=False) as sim1:
             sim1.run_steps(50)
 
-        with TestSimulator(net, step_blocks=10,
-                           unroll_simulation=True) as sim2:
+        with Simulator(net, step_blocks=10, unroll_simulation=True) as sim2:
             sim2.run_steps(50)
 
         assert np.allclose(sim1.data[p], sim2.data[p])
@@ -93,7 +91,7 @@ def test_minibatch():
 
         ps = [nengo.Probe(e) for e in ens]
 
-    with TestSimulator(net, minibatch_size=None) as sim:
+    with Simulator(net, minibatch_size=None) as sim:
         probe_data = [[] for _ in ps]
         for i in range(5):
             sim.run_steps(1000)
@@ -105,7 +103,7 @@ def test_minibatch():
 
         probe_data = [np.stack(x, axis=0) for x in probe_data]
 
-    with TestSimulator(net, minibatch_size=5) as sim:
+    with Simulator(net, minibatch_size=5) as sim:
         sim.run_steps(1000)
 
     assert np.allclose(sim.data[ps[0]], probe_data[0])
@@ -123,8 +121,8 @@ def test_input_feeds():
         nengo.Connection(inp, out, synapse=None)
         p = nengo.Probe(out)
 
-    with TestSimulator(net, minibatch_size=minibatch_size,
-                       step_blocks=step_blocks) as sim:
+    with Simulator(net, minibatch_size=minibatch_size,
+                   step_blocks=step_blocks) as sim:
         val = np.random.randn(minibatch_size, step_blocks, 3)
         sim.run_steps(step_blocks, input_feeds={inp: val})
         assert np.allclose(sim.data[p], val)
@@ -159,8 +157,8 @@ def test_train_ff(neurons):
         # TODO: why does training fail if we probe out instead of out.neurons?
         p = nengo.Probe(out.neurons)
 
-    with TestSimulator(net, minibatch_size=minibatch_size,
-                       step_blocks=step_blocks, unroll_simulation=True) as sim:
+    with Simulator(net, minibatch_size=minibatch_size, step_blocks=step_blocks,
+                   unroll_simulation=True) as sim:
         x = np.asarray([[[0, 0]], [[0, 1]], [[1, 0]], [[1, 1]]])
         y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
 
@@ -205,8 +203,8 @@ def test_train_recurrent(neurons):
 
         p = nengo.Probe(out)
 
-    with TestSimulator(net, minibatch_size=minibatch_size,
-                       step_blocks=step_blocks, unroll_simulation=True) as sim:
+    with Simulator(net, minibatch_size=minibatch_size, step_blocks=step_blocks,
+                   unroll_simulation=True) as sim:
         x = np.outer(np.linspace(0.1, 0.9, batch_size),
                      np.ones(step_blocks))[:, :, None]
         y = np.outer(np.linspace(0.1, 0.9, batch_size),
@@ -233,8 +231,8 @@ def test_train_objective():
         nengo.Connection(inp, ens, synapse=0.01)
         p = nengo.Probe(ens)
 
-    with TestSimulator(net, minibatch_size=minibatch_size,
-                       step_blocks=step_blocks, unroll_simulation=True) as sim:
+    with Simulator(net, minibatch_size=minibatch_size, step_blocks=step_blocks,
+                   unroll_simulation=True) as sim:
         x = np.ones((minibatch_size, step_blocks, 1))
         y = np.zeros((minibatch_size, step_blocks, 1))
 
@@ -259,7 +257,7 @@ def test_loss():
         nengo.Connection(inp, out, synapse=None)
         p = nengo.Probe(out)
 
-    with TestSimulator(net, step_blocks=1) as sim:
+    with Simulator(net, step_blocks=1) as sim:
         assert sim.loss({inp: np.ones((4, 1, 1))},
                         {p: np.zeros((4, 1, 1))}, "mse") == 1
 
@@ -276,7 +274,7 @@ def test_generate_inputs():
 
         p = [nengo.Probe(x) for x in inp]
 
-    with TestSimulator(net, minibatch_size=2, step_blocks=3) as sim:
+    with Simulator(net, minibatch_size=2, step_blocks=3) as sim:
         feed = sim._generate_inputs({inp[0]: np.zeros((2, 3, 1))}, 3)
 
         ph = [sim.tensor_graph.invariant_ph[x] for x in inp]
@@ -310,13 +308,13 @@ def test_save_load_params():
     if not os.path.exists("./tmp"):
         os.makedirs("tmp")
 
-    with TestSimulator(net) as sim:
+    with Simulator(net) as sim:
         weights_var = [x for x in sim.tensor_graph.base_vars
                        if x.get_shape() == (1, 10)][0]
         weights0 = sim.sess.run(weights_var)
         sim.save_params("./tmp/tmp")
 
-    with TestSimulator(net2) as sim:
+    with Simulator(net2) as sim:
         weights_var = [x for x in sim.tensor_graph.base_vars
                        if x.get_shape() == (1, 10)][0]
         weights1 = sim.sess.run(weights_var)

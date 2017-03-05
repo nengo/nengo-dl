@@ -2,7 +2,7 @@ import nengo
 import numpy as np
 import tensorflow as tf
 
-from nengo_deeplearning.tests import TestSimulator
+from nengo_deeplearning.tests import Simulator
 
 
 def test_gradients():
@@ -39,8 +39,8 @@ def test_gradients():
         p = nengo.Probe(ens)
         p2 = nengo.Probe(ens2)
 
-    with TestSimulator(net, step_blocks=step_blocks, unroll_simulation=True,
-                       minibatch_size=minibatch_size) as sim:
+    with Simulator(net, step_blocks=step_blocks, unroll_simulation=True,
+                   minibatch_size=minibatch_size) as sim:
         sim.tensor_graph.build_optimizer(
             tf.train.GradientDescentOptimizer(0.1),
             {x: np.zeros((minibatch_size, step_blocks, x.size_in))

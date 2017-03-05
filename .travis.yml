@@ -53,7 +53,7 @@ install:
 script:
   - if [[ "$STATIC" == "false" ]]; then
       python setup.py develop;
-      py.test --pyargs nengo --simulator nengo_deeplearning.tests.TestSimulator --ref-simulator nengo_deeplearning.tests.TestSimulator -p nengo.tests.options;
+      py.test --pyargs nengo --simulator nengo_deeplearning.tests.Simulator --ref-simulator nengo_deeplearning.tests.Simulator -p nengo.tests.options;
       py.test;
     else
       flake8 --ignore E721;

@@ -8,14 +8,14 @@ import numpy as np
 
 
 import nengo_deeplearning as nengo_dl
-from nengo_deeplearning.tests import TestSimulator
+from nengo_deeplearning.tests import Simulator
 
 
 def test_warn_on_opensim_del():
     with nengo.Network() as net:
         nengo.Ensemble(10, 1)
 
-    sim = TestSimulator(net)
+    sim = Simulator(net)
     with warns(RuntimeWarning):
         sim.__del__()
     sim.close()
@@ -39,7 +39,7 @@ def test_args():
         v = nengo.Node(Fn(), size_in=1, size_out=0)
         nengo.Connection(u, v, synapse=None)
 
-    with TestSimulator(model) as sim:
+    with Simulator(model) as sim:
         sim.run(0.01)
 
 
@@ -68,7 +68,7 @@ def test_signal_init_values():
     for p in probes:
         m.sig[p]['in'] = p.target
 
-    with TestSimulator(None, model=m) as sim:
+    with Simulator(None, model=m) as sim:
         sim.run_steps(3)
         assert np.allclose(sim.data[probes[0]], 0)
         assert np.allclose(sim.data[probes[1]], 1)
@@ -92,7 +92,7 @@ def test_unconnected_node():
     model = nengo.Network()
     with model:
         nengo.Node(f, size_in=0, size_out=0)
-    with TestSimulator(model, step_blocks=1) as sim:
+    with Simulator(model, step_blocks=1) as sim:
         assert hits == 0
         sim.run(dt)
         assert hits == 1

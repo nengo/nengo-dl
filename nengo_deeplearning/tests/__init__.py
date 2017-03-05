@@ -2,11 +2,11 @@ import os
 
 import tensorflow as tf
 
-from nengo_deeplearning import Simulator
+from nengo_deeplearning import simulator
 from nengo_deeplearning.tests import conftest  # noqa : F401
 
 
-class TestSimulator(Simulator):
+class Simulator(simulator.Simulator):
     def __init__(self, *args, **kwargs):
         if "NENGO_DL_TEST_PRECISION" in os.environ:
             if os.environ["NENGO_DL_TEST_PRECISION"] == "32":
@@ -34,4 +34,4 @@ class TestSimulator(Simulator):
         else:
             kwargs.setdefault("device", "/cpu:0")
 
-        super(TestSimulator, self).__init__(*args, **kwargs)
+        super(Simulator, self).__init__(*args, **kwargs)
