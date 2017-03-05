@@ -1,8 +1,15 @@
+#!/usr/bin/env python
 import io
 import runpy
 import os
 
-from setuptools import find_packages, setup
+try:
+    from setuptools import find_packages, setup
+except ImportError:
+    raise ImportError(
+        "'setuptools' is required but not installed. To install it, "
+        "follow the instructions at "
+        "https://pip.pypa.io/en/stable/installing/#installing-with-get-pip-py")
 
 
 def read(*filenames, **kwargs):
@@ -16,12 +23,9 @@ def read(*filenames, **kwargs):
 
 
 root = os.path.dirname(os.path.realpath(__file__))
-version = runpy.run_path(os.path.join(root, 'nengo_deeplearning',
-                                      'version.py'))['version']
-description = "Deep learning in Nengo"
-long_description = read('README.rst', 'CHANGES.rst')
+version = runpy.run_path(os.path.join(
+    root, 'nengo_deeplearning', 'version.py'))['version']
 
-url = "https://github.com/nengo/nengo_deeplearning"
 setup(
     name="nengo_deeplearning",
     version=version,
@@ -30,11 +34,11 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     scripts=[],
-    url=url,
-    license="",
-    description=description,
-    long_description=long_description,
-    install_requires=["nengo", "numpy", "tensorflow"],
+    url="https://github.com/nengo/nengo_deeplearning",
+    license="Free for non-commercial use",
+    description="Deep learning in Nengo",
+    long_description=read('README.rst', 'CHANGES.rst'),
+    install_requires=["nengo", "numpy>=1.11", "tensorflow"],
     entry_points={"nengo.backends":
                   ["deeplearning = nengo_deeplearning:Simulator"]},
 )

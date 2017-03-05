@@ -43,4 +43,4 @@ More details can be found in the `NengoDL documentation <TODO: upload>`_.
 Installation
 ------------
 
-Installation instructions can be found `here <TODO: upload>`_
+Installation instructions can be found `here <TODO: upload>`_.
