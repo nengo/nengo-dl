@@ -11,6 +11,7 @@ dist: trusty
 env:
   global:
     - STATIC="false"
+    - DOCUMENTATION="false"
     - PYTHON_VERSION="3.5"
     - NENGO_DL_TEST_PRECISION="32"
     - NENGO_DL_TEST_UNROLL="False"
@@ -21,6 +22,7 @@ env:
 
   matrix:
     - STATIC="true"
+    - DOCUMENTATION="true"
     - # default build
     - NENGO_DL_TEST_PRECISION="64"
     - NENGO_DL_TEST_UNROLL="True"
@@ -48,13 +50,25 @@ install:
   - pip install $NENGO_VERSION
   - pip install -r requirements.txt
   - pip install -r requirements-test.txt
+  - if [[ "$DOCUMENTATION" == "true" ]]; then pip install -r requirements-docs.txt; fi
 
 # run pytest/flake8
 script:
-  - if [[ "$STATIC" == "false" ]]; then
+  - if [[ "$STATIC" == "true" ]]; then
+      flake8;
+    elif [[ "$DOCUMENTATION" == "true" ]]; then
+      python setup.py build_sphinx;
+    else
       python setup.py develop;
       py.test --pyargs nengo --simulator nengo_deeplearning.tests.Simulator --ref-simulator nengo_deeplearning.tests.Simulator -p nengo.tests.options;
       py.test;
-    else
-      flake8 --ignore E721;
+    fi
+
+after_success:
+  - if [[ "$DOCUMENTATION" == "true" && "$TRAVIS_BRANCH" == "master" ]]; then
+      export DATE=$(date '+%Y-%m-%d %T');
+      ghp-import -m "Last update at $DATE" -b gh-pages docs/_build/html;
+      git config --global user.email "travis@travis-ci.org";
+      git config --global user.name "TravisCI";
+      git push -fq "https://$GH_TOKEN@github.com/nengo/nengo_deeplearning.git" gh-pages;
     fi
