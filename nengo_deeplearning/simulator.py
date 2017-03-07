@@ -148,6 +148,9 @@ class Simulator(object):
             self.seed = seed
 
         self.rng = np.random.RandomState(self.seed)
+        # TODO: why is setting the tensorflow seed necessary to make
+        # gradient descent training deterministic?
+        tf.set_random_seed(self.seed)
 
         # clear probe data
         for p in self.model.probes:
@@ -799,6 +802,7 @@ class Simulator(object):
         for node, inp in self.tensor_graph.invariant_ph.items():
             analytic, numeric = tf.test.compute_gradient(
                 inp, inp.get_shape().as_list(), self.tensor_graph.loss, (1,),
+                x_init_value=np.zeros(inp.get_shape().as_list()),
                 extra_feed_dict=feed)
             if np.any(np.isnan(analytic)) or np.any(np.isnan(numeric)):
                 raise SimulationError("NaNs detected in gradient")

@@ -1,3 +1,4 @@
+from nengo.conftest import seed  # noqa
 import nengo.tests.test_synapses
 import numpy as np
 
