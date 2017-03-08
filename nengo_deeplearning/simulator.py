@@ -337,7 +337,8 @@ class Simulator(object):
 
         return probe_data
 
-    def train(self, inputs, targets, optimizer, n_epochs=1, objective="mse"):
+    def train(self, inputs, targets, optimizer, n_epochs=1, objective="mse",
+              shuffle=True):
         """Optimize the trainable parameters of the network using the given
         optimization method, minimizing the objective value over the given
         inputs and targets.
@@ -359,13 +360,15 @@ class Simulator(object):
         n_epochs : int, optional
             run training for the given number of epochs (complete passes
             through ``inputs``)
-        objective : ``"mse"`` or callable
+        objective : ``"mse"`` or callable, optional
             the objective to be minimized. passing ``"mse"`` will train with
             mean squared error. a custom function
             ``f(output, target) -> loss`` can be passed that consumes the
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
             that Probe (loss will be averaged across Probes).
+        shuffle : bool, optional
+            if True, randomize the data into different minibatches each epoch
 
         Notes
         -----
@@ -439,7 +442,8 @@ class Simulator(object):
 
         for n in range(n_epochs):
             for inp, tar in utils.minibatch_generator(
-                    inputs, targets, self.minibatch_size, rng=self.rng):
+                    inputs, targets, self.minibatch_size, rng=self.rng,
+                    shuffle=shuffle):
                 # TODO: set up queue to feed in data more efficiently
                 self.sess.run(
                     [self.tensor_graph.opt_op],
