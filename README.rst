@@ -38,9 +38,11 @@ adds a number of unique features, such as:
 - inserting networks defined using TensorFlow (such as
   convolutional neural networks) directly into a Nengo model
 
-More details can be found in the `NengoDL documentation <TODO: upload>`_.
+More details can be found in the `NengoDL documentation
+<https://nengo.github.io/nengo_deeplearning/>`_.
 
 Installation
 ------------
 
-Installation instructions can be found `here <TODO: upload>`_.
+Installation instructions can be found `here
+<https://nengo.github.io/nengo_deeplearning/installation.html>`_.

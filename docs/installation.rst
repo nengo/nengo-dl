@@ -8,9 +8,34 @@ Requirements
 - ``nengo >= 2.3.1``
 - ``tensorflow >= 1.0.0``
 
-See the
+Installing NengoDL
+------------------
+To install NengoDL, we recommend using ``pip``.
+
+.. code-block:: bash
+
+  pip install nengo_deeplearning
+
+``pip`` will do its best to install all of NengoDL's requirements when it
+installs NengoDL.  However, if anything goes wrong during this process, you
+can install the requirements manually before doing
+``pip install nengo_deeplearning`` again.  See the
 `Nengo documentation <https://pythonhosted.org/nengo/getting_started.html>`_
-for instructions on installing ``numpy`` and ``nengo``.
+for instructions on installing ``numpy`` and ``nengo``, and the ``tensorflow``
+installation instructions below.
+
+Developer installation
+----------------------
+If you want to modify NengoDL, you will need to install it from source:
+
+.. code-block:: bash
+
+  git clone https://github.com/nengo/nengo_deeplearning.git
+  cd nengo_deeplearning
+  python setup.py develop --user
+
+If you are in a virtual environment (recommended), you can omit the ``--user``
+flag.
 
 Installing TensorFlow
 ---------------------
@@ -26,20 +51,3 @@ computer, which can improve simulation speeds.
 
 `Instructions for installing on Windows
 <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/cmake/README.md>`_.
-
-Installing NengoDL
-------------------
-TODO: pypi release
-
-Developer installation
-----------------------
-If you want to modify NengoDL, you will need to install it from source:
-
-.. code-block:: bash
-
-  git clone https://github.com/nengo/nengo_deeplearning.git
-  cd nengo_deeplearning
-  python setup.py develop --user
-
-If you are in a virtual environment (recommended), you can omit the ``--user``
-flag.
