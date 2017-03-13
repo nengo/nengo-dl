@@ -19,8 +19,8 @@ Release History
    - Removed
    - Fixed
 
-0.2.0 (unreleased)
-==================
+0.2.0 (March 13, 2017)
+======================
 
 Initial release of TensorFlow-based NengoDL
 

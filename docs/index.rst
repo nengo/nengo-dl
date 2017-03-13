@@ -9,4 +9,4 @@ NengoDL
     backend
 
 `Github <https://github.com/nengo/nengo_dl>`_ |
-`PyPI <TBD>`_
+`PyPI <https://pypi.python.org/pypi/nengo_dl>`_
