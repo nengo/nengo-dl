@@ -6,7 +6,7 @@ from nengo.params import Default, IntParam, Parameter
 import numpy as np
 import tensorflow as tf
 
-from nengo_deeplearning.builder import Builder, OpBuilder
+from nengo_dl.builder import Builder, OpBuilder
 
 
 class TensorFuncParam(Parameter):

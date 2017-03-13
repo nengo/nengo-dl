@@ -11,7 +11,7 @@ from nengo.utils.graphs import toposort
 from nengo.utils.simulator import operator_depencency_graph
 import numpy as np
 
-from nengo_deeplearning import signals, processes, builder, tensor_node, DEBUG
+from nengo_dl import signals, processes, builder, tensor_node, DEBUG
 
 
 def mergeable(op, chosen_ops):

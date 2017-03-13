@@ -69,5 +69,5 @@ after_success:
       ghp-import -m "Last update at $DATE" -b gh-pages docs/_build/html;
       git config --global user.email "travis@travis-ci.org";
       git config --global user.name "TravisCI";
-      git push -fq "https://$GH_TOKEN@github.com/nengo/nengo_deeplearning.git" gh-pages;
+      git push -fq "https://$GH_TOKEN@github.com/nengo/nengo_dl.git" gh-pages;
     fi

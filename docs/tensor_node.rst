@@ -11,7 +11,7 @@ Here is a simple example that uses a TensorNode to compute a ``sin`` wave:
 .. code-block:: python
 
     import nengo
-    import nengo_deeplearning as nengo_dl
+    import nengo_dl
     import tensorflow as tf
 
     with nengo.Network() as net:
@@ -33,7 +33,7 @@ layer to MNIST images:
 .. code-block:: python
 
   import nengo
-  import nengo_deeplearning as nengo_dl
+  import nengo_dl
   import numpy as np
   import tensorflow as tf
   from tensorflow.examples.tutorials.mnist import input_data
@@ -81,4 +81,4 @@ pass in the shape of the input and output Tensors.  This can be used to
 define any constants or other operations that don't need to be executed every
 simulation timestep.
 
-.. autoclass:: nengo_deeplearning.tensor_node.TensorNode
+.. autoclass:: nengo_dl.tensor_node.TensorNode

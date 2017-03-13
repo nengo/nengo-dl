@@ -27,23 +27,23 @@ minimum_nengo_version = (2, 3, 1)
 latest_nengo_version = (2, 3, 2)
 if version_info < minimum_nengo_version:
     raise ValueError(
-        "`nengo_deeplearning` does not support `nengo` version %s. Upgrade "
+        "`nengo_dl` does not support `nengo` version %s. Upgrade "
         "with 'pip install --upgrade --no-deps nengo'."
         % version_info)
 elif version_info > latest_nengo_version:
-    warnings.warn("This version of `nengo_deeplearning` has not been tested "
+    warnings.warn("This version of `nengo_dl` has not been tested "
                   "with your `nengo` version (%s). The latest fully "
                   "supported version is %s" % (
                       version_info, latest_nengo_version))
 
 # need to explicitly import these to trigger the builder registration
-from nengo_deeplearning import (  # noqa: F401
+from nengo_dl import (  # noqa: F401
     operators, neurons, processes, learning_rules)
 
 # import into top-level namespace
-from nengo_deeplearning.simulator import Simulator  # noqa: F401
-from nengo_deeplearning.tensor_node import TensorNode  # noqa: F401
+from nengo_dl.simulator import Simulator  # noqa: F401
+from nengo_dl.tensor_node import TensorNode  # noqa: F401
 
 # fix tensorflow bugs
-from nengo_deeplearning import tensorflow_patch  # noqa: E402
+from nengo_dl import tensorflow_patch  # noqa: E402
 tensorflow_patch.patch_dynamic_stitch_grad()

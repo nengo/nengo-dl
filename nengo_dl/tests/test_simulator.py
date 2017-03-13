@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_deeplearning.tests import Simulator
+from nengo_dl.tests import Simulator
 
 
 def test_persistent_state():

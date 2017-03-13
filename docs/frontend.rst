@@ -15,7 +15,7 @@ For example:
 .. code-block:: python
 
     import nengo
-    import nengo_deeplearning as nengo_dl
+    import nengo_dl
     import numpy as np
 
     with nengo.Network() as net:

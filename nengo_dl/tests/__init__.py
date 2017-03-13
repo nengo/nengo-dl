@@ -2,8 +2,8 @@ import os
 
 import tensorflow as tf
 
-from nengo_deeplearning import simulator
-from nengo_deeplearning.tests import conftest  # noqa : F401
+from nengo_dl import simulator
+from nengo_dl.tests import conftest  # noqa : F401
 
 
 class Simulator(simulator.Simulator):

@@ -4,7 +4,7 @@ represents a release version. Commits for which the version doesn't have
 '.dev0' should be git tagged with the version.
 """
 
-name = "nengo_deeplearning"
+name = "nengo_dl"
 version_info = (0, 2, 0)  # (major, minor, patch)
 dev = True
 

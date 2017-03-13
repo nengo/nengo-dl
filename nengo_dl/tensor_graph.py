@@ -5,8 +5,8 @@ from nengo.builder.operator import TimeUpdate, SimPyFunc
 from nengo.builder.processes import SimProcess
 import tensorflow as tf
 
-from nengo_deeplearning import (builder, graph_optimizer, signals, utils,
-                                tensor_node, DEBUG)
+from nengo_dl import (builder, graph_optimizer, signals, utils,
+                      tensor_node, DEBUG)
 
 
 class TensorGraph(object):

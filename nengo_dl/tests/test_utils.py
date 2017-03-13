@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_deeplearning import utils
+from nengo_dl import utils
 
 
 def test_sanitize_name():

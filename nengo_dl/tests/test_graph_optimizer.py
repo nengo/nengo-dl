@@ -6,10 +6,10 @@ from nengo.builder.processes import SimProcess
 import numpy as np
 import pytest
 
-from nengo_deeplearning import builder
-from nengo_deeplearning.graph_optimizer import (
+from nengo_dl import builder
+from nengo_dl.graph_optimizer import (
     mergeable, greedy_planner, tree_planner, order_signals, create_signals)
-from nengo_deeplearning.tensor_node import SimTensorNode
+from nengo_dl.tensor_node import SimTensorNode
 
 
 class DummySignal(object):

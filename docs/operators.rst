@@ -1,6 +1,6 @@
 Basic operators
 ===============
 
-.. automodule:: nengo_deeplearning.operators
+.. automodule:: nengo_dl.operators
 
-.. autoclass:: nengo_deeplearning.tensor_node.SimTensorNodeBuilder
+.. autoclass:: nengo_dl.tensor_node.SimTensorNodeBuilder

@@ -7,8 +7,8 @@ from nengo.utils.testing import warns
 import numpy as np
 
 
-import nengo_deeplearning as nengo_dl
-from nengo_deeplearning.tests import Simulator
+import nengo_dl
+from nengo_dl.tests import Simulator
 
 
 def test_warn_on_opensim_del():

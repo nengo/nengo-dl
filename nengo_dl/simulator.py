@@ -14,15 +14,15 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.client.timeline import Timeline
 
-from nengo_deeplearning import signals, utils, DATA_DIR
-from nengo_deeplearning.tensor_graph import TensorGraph
-from nengo_deeplearning.utils import print_and_flush
+from nengo_dl import signals, utils, DATA_DIR
+from nengo_dl.tensor_graph import TensorGraph
+from nengo_dl.utils import print_and_flush
 
 logger = logging.getLogger(__name__)
 
 
 class Simulator(object):
-    """Simulate network using the ``nengo_deeplearning`` backend.
+    """Simulate network using the ``nengo_dl`` backend.
 
     Parameters
     ----------
@@ -59,7 +59,7 @@ class Simulator(object):
     # unsupported unit tests
     unsupported = [
         ("nengo/tests/test_simulator.py:test_warn_on_opensim_del",
-         "nengo_deeplearning raises a different (more visible) warning (see "
+         "nengo_dl raises a different (more visible) warning (see "
          "tests/test_nengo_tests.py:test_warn_on_opensim_del"),
 
         ("nengo/tests/test_simulator.py:test_signal_init_values",

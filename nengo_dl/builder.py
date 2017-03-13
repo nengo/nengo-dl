@@ -3,11 +3,11 @@ import warnings
 from nengo.exceptions import BuildError
 import tensorflow as tf
 
-from nengo_deeplearning import DEBUG
+from nengo_dl import DEBUG
 
 
 class Builder(object):
-    """Manages the operator build classes known to the ``nengo_deeplearning``
+    """Manages the operator build classes known to the ``nengo_dl``
     build process."""
 
     builders = {}

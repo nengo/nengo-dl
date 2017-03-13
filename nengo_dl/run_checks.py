@@ -14,13 +14,13 @@ os.environ["NENGO_DL_TEST_DEVICE"] = "/cpu:0"
 print("#" * 30, "NENGO TESTS", "#" * 30)
 pytest.main([
     os.path.dirname(nengo.__file__),
-    '--simulator', 'nengo_deeplearning.tests.Simulator',
-    '--ref-simulator', 'nengo_deeplearning.tests.Simulator',
+    '--simulator', 'nengo_dl.tests.Simulator',
+    '--ref-simulator', 'nengo_dl.tests.Simulator',
     '-p', 'nengo.tests.options',
 ])
 
 # run local tests
-print("#" * 30, "NENGO_DEEPLEARNING TESTS", "#" * 30)
+print("#" * 30, "NENGO_DL TESTS", "#" * 30)
 pytest.main()
 
 # run flake8

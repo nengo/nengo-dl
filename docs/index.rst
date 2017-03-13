@@ -8,5 +8,5 @@ NengoDL
     frontend
     backend
 
-`Github <https://github.com/nengo/nengo_deeplearning>`_ |
+`Github <https://github.com/nengo/nengo_dl>`_ |
 `PyPI <TBD>`_

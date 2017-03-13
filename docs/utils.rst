@@ -1,4 +1,4 @@
 Miscellaneous utilities
 =======================
 
-.. automodule:: nengo_deeplearning.utils
+.. automodule:: nengo_dl.utils

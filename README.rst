@@ -15,7 +15,7 @@ For example:
 .. code-block:: python
 
     import nengo
-    import nengo_deeplearning as nengo_dl
+    import nengo_dl
     import numpy as np
 
     with nengo.Network() as net:
@@ -39,10 +39,10 @@ adds a number of unique features, such as:
   convolutional neural networks) directly into a Nengo model
 
 More details can be found in the `NengoDL documentation
-<https://nengo.github.io/nengo_deeplearning/>`_.
+<https://nengo.github.io/nengo_dl/>`_.
 
 Installation
 ------------
 
 Installation instructions can be found `here
-<https://nengo.github.io/nengo_deeplearning/installation.html>`_.
+<https://nengo.github.io/nengo_dl/installation.html>`_.

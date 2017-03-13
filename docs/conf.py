@@ -1,6 +1,6 @@
 import os
 
-import nengo_deeplearning as nengo_dl
+import nengo_dl
 import sphinx_rtd_theme
 
 extensions = [

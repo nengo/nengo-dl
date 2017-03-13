@@ -7,7 +7,7 @@ from nengo.neurons import Direct
 import numpy as np
 import tensorflow as tf
 
-from nengo_deeplearning import DEBUG
+from nengo_dl import DEBUG
 
 
 class TensorSignal(object):

@@ -1,7 +1,7 @@
 Signals
 ===============
 
-.. autoclass:: nengo_deeplearning.signals.TensorSignal
+.. autoclass:: nengo_dl.signals.TensorSignal
     :special-members: __getitem__
 
-.. autoclass:: nengo_deeplearning.signals.SignalDict
+.. autoclass:: nengo_dl.signals.SignalDict

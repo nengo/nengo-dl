@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-import nengo_deeplearning as nengo_dl
+import nengo_dl
 
 
 def test_validation():

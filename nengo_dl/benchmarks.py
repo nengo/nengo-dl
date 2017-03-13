@@ -5,7 +5,7 @@ import nengo
 import nengo_ocl
 import numpy as np
 
-import nengo_deeplearning as nengo_dl
+import nengo_dl
 
 
 def cconv(dimensions, neurons_per_d, neuron_type):

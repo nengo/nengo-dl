@@ -2,4 +2,4 @@ Neuron types
 ============
 Build Nengo neuron types into the TensorFlow graph.
 
-.. automodule:: nengo_deeplearning.neurons
+.. automodule:: nengo_dl.neurons

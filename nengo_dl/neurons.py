@@ -3,8 +3,8 @@ from nengo.builder.neurons import SimNeurons
 import numpy as np
 import tensorflow as tf
 
-from nengo_deeplearning import utils, DEBUG
-from nengo_deeplearning.builder import Builder, OpBuilder
+from nengo_dl import utils, DEBUG
+from nengo_dl.builder import Builder, OpBuilder
 
 
 @Builder.register(SimNeurons)

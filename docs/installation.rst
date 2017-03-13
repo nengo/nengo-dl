@@ -14,12 +14,12 @@ To install NengoDL, we recommend using ``pip``.
 
 .. code-block:: bash
 
-  pip install nengo_deeplearning
+  pip install nengo_dl
 
 ``pip`` will do its best to install all of NengoDL's requirements when it
 installs NengoDL.  However, if anything goes wrong during this process, you
 can install the requirements manually before doing
-``pip install nengo_deeplearning`` again.  See the
+``pip install nengo_dl`` again.  See the
 `Nengo documentation <https://pythonhosted.org/nengo/getting_started.html>`_
 for instructions on installing ``numpy`` and ``nengo``, and the ``tensorflow``
 installation instructions below.
@@ -30,8 +30,8 @@ If you want to modify NengoDL, you will need to install it from source:
 
 .. code-block:: bash
 
-  git clone https://github.com/nengo/nengo_deeplearning.git
-  cd nengo_deeplearning
+  git clone https://github.com/nengo/nengo_dl.git
+  cd nengo_dl
   python setup.py develop --user
 
 If you are in a virtual environment (recommended), you can omit the ``--user``

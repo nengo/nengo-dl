@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_deeplearning.signals import TensorSignal, SignalDict, mark_signals
+from nengo_dl.signals import TensorSignal, SignalDict, mark_signals
 
 
 def test_tensor_signal_basic():
