@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import datetime
+import logging
 import re
 import sys
 import time
@@ -9,6 +10,8 @@ from nengo.exceptions import SimulationError
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework.ops import get_gradient_function
+
+logger = logging.getLogger(__name__)
 
 
 if sys.version_info[:2] < (3, 3):
@@ -189,7 +192,7 @@ def find_non_differentiable(inputs, outputs):
                 get_gradient_function(o.op)
                 find_non_differentiable(inputs, o.op.inputs)
             except LookupError as e:
-                print(e)
+                logger.exception(e)
                 raise SimulationError(
                     "Graph contains non-differentiable "
                     "elements: %s" % o.op)
@@ -269,7 +272,6 @@ class ProgressBar(object):
             self.stop()
 
 
-# generator to sample minibatch_sized subsets from inputs and targets
 def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
                         rng=None):
     """Generator to yield ``minibatch_sized`` subsets from ``inputs`` and

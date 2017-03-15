@@ -1,3 +1,4 @@
+import logging
 import os
 
 import tensorflow as tf
@@ -8,6 +9,8 @@ from nengo_dl.tests import conftest  # noqa : F401
 
 class Simulator(simulator.Simulator):
     def __init__(self, *args, **kwargs):
+        logging.basicConfig(level=logging.WARNING)
+
         if "NENGO_DL_TEST_PRECISION" in os.environ:
             if os.environ["NENGO_DL_TEST_PRECISION"] == "32":
                 kwargs.setdefault("dtype", tf.float32)

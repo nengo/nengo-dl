@@ -1,11 +1,15 @@
+import logging
+
 from nengo.builder.processes import SimProcess
 from nengo.synapses import Lowpass
 from nengo.utils.filter_design import cont2discrete
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl import utils, DEBUG
+from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
+
+logger = logging.getLogger(__name__)
 
 
 @Builder.register(SimProcess)
@@ -25,13 +29,12 @@ class SimProcessBuilder(OpBuilder):
     pass_rng = True
 
     def __init__(self, ops, signals, rng):
-        if DEBUG:
-            print("sim_process")
-            print([op for op in ops])
-            print("process", [op.process for op in ops])
-            print("input", [op.input for op in ops])
-            print("output", [op.output for op in ops])
-            print("t", [op.t for op in ops])
+        logger.debug("sim_process")
+        logger.debug([op for op in ops])
+        logger.debug("process %s", [op.process for op in ops])
+        logger.debug("input %s", [op.input for op in ops])
+        logger.debug("output %s", [op.output for op in ops])
+        logger.debug("t %s", [op.t for op in ops])
 
         process_type = type(ops[0].process)
 

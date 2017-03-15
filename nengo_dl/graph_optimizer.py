@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import copy
+import logging
 
 from nengo.builder.operator import (SimPyFunc, DotInc, ElementwiseInc, Copy,
                                     Reset)
@@ -11,7 +12,9 @@ from nengo.utils.graphs import toposort
 from nengo.utils.simulator import operator_depencency_graph
 import numpy as np
 
-from nengo_dl import signals, processes, builder, tensor_node, DEBUG
+from nengo_dl import signals, processes, builder, tensor_node
+
+logger = logging.getLogger(__name__)
 
 
 def mergeable(op, chosen_ops):
@@ -197,9 +200,8 @@ def greedy_planner(operators):
             del predecessors_of[op]
             del successors_of[op]
 
-    if DEBUG:
-        print("GREEDY PLAN")
-        print("\n".join([str(x) for x in plan]))
+    logger.debug("GREEDY PLAN")
+    logger.debug("\n".join([str(x) for x in plan]))
 
     assert len(operators) == sum(len(ops) for ops in plan)
 
@@ -225,9 +227,8 @@ def tree_planner(operators):
     """
 
     def shortest_plan(ops, successors_of, predecessors_of, cache):
-        if DEBUG:
-            print("shortest_plan")
-            print(ops)
+        logger.debug("shortest_plan")
+        logger.debug(ops)
 
         if len(ops) <= 1:
             # normal termination
@@ -240,8 +241,7 @@ def tree_planner(operators):
         # get the groups that could be scheduled next
         free = [op for op in ops if len(predecessors_of[op]) == 0]
 
-        if DEBUG:
-            print("free", free)
+        logger.debug("free %s", free)
 
         available = []
         for op in free:
@@ -252,9 +252,8 @@ def tree_planner(operators):
             else:
                 available += [(op,)]
 
-        if DEBUG:
-            print("available")
-            print(available)
+        logger.debug("available")
+        logger.debug(available)
 
         if len(available) == 0:
             raise BuildError("Cycle detected during graph optimization")
@@ -267,8 +266,7 @@ def tree_planner(operators):
                 for op2 in successors_of[op]:
                     pred[op2].remove(op)
 
-            if DEBUG:
-                print("selecting", group)
+            logger.debug("selecting %s", group)
 
             result = shortest_plan(
                 tuple(op for op in ops if op not in group),
@@ -277,9 +275,8 @@ def tree_planner(operators):
             if shortest is None or len(result) + 1 < len(shortest):
                 shortest = [group] + result
 
-                if DEBUG:
-                    print("new shortest plan detected")
-                    print(shortest)
+                logger.debug("new shortest plan detected")
+                logger.debug(shortest)
 
         cache[ops] = shortest
 
@@ -300,9 +297,8 @@ def tree_planner(operators):
 
     tmp = shortest_plan(tuple(operators), successors_of, predecessors_of, {})
 
-    if DEBUG:
-        print("TREE PLAN")
-        print("\n".join([str(x) for x in tmp]))
+    logger.debug("TREE PLAN")
+    logger.debug("\n".join([str(x) for x in tmp]))
 
     return tmp
 
@@ -395,13 +391,12 @@ def order_signals(plan, n_passes=10):
         # no reads, so nothing to reorder
         return all_signals, plan
 
-    if DEBUG:
-        print("all signals")
-        print(all_signals)
-        print("read blocks")
-        print(read_blocks)
-        print("signal blocks")
-        print(signal_blocks)
+    logger.debug("all signals")
+    logger.debug(all_signals)
+    logger.debug("read blocks")
+    logger.debug(read_blocks)
+    logger.debug("signal blocks")
+    logger.debug(signal_blocks)
 
     sorted_reads = [(ops, i) for ops in plan
                     for i in range(len(reads[ops[0]]))]
@@ -410,17 +405,15 @@ def order_signals(plan, n_passes=10):
         sorted_reads, key=lambda p: np.sum([reads[op][p[1]].size
                                             for op in p[0]]))
 
-    if DEBUG:
-        print("sorted reads")
-        print("\n".join(str(x) for x in sorted_reads))
+    logger.debug("sorted reads")
+    logger.debug("\n".join(str(x) for x in sorted_reads))
 
     # reorder the signals into contiguous blocks (giving higher priority
     # to larger groups)
     all_signals = hamming_sort(all_signals, signal_blocks)
 
-    if DEBUG:
-        print("hamming sorted signals")
-        print(all_signals)
+    logger.debug("hamming sorted signals")
+    logger.debug(all_signals)
 
     # basically we're going to repeatedly iterate over two steps
     # 1) order the ops within a group according to the order of their
@@ -439,21 +432,18 @@ def order_signals(plan, n_passes=10):
     for n in range(n_passes):
         # TODO: detect if ops order didn't change (early termination)
         # TODO: every few iterations, eliminate the smallest unsatisfied block
-        if DEBUG:
-            print("======== pass %d ========" % n)
+        logger.debug("======== pass %d ========", n)
 
         # reorder ops by signal order. this leaves the overall
         # hamming sort block order unchanged.
         new_plan, all_signals = sort_ops_by_signals(
             sorted_reads, all_signals, new_plan, signal_blocks, reads)
 
-        if DEBUG:
-            print("resorted ops")
-            print("\n".join([str(x) for x in new_plan.values()]))
+        logger.debug("resorted ops")
+        logger.debug("\n".join([str(x) for x in new_plan.values()]))
 
-        if DEBUG:
-            print("reordered signals")
-            print(all_signals)
+        logger.debug("reordered signals")
+        logger.debug(all_signals)
 
     # error checking
     assert len(new_plan) == len(plan)
@@ -462,11 +452,10 @@ def order_signals(plan, n_passes=10):
         for op in ops:
             assert op in new_ops
 
-    if DEBUG:
-        print("final sorted signals")
-        print(all_signals)
-        print("new plan")
-        print("\n".join([str(new_plan[ops]) for ops in plan]))
+    logger.debug("final sorted signals")
+    logger.debug(all_signals)
+    logger.debug("new plan")
+    logger.debug("\n".join([str(new_plan[ops]) for ops in plan]))
 
     return all_signals, [new_plan[ops] for ops in plan]
 
@@ -492,12 +481,10 @@ def hamming_sort(signals, blocks):
     curr_block[0] = True
     active_block = None
 
-    if DEBUG:
-        print("hamming sort:")
+    logger.debug("hamming sort:")
 
     while True:
-        if DEBUG:
-            print("curr_block", curr_block)
+        logger.debug("curr_block %s", curr_block)
 
         # add any matching blocks to the sorted list
         zero_dists = np.all(blocks == curr_block, axis=1)
@@ -532,19 +519,17 @@ def hamming_sort(signals, blocks):
         # get the unique blocks
         next_blocks = np.vstack(set(tuple(b) for b in next_blocks))
 
-        if DEBUG:
-            print("active block", active_block)
-            print("next blocks")
-            print(next_blocks)
+        logger.debug("active block %s", active_block)
+        logger.debug("next blocks")
+        logger.debug(next_blocks)
 
         # then within all the blocks that are a potential continuation,
         # pick the ones with the smallest hamming distance
         next_dists = np.sum(next_blocks != curr_block, axis=1)
         next_blocks = next_blocks[next_dists == np.min(next_dists)]
 
-        if DEBUG:
-            print("hamming filter")
-            print(next_blocks)
+        logger.debug("hamming filter")
+        logger.debug(next_blocks)
 
         # within all the blocks that have the same hamming distance, pick the
         # next block that matches along the highest indices
@@ -610,13 +595,12 @@ def sort_ops_by_signals(sorted_reads, signals, new_plan, blocks, reads):
         signals list, possibly rearranged to match new operator order
     """
 
-    if DEBUG:
-        print("sort ops by signals")
+    logger.log(logging.DEBUG - 1, "sort ops by signals")
 
     for old_ops, read_block in sorted_reads:
-        if DEBUG:
-            print("sorting ops", new_plan[old_ops])
-            print("by", [reads[op][read_block] for op in new_plan[old_ops]])
+        logger.log(logging.DEBUG - 1, "sorting ops %s", new_plan[old_ops])
+        logger.log(logging.DEBUG - 1, "by %s",
+                   [reads[op][read_block] for op in new_plan[old_ops]])
 
         if len(old_ops) == 1:
             # then we have nothing to sort
@@ -633,9 +617,8 @@ def sort_ops_by_signals(sorted_reads, signals, new_plan, blocks, reads):
 
         new_plan[old_ops] = tuple(sorted_ops)
 
-        if DEBUG:
-            print("sorted ops")
-            print(new_plan[old_ops])
+        logger.log(logging.DEBUG - 1, "sorted ops")
+        logger.log(logging.DEBUG - 1, new_plan[old_ops])
 
         # after sorting the operators, we then rearrange all the other read
         # blocks associated with this group of operators to match the new
@@ -681,10 +664,9 @@ def sort_signals_by_ops(sorted_reads, signals, new_plan, blocks, reads):
     """
 
     for old_ops, read_block in sorted_reads:
-        if DEBUG:
-            print("sorting signals", [reads[op][read_block]
-                                      for op in new_plan[old_ops]])
-            print(read_block, new_plan[old_ops])
+        logger.log(logging.DEBUG - 1, "sorting signals %s",
+                   [reads[op][read_block] for op in new_plan[old_ops]])
+        logger.log(logging.DEBUG - 1, "%d %s", read_block, new_plan[old_ops])
 
         ops = new_plan[old_ops]
         op_reads = [reads[op][read_block].base for op in ops]
@@ -729,8 +711,7 @@ def sort_signals_by_ops(sorted_reads, signals, new_plan, blocks, reads):
             else:
                 prev_index = r_index
 
-        if DEBUG:
-            print("sorted signals", signals)
+        logger.log(logging.DEBUG - 1, "sorted signals %s", signals)
 
     return signals
 
@@ -855,10 +836,9 @@ def create_signals(sigs, plan, float_type, minibatch_size):
         sig_map[sig] = signals.TensorSignal(
             indices, key, dtype, shape, not sig.trainable, label=sig.name)
 
-        if DEBUG:
-            print("created base signal")
-            print(sig)
-            print(sig_map[sig])
+        logger.debug("created base signal")
+        logger.debug(sig)
+        logger.debug(sig_map[sig])
 
     # add any signal views to the sig_map
     all_signals = [sig for ops in plan for op in ops for sig in op.all_signals]
@@ -905,9 +885,8 @@ def create_signals(sigs, plan, float_type, minibatch_size):
     for k in base_arrays:
         base_arrays[k] = (np.array(base_arrays[k][0]), base_arrays[k][1])
 
-    if DEBUG:
-        print("base arrays")
-        print("\n".join([str((k, v[0].dtype, v[0].shape, v[1]))
-                         for k, v in base_arrays.items()]))
+    logger.debug("base arrays")
+    logger.debug("\n".join([str((k, v[0].dtype, v[0].shape, v[1]))
+                            for k, v in base_arrays.items()]))
 
     return base_arrays, sig_map

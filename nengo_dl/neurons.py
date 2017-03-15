@@ -1,10 +1,14 @@
+import logging
+
 from nengo.neurons import RectifiedLinear, Sigmoid, LIF, LIFRate
 from nengo.builder.neurons import SimNeurons
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl import utils, DEBUG
+from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
+
+logger = logging.getLogger(__name__)
 
 
 @Builder.register(SimNeurons)
@@ -23,10 +27,9 @@ class SimNeuronsBuilder(OpBuilder):
     TF_NEURON_IMPL = (RectifiedLinear, Sigmoid, LIF, LIFRate)
 
     def __init__(self, ops, signals):
-        if DEBUG:
-            print("sim_neurons")
-            print([op for op in ops])
-            print("J", [op.J for op in ops])
+        logger.debug("sim_neurons")
+        logger.debug([op for op in ops])
+        logger.debug("J %s", [op.J for op in ops])
 
         neuron_type = type(ops[0].neurons)
 
@@ -64,6 +67,7 @@ class GenericNeuronBuilder(object):
     simulation, so any performance-critical neuron models should consider
     adding a custom Tensorflow implementation for their neuron type instead.
     """
+
     def __init__(self, ops, signals):
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
@@ -142,6 +146,7 @@ class GenericNeuronBuilder(object):
 class RectifiedLinearBuilder(object):
     """Build a group of :class:`~nengo:nengo.RectifiedLinear`
     neuron operators."""
+
     def __init__(self, ops, signals):
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
@@ -154,6 +159,7 @@ class RectifiedLinearBuilder(object):
 class SigmoidBuilder(object):
     """Build a group of :class:`~nengo:nengo.Sigmoid`
     neuron operators."""
+
     def __init__(self, ops, signals):
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
@@ -169,6 +175,7 @@ class SigmoidBuilder(object):
 class LIFRateBuilder(object):
     """Build a group of :class:`~nengo:nengo.LIFRate`
     neuron operators."""
+
     def __init__(self, ops, signals):
         self.tau_ref = tf.constant(
             [[op.neurons.tau_ref] for op in ops
@@ -204,6 +211,7 @@ class LIFRateBuilder(object):
 class LIFBuilder(object):
     """Build a group of :class:`~nengo:nengo.LIF`
     neuron operators."""
+
     def __init__(self, ops, signals):
         self.tau_ref = tf.constant(
             [[op.neurons.tau_ref] for op in ops

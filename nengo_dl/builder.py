@@ -1,9 +1,10 @@
+import logging
 import warnings
 
 from nengo.exceptions import BuildError
 import tensorflow as tf
 
-from nengo_dl import DEBUG
+logger = logging.getLogger(__name__)
 
 
 class Builder(object):
@@ -29,13 +30,12 @@ class Builder(object):
             random number generator instance
         """
 
-        if DEBUG:
-            print("===================")
-            print("PRE BUILD", ops)
-            print("sets", [op.sets for op in ops])
-            print("incs", [op.incs for op in ops])
-            print("reads", [op.reads for op in ops])
-            print("updates", [op.updates for op in ops])
+        logger.debug("===================")
+        logger.debug("PRE BUILD %s", ops)
+        logger.debug("sets %s", [op.sets for op in ops])
+        logger.debug("incs %s", [op.incs for op in ops])
+        logger.debug("reads %s", [op.reads for op in ops])
+        logger.debug("updates %s", [op.updates for op in ops])
 
         if type(ops[0]) not in cls.builders:
             raise BuildError("No registered builder for operators of type %r" %
@@ -62,9 +62,8 @@ class Builder(object):
             ``tf.Tensor`` (updated by operations)
         """
 
-        if DEBUG:
-            print("===================")
-            print("BUILD", ops)
+        logger.debug("===================")
+        logger.debug("BUILD %s", ops)
 
         if ops not in cls.op_builds:
             raise BuildError("Operators build has not been initialized "

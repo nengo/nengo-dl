@@ -1,4 +1,5 @@
 from collections import defaultdict
+import logging
 import warnings
 
 from nengo.builder.signal import Signal
@@ -7,7 +8,7 @@ from nengo.neurons import Direct
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl import DEBUG
+logger = logging.getLogger(__name__)
 
 
 class TensorSignal(object):
@@ -241,13 +242,13 @@ class SignalDict(object):
         # elif mode == "mul":
         #     scatter_f = tf.scatter_mul
 
-        if DEBUG:
-            print("scatter")
-            print("values", val)
-            print("dst", dst)
-            print("indices", dst.indices)
-            print("dst base", self.bases[dst.key])
-            print("reads_by_base", self.reads_by_base[self.bases[dst.key]])
+        logger.debug("scatter")
+        logger.debug("values %s", val)
+        logger.debug("dst %s", dst)
+        logger.debug("indices %s", dst.indices)
+        logger.debug("dst base %s", self.bases[dst.key])
+        logger.debug("reads_by_base %s",
+                     self.reads_by_base[self.bases[dst.key]])
 
         # make sure that any reads to the target signal happen before this
         # write (note: this is only any reads that have happened since the
@@ -266,8 +267,7 @@ class SignalDict(object):
                 #     self.bases[dst.key], dst.tf_indices, val, mode=mode)
                 self.bases[dst.key] = self._scatter_f2(dst, val, mode=mode)
 
-        if DEBUG:
-            print("new dst base", self.bases[dst.key])
+        logger.debug("new dst base %s", self.bases[dst.key])
 
     def _scatter_f(self, dst, idxs, src, mode="update"):
         if mode == "update":
@@ -295,6 +295,7 @@ class SignalDict(object):
             result = tf.dynamic_stitch([base_idxs, dst.tf_indices],
                                        [self.bases[dst.key], src])
         elif mode == "inc":
+            # TODO: use scatter_nd or sparse_add (if it has gpu kernel now?)
             x = self.gather(dst)
             result = tf.dynamic_stitch([base_idxs, dst.tf_indices],
                                        [self.bases[dst.key], x + src])
@@ -331,11 +332,10 @@ class SignalDict(object):
             raise BuildError("Indices for %s have not been loaded into "
                              "Tensorflow" % src)
 
-        if DEBUG:
-            print("gather")
-            print("src", src)
-            print("indices", src.indices)
-            print("src base", self.bases[src.key])
+        logger.debug("gather")
+        logger.debug("src %s", src)
+        logger.debug("indices %s", src.indices)
+        logger.debug("src base %s", self.bases[src.key])
 
         # we prefer to get the data via `strided_slice` if possible, as it
         # is more efficient

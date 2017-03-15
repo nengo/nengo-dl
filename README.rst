@@ -6,7 +6,7 @@ That means it takes a Nengo network as input, and allows the user to simulate
 that network using some underlying computational framework (in this case,
 TensorFlow).
 
-In practice, what that means is that your code for constructing a Nengo model
+In practice, what that means is that the code for constructing a Nengo model
 is exactly the same as it would be for the standard Nengo simulator.  All that
 changes is that we use a different Simulator class to execute the
 model.

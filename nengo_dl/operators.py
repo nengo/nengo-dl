@@ -1,24 +1,27 @@
 from collections import defaultdict
+import logging
 
 from nengo.builder.operator import (
     Reset, Copy, ElementwiseInc, DotInc, SimPyFunc)
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl import utils, DEBUG
+from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
+
+logger = logging.getLogger(__name__)
 
 
 @Builder.register(Reset)
 class ResetBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.operator.Reset`
     operators."""
+
     def __init__(self, ops, signals):
-        if DEBUG:
-            print("reset")
-            print([str(x) for x in ops])
-            print("val", [op.value for op in ops])
-            print("dst", [op.dst for op in ops])
+        logger.debug("reset")
+        logger.debug([str(x) for x in ops])
+        logger.debug("val %s", [op.value for op in ops])
+        logger.debug("dst %s", [op.dst for op in ops])
 
         dtype = utils.cast_dtype(np.asarray(ops[0].value).dtype,
                                  signals.dtype).as_numpy_dtype
@@ -39,9 +42,8 @@ class ResetBuilder(OpBuilder):
             self.scatters += [(signals.combine([x.dst for x in group]),
                                tf.constant(value))]
 
-        if DEBUG:
-            print("scatters")
-            print("\n".join([str(x) for x in self.scatters]))
+        logger.debug("scatters")
+        logger.debug("\n".join([str(x) for x in self.scatters]))
 
     def build_step(self, signals):
         for data, val in self.scatters:
@@ -52,14 +54,16 @@ class ResetBuilder(OpBuilder):
 class CopyBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.operator.Copy`
     operators."""
+
     def __init__(self, ops, signals):
-        if DEBUG:
-            print("sliced_copy")
-            print([str(op) for op in ops])
-            print("src", [op.src for op in ops])
-            print("src_slice", [getattr(op, "src_slice", None) for op in ops])
-            print("dst", [op.dst for op in ops])
-            print("dst_slice", [getattr(op, "dst_slice", None) for op in ops])
+        logger.debug("sliced_copy")
+        logger.debug([str(op) for op in ops])
+        logger.debug("src %s", [op.src for op in ops])
+        logger.debug("src_slice %s", [getattr(op, "src_slice", None)
+                                      for op in ops])
+        logger.debug("dst %s", [op.dst for op in ops])
+        logger.debug("dst_slice %s", [getattr(op, "dst_slice", None)
+                                      for op in ops])
 
         srcs = []
         dsts = []
@@ -89,13 +93,13 @@ class CopyBuilder(OpBuilder):
 class ElementwiseIncBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.operator.ElementwiseInc`
     operators."""
+
     def __init__(self, ops, signals):
-        if DEBUG:
-            print("elementwise_inc"), len(ops)
-            print("\n".join([str(x) for x in ops]))
-            print("dst", [op.Y for op in ops])
-            print("A", [op.A for op in ops])
-            print("X", [op.X for op in ops])
+        logger.debug("elementwise_inc"), len(ops)
+        logger.debug("\n".join([str(x) for x in ops]))
+        logger.debug("dst %s", [op.Y for op in ops])
+        logger.debug("A %s", [op.A for op in ops])
+        logger.debug("X %s", [op.X for op in ops])
 
         self.dot_inc = isinstance(ops[0], DotInc)
 
@@ -147,13 +151,13 @@ class ElementwiseIncBuilder(OpBuilder):
 class DotIncBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.operator.DotInc`
     operators."""
+
     def __init__(self, ops, signals):
-        if DEBUG:
-            print("dot_inc"), len(ops)
-            print("\n".join([str(x) for x in ops]))
-            print("dst", [op.Y for op in ops])
-            print("A", [op.A for op in ops])
-            print("X", [op.X for op in ops])
+        logger.debug("dot_inc"), len(ops)
+        logger.debug("\n".join([str(x) for x in ops]))
+        logger.debug("dst %s", [op.Y for op in ops])
+        logger.debug("A %s", [op.A for op in ops])
+        logger.debug("X %s", [op.X for op in ops])
 
         self.Y_data = signals.combine([op.Y for op in ops])
 
@@ -236,13 +240,13 @@ class DotIncBuilder(OpBuilder):
 class SimPyFuncBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.operator.SimPyFunc`
     operators."""
+
     def __init__(self, ops, signals):
-        if DEBUG:
-            print("sim_py_func")
-            print([str(op) for op in ops])
-            print("t", [op.t for op in ops])
-            print("x", [op.x for op in ops])
-            print("fn", [op.fn for op in ops])
+        logger.debug("sim_py_func")
+        logger.debug([str(op) for op in ops])
+        logger.debug("t %s", [op.t for op in ops])
+        logger.debug("x %s", [op.x for op in ops])
+        logger.debug("fn %s", [op.fn for op in ops])
 
         self.time_input = ops[0].t is not None
         self.input_data = signals.combine([op.x for op in ops])

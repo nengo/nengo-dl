@@ -1,12 +1,14 @@
 from collections import OrderedDict
+import logging
 
 from nengo import Process
 from nengo.builder.operator import TimeUpdate, SimPyFunc
 from nengo.builder.processes import SimProcess
 import tensorflow as tf
 
-from nengo_dl import (builder, graph_optimizer, signals, utils,
-                      tensor_node, DEBUG)
+from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node
+
+logger = logging.getLogger(__name__)
 
 
 class TensorGraph(object):
@@ -143,9 +145,8 @@ class TensorGraph(object):
 
                 self.base_vars += [var]
 
-            if DEBUG:
-                print("created base arrays")
-                print([str(x) for x in self.base_vars])
+            logger.debug("created base arrays")
+            logger.debug([str(x) for x in self.base_vars])
 
             # set up invariant inputs
             self.build_inputs(rng)
@@ -197,10 +198,6 @@ class TensorGraph(object):
             if outputs is not None:
                 side_effects += outputs
 
-        if DEBUG:
-            print("=" * 30)
-            print("collecting probe tensors")
-
         # TODO: better solution to avoid the forced_copy
         # we need to make sure that probe reads occur before the
         # probe value is overwritten on the next timestep. however,
@@ -218,10 +215,10 @@ class TensorGraph(object):
                                 force_copy=True)
             for p in self.model.probes]
 
-        if DEBUG:
-            print("build_step complete")
-            print("probe_tensors", [str(x) for x in probe_tensors])
-            print("side_effects", [str(x) for x in side_effects])
+        logger.debug("=" * 30)
+        logger.debug("build_step complete")
+        logger.debug("probe_tensors %s", [str(x) for x in probe_tensors])
+        logger.debug("side_effects %s", [str(x) for x in side_effects])
 
         return probe_tensors, side_effects
 

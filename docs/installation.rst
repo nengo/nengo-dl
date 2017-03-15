@@ -10,7 +10,7 @@ Requirements
 
 Installing NengoDL
 ------------------
-To install NengoDL, we recommend using ``pip``.
+To install NengoDL, we recommend using ``pip``:
 
 .. code-block:: bash
 

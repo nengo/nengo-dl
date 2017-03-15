@@ -673,7 +673,7 @@ class Simulator(object):
                                   "parameters")
 
         path = tf.train.Saver().save(self.sess, path)
-        print("Model parameters saved to %s" % path)
+        logger.info("Model parameters saved to %s", path)
 
     def load_params(self, path):
         """Load trainable network parameters from the given ``path``.
