@@ -40,7 +40,7 @@ def test_gradients():
         p2 = nengo.Probe(ens2)
 
     with Simulator(net, step_blocks=step_blocks, unroll_simulation=True,
-                   minibatch_size=minibatch_size) as sim:
+                   minibatch_size=minibatch_size, seed=1) as sim:
         sim.tensor_graph.build_optimizer(
             tf.train.GradientDescentOptimizer(0.1),
             {x: np.zeros((minibatch_size, step_blocks, x.size_in))

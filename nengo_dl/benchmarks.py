@@ -131,7 +131,7 @@ def compare_backends(raw=False):
     n_range = [32]
     d_range = [64, 128, 256]
     neuron_types = [nengo.RectifiedLinear, nengo.LIF]
-    backends = [nengo_dl, None, nengo_ocl]
+    backends = [nengo_dl, nengo, nengo_ocl]
 
     if raw:
         data = np.zeros((len(benchmarks), len(n_range), len(d_range),
@@ -157,21 +157,21 @@ def compare_backends(raw=False):
                             if backend == nengo_dl:
                                 kwargs = {"step_blocks": 50,
                                           "unroll_simulation": True,
-                                          "minibatch_size": 50,
+                                          "minibatch_size": 1,
                                           "device": "/gpu:0"
                                           }
                             else:
                                 kwargs = {"progress_bar": None}
 
-                            reps = 1 if backend == nengo_dl else 50
+                            # reps = 1 if backend == nengo_dl else 50
 
                             try:
                                 with backend.Simulator(None, model=model,
                                                        **kwargs) as sim:
                                     start = time.time()
-                                    # sim.run(50)
-                                    for r in range(reps):
-                                        sim.run(1.0)
+                                    sim.run(5)
+                                    # for r in range(reps):
+                                    #     sim.run(1.0)
                                     data[i, j, k, l, m] = time.time() - start
                                     print("time", data[i, j, k, l, m])
                             except Exception as e:

@@ -69,15 +69,6 @@ def mergeable(op, chosen_ops):
         if s0.trainable != s1.trainable:
             return False
 
-    # check that none of the ops increment the same value
-    # note: this is only necessary with the dynamic_stitch scatter_inc approach
-    # (because it does a gather beforehand); otherwise the incs just get
-    # applied in random order, which is fine.
-    for op2 in chosen_ops:
-        for s0, s1 in zip(op.incs, op2.incs):
-            if s0.base is s1.base and s0.may_share_memory(s1):
-                return False
-
     # operator-specific checks
     if isinstance(op, Copy):
         # can't merge incs and updates

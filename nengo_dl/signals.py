@@ -1,4 +1,5 @@
 from collections import defaultdict
+import itertools
 import logging
 import warnings
 
@@ -38,7 +39,6 @@ class TensorSignal(object):
         self._indices = np.asarray(indices)
         self._indices.flags.writeable = False
         self.tf_indices = None
-        self.full_indices = None
 
         self.key = key
         self.dtype = dtype
@@ -162,6 +162,8 @@ class TensorSignal(object):
         that slice."""
 
         self.tf_indices = tf.constant(self.indices, dtype=tf.int32)
+        self.tf_indices_nd = tf.expand_dims(
+            tf.cast(self.tf_indices, tf.int64), 1)
 
         start = self.indices[0]
         stop = self.indices[-1] + 1
@@ -231,17 +233,6 @@ class SignalDict(object):
         if val.get_shape() != dst_shape:
             val = tf.reshape(val, dst_shape)
 
-        # TODO: until tensorflow implements scatter_nd kernel for GPU, users
-        # will have to train on CPU (using tensors/scatter_nd), but can still
-        # do inference on GPU (using variables/scatter)
-
-        # if mode == "update":
-        #     scatter_f = tf.scatter_update
-        # elif mode == "inc":
-        #     scatter_f = tf.scatter_add
-        # elif mode == "mul":
-        #     scatter_f = tf.scatter_mul
-
         logger.debug("scatter")
         logger.debug("values %s", val)
         logger.debug("dst %s", dst)
@@ -261,48 +252,37 @@ class SignalDict(object):
                 elif mode == "inc":
                     self.bases[dst.key] += val
             else:
-                # self.bases[dst.key] = scatter_f(
-                #     self.bases[dst.key], dst.tf_indices, val)
-                # self.bases[dst.key] = self._scatter_f(
-                #     self.bases[dst.key], dst.tf_indices, val, mode=mode)
-                self.bases[dst.key] = self._scatter_f2(dst, val, mode=mode)
+                self.bases[dst.key] = self._scatter_f(dst, val, mode=mode)
 
         logger.debug("new dst base %s", self.bases[dst.key])
 
-    def _scatter_f(self, dst, idxs, src, mode="update"):
+    def _scatter_f(self, dst, src, mode="update"):
         if mode == "update":
-            tmp = tf.dynamic_stitch([tf.range(dst.get_shape()[0]), idxs],
-                                    [dst, src])
-            tmp.set_shape(dst.get_shape())
+            scatter_src = tf.scatter_nd(
+                dst.tf_indices_nd, src, self.bases[dst.key].get_shape())
+            mask = tf.scatter_nd(
+                dst.tf_indices_nd, tf.ones_like(src, dtype=tf.float32),
+                self.bases[dst.key].get_shape())
+            result = tf.where(mask > 0, scatter_src, self.bases[dst.key])
 
-            return tmp
-
+            # the dynamic stitch approach appears to be slower, because it is
+            # doing some HtoD memcpy's
+            # base_idxs = self.base_ranges[dst.key]
+            # result = tf.dynamic_stitch([base_idxs, dst.tf_indices],
+            #                            [self.bases[dst.key], src])
         elif mode == "inc":
-            # src = tf.reshape(src, (-1,))
+            # TODO: switch to sparse_add if they implement a GPU kernel?
+            # idxs = tf.constant(list(itertools.product(
+            #     dst.indices, range(self.minibatch_size))),
+            #     dtype=tf.int64)
             # tmp = tf.SparseTensor(
-            #     idxs, src,
-            #     dst.get_shape()[:1].concatenate(src.get_shape()[1:]))
-            # return tf.sparse_add(dst, tmp)
+            #     idxs, tf.reshape(src, (-1,)),
+            #     [dst.shape[0]] + src.get_shape().as_list()[1:])
+            # result = tf.sparse_add(self.bases[dst.key], tmp)
 
-            idxs = tf.expand_dims(idxs, 1)
-            return dst + tf.scatter_nd(idxs, src, dst.get_shape())
-        else:
-            raise NotImplementedError
+            result = self.bases[dst.key] + tf.scatter_nd(
+                dst.tf_indices_nd, src, self.bases[dst.key].get_shape())
 
-    def _scatter_f2(self, dst, src, mode="update"):
-        base_idxs = self.base_ranges[dst.key]
-        if mode == "update":
-            result = tf.dynamic_stitch([base_idxs, dst.tf_indices],
-                                       [self.bases[dst.key], src])
-        elif mode == "inc":
-            # TODO: use scatter_nd or sparse_add (if it has gpu kernel now?)
-            x = self.gather(dst)
-            result = tf.dynamic_stitch([base_idxs, dst.tf_indices],
-                                       [self.bases[dst.key], x + src])
-        # elif mode == "mul":
-        #     x = self.gather(dst)
-        #     result = tf.dynamic_stitch([base_idxs, dst.tf_indices],
-        #                                [self.bases[dst.key], x * src])
         else:
             raise NotImplementedError
 
