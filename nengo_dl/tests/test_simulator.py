@@ -9,10 +9,10 @@ import tensorflow as tf
 from nengo_dl.tests import Simulator
 
 
-def test_persistent_state():
+def test_persistent_state(seed):
     """Make sure that state is preserved between runs."""
 
-    with nengo.Network(seed=0) as net:
+    with nengo.Network(seed=seed) as net:
         inp = nengo.Node([1])
         ens = nengo.Ensemble(1000, 1)
         nengo.Connection(inp, ens)
@@ -35,8 +35,8 @@ def test_persistent_state():
     assert np.allclose(data2, data3)
 
 
-def test_step_blocks():
-    with nengo.Network(seed=0) as net:
+def test_step_blocks(seed):
+    with nengo.Network(seed=seed) as net:
         inp = nengo.Node(np.sin)
         ens = nengo.Ensemble(10, 1)
         nengo.Connection(inp, ens)
@@ -53,11 +53,11 @@ def test_step_blocks():
     assert np.allclose(sim2.data[p], sim3.data[p])
 
 
-def test_unroll_simulation():
+def test_unroll_simulation(seed):
     # note: we run this multiple times because the effects of unrolling can
     # be somewhat stochastic depending on the op order
     for _ in range(10):
-        with nengo.Network(seed=0) as net:
+        with nengo.Network(seed=seed) as net:
             inp = nengo.Node(np.sin)
             ens = nengo.Ensemble(10, 1)
             nengo.Connection(inp, ens)
@@ -72,15 +72,16 @@ def test_unroll_simulation():
         assert np.allclose(sim1.data[p], sim2.data[p])
 
 
-def test_minibatch():
-    with nengo.Network(seed=0) as net:
+def test_minibatch(seed):
+    with nengo.Network(seed=seed) as net:
         inp = [nengo.Node(output=[0.5]), nengo.Node(output=np.sin),
-               nengo.Node(output=nengo.processes.WhiteSignal(5, 0.5, seed=0))]
+               nengo.Node(output=nengo.processes.WhiteSignal(5, 0.5,
+                                                             seed=seed))]
 
         ens = [
             nengo.Ensemble(10, 1, neuron_type=nengo.AdaptiveLIF()),
             nengo.Ensemble(10, 1, neuron_type=nengo.LIFRate()),
-            nengo.Ensemble(10, 2, noise=nengo.processes.WhiteNoise(seed=0))]
+            nengo.Ensemble(10, 2, noise=nengo.processes.WhiteNoise(seed=seed))]
 
         nengo.Connection(inp[0], ens[0])
         nengo.Connection(inp[1], ens[1], synapse=None)
@@ -106,9 +107,9 @@ def test_minibatch():
     with Simulator(net, minibatch_size=5) as sim:
         sim.run_steps(1000)
 
-    assert np.allclose(sim.data[ps[0]], probe_data[0])
-    assert np.allclose(sim.data[ps[1]], probe_data[1])
-    assert np.allclose(sim.data[ps[2]], probe_data[2])
+    assert np.allclose(sim.data[ps[0]], probe_data[0], atol=1e-6)
+    assert np.allclose(sim.data[ps[1]], probe_data[1], atol=1e-6)
+    assert np.allclose(sim.data[ps[2]], probe_data[2], atol=1e-6)
 
 
 def test_input_feeds():
@@ -138,6 +139,8 @@ def test_train_ff(neurons, seed):
     step_blocks = 1
     n_hidden = 5
 
+    np.random.seed(seed)
+
     with nengo.Network() as net:
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
         net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-0.1, 0.1)
@@ -165,7 +168,7 @@ def test_train_ff(neurons, seed):
         sim.train({inp: x}, {p: y}, tf.train.GradientDescentOptimizer(1),
                   n_epochs=10000)
 
-        sim.check_gradients()
+        sim.check_gradients(atol=2e-5)
 
         sim.step(input_feeds={inp: x})
 
@@ -179,27 +182,17 @@ def test_train_recurrent(neurons, seed):
     step_blocks = 10
     n_hidden = 20
 
-    with nengo.Network(seed=0) as net:
+    with nengo.Network(seed=seed) as net:
         inp = nengo.Node([0])
         ens = nengo.Ensemble(
             n_hidden, 1, neuron_type=nengo.Sigmoid(tau_ref=1),
             gain=nengo.dists.Choice([1]), bias=nengo.dists.Uniform(-1, 1))
         out = nengo.Node(size_in=1)
 
-        if neurons:
-            rng = np.random.RandomState(0)
-            nengo.Connection(
-                inp, ens.neurons, synapse=None,
-                transform=rng.uniform(-1, 1, size=(n_hidden, 1)))
-            nengo.Connection(ens, ens, synapse=0,
-                             solver=nengo.solvers.LstsqL2(weights=True))
-            nengo.Connection(
-                ens.neurons, out, synapse=None,
-                transform=rng.uniform(-1, 1, size=(1, n_hidden)))
-        else:
-            nengo.Connection(inp, ens, synapse=None)
-            nengo.Connection(ens, ens, synapse=0)
-            nengo.Connection(ens, out, synapse=None)
+        nengo.Connection(inp, ens, synapse=None)
+        nengo.Connection(ens, ens, synapse=0,
+                         solver=nengo.solvers.LstsqL2(weights=neurons))
+        nengo.Connection(ens, out, synapse=None)
 
         p = nengo.Probe(out)
 
@@ -213,7 +206,7 @@ def test_train_recurrent(neurons, seed):
         sim.train({inp: x}, {p: y}, tf.train.GradientDescentOptimizer(1e-2),
                   n_epochs=1000)
 
-        sim.check_gradients(rtol=1e-2)
+        sim.check_gradients(sim.tensor_graph.losses[("mse", (p,))])
 
         sim.run_steps(step_blocks, input_feeds={inp: x[:minibatch_size]})
 
@@ -225,7 +218,7 @@ def test_train_objective(seed):
     step_blocks = 10
     n_hidden = 20
 
-    with nengo.Network(seed=0) as net:
+    with nengo.Network(seed=seed) as net:
         inp = nengo.Node([1])
         ens = nengo.Ensemble(n_hidden, 1, neuron_type=nengo.RectifiedLinear())
         nengo.Connection(inp, ens, synapse=0.01)
@@ -242,12 +235,15 @@ def test_train_objective(seed):
         sim.train({inp: x}, {p: y}, tf.train.GradientDescentOptimizer(1e-2),
                   n_epochs=1000, objective=obj)
 
-        sim.check_gradients()
+        sim.check_gradients(sim.tensor_graph.losses[(obj, (p,))])
 
         sim.run_steps(step_blocks, input_feeds={inp: x})
 
         assert np.allclose(sim.data[p][:, -1], y[:, -1] + 0.5,
                            atol=1e-3)
+
+
+# TODO: add test with non-gradientdescent optimizer
 
 
 def test_loss():
@@ -266,9 +262,9 @@ def test_loss():
                         objective=lambda x, y: tf.constant(2)) == 2
 
 
-def test_generate_inputs():
+def test_generate_inputs(seed):
     with nengo.Network() as net:
-        proc = nengo.processes.WhiteNoise(seed=0)
+        proc = nengo.processes.WhiteNoise(seed=seed)
         inp = [nengo.Node([1]), nengo.Node(np.sin), nengo.Node(proc),
                nengo.Node([2])]
 

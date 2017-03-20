@@ -13,6 +13,7 @@ from nengo.exceptions import (ReadonlyError, SimulatorClosed, NengoWarning,
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.client.timeline import Timeline
+from tensorflow.python.ops import gradient_checker
 
 from nengo_dl import signals, utils, DATA_DIR
 from nengo_dl.tensor_graph import TensorGraph
@@ -187,12 +188,19 @@ class Simulator(object):
         self.closed = False
 
         # initialize variables
-        self.sess.run(self.tensor_graph.init_op)
+        self.sess.run([self.tensor_graph.local_init_op,
+                       self.tensor_graph.trainable_init_op])
 
         self.n_steps = 0
         self.time = 0.0
         self.final_bases = [
             x[0] for x in self.tensor_graph.base_arrays_init.values()]
+
+    def soft_reset(self):
+        """Resets the internal state of the simulation, but doesn't
+        start a new simulation run."""
+
+        self.sess.run(self.tensor_graph.local_init_op)
 
     def step(self, **kwargs):
         """Run the simulation for one time step.
@@ -428,14 +436,15 @@ class Simulator(object):
         #      for p in targets])
 
         # build optimizer op
-        self.tensor_graph.build_optimizer(optimizer, targets, objective)
+        self.tensor_graph.build_optimizer(optimizer, tuple(targets.keys()),
+                                          objective)
 
         # initialize any variables that were created by the optimizer
         try:
             self.sess.run(self.tensor_graph.opt_slots_init)
         except tf.errors.InvalidArgumentError:
             raise SimulationError(
-                "Tensorflow does not yet support this optimizer on the "
+                "TensorFlow does not yet support this optimizer on the "
                 "GPU; try `Simulator(..., device='/cpu:0')`")
 
         progress = utils.ProgressBar(n_epochs, "Training")
@@ -445,12 +454,15 @@ class Simulator(object):
                     inputs, targets, self.minibatch_size, rng=self.rng,
                     shuffle=shuffle):
                 # TODO: set up queue to feed in data more efficiently
+                self.soft_reset()
                 self.sess.run(
                     [self.tensor_graph.opt_op],
                     feed_dict=self._fill_feed(self.step_blocks, inp, tar))
             progress.step()
 
-    def loss(self, inputs, targets, objective=None):
+        self.soft_reset()
+
+    def loss(self, inputs, targets, objective):
         """Compute the loss value for the given objective and inputs/targets.
 
         Parameters
@@ -464,15 +476,13 @@ class Simulator(object):
             desired output value at Probes, corresponding to each value in
             ``inputs``; arrays should have shape
             ``(batch_size, sim.step_blocks, probe.size_in)``
-        objective : ``"mse"`` or callable, optional
+        objective : ``"mse"`` or callable
             the objective used to compute loss. passing ``"mse"`` will use
             mean squared error. a custom function
             ``f(output, target) -> loss`` can be passed that consumes the
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
-            that Probe (loss will be averaged across Probes). passing None will
-            use the objective passed to the last call of
-            :meth:`.Simulator.train`.
+            that Probe (loss will be averaged across Probes)
         """
 
         if self.closed:
@@ -499,12 +509,10 @@ class Simulator(object):
                     "Dimensionality of target sequence (%d) does not match "
                     "probe.size_in (%d)" % (x.shape[2], p.size_in))
 
-        # build optimizer op
-        if objective is None:
-            loss = self.tensor_graph.loss
-        else:
-            loss = self.tensor_graph.build_loss(objective, targets)
+        # get loss op
+        loss = self.tensor_graph.build_loss(objective, tuple(targets.keys()))
 
+        # compute loss on data
         loss_val = 0
         for i, (inp, tar) in enumerate(utils.minibatch_generator(
                 inputs, targets, self.minibatch_size, rng=self.rng)):
@@ -703,10 +711,10 @@ class Simulator(object):
             raise SimulationError("Simulation has been closed, cannot print "
                                   "parameters")
 
-        params = {k: v for k, v in self.tensor_graph.signals.bases.items()
-                  if v.dtype._is_ref_dtype}
         param_sigs = {k: v for k, v in self.tensor_graph.sig_map.items()
                       if k.trainable}
+        params = {v.key: self.tensor_graph.signals.bases[v.key]
+                  for v in param_sigs.values()}
 
         param_vals = self.sess.run(params)
 
@@ -779,7 +787,7 @@ class Simulator(object):
         n_steps = int(self.n_steps * (self.dt / dt))
         return dt * np.arange(1, n_steps + 1)
 
-    def check_gradients(self, atol=1e-4, rtol=1e-3):
+    def check_gradients(self, outputs=None, atol=1e-5, rtol=1e-3):
         """Perform gradient checks for the network (used to verify that the
         analytic gradients are correct).
 
@@ -789,32 +797,87 @@ class Simulator(object):
 
         Parameters
         ----------
+        outputs : ``tf.Tensor`` or list of ``tf.Tensor``
+            compute gradients wrt this output (if None, computes wrt each
+            output probe)
         atol : float, optional
             absolute error tolerance
         rtol : float, optional
             relative (to numeric grad) error tolerance
+
+        Notes
+        -----
+        Calling this function will reset all values in the network, so it
+        should not be intermixed with calls to :meth:`.Simulator.run`.
         """
+
+        delta = 1e-3
 
         feed = self._fill_feed(
             self.step_blocks, {n: np.zeros((self.minibatch_size,
                                             self.step_blocks, n.size_out))
                                for n in self.tensor_graph.invariant_inputs},
             {p: np.zeros((self.minibatch_size, self.step_blocks, p.size_in))
-             for p in self.model.probes})
+             for p in self.tensor_graph.target_phs})
+
+        if outputs is None:
+            # note: the x + 0 is necessary because `gradient_checker`
+            # doesn't work properly if the output variable is a tensorarray
+            outputs = [x + 0 for x in self.tensor_graph.probe_arrays]
+        elif isinstance(outputs, tf.Tensor):
+            outputs = [outputs]
 
         # check gradient wrt inp
         for node, inp in self.tensor_graph.invariant_ph.items():
-            analytic, numeric = tf.test.compute_gradient(
-                inp, inp.get_shape().as_list(), self.tensor_graph.loss, (1,),
-                x_init_value=np.zeros(inp.get_shape().as_list()),
-                extra_feed_dict=feed)
-            if np.any(np.isnan(analytic)) or np.any(np.isnan(numeric)):
-                raise SimulationError("NaNs detected in gradient")
-            if np.any(abs(analytic - numeric) >= atol + rtol * abs(numeric)):
-                raise SimulationError(
-                    "Gradient check failed for input %s\n"
-                    "numeric gradient:\n%s\n"
-                    "analytic gradient:\n%s\n" % (node, numeric, analytic))
+            inp_shape = inp.get_shape().as_list()
+            inp_tens = self.tensor_graph.invariant_ph[node]
+            feed[inp_tens] = np.ascontiguousarray(feed[inp_tens])
+            inp_val = np.ravel(feed[inp_tens])
+            for out in outputs:
+                out_shape = out.get_shape().as_list()
+
+                # we need to compute the numeric jacobian manually, to
+                # correctly handle variables (tensorflow doesn't expect
+                # state ops in `compute_gradient`, because it doesn't define
+                # gradients for them)
+                numeric = np.zeros((np.prod(inp_shape, dtype=np.int32),
+                                    np.prod(out_shape, dtype=np.int32)))
+
+                for i in range(numeric.shape[0]):
+                    self.soft_reset()
+                    inp_val[i] = delta
+                    plus = self.sess.run(out, feed_dict=feed)
+
+                    self.soft_reset()
+                    inp_val[i] = -delta
+                    minus = self.sess.run(out, feed_dict=feed)
+
+                    numeric[i] = np.ravel((plus - minus) / (2 * delta))
+
+                    inp_val[i] = 0
+
+                self.soft_reset()
+
+                dx, dy = gradient_checker._compute_dx_and_dy(
+                    inp, out, out_shape)
+
+                analytic = gradient_checker._compute_theoretical_jacobian(
+                    inp, inp_shape, np.zeros(inp_shape), dy, out_shape, dx,
+                    extra_feed_dict=feed)
+
+                if np.any(np.isnan(analytic)) or np.any(np.isnan(numeric)):
+                    raise SimulationError("NaNs detected in gradient")
+                fail = abs(analytic - numeric) >= atol + rtol * abs(numeric)
+                if np.any(fail):
+                    raise SimulationError(
+                        "Gradient check failed for input %s and output %s\n"
+                        "numeric values:\n%s\n"
+                        "analytic values:\n%s\n" % (node, out, numeric[fail],
+                                                    analytic[fail]))
+
+        self.soft_reset()
+
+        logger.info("Gradient check passed")
 
 
 class ProbeDict(Mapping):

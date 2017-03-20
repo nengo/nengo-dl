@@ -266,6 +266,7 @@ class LIFBuilder(object):
                    self.tau_rc * tf.log1p((1 - voltage) / (J - 1)))
         refractory = tf.where(spiked, t_spike, refractory)
 
+        signals.mark_gather(self.J_data)
         signals.scatter(self.refractory_data, refractory)
 
         voltage = tf.where(spiked, self.zeros,

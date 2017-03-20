@@ -1,7 +1,7 @@
 import os
 import sys
 
-import flake8.main
+import flake8.main.cli as flake8
 import nengo
 import pytest
 
@@ -24,4 +24,4 @@ pytest.main()
 
 # run flake8
 sys.argv += "--ignore E721 .".split()
-flake8.main.main()
+flake8.main()

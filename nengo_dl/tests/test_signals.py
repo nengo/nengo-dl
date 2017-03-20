@@ -113,8 +113,8 @@ def test_signal_dict_scatter():
     with tf.Session() as sess:
         key = object()
         val = np.random.randn(20, minibatch_size)
-        signals.bases = {key: tf.constant(val, dtype=tf.float32)}
-        signals.base_ranges[key] = tf.range(20)
+        signals.bases = {key: tf.assign(tf.Variable(val, dtype=tf.float32),
+                                        val)}
 
         x = TensorSignal([0, 1, 2, 3], key, tf.float32, (4,), False)
         with pytest.raises(BuildError):
@@ -148,8 +148,7 @@ def test_signal_dict_scatter():
         x.load_indices()
         y = tf.ones((20, 1))
         signals.scatter(x, y)
-        assert signals.bases[key].op.type == "Identity"
-        assert signals.bases[key].op.inputs[0] is y
+        assert signals.bases[key].op.type == "Assign"
 
 
 def test_signal_dict_gather():
@@ -160,7 +159,6 @@ def test_signal_dict_gather():
         key = object()
         val = np.random.randn(20, minibatch_size)
         signals.bases = {key: tf.constant(val, dtype=tf.float32)}
-        signals.base_ranges[key] = tf.range(20)
 
         x = TensorSignal([0, 1, 2, 3], key, tf.float32, (4,), True)
         with pytest.raises(BuildError):

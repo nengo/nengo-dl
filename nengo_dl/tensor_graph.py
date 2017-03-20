@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class TensorGraph(object):
-    """Manages the construction of the Tensorflow symbolic computation graph.
+    """Manages the construction of the TensorFlow symbolic computation graph.
 
     Parameters
     ----------
@@ -98,6 +98,8 @@ class TensorGraph(object):
         self.graph = tf.Graph()
         self.signals = signals.SignalDict(self.sig_map, self.dtype,
                                           self.minibatch_size)
+        self.target_phs = {}
+        self.losses = {}
 
         with self.graph.as_default(), tf.device(self.device):
             # make sure indices are loaded for all probe signals (they won't
@@ -121,7 +123,9 @@ class TensorGraph(object):
                         v.dtype, "_".join(str(x) for x in v.shape), trainable,
                         unique_idx)
 
-                    if any([name in x.name for x in tf.global_variables()]):
+                    if any([name in x.name for x in (
+                            tf.global_variables() if trainable else
+                            tf.local_variables())]):
                         unique_idx += 1
                     else:
                         try:
@@ -130,18 +134,25 @@ class TensorGraph(object):
                         except KeyError:
                             duplicate = False
 
+                # if trainable:
+                #     # trainable signal, so create Variable
+                #     with tf.variable_scope("base_vars", reuse=False):
+                #         var = tf.get_variable(
+                #             name, initializer=tf.constant_initializer(v),
+                #             dtype=v.dtype, shape=v.shape, trainable=True)
+                # else:
+                #     var = tf.placeholder(tf.as_dtype(v.dtype), shape=v.shape,
+                #                          name=name)
                 if trainable:
-                    # trainable signal, so create Variable
-                    with tf.variable_scope("base_vars", reuse=False):
+                    with tf.variable_scope("trainable_vars", reuse=False):
                         var = tf.get_variable(
                             name, initializer=tf.constant_initializer(v),
                             dtype=v.dtype, shape=v.shape, trainable=True)
                 else:
-                    var = tf.placeholder(tf.as_dtype(v.dtype), shape=v.shape,
-                                         name=name)
-
-                # pre-compute indices for the full range (used in scatter_f2)
-                self.signals.base_ranges[k] = tf.range(v.shape[0])
+                    with tf.variable_scope("local_vars", reuse=False):
+                        var = tf.get_local_variable(
+                            name, initializer=tf.constant_initializer(v),
+                            dtype=v.dtype, shape=v.shape, trainable=False)
 
                 self.base_vars += [var]
 
@@ -160,8 +171,9 @@ class TensorGraph(object):
             # build stage
             self.build_loop()
 
-            # op for initializing variables (will be called by simulator)
-            self.init_op = tf.global_variables_initializer()
+            # ops for initializing variables (will be called by simulator)
+            self.trainable_init_op = tf.global_variables_initializer()
+            self.local_init_op = tf.local_variables_initializer()
 
     def build_step(self):
         """Build the operators that execute a single simulation timestep
@@ -210,6 +222,8 @@ class TensorGraph(object):
         # probe_array.flow doesn't work, although I think it should).
         # so by adding the copy here and then blocking on the copy, we make
         # sure that the probe value is read before it can be overwritten.
+        # TODO: check out tensorarray.identity()
+        logger.debug("collecting probe tensors")
         probe_tensors = [
             self.signals.gather(self.sig_map[self.model.sig[p]["in"]],
                                 force_copy=True)
@@ -290,8 +304,9 @@ class TensorGraph(object):
             #
             # summary_op = tf.summary.merge_all()
 
-            return (step, stop, loop_i, probe_arrays,
-                    tuple(self.signals.bases.values()))
+            base_vals = tuple(self.signals.bases.values())
+
+            return step, stop, loop_i, probe_arrays, base_vals
 
         self.step_var = tf.placeholder(tf.int32, shape=(), name="step")
         self.stop_var = tf.placeholder(tf.int32, shape=(), name="stop")
@@ -312,6 +327,7 @@ class TensorGraph(object):
 
         if self.unroll_simulation:
             for n in range(self.step_blocks):
+                logger.debug("BUILDING ITERATION %d", n)
                 with self.graph.name_scope("iteration_%d" % n):
                     loop_vars = loop_body(*loop_vars)
         else:
@@ -321,7 +337,12 @@ class TensorGraph(object):
                 back_prop=False)
 
         self.end_step = loop_vars[0]
-        self.probe_arrays = [p.stack() for p in loop_vars[3]]
+        self.probe_arrays = []
+        for p in loop_vars[3]:
+            x = p.stack()
+            if self.step_blocks is not None:
+                x.set_shape([self.step_blocks] + x.get_shape().as_list()[1:])
+            self.probe_arrays += [x]
         self.end_base_arrays = loop_vars[4]
 
     def build_inputs(self, rng):
@@ -367,7 +388,7 @@ class TensorGraph(object):
         ----------
         optimizer : ``tf.train.Optimizer``
             instance of a Tensorflow optimizer class
-        targets : list of :class:`~nengo:nengo.Probe`
+        targets : tuple of :class:`~nengo:nengo.Probe`
             the Probes corresponding to the output signals being optimized
         objective : ``"mse"`` or callable
             the objective to be minimized. passing ``"mse"`` will train with
@@ -379,11 +400,13 @@ class TensorGraph(object):
         """
 
         with self.graph.as_default(), tf.device(self.device):
-            self.loss = self.build_loss(objective, targets)
+            loss = self.build_loss(objective, targets)
 
             # create optimizer operator
+            # TODO: add caching here so we don't rebuild the same optimizer
+            # on repeated calls
             self.opt_op = optimizer.minimize(
-                self.loss, var_list=tf.trainable_variables())
+                loss, var_list=tf.trainable_variables())
 
             # get any new variables created by optimizer (so they can be
             # initialized)
@@ -403,20 +426,26 @@ class TensorGraph(object):
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
             that Probe (loss will be averaged across Probes).
-        targets : list of :class:`~nengo:nengo.Probe`
+        targets : tuple of :class:`~nengo:nengo.Probe`
             the Probes corresponding to target values in objective
         """
 
+        if isinstance(targets, list):
+            targets = tuple(targets)
+
+        if (objective, targets) in self.losses:
+            return self.losses[(objective, targets)]
+
         with self.graph.as_default(), tf.device(self.device):
             loss = []
-            self.target_phs = {}
             for p in targets:
                 probe_index = self.model.probes.index(p)
 
                 # create a placeholder for the target values
-                self.target_phs[p] = tf.placeholder(
-                    self.dtype, (self.step_blocks, p.size_in,
-                                 self.minibatch_size), name="targets")
+                if p not in self.target_phs:
+                    self.target_phs[p] = tf.placeholder(
+                        self.dtype, (self.step_blocks, p.size_in,
+                                     self.minibatch_size), name="targets")
 
                 # compute loss
                 if objective == "mse":
@@ -433,5 +462,7 @@ class TensorGraph(object):
         # average loss across probes (note: this will also average across
         # the output of `objective` if it doesn't return a scalar)
         loss = tf.reduce_mean(loss)
+
+        self.losses[(objective, targets)] = loss
 
         return loss

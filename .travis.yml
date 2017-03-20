@@ -50,6 +50,8 @@ install:
   - pip install -r requirements.txt
   - pip install -r requirements-test.txt
   - if [[ "$MODE" == "docs" ]]; then pip install -r requirements-docs.txt; fi
+  - conda list -e
+  - pip freeze
 
 # run pytest/flake8
 script:

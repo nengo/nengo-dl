@@ -169,10 +169,11 @@ class LinearFilter(object):
         self.dens = tf.constant(dens, dtype=self.output_data.dtype)
 
     def build_step(self, signals):
-        input = signals.gather(self.input_data)
         # signals.scatter(self.output_data, self.dens, mode="mul")
+        # input = signals.gather(self.input_data)
         # signals.scatter(self.output_data, self.nums * input, mode="inc")
 
+        input = signals.gather(self.input_data)
         output = signals.gather(self.output_data)
         signals.scatter(self.output_data,
                         self.dens * output + self.nums * input)

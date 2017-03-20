@@ -1,5 +1,4 @@
 from collections import defaultdict
-import itertools
 import logging
 import warnings
 
@@ -198,12 +197,12 @@ class SignalDict(object):
         self.dtype = dtype
         self.sig_map = sig_map
         self.minibatch_size = minibatch_size
-        self.base_ranges = {}
         self.bases = None
         self.reads_by_base = defaultdict(list)
+        self.gather_bases = []
 
     def scatter(self, dst, val, mode="update"):
-        """Updates the base data corresponding to `dst`.
+        """Updates the base data corresponding to ``dst``.
 
         Parameters
         ----------
@@ -212,8 +211,8 @@ class SignalDict(object):
         val : ``tf.Tensor``
             update data (same shape as ``dst``, i.e. a dense array <= the size
             of the base array)
-        mode : "update" or "inc" or "mul"
-            overwrite/add/multiply the data at ``dst`` with ``val``
+        mode : "update" or "inc"
+            overwrite/add the data at ``dst`` with ``val``
         """
 
         if dst.tf_indices is None:
@@ -245,19 +244,29 @@ class SignalDict(object):
         # write (note: this is only any reads that have happened since the
         # last write, since each write changes the base array object)
         with tf.control_dependencies(self.reads_by_base[self.bases[dst.key]]):
-            if np.all(np.arange(self.bases[dst.key].get_shape()[0].value) ==
-                      dst.indices):
-                if mode == "update":
-                    self.bases[dst.key] = tf.identity(val)
-                elif mode == "inc":
-                    self.bases[dst.key] += val
-            else:
-                self.bases[dst.key] = self._scatter_f(dst, val, mode=mode)
+            self.bases[dst.key] = self._scatter_f_var(dst, val, mode=mode)
+
+        # update reads_by_base. the general workflow is
+        # gather -> computation -> scatter
+        # so when we get a scatter, we assume that that value indicates that
+        # all the previous gathers are complete. so we block any writes to
+        # those bases on the scatter value, to be sure that the
+        # computation step is complete before the values can be overwritten
+        for b in self.gather_bases:
+            self.reads_by_base[b] += [self.bases[dst.key]]
+        self.gather_bases = []
 
         logger.debug("new dst base %s", self.bases[dst.key])
 
     def _scatter_f(self, dst, src, mode="update"):
-        if mode == "update":
+        dst_shape = self.bases[dst.key].get_shape()
+        if dst_shape.is_compatible_with(src.get_shape()) and np.all(
+                np.arange(dst_shape[0].value) == dst.indices):
+            if mode == "update":
+                result = tf.identity(src)
+            elif mode == "inc":
+                result = self.bases[dst.key] + src
+        elif mode == "update":
             scatter_src = tf.scatter_nd(
                 dst.tf_indices_nd, src, self.bases[dst.key].get_shape())
             mask = tf.scatter_nd(
@@ -289,6 +298,33 @@ class SignalDict(object):
         result.set_shape(self.bases[dst.key].get_shape())
         return result
 
+    def _scatter_f_var(self, dst, src, mode="update"):
+        # create a temporary variable for dst so that we can use the sparse
+        # variable updates. despite this looking incredibly inefficient, it is
+        # actually faster than the scatter_nd approach
+        # from tensorflow.python.ops import gen_state_ops
+        # var = gen_state_ops._temporary_variable(
+        #     self.bases[dst.key].get_shape(), self.bases[dst.key].dtype)
+        # var_name = var.op.name
+        # var = tf.assign(var, self.bases[dst.key])
+
+        var = self.bases[dst.key]
+
+        if var.get_shape().is_compatible_with(src.get_shape()) and np.all(
+                np.arange(var.get_shape()[0].value) == dst.indices):
+            if mode == "inc":
+                result = tf.assign_add(var, src)
+            else:
+                result = tf.assign(var, src)
+        elif mode == "inc":
+            result = tf.scatter_add(var, dst.tf_indices, src)
+        else:
+            result = tf.scatter_update(var, dst.tf_indices, src)
+
+        # result = gen_state_ops._destroy_temporary_variable(var, var_name)
+
+        return result
+
     def gather(self, src, force_copy=False):
         """Fetches the data corresponding to ``src`` from the base array.
 
@@ -317,8 +353,8 @@ class SignalDict(object):
         logger.debug("indices %s", src.indices)
         logger.debug("src base %s", self.bases[src.key])
 
-        # we prefer to get the data via `strided_slice` if possible, as it
-        # is more efficient
+        # we prefer to get the data via `strided_slice` or `identity` if
+        # possible, as it is more efficient
         if force_copy or src.as_slice is None:
             result = tf.gather(self.bases[src.key], src.tf_indices)
         elif np.all(np.arange(self.bases[src.key].get_shape()[0].value) ==
@@ -327,8 +363,7 @@ class SignalDict(object):
         else:
             result = tf.strided_slice(self.bases[src.key], *src.as_slice)
 
-        # for some reason the shape inference doesn't work in some cases,
-        # and tensorflow loses track of the shape
+        # for some reason the shape inference doesn't work in some cases
         result.set_shape(src.tf_indices.get_shape()[:1].concatenate(
             self.bases[src.key].get_shape()[1:]))
 
@@ -345,9 +380,25 @@ class SignalDict(object):
         # the read)
         # TODO: we could store the indices as well, so that future writes are
         # only delayed if they write to the same part of the array
-        self.reads_by_base[self.bases[src.key]] += [result]
+
+        if force_copy:
+            self.reads_by_base[self.bases[src.key]] += [result]
+        else:
+            self.mark_gather(src)
 
         return result
+
+    def mark_gather(self, src):
+        """Marks ``src`` as being gathered, but doesn't actually perform a
+        gather.  Used to indicate that some computation relies on ``src``.
+
+        Parameters
+        ----------
+        src : :class:`.TensorSignal`
+            signal indicating the data being read
+        """
+
+        self.gather_bases += [self.bases[src.key]]
 
     def combine(self, sigs, load_indices=True):
         """Combines several TensorSignals into one by concatenating along
@@ -464,4 +515,4 @@ def mark_signals(model):
 
                 # at the moment minibatched is just the opposite of trainable,
                 # but it could be the case that the two are independent
-                x.minibatched = not sig.trainable
+                x.minibatched = not x.trainable

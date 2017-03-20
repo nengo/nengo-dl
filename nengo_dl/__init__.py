@@ -45,3 +45,4 @@ from nengo_dl.tensor_node import TensorNode  # noqa: F401
 # fix tensorflow bugs
 from nengo_dl import tensorflow_patch  # noqa: E402
 tensorflow_patch.patch_dynamic_stitch_grad()
+tensorflow_patch.patch_state_grads()
