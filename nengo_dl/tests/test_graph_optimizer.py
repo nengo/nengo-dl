@@ -245,15 +245,21 @@ def contiguous(sigs, all_signals):
 
 
 def ordered(ops, all_signals, block=None):
+    reads = {}
+    for op in ops:
+        reads[op] = [x for x in op.reads]
+        if type(op) == SimNeurons:
+            reads[op] += op.states
+
     if block is None:
         read_indices = [
-            [all_signals.index(op.reads[i].base) * 10000 +
-             op.reads[i].elemoffset for op in ops]
+            [all_signals.index(reads[op][i].base) * 10000 +
+             reads[op][i].elemoffset for op in ops]
             for i in range(len(ops[0].reads))]
     else:
         read_indices = [
-            [all_signals.index(op.reads[block].base) * 10000 +
-             op.reads[block].elemoffset for op in ops]]
+            [all_signals.index(reads[op][block].base) * 10000 +
+             reads[op][block].elemoffset for op in ops]]
 
     return np.all(np.diff(read_indices, axis=1) > 0)
 

@@ -320,3 +320,38 @@ def test_save_load_params(Simulator):
         assert np.allclose(weights0, weights2)
 
     shutil.rmtree("./tmp")
+
+
+def test_model_passing(Simulator):
+    # make sure that passing a built model to the Simulator works properly
+
+    with nengo.Network() as net:
+        inp = nengo.Node([1])
+        ens = nengo.Ensemble(20, 1)
+        nengo.Connection(inp, ens)
+        p = nengo.Probe(ens)
+
+    model = nengo.builder.Model()
+    model.build(net)
+
+    with nengo.Simulator(None, model=model) as sim:
+        sim.run_steps(10)
+
+    canonical = sim.data[p]
+
+    with Simulator(None, model=model) as sim:
+        sim.run_steps(10)
+
+    assert np.allclose(sim.data[p], canonical)
+
+    # make sure that passing the same model to Simulator twice works
+    with Simulator(None, model=model) as sim:
+        sim.run_steps(10)
+
+    assert np.allclose(sim.data[p], canonical)
+
+    # make sure that passing that model back to the reference simulator works
+    with nengo.Simulator(None, model=model) as sim:
+        sim.run_steps(10)
+
+    assert np.allclose(sim.data[p], canonical)

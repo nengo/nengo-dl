@@ -345,7 +345,7 @@ def order_signals(plan, n_passes=10):
     reads = {}
     for ops in plan:
         for op in ops:
-            reads[op] = op.reads
+            reads[op] = [x for x in op.reads]
             if type(op) == SimNeurons:
                 # state signals are technically reads as well, they just aren't
                 # marked as such, so we add them to the reads list
