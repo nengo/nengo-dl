@@ -8,10 +8,9 @@ import numpy as np
 
 
 import nengo_dl
-from nengo_dl.tests import Simulator
 
 
-def test_warn_on_opensim_del():
+def test_warn_on_opensim_del(Simulator):
     with nengo.Network() as net:
         nengo.Ensemble(10, 1)
 
@@ -21,7 +20,7 @@ def test_warn_on_opensim_del():
     sim.close()
 
 
-def test_args():
+def test_args(Simulator):
     class Fn(object):
         def __init__(self):
             self.last_x = None
@@ -43,7 +42,7 @@ def test_args():
         sim.run(0.01)
 
 
-def test_signal_init_values():
+def test_signal_init_values(Simulator):
     """Tests that initial values are not overwritten."""
 
     zero = Signal([0.0])
@@ -82,7 +81,7 @@ def test_entry_point():
     assert nengo_dl.Simulator in sims
 
 
-def test_unconnected_node():
+def test_unconnected_node(Simulator):
     hits = np.array(0)
     dt = 0.001
 

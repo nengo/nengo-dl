@@ -1,9 +1,7 @@
 import nengo
 
-from nengo_dl.tests import Simulator
 
-
-def test_gradients(seed):
+def test_gradients(Simulator, seed):
     step_blocks = 10
     minibatch_size = 4
 
@@ -44,7 +42,7 @@ def test_gradients(seed):
         sim.check_gradients(atol=1e-4)
 
 
-def test_build_loss():
+def test_build_loss(Simulator):
     # check that the loss caching works
 
     with nengo.Network() as net:

@@ -6,10 +6,8 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl.tests import Simulator
 
-
-def test_persistent_state(seed):
+def test_persistent_state(Simulator, seed):
     """Make sure that state is preserved between runs."""
 
     with nengo.Network(seed=seed) as net:
@@ -35,7 +33,7 @@ def test_persistent_state(seed):
     assert np.allclose(data2, data3)
 
 
-def test_step_blocks(seed):
+def test_step_blocks(Simulator, seed):
     with nengo.Network(seed=seed) as net:
         inp = nengo.Node(np.sin)
         ens = nengo.Ensemble(10, 1)
@@ -53,7 +51,7 @@ def test_step_blocks(seed):
     assert np.allclose(sim2.data[p], sim3.data[p])
 
 
-def test_unroll_simulation(seed):
+def test_unroll_simulation(Simulator, seed):
     # note: we run this multiple times because the effects of unrolling can
     # be somewhat stochastic depending on the op order
     for _ in range(10):
@@ -72,7 +70,7 @@ def test_unroll_simulation(seed):
         assert np.allclose(sim1.data[p], sim2.data[p])
 
 
-def test_minibatch(seed):
+def test_minibatch(Simulator, seed):
     with nengo.Network(seed=seed) as net:
         inp = [nengo.Node(output=[0.5]), nengo.Node(output=np.sin),
                nengo.Node(output=nengo.processes.WhiteSignal(5, 0.5,
@@ -112,7 +110,7 @@ def test_minibatch(seed):
     assert np.allclose(sim.data[ps[2]], probe_data[2], atol=1e-6)
 
 
-def test_input_feeds():
+def test_input_feeds(Simulator):
     minibatch_size = 10
     step_blocks = 5
 
@@ -134,7 +132,7 @@ def test_input_feeds():
 
 
 @pytest.mark.parametrize("neurons", (True, False))
-def test_train_ff(neurons, seed):
+def test_train_ff(Simulator, neurons, seed):
     minibatch_size = 4
     step_blocks = 1
     n_hidden = 5
@@ -176,7 +174,7 @@ def test_train_ff(neurons, seed):
 
 
 @pytest.mark.parametrize("neurons", (True, False))
-def test_train_recurrent(neurons, seed):
+def test_train_recurrent(Simulator, neurons, seed):
     batch_size = 100
     minibatch_size = 10
     step_blocks = 10
@@ -213,7 +211,7 @@ def test_train_recurrent(neurons, seed):
     assert np.sqrt(np.sum((sim.data[p] - y[:minibatch_size]) ** 2)) < 0.4
 
 
-def test_train_objective(seed):
+def test_train_objective(Simulator, seed):
     minibatch_size = 1
     step_blocks = 10
     n_hidden = 20
@@ -246,7 +244,7 @@ def test_train_objective(seed):
 # TODO: add test with non-gradientdescent optimizer
 
 
-def test_loss():
+def test_loss(Simulator):
     with nengo.Network() as net:
         inp = nengo.Node([0])
         out = nengo.Node(size_in=1)
@@ -262,7 +260,7 @@ def test_loss():
                         objective=lambda x, y: tf.constant(2)) == 2
 
 
-def test_generate_inputs(seed):
+def test_generate_inputs(Simulator, seed):
     with nengo.Network() as net:
         proc = nengo.processes.WhiteNoise(seed=seed)
         inp = [nengo.Node([1]), nengo.Node(np.sin), nengo.Node(proc),
@@ -290,7 +288,7 @@ def test_generate_inputs(seed):
             assert np.allclose(sim.data[p[i]], x.transpose(2, 0, 1))
 
 
-def test_save_load_params():
+def test_save_load_params(Simulator):
     with nengo.Network(seed=0) as net:
         out = nengo.Node(size_in=1)
         ens = nengo.Ensemble(10, 1)
