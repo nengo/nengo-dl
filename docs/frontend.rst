@@ -39,12 +39,8 @@ adds a number of unique features, such as:
 - inserting networks defined using TensorFlow (such as
   convolutional neural networks) directly into a Nengo model
 
-If you are new to Nengo, you should start by reading the
-`Nengo documentation <https://pythonhosted.org/nengo/>`_.
-
-Knowledge of TensorFlow is not required to use NengoDL.  However, if you want
-to start constructing your own TensorFlow networks, you can can check out the
-`TensorFlow documentation <https://www.tensorflow.org/>`_
+User API
+----------------
 
 These are the only classes that a NengoDL user needs to interact with:
 
@@ -53,6 +49,16 @@ These are the only classes that a NengoDL user needs to interact with:
 
     simulator
     tensor_node
+
+Additional resources
+--------------------
+
+If you are new to Nengo, you should start by reading the
+`Nengo documentation <https://pythonhosted.org/nengo/>`_.
+
+Knowledge of TensorFlow is not required to use NengoDL.  However, if you want
+to start constructing your own TensorFlow networks, you can can check out the
+`TensorFlow documentation <https://www.tensorflow.org/>`_
 
 You can read the :doc:`NengoDL developer documentation <backend>` if you want
 to know more about how things are working under the hood.

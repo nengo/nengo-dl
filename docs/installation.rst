@@ -26,7 +26,8 @@ installation instructions below.
 
 Developer installation
 ----------------------
-If you want to modify NengoDL, you will need to install it from source:
+If you want to modify NengoDL, or get the very latest updates, you will need to
+perform a developer installation:
 
 .. code-block:: bash
 
