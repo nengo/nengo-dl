@@ -2,6 +2,7 @@ from collections import OrderedDict
 import copy
 import logging
 
+from nengo.synapses import Lowpass
 from nengo.builder.operator import (SimPyFunc, DotInc, ElementwiseInc, Copy,
                                     Reset)
 from nengo.builder.neurons import SimNeurons
@@ -350,10 +351,8 @@ def order_signals(plan, n_passes=10):
                 # state signals are technically reads as well, they just aren't
                 # marked as such, so we add them to the reads list
                 reads[op] += op.states
-            # TODO: for the dynamic_stitch scatter implementation, we could add
-            # any increment inputs to the reads as well
-            # TODO: could also add linear synapse outputs (depending on
-            # implementation)
+            elif type(op) == SimProcess and isinstance(op.process, Lowpass):
+                reads[op] += op.updates
 
         for i in range(len(reads[ops[0]])):
             read_blocks += [set(reads[op][i].base for op in ops)]

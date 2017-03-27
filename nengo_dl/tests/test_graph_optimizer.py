@@ -250,6 +250,8 @@ def ordered(ops, all_signals, block=None):
         reads[op] = [x for x in op.reads]
         if type(op) == SimNeurons:
             reads[op] += op.states
+        elif type(op) == SimProcess and isinstance(op.process, Lowpass):
+            reads[op] += op.updates
 
     if block is None:
         read_indices = [
@@ -488,6 +490,27 @@ def test_order_signals_neuron_states():
     # note: block=0 is just a single signal, so it's always "ordered"
     assert ordered(new_plan[0], sigs, block=1)
     assert ordered(new_plan[1], sigs, block=1)
+
+
+def test_order_signals_lowpass():
+    # test that lowpass outputs are ordered as reads
+
+    inputs = [DummySignal(label=str(i)) for i in range(10)]
+    time = DummySignal()
+    plan = [
+        tuple(SimProcess(Lowpass(0.1), inputs[i], inputs[i+1], time,
+                         mode="update") for i in range(0, 4, 2)),
+        tuple(SimProcess(Lowpass(0.1), inputs[i], inputs[i+1], time,
+                         mode="update") for i in range(5, 9, 2))]
+    sigs, new_plan = order_signals(plan)
+
+    assert contiguous(inputs[1:5:2], sigs)
+    assert contiguous(inputs[6:10:2], sigs)
+
+    assert ordered(new_plan[0], sigs, block=1)
+    assert ordered(new_plan[0], sigs, block=2)
+    assert ordered(new_plan[1], sigs, block=1)
+    assert ordered(new_plan[1], sigs, block=2)
 
 
 def test_create_signals():
