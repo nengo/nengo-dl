@@ -301,13 +301,13 @@ def test_order_signals_partial_complex():
     inputs = [DummySignal(label=str(i)) for i in range(10)]
     plan = [
         tuple(DummyOp(reads=[inputs[i]]) for i in range(5)),
-        tuple(DummyOp(reads=[inputs[2 + i]]) for i in range(5)),
-        tuple(DummyOp(reads=[inputs[5 + i]]) for i in range(5)),
+        tuple(DummyOp(reads=[inputs[2 + i]]) for i in range(4)),
+        tuple(DummyOp(reads=[inputs[5 + i]]) for i in range(3)),
     ]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:5], sigs)
-    assert contiguous(inputs[5:], sigs)
-    assert contiguous(inputs[2:7], sigs)
+    assert contiguous(inputs[5:8], sigs)
+    assert contiguous(inputs[2:6], sigs)
     assert ordered(new_plan[0], sigs)
     assert ordered(new_plan[1], sigs)
     assert ordered(new_plan[2], sigs)
@@ -389,14 +389,15 @@ def test_order_signals_multiread_complex2():
         tuple(DummyOp(reads=[inputs[5 + i]]) for i in range(3)),
     ]
     sigs, new_plan = order_signals(plan)
-    assert contiguous(inputs[:4], sigs)
+
     assert contiguous(inputs[5:8], sigs)
-    assert contiguous(inputs[2:6], sigs)
     assert ordered(new_plan[1], sigs)
 
-    # note: technically it is always possible to order both properly, but it
-    # requires you to know which of the two equally sized blocks should have
-    # priority, and I'm not sure there's a way to determine that.
+    # TODO: technically it is always possible to order both blocks properly,
+    # but it requires you to know which of the two equally sized blocks should
+    # have priority, and I'm not sure there's a way to determine that.
+    assert (contiguous(inputs[:4], sigs) or
+            contiguous(inputs[2:6], sigs))
     assert (ordered(new_plan[0], sigs, block=0) or
             ordered(new_plan[0], sigs, block=1))
 
@@ -416,8 +417,9 @@ def test_order_signals_multiread_unsatisfiable():
     assert contiguous(inputs[:2], sigs)
     assert contiguous(inputs[5:7], sigs)
     assert ordered(new_plan[0], sigs)
-    assert ordered(new_plan[1], sigs, block=0)
-    assert not ordered(new_plan[1], sigs, block=1)
+    assert (ordered(new_plan[1], sigs, block=0) or
+            ordered(new_plan[1], sigs, block=1))
+    assert not ordered(new_plan[1], sigs)
 
 
 def test_order_signals_views():
@@ -498,9 +500,9 @@ def test_order_signals_lowpass():
     inputs = [DummySignal(label=str(i)) for i in range(10)]
     time = DummySignal()
     plan = [
-        tuple(SimProcess(Lowpass(0.1), inputs[i], inputs[i+1], time,
+        tuple(SimProcess(Lowpass(0.1), inputs[i], inputs[i + 1], time,
                          mode="update") for i in range(0, 4, 2)),
-        tuple(SimProcess(Lowpass(0.1), inputs[i], inputs[i+1], time,
+        tuple(SimProcess(Lowpass(0.1), inputs[i], inputs[i + 1], time,
                          mode="update") for i in range(5, 9, 2))]
     sigs, new_plan = order_signals(plan)
 
@@ -511,6 +513,23 @@ def test_order_signals_lowpass():
     assert ordered(new_plan[0], sigs, block=2)
     assert ordered(new_plan[1], sigs, block=1)
     assert ordered(new_plan[1], sigs, block=2)
+
+
+def test_order_signals_duplicate_read_blocks():
+    # test that order_signal prioritizes read blocks that are duplicated in
+    # multiple op groups
+    inputs = [DummySignal(label=str(i)) for i in range(10)]
+    plan = [
+        tuple(DummyOp(reads=[inputs[i], inputs[5 + i]]) for i in range(3)),
+        tuple(DummyOp(reads=[inputs[i], inputs[5 + i]]) for i in range(3)),
+        tuple(DummyOp(reads=[inputs[5 + i], inputs[4 - i]]) for i in range(5))]
+
+    sigs, new_plan = order_signals(plan)
+    assert ordered(new_plan[0], sigs)
+    assert ordered(new_plan[1], sigs)
+    assert (ordered(new_plan[2], sigs, block=0) or 
+            ordered(new_plan[2], sigs, block=1))
+    assert not ordered(new_plan[2], sigs)
 
 
 def test_create_signals():
