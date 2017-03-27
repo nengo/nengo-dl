@@ -11,7 +11,7 @@ from nengo_dl.builder import Builder, OpBuilder
 
 class TensorFuncParam(Parameter):
     """Performs validation on the function passed to TensorNode, and sets
-    ``size_in``/``size_out`` if necessary."""
+    ``size_out`` if necessary."""
 
     def __init__(self, name, readonly=False):
         super(TensorFuncParam, self).__init__(
@@ -19,8 +19,6 @@ class TensorFuncParam(Parameter):
 
     def __set__(self, node, output):
         super(TensorFuncParam, self).validate(node, output)
-
-        node.size_in = 0 if node.size_in is None else node.size_in
 
         # We trust user's size_out if set, because calling output
         # may have unintended consequences
@@ -58,10 +56,10 @@ class TensorFuncParam(Parameter):
 
 class TensorNode(Node):
     """Inserts TensorFlow code into a Nengo model.  A TensorNode operates in
-    much the same was a a :class:`~nengo:nengo.Node`, except its inputs and
+    much the same way as a :class:`~nengo:nengo.Node`, except its inputs and
     outputs are defined using TensorFlow operations.
 
-    The Tensorflow code is defined in a function or callable class
+    The TensorFlow code is defined in a function or callable class
     (``tensor_func``).  This function accepts the current simulation time as
     input, or the current simulation time and a Tensor ``x`` if
     ``node.size_in > 0``.  ``x`` will have shape
@@ -79,7 +77,7 @@ class TensorNode(Node):
     ----------
     tensor_func : callable
         a function that maps node inputs to outputs
-    size_in : int, optional (Default: None)
+    size_in : int, optional (Default: 0)
         the number of elements in the input vector
     size_out : int, optional (Default: None)
         the number of elements in the output vector (if None, value will be
@@ -89,7 +87,7 @@ class TensorNode(Node):
     """
 
     tensor_func = TensorFuncParam('tensor_func')
-    size_in = IntParam('size_in', default=None, low=0, optional=True)
+    size_in = IntParam('size_in', default=0, low=0, optional=True)
     size_out = IntParam('size_out', default=None, low=1, optional=True)
 
     def __init__(self, tensor_func, size_in=Default, size_out=Default,
