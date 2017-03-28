@@ -433,13 +433,12 @@ def order_signals(plan, n_passes=10):
 
     new_plan = {ops: ops for ops in plan}
     for n in range(n_passes):
-        # TODO: detect if ops order didn't change (early termination)
-        # TODO: every few iterations, eliminate the smallest unsatisfied block
+        # TODO: every few iterations, eliminate the smallest unsatisfied block?
         logger.debug("======== pass %d ========", n)
 
         # reorder ops by signal order. this leaves the overall
         # hamming sort block order unchanged.
-        new_plan, all_signals = sort_ops_by_signals(
+        new_plan2, all_signals2 = sort_ops_by_signals(
             sorted_reads, all_signals, new_plan, signal_blocks, reads)
 
         logger.debug("resorted ops")
@@ -447,6 +446,18 @@ def order_signals(plan, n_passes=10):
 
         logger.debug("reordered signals")
         logger.debug(all_signals)
+
+        if (all([x == y for ops in plan
+                 for x, y in zip(new_plan[ops], new_plan2[ops])]) and
+                all([x == y for x, y in zip(all_signals, all_signals2)])):
+            # if the plan didn't change and the signals didn't change, then
+            # there is no point in continuing (they're not going to change
+            # in the future)
+            logger.debug("early termination")
+            break
+        else:
+            all_signals = all_signals2
+            new_plan = new_plan2
 
     # error checking
     assert len(new_plan) == len(plan)
