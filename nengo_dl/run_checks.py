@@ -6,8 +6,8 @@ import nengo
 import pytest
 
 os.environ["NENGO_DL_TEST_PRECISION"] = "32"
-os.environ["NENGO_DL_TEST_UNROLL"] = "True"
-os.environ["NENGO_DL_TEST_STEP_BLOCKS"] = "10"
+os.environ["NENGO_DL_TEST_UNROLL"] = "False"
+os.environ["NENGO_DL_TEST_STEP_BLOCKS"] = "None"
 os.environ["NENGO_DL_TEST_DEVICE"] = "/cpu:0"
 
 # run nengo tests

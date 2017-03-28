@@ -688,58 +688,37 @@ def sort_signals_by_ops(sorted_reads, sigs, new_plan, blocks, reads):
             # only one read signal, so nothing to sort
             continue
 
-        # check that all the signals in the read group are in the same block
-        # (so sorting them won't change the overall block order).
-        # note: this is a bit conservative, as it is possible that signals from
-        # different blocks could still be sorted if the blocks were adjacent.
-        # however, that combination (adjacent read blocks with signals that can
-        # be sorted) is going to be rare, so the minor savings we would
-        # perhaps gain by trying to sort them are not worth the added
-        # code complexity and execution time.
-        # block_type = blocks[op_reads[0]]
-        # if not all([block_type == blocks[r] for r in op_reads[1:]]):
-        #     continue
-        #
-        # # sort signals so that the signals in op_reads are in order (doesn't
-        # # change the relative order of any other signals)
-        # pivot = sigs.index(op_reads[0])
-        # sorting = [sigs[pivot]]
-        # post = []
-        # for s in sigs[pivot + 1:]:
-        #     if s in op_reads:
-        #         sorting += [s]
-        #     else:
-        #         post += [s]
-        #
-        # sigs = (
-        #     sigs[:pivot] + sorted(sorting, key=lambda s: op_reads.index(s)) +
-        #     post)
-
-        # we bubble up each signal until it is in sorted order or it hits
-        # the edge of a signal block (since we don't want to disturb the
-        # overall order established by hamming_sort)
-        # TODO: stop as soon as we detect that this read group can't be sorted?
-        prev_index = sigs.index(op_reads[0])
-        for i in range(1, len(op_reads)):
-            r_index = sigs.index(op_reads[i])
-
-            move = False
-            while r_index <= prev_index:
-                r_index += 1
-                move = True
-
-                if (0 < r_index < len(sigs) and
-                        blocks[sigs[r_index]] !=
-                        blocks[sigs[r_index - 1]]):
-                    break
-
-            if move:
-                pre = [x for x in sigs[:r_index] if x is not op_reads[i]]
-                post = sigs[r_index:]
-                sigs = pre + [op_reads[i]] + post
-                prev_index = r_index - 1
+        sort_vals = {}
+        block_groups = [[]]
+        found_block = None
+        curr_block = blocks[sigs[0]]
+        for s in sigs:
+            # we try to sort things into everything <= the first read block
+            # in op_reads and everything after, with the op_reads signals in
+            # the middle (ordered to match op_reads)
+            if s in op_reads:
+                if found_block is None:
+                    found_block = False
+                sort_vals[s] = op_reads.index(s)
             else:
-                prev_index = r_index
+                sort_vals[s] = len(sigs) + 1 if found_block else -1
+
+            if found_block is None or blocks[s] == curr_block:
+                block_groups[-1] += [sort_vals[s]]
+            else:
+                if found_block is not None:
+                    found_block = True
+                block_groups += [[sort_vals[s]]]
+                curr_block = blocks[s]
+
+        for i in range(len(block_groups) - 1):
+            # check if this read group is unsortable (sorting it would
+            # break the overall group order)
+            if max(block_groups[i]) > min(block_groups[i + 1]):
+                break
+        else:
+            # sorting won't change the overall order, so go ahead and do it
+            sigs = sorted(sigs, key=lambda s: sort_vals[s])
 
         logger.log(logging.DEBUG - 1, "sorted signals %s", sigs)
 
