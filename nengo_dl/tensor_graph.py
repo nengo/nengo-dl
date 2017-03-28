@@ -336,14 +336,23 @@ class TensorGraph(object):
                 parallel_iterations=1,  # TODO: more parallel iterations
                 back_prop=False)
 
-        self.end_step = loop_vars[0]
+        self.end_base_arrays = loop_vars[4]
         self.probe_arrays = []
         for p in loop_vars[3]:
             x = p.stack()
             if self.step_blocks is not None:
-                x.set_shape([self.step_blocks] + x.get_shape().as_list()[1:])
+                x.set_shape([self.step_blocks] +
+                            x.get_shape().as_list()[1:])
             self.probe_arrays += [x]
-        self.end_base_arrays = loop_vars[4]
+
+        # note: we need to make sure the final base array updates get computed,
+        # even if they aren't being read by anything, because they may be
+        # being read on the next `_run_steps` call. the `tf.while_loop`
+        # enter/exit logic takes care of that on its own, so we only need to
+        # do this for the unrolled case
+        with tf.control_dependencies(self.end_base_arrays if
+                                     self.unroll_simulation else []):
+            self.end_step = tf.identity(loop_vars[0])
 
     def build_inputs(self, rng):
         """Sets up the inputs in the model (which will be computed outside of
@@ -360,7 +369,7 @@ class TensorGraph(object):
         for n in self.invariant_inputs:
             if self.model.sig[n]["out"] in self.sig_map:
                 # make sure the indices for this input are loaded into
-                # Tensorflow (they may not be, if the output of this node is
+                # TensorFlow (they may not be, if the output of this node is
                 # only read as part of a larger block during the simulation)
                 self.sig_map[self.model.sig[n]["out"]].load_indices()
 

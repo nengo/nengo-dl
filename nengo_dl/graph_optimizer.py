@@ -776,9 +776,6 @@ def create_signals(sigs, plan, float_type, minibatch_size):
     sig_map = {}
 
     # find the non-overlapping partitions of the signals
-    # TODO: we could just partition based on reads, and allow
-    # sets to happen across base arrays (how much of a performance hit would
-    # we get from that?)
     breaks = []
     starts = []
     stops = []

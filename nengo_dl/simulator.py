@@ -92,9 +92,6 @@ class Simulator(object):
         # TODO: allow the simulator to be called flexibly with/without
         # minibatching
 
-        # TODO: there's some possible bugs with device=None and
-        # unroll_simulation=False
-
         # build model (uses default nengo builder)
         if model is None:
             self.model = Model(dt=float(dt), label="%s, dt=%f" % (network, dt))
@@ -178,8 +175,10 @@ class Simulator(object):
                 graph=self.tensor_graph.graph)
 
         # start session
+        # note: we need to allow soft placement when using tf.while_loop,
+        # because tensorflow pins loop variables to the CPU
         config = tf.ConfigProto(
-            allow_soft_placement=False,
+            allow_soft_placement=not self.tensor_graph.unroll_simulation,
             log_device_placement=False,
         )
 
@@ -289,7 +288,7 @@ class Simulator(object):
         n_steps : int
             the number of simulation steps to be executed
         profile : bool, optional
-            if True, collect Tensorflow profiling information while the
+            if True, collect TensorFlow profiling information while the
             simulation is running (this will slow down the simulation)
         input_feeds : dict of {:class:`~nengo:nengo.Node`: \
                                :class:`~numpy:numpy.ndarray`}
@@ -319,9 +318,8 @@ class Simulator(object):
 
         # execute the simulation loop
         try:
-            final_step, probe_data, self.final_bases = self.sess.run(
-                [self.tensor_graph.end_step, self.tensor_graph.probe_arrays,
-                 self.tensor_graph.end_base_arrays],
+            final_step, probe_data = self.sess.run(
+                [self.tensor_graph.end_step, self.tensor_graph.probe_arrays],
                 feed_dict=self._fill_feed(n_steps, input_feeds,
                                           start=self.n_steps),
                 options=run_options, run_metadata=run_metadata)

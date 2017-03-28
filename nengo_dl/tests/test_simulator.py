@@ -1,3 +1,4 @@
+import itertools
 import os
 import shutil
 
@@ -54,8 +55,8 @@ def test_step_blocks(Simulator, seed):
 def test_unroll_simulation(Simulator, seed):
     # note: we run this multiple times because the effects of unrolling can
     # be somewhat stochastic depending on the op order
-    for _ in range(10):
-        with nengo.Network(seed=seed) as net:
+    for i in range(10):
+        with nengo.Network(seed=seed + i) as net:
             inp = nengo.Node(np.sin)
             ens = nengo.Ensemble(10, 1)
             nengo.Connection(inp, ens)
@@ -355,3 +356,24 @@ def test_model_passing(Simulator):
         sim.run_steps(10)
 
     assert np.allclose(sim.data[p], canonical)
+
+
+@pytest.mark.gpu
+@pytest.mark.parametrize(
+    "device, unroll", itertools.product(["/cpu:0", "/gpu:0", None],
+                                        [True, False]))
+def test_devices(Simulator, device, unroll, seed):
+    with nengo.Network(seed=seed) as net:
+        inp = nengo.Node([0])
+        ens = nengo.Ensemble(10, 1)
+        nengo.Connection(inp, ens)
+        p = nengo.Probe(ens)
+
+    with nengo.Simulator(net) as sim:
+        sim.run_steps(50)
+        canonical = sim.data[p]
+
+    with Simulator(net, device=device, unroll_simulation=unroll,
+                   step_blocks=10) as sim:
+        sim.run_steps(50)
+        assert np.allclose(sim.data[p], canonical)

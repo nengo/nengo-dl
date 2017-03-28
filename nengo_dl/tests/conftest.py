@@ -11,3 +11,13 @@ def Simulator(request):
     """
 
     return tests.Simulator
+
+
+def pytest_runtest_setup(item):
+    if (getattr(item.obj, 'gpu', None) and not item.config.getvalue('--gpu')):
+        pytest.skip("GPU tests not requested")
+
+
+def pytest_addoption(parser):
+    parser.addoption("--gpu", action="store_true", default=False,
+                     help="run GPU tests")

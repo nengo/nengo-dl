@@ -527,7 +527,7 @@ def test_order_signals_duplicate_read_blocks():
     sigs, new_plan = order_signals(plan)
     assert ordered(new_plan[0], sigs)
     assert ordered(new_plan[1], sigs)
-    assert (ordered(new_plan[2], sigs, block=0) or 
+    assert (ordered(new_plan[2], sigs, block=0) or
             ordered(new_plan[2], sigs, block=1))
     assert not ordered(new_plan[2], sigs)
 

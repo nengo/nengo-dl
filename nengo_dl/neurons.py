@@ -231,8 +231,6 @@ class LIFBuilder(object):
                               signals.dtype)
 
     def build_step(self, signals):
-        # TODO: use sparse operators when dealing with spikes
-
         J = signals.gather(self.J_data)
         voltage = signals.gather(self.voltage_data)
         refractory = signals.gather(self.refractory_data)
@@ -252,12 +250,12 @@ class LIFBuilder(object):
         # this is because there is no GPU kernel for scatter/gather_nd. so if
         # that gets implemented in the future, this may be faster.
         # indices = tf.cast(tf.where(spiked), tf.int32)
-        # tau_rc = tf.gather_nd(self.tau_rc, tf.expand_dims(indices[:, 0], 1))
-        # tau_ref = tf.gather_nd(
-        #     self.tau_ref, tf.expand_dims(indices[:, 0], 1))
-        # J = tf.gather_nd(J, indices)
+        # indices0 = tf.expand_dims(indices[:, 0], 1)
+        # tau_rc = tf.gather_nd(self.tau_rc, indices0)
+        # tau_ref = tf.gather_nd(self.tau_ref, indices0)
         # t_spike = tau_ref + signals.dt + tau_rc * tf.log1p(
-        #     -(tf.gather_nd(voltage, indices) - 1) / (J - 1))
+        #     -(tf.gather_nd(voltage, indices) - 1) /
+        #     (tf.gather_nd(J, indices) - 1))
         # refractory = tf.where(
         #     spiked, tf.scatter_nd(indices, t_spike, tf.shape(refractory)),
         #     refractory)

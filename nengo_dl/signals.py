@@ -378,13 +378,7 @@ class SignalDict(object):
         # whenever we read from an array we use this to mark it as "read"
         # (so that any future writes to the array will be scheduled after
         # the read)
-        # TODO: we could store the indices as well, so that future writes are
-        # only delayed if they write to the same part of the array
-
-        if force_copy:
-            self.reads_by_base[self.bases[src.key]] += [result]
-        else:
-            self.mark_gather(src)
+        self.mark_gather(src)
 
         return result
 

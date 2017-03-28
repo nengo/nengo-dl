@@ -8,7 +8,7 @@ import pytest
 os.environ["NENGO_DL_TEST_PRECISION"] = "32"
 os.environ["NENGO_DL_TEST_UNROLL"] = "False"
 os.environ["NENGO_DL_TEST_STEP_BLOCKS"] = "None"
-os.environ["NENGO_DL_TEST_DEVICE"] = "/cpu:0"
+os.environ["NENGO_DL_TEST_DEVICE"] = "/gpu:0"
 
 # run nengo tests
 print("#" * 30, "NENGO TESTS", "#" * 30)
@@ -20,7 +20,7 @@ pytest.main([
 
 # run local tests
 print("#" * 30, "NENGO_DL TESTS", "#" * 30)
-pytest.main()
+pytest.main(['--gpu'])
 
 # run flake8
 sys.argv += "--ignore E721 .".split()
