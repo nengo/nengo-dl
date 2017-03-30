@@ -100,6 +100,7 @@ class TensorGraph(object):
                                           self.minibatch_size)
         self.target_phs = {}
         self.losses = {}
+        self.optimizers = {}
 
         with self.graph.as_default(), tf.device(self.device):
             # make sure indices are loaded for all probe signals (they won't
@@ -222,7 +223,6 @@ class TensorGraph(object):
         # probe_array.flow doesn't work, although I think it should).
         # so by adding the copy here and then blocking on the copy, we make
         # sure that the probe value is read before it can be overwritten.
-        # TODO: check out tensorarray.identity()
         logger.debug("collecting probe tensors")
         probe_tensors = [
             self.signals.gather(self.sig_map[self.model.sig[p]["in"]],
@@ -282,28 +282,6 @@ class TensorGraph(object):
             with self.graph.control_dependencies(side_effects + probe_tensors):
                 loop_i += 1
 
-            # set up tensorboard output
-            # if self.tensorboard:
-            # TODO: get this part to work again
-            # names = []
-            # for i, probe in enumerate(self.model.probes):
-            #     # add probes to tensorboard summary
-            #     if self.tensorboard:
-            #         # cut out the memory address so tensorboard doesn't
-            #         # display them as separate graphs for each run
-            #         name = utils.sanitize_name(probe)
-            #         name = name[:name.index("_at_0x")]
-            #         count = len(
-            #             [x for x in names if x.startswith(name)])
-            #         name += "_%d" % count
-            #         names += [name]
-            #
-            #         for j in range(probe.size_in):
-            #             tf.summary.scalar("%s.dim%d" % (name, j),
-            #                               probe_tensors[i][j])
-            #
-            # summary_op = tf.summary.merge_all()
-
             base_vals = tuple(self.signals.bases.values())
 
             return step, stop, loop_i, probe_arrays, base_vals
@@ -331,10 +309,12 @@ class TensorGraph(object):
                 with self.graph.name_scope("iteration_%d" % n):
                     loop_vars = loop_body(*loop_vars)
         else:
+            # TODO: get parallel iterations working? nengo simulations are
+            # pretty serial though, so I'm not sure how much benefit we would
+            # get (and it seems non-trivial to get working correctly)
             loop_vars = tf.while_loop(
                 loop_condition, loop_body, loop_vars=loop_vars,
-                parallel_iterations=1,  # TODO: more parallel iterations
-                back_prop=False)
+                parallel_iterations=1, back_prop=False)
 
         self.end_base_arrays = loop_vars[4]
         self.probe_arrays = []
@@ -411,17 +391,22 @@ class TensorGraph(object):
         with self.graph.as_default(), tf.device(self.device):
             loss = self.build_loss(objective, targets)
 
-            # create optimizer operator
-            # TODO: add caching here so we don't rebuild the same optimizer
-            # on repeated calls
-            self.opt_op = optimizer.minimize(
-                loss, var_list=tf.trainable_variables())
+            key = (optimizer, targets, objective)
+            if key not in self.optimizers:
+                # create optimizer operator
+                opt_op = optimizer.minimize(
+                    loss, var_list=tf.trainable_variables())
 
-            # get any new variables created by optimizer (so they can be
-            # initialized)
-            self.opt_slots_init = tf.variables_initializer(
-                [optimizer.get_slot(v, name) for v in tf.trainable_variables()
-                 for name in optimizer.get_slot_names()])
+                # get any new variables created by optimizer (so they can be
+                # initialized)
+                opt_slots_init = tf.variables_initializer(
+                    [optimizer.get_slot(v, name)
+                     for v in tf.trainable_variables()
+                     for name in optimizer.get_slot_names()])
+
+                self.optimizers[key] = (opt_op, opt_slots_init)
+
+            return self.optimizers[key]
 
     def build_loss(self, objective, targets):
         """Adds elements into the graph to compute the given objective.

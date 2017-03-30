@@ -242,7 +242,77 @@ def test_train_objective(Simulator, seed):
                            atol=1e-3)
 
 
-# TODO: add test with non-gradientdescent optimizer
+def test_train_rmsprop(Simulator, seed):
+    minibatch_size = 4
+    step_blocks = 1
+    n_hidden = 5
+
+    np.random.seed(seed)
+
+    with nengo.Network(seed=seed) as net:
+        net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
+        net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-0.1, 0.1)
+        net.config[nengo.Connection].synapse = None
+
+        inp = nengo.Node([0, 0])
+        ens = nengo.Ensemble(n_hidden, n_hidden,
+                             neuron_type=nengo.Sigmoid(tau_ref=1))
+        out = nengo.Ensemble(1, 1, neuron_type=nengo.Sigmoid(tau_ref=1))
+        nengo.Connection(
+            inp, ens, transform=np.random.uniform(-1, 1, size=(n_hidden, 2)))
+        nengo.Connection(
+            ens, out, transform=np.random.uniform(-1, 1, size=(1, n_hidden)))
+
+        p = nengo.Probe(out.neurons)
+
+    with Simulator(net, minibatch_size=minibatch_size, step_blocks=step_blocks,
+                   unroll_simulation=True, seed=seed, device="/cpu:0") as sim:
+        x = np.asarray([[[0, 0]], [[0, 1]], [[1, 0]], [[1, 1]]])
+        y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
+
+        sim.train({inp: x}, {p: y}, tf.train.RMSPropOptimizer(2e-4),
+                  n_epochs=10000)
+
+        sim.step(input_feeds={inp: x})
+
+        assert np.allclose(sim.data[p], y, atol=1e-4)
+
+
+@pytest.mark.xfail
+def test_train_rmsprop_gpu(Simulator, seed):
+    minibatch_size = 4
+    step_blocks = 1
+    n_hidden = 5
+
+    np.random.seed(seed)
+
+    with nengo.Network(seed=seed) as net:
+        net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
+        net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-0.1, 0.1)
+        net.config[nengo.Connection].synapse = None
+
+        inp = nengo.Node([0, 0])
+        ens = nengo.Ensemble(n_hidden, n_hidden,
+                             neuron_type=nengo.Sigmoid(tau_ref=1))
+        out = nengo.Ensemble(1, 1, neuron_type=nengo.Sigmoid(tau_ref=1))
+        nengo.Connection(
+            inp, ens, transform=np.random.uniform(-1, 1, size=(n_hidden, 2)))
+        nengo.Connection(
+            ens, out, transform=np.random.uniform(-1, 1, size=(1, n_hidden)))
+
+        p = nengo.Probe(out.neurons)
+
+    with Simulator(net, minibatch_size=minibatch_size, step_blocks=step_blocks,
+                   unroll_simulation=True, seed=seed, device="/gpu:0") as sim:
+        x = np.asarray([[[0, 0]], [[0, 1]], [[1, 0]], [[1, 1]]])
+        y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
+
+        sim.train({inp: x}, {p: y}, tf.train.RMSPropOptimizer(2e-4),
+                  n_epochs=10000)
+
+        sim.step(input_feeds={inp: x})
+
+        assert np.allclose(sim.data[p], y, atol=1e-4)
 
 
 def test_loss(Simulator):

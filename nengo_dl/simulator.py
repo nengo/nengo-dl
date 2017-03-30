@@ -434,16 +434,11 @@ class Simulator(object):
         #      for p in targets])
 
         # build optimizer op
-        self.tensor_graph.build_optimizer(optimizer, tuple(targets.keys()),
-                                          objective)
+        opt_op, opt_slots_init = self.tensor_graph.build_optimizer(
+            optimizer, tuple(targets.keys()), objective)
 
         # initialize any variables that were created by the optimizer
-        try:
-            self.sess.run(self.tensor_graph.opt_slots_init)
-        except tf.errors.InvalidArgumentError:
-            raise SimulationError(
-                "TensorFlow does not yet support this optimizer on the "
-                "GPU; try `Simulator(..., device='/cpu:0')`")
+        self.sess.run(opt_slots_init)
 
         progress = utils.ProgressBar(n_epochs, "Training")
 
@@ -453,9 +448,13 @@ class Simulator(object):
                     shuffle=shuffle):
                 # TODO: set up queue to feed in data more efficiently
                 self.soft_reset()
-                self.sess.run(
-                    [self.tensor_graph.opt_op],
-                    feed_dict=self._fill_feed(self.step_blocks, inp, tar))
+                try:
+                    self.sess.run([opt_op], feed_dict=self._fill_feed(
+                        self.step_blocks, inp, tar))
+                except tf.errors.InvalidArgumentError:
+                    raise SimulationError(
+                        "TensorFlow does not yet support this optimizer on "
+                        "the GPU; try `Simulator(..., device='/cpu:0')`")
             progress.step()
 
         self.soft_reset()

@@ -47,7 +47,7 @@ class SimProcessBuilder(OpBuilder):
             # make sure that TF_PROCESS_IMPL is kept up to date
 
             if process_type == Lowpass:
-                self.built_process = LinearFilter(ops, signals)
+                self.built_process = LowpassBuilder(ops, signals)
         else:
             self.built_process = GenericProcessBuilder(ops, signals, rng)
 
@@ -123,11 +123,11 @@ class GenericProcessBuilder(object):
         signals.scatter(self.output_data, result, mode=self.mode)
 
 
-class LinearFilter(object):
+class LowpassBuilder(object):
     """Build a group of :class:`~nengo:nengo.LinearFilter`
     neuron operators."""
     def __init__(self, ops, signals):
-        # TODO: implement general linear filter (using tensorarrays?)
+        # TODO: implement general linear filter (using queues?)
 
         self.input_data = (None if ops[0].input is None else
                            signals.combine([op.input for op in ops]))
@@ -162,8 +162,9 @@ class LinearFilter(object):
 
         # note: applying the negative here
         dens = -np.asarray(dens)[:, None]
+
         # need to manually broadcast for scatter_mul
-        dens = np.tile(dens, (1, signals.minibatch_size))
+        # dens = np.tile(dens, (1, signals.minibatch_size))
 
         self.nums = tf.constant(nums, dtype=self.output_data.dtype)
         self.dens = tf.constant(dens, dtype=self.output_data.dtype)
