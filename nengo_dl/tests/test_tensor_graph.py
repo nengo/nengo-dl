@@ -1,7 +1,9 @@
 import nengo
+import pytest
 
 
-def test_gradients(Simulator, seed):
+@pytest.mark.parametrize("unroll", (True, False))
+def test_gradients(Simulator, unroll, seed):
     step_blocks = 10
     minibatch_size = 4
 
@@ -37,7 +39,7 @@ def test_gradients(Simulator, seed):
         nengo.Probe(ens)
         nengo.Probe(ens2)
 
-    with Simulator(net, step_blocks=step_blocks, unroll_simulation=True,
+    with Simulator(net, step_blocks=step_blocks, unroll_simulation=unroll,
                    minibatch_size=minibatch_size) as sim:
         sim.check_gradients(atol=1e-4)
 

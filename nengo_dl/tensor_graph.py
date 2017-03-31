@@ -4,6 +4,7 @@ import logging
 from nengo import Process
 from nengo.builder.operator import TimeUpdate, SimPyFunc
 from nengo.builder.processes import SimProcess
+from nengo.exceptions import SimulationError
 import tensorflow as tf
 
 from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node
@@ -314,7 +315,7 @@ class TensorGraph(object):
             # get (and it seems non-trivial to get working correctly)
             loop_vars = tf.while_loop(
                 loop_condition, loop_body, loop_vars=loop_vars,
-                parallel_iterations=1, back_prop=False)
+                parallel_iterations=1, back_prop=True)
 
         self.end_base_arrays = loop_vars[4]
         self.probe_arrays = []
@@ -394,8 +395,12 @@ class TensorGraph(object):
             key = (optimizer, targets, objective)
             if key not in self.optimizers:
                 # create optimizer operator
-                opt_op = optimizer.minimize(
-                    loss, var_list=tf.trainable_variables())
+                try:
+                    opt_op = optimizer.minimize(
+                        loss, var_list=tf.trainable_variables())
+                except ValueError:
+                    raise SimulationError(
+                        "Network graph contains non-differentiable elements")
 
                 # get any new variables created by optimizer (so they can be
                 # initialized)

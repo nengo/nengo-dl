@@ -160,7 +160,7 @@ def test_train_ff(Simulator, neurons, seed):
         p = nengo.Probe(out.neurons)
 
     with Simulator(net, minibatch_size=minibatch_size, step_blocks=step_blocks,
-                   unroll_simulation=True, seed=seed) as sim:
+                   seed=seed) as sim:
         x = np.asarray([[[0, 0]], [[0, 1]], [[1, 0]], [[1, 1]]])
         y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
 
@@ -196,7 +196,7 @@ def test_train_recurrent(Simulator, neurons, seed):
         p = nengo.Probe(out)
 
     with Simulator(net, minibatch_size=minibatch_size, step_blocks=step_blocks,
-                   unroll_simulation=True, seed=seed) as sim:
+                   seed=seed) as sim:
         x = np.outer(np.linspace(0.1, 0.9, batch_size),
                      np.ones(step_blocks))[:, :, None]
         y = np.outer(np.linspace(0.1, 0.9, batch_size),
@@ -212,7 +212,8 @@ def test_train_recurrent(Simulator, neurons, seed):
     assert np.sqrt(np.sum((sim.data[p] - y[:minibatch_size]) ** 2)) < 0.4
 
 
-def test_train_objective(Simulator, seed):
+@pytest.mark.parametrize("unroll", (True, False))
+def test_train_objective(Simulator, unroll, seed):
     minibatch_size = 1
     step_blocks = 10
     n_hidden = 20
@@ -224,7 +225,7 @@ def test_train_objective(Simulator, seed):
         p = nengo.Probe(ens)
 
     with Simulator(net, minibatch_size=minibatch_size, step_blocks=step_blocks,
-                   unroll_simulation=True, seed=seed) as sim:
+                   unroll_simulation=unroll, seed=seed) as sim:
         x = np.ones((minibatch_size, step_blocks, 1))
         y = np.zeros((minibatch_size, step_blocks, 1))
 

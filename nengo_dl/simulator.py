@@ -402,10 +402,10 @@ class Simulator(object):
             raise SimulatorClosed("Simulator cannot be trained because it is "
                                   "closed.")
 
-        if not self.tensor_graph.unroll_simulation:
+        if self.step_blocks is None:
             raise SimulationError(
-                "Simulation must be unrolled for training "
-                "(`Simulator(..., unroll_simulation=True)`)")
+                "Simulator `step_blocks` must be set for training "
+                "(`Simulator(..., step_blocks=n)`)")
 
         for n, x in inputs.items():
             if x.shape[1] != self.step_blocks:
@@ -429,7 +429,7 @@ class Simulator(object):
 
         # check for non-differentiable elements in graph
         # utils.find_non_differentiable(
-        #     [self.tensor_graph.invariant_ph[1]],
+        #     [self.tensor_graph.invariant_ph[n] for n in inputs],
         #     [self.tensor_graph.probe_arrays[self.model.probes.index(p)]
         #      for p in targets])
 
