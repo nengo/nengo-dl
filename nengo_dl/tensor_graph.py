@@ -1,5 +1,7 @@
 from collections import OrderedDict
+import datetime
 import logging
+import time
 
 from nengo import Process
 from nengo.builder.operator import TimeUpdate, SimPyFunc
@@ -72,6 +74,9 @@ class TensorGraph(object):
                 (isinstance(op, SimProcess) and op.input is None and
                  op.process in node_processes))]
 
+        utils.print_and_flush("Optimizing graph", end="")
+        start = time.time()
+
         # group mergeable operators
         plan = graph_optimizer.greedy_planner(operators)
         # plan = graph_optimizer.tree_planner(operators)
@@ -86,6 +91,9 @@ class TensorGraph(object):
         self.base_arrays_init, self.sig_map = graph_optimizer.create_signals(
             sigs, self.plan, float_type=dtype.as_numpy_dtype,
             minibatch_size=self.minibatch_size)
+
+        print("\rOptimization completed in %s " %
+              datetime.timedelta(seconds=int(time.time() - start)))
 
     def build(self, rng):
         """Constructs a new graph to simulate the model.
@@ -283,9 +291,9 @@ class TensorGraph(object):
             with self.graph.control_dependencies(side_effects + probe_tensors):
                 loop_i += 1
 
-            base_vals = tuple(self.signals.bases.values())
+            base_vars = tuple(self.signals.bases.values())
 
-            return step, stop, loop_i, probe_arrays, base_vals
+            return step, stop, loop_i, probe_arrays, base_vars
 
         self.step_var = tf.placeholder(tf.int32, shape=(), name="step")
         self.stop_var = tf.placeholder(tf.int32, shape=(), name="stop")

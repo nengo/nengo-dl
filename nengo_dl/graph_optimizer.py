@@ -121,6 +121,8 @@ def mergeable(op, chosen_ops):
     return True
 
 
+# TODO: implement transitive-closure based planner
+
 def greedy_planner(operators):
     """Combine mergeable operators into groups that will be executed as a
     single computation.
@@ -432,34 +434,43 @@ def order_signals(plan, n_passes=10):
     # based on the order established by the later group.
 
     new_plan = {ops: ops for ops in plan}
+    sig_idxs = {s: i for i, s in enumerate(all_signals)}
     for n in range(n_passes):
         # TODO: every few iterations, eliminate the smallest unsatisfied block?
         logger.debug("======== pass %d ========", n)
 
         # reorder ops by signal order. this leaves the overall
         # hamming sort block order unchanged.
-        new_plan2, all_signals2 = sort_ops_by_signals(
-            sorted_reads, all_signals, new_plan, signal_blocks, reads)
+        new_plan2, sig_idxs2 = sort_ops_by_signals(
+            sorted_reads, all_signals, sig_idxs, new_plan, signal_blocks,
+            reads)
 
         logger.debug("resorted ops")
         logger.debug("\n".join([str(x) for x in new_plan.values()]))
 
-        logger.debug("reordered signals")
-        logger.debug(all_signals)
+        logger.debug("reordered signal indices")
+        logger.debug(sig_idxs2)
 
         if (all([x == y for ops in plan
                  for x, y in zip(new_plan[ops], new_plan2[ops])]) and
-                all([x == y for x, y in zip(all_signals, all_signals2)])):
+                all([sig_idxs[s] == sig_idxs2[s] for s in all_signals])):
             # if the plan didn't change and the signals didn't change, then
             # there is no point in continuing (they're not going to change
             # in the future)
             logger.debug("early termination")
             break
         else:
-            all_signals = all_signals2
+            sig_idxs = sig_idxs2
             new_plan = new_plan2
 
+    sorted_signals = sorted(all_signals, key=lambda s: sig_idxs2[s])
+
     # error checking
+    # make sure that overall signal block order didn't change
+    for s, s2 in zip(all_signals, sorted_signals):
+        assert signal_blocks[s] == signal_blocks[s2]
+
+    # make sure that all ops are present
     assert len(new_plan) == len(plan)
     for ops, new_ops in new_plan.items():
         assert len(ops) == len(new_ops)
@@ -467,11 +478,11 @@ def order_signals(plan, n_passes=10):
             assert op in new_ops
 
     logger.debug("final sorted signals")
-    logger.debug(all_signals)
+    logger.debug(sorted_signals)
     logger.debug("new plan")
     logger.debug("\n".join([str(new_plan[ops]) for ops in plan]))
 
-    return all_signals, [new_plan[ops] for ops in plan]
+    return sorted_signals, [new_plan[ops] for ops in plan]
 
 
 def hamming_sort(sigs, blocks):
@@ -574,7 +585,7 @@ def hamming_sort(sigs, blocks):
     return sorted_signals
 
 
-def sort_ops_by_signals(sorted_reads, sigs, new_plan, blocks, reads):
+def sort_ops_by_signals(sorted_reads, sigs, sig_idxs, new_plan, blocks, reads):
     """Rearrange operators to match the order of signals.
 
     Note: the same operators can be associated with multiple read blocks if
@@ -594,6 +605,8 @@ def sort_ops_by_signals(sorted_reads, sigs, new_plan, blocks, reads):
     sigs : list of :class:`~nengo:nengo.builder.Signal`
         signals that have been arranged into a given order by other parts
         of the algorithm
+    sig_idxs : dict of {:class:`~nengo:nengo.builder.Signal`: int}
+        sorted indices of signals
     new_plan : dict of {tuple of :class:`~nengo:nengo.builder.Operator`: \
                         tuple of :class:`~nengo:nengo.builder.Operator`}
         mapping from original operator group to the sorted operators
@@ -608,8 +621,8 @@ def sort_ops_by_signals(sorted_reads, sigs, new_plan, blocks, reads):
     new_plan : dict of {tuple of :class:`~nengo:nengo.builder.Operator`: \
                         tuple of :class:`~nengo:nengo.builder.Operator`}
         mapping from original operator group to the sorted operators
-    sigs : list of :class:`~nengo:nengo.builder.Signal`
-        signals list, possibly rearranged to match new operator order
+    sig_idxs : dict of {:class:`~nengo:nengo.builder.Signal`: int}
+        signal indices, possibly updated to match new op order
     """
 
     logger.log(logging.DEBUG - 1, "sort ops by signals")
@@ -630,7 +643,7 @@ def sort_ops_by_signals(sorted_reads, sigs, new_plan, blocks, reads):
         # sorted first by the order of the signals in the list, then by
         # the order of the views within each signal
         sorted_ops = sorted(
-            ops, key=lambda op: (sigs.index(reads[op][read_block].base),
+            ops, key=lambda op: (sig_idxs[reads[op][read_block].base],
                                  reads[op][read_block].elemoffset))
 
         new_plan[old_ops] = tuple(sorted_ops)
@@ -648,14 +661,14 @@ def sort_ops_by_signals(sorted_reads, sigs, new_plan, blocks, reads):
         # because while we know that these ops are in the same relative order
         # as the signals, the signals may not be adjacent (sorting will try
         # to make them adjacent)
-        sigs = sort_signals_by_ops(
+        sig_idxs = sort_signals_by_ops(
             [x for x in sorted_reads if x[0] == old_ops],
-            sigs, new_plan, blocks, reads)
+            sigs, sig_idxs, new_plan, blocks, reads)
 
-    return new_plan, sigs
+    return new_plan, sig_idxs
 
 
-def sort_signals_by_ops(sorted_reads, sigs, new_plan, blocks, reads):
+def sort_signals_by_ops(sorted_reads, sigs, sig_idxs, new_plan, blocks, reads):
     """Attempts to rearrange ``sigs`` so that it is in the same order as
     operator reads, without changing the overall block order.
 
@@ -669,6 +682,8 @@ def sort_signals_by_ops(sorted_reads, sigs, new_plan, blocks, reads):
         inputs this block is associated with.
     sigs : list of :class:`~nengo:nengo.builder.Signal`
         signals to be sorted
+    sig_idxs : dict of {:class:`~nengo:nengo.builder.Signal`: int}
+        sorted indices of signals
     new_plan : dict of {tuple of :class:`~nengo:nengo.builder.Operator`: \
                         tuple of :class:`~nengo:nengo.builder.Operator`}
         mapping from original operator group to the sorted operators
@@ -680,8 +695,8 @@ def sort_signals_by_ops(sorted_reads, sigs, new_plan, blocks, reads):
 
     Returns
     -------
-    list of :class:`~nengo:nengo.builder.Signal`
-        sorted signals
+    sig_idxs : dict of {:class:`~nengo:nengo.builder.Signal`: int}
+        sorted indices of signals
     """
 
     logger.log(logging.DEBUG - 1, "-" * 10)
@@ -693,47 +708,84 @@ def sort_signals_by_ops(sorted_reads, sigs, new_plan, blocks, reads):
         logger.log(logging.DEBUG - 1, "%d %s", read_block, new_plan[old_ops])
 
         ops = new_plan[old_ops]
-        op_reads = [reads[op][read_block].base for op in ops]
 
-        if len(set(op_reads)) == 1:
+        sort_vals = {s: i for i, s in
+                     enumerate(reads[op][read_block].base for op in ops)}
+
+        if len(sort_vals) == 1:
             # only one read signal, so nothing to sort
             continue
 
-        sort_vals = {}
-        block_groups = [[]]
-        found_block = None
-        curr_block = blocks[sigs[0]]
-        for s in sigs:
+        first_block = True
+        last_block = False
+        curr_block = None
+        pre = []
+        post = []
+        curr_max = -1
+        sortable = True
+        sort_idxs = [sig_idxs[s] for s in sort_vals]
+        min_index = min(sort_idxs)
+        max_index = max(sort_idxs)
+
+        for i, s in enumerate(sigs[min_index:max_index + 1]):
             # we try to sort things into everything <= the first read block
             # in op_reads and everything after, with the op_reads signals in
             # the middle (ordered to match op_reads)
-            if s in op_reads:
-                if found_block is None:
-                    found_block = False
-                sort_vals[s] = op_reads.index(s)
-            else:
-                sort_vals[s] = len(sigs) + 1 if found_block else -1
+            sort_item = s in sort_vals
 
-            if found_block is None or blocks[s] == curr_block:
-                block_groups[-1] += [sort_vals[s]]
-            else:
-                if found_block is not None:
-                    found_block = True
-                block_groups += [[sort_vals[s]]]
+            if blocks[s] != curr_block:
+                if last_block:
+                    # if the block changes after the last block, that means
+                    # that there are still sortable items in the new block,
+                    # but there were `post` items in the previous block,
+                    # so the list is not sortable
+                    sortable = False
+                    break
+
+                first_block = False
+                prev_max = curr_max
+                curr_max = -1
                 curr_block = blocks[s]
 
-        for i in range(len(block_groups) - 1):
-            # check if this read group is unsortable (sorting it would
-            # break the overall group order)
-            if max(block_groups[i]) > min(block_groups[i + 1]):
-                break
-        else:
-            # sorting won't change the overall order, so go ahead and do it
-            sigs = sorted(sigs, key=lambda s: sort_vals[s])
+            if sort_item:
+                idx = sort_vals[s]
+                if idx < prev_max:
+                    # if the sort position for this signal is less than the
+                    # end of the previous sorted block, then the list is not
+                    # sortable
+                    sortable = False
+                    break
 
-        logger.log(logging.DEBUG - 1, "sorted signals %s", sigs)
+                # update the max sort index in this block
+                curr_max = max(curr_max, idx)
+            elif first_block:
+                # only for the first block, we want to add non-sort items to
+                # the beginning of the list instead of the end
+                pre.append(s)
+            else:
+                # s is not in sort_vals, and this is not the first block,
+                # so this must be the last block (we can't have items
+                # not in sort_vals in a middle block, or they will be
+                # unsortable)
+                last_block = True
+                post.append(s)
 
-    return sigs
+        if sortable:
+            for i, s in enumerate(pre):
+                sig_idxs[s] = min_index + i
+
+            offset = min_index + len(pre)
+            for i, s in enumerate(sorted(sort_vals,
+                                         key=lambda s: sort_vals[s])):
+                sig_idxs[s] = offset + i
+
+            offset += len(sort_vals)
+            for i, s in enumerate(post):
+                sig_idxs[s] = offset + i
+
+            logger.log(logging.DEBUG - 1, "sorted indices %s", sig_idxs)
+
+    return sig_idxs
 
 
 def noop_order_signals(plan, **kwargs):
