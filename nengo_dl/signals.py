@@ -310,8 +310,10 @@ class SignalDict(object):
 
         var = self.bases[dst.key]
 
-        if var.get_shape().is_compatible_with(src.get_shape()) and np.all(
-                np.arange(var.get_shape()[0].value) == dst.indices):
+        if (dst.as_slice is not None and
+                var.get_shape().is_compatible_with(src.get_shape()) and
+                dst.indices[0] == 0 and
+                dst.indices[-1] == var.get_shape()[0].value - 1):
             if mode == "inc":
                 result = tf.assign_add(var, src)
             else:
@@ -353,19 +355,21 @@ class SignalDict(object):
         logger.debug("indices %s", src.indices)
         logger.debug("src base %s", self.bases[src.key])
 
+        var = self.bases[src.key]
+
         # we prefer to get the data via `strided_slice` or `identity` if
         # possible, as it is more efficient
         if force_copy or src.as_slice is None:
-            result = tf.gather(self.bases[src.key], src.tf_indices)
-        elif np.all(np.arange(self.bases[src.key].get_shape()[0].value) ==
-                    src.indices):
-            result = tf.identity(self.bases[src.key])
+            result = tf.gather(var, src.tf_indices)
+        elif (src.indices[0] == 0 and
+              src.indices[-1] == var.get_shape()[0].value - 1):
+            result = tf.identity(var)
         else:
-            result = tf.strided_slice(self.bases[src.key], *src.as_slice)
+            result = tf.strided_slice(var, *src.as_slice)
 
         # for some reason the shape inference doesn't work in some cases
         result.set_shape(src.tf_indices.get_shape()[:1].concatenate(
-            self.bases[src.key].get_shape()[1:]))
+            var.get_shape()[1:]))
 
         # reshape the data according to the shape set in `src`, if there is
         # one, otherwise keep the shape of the base array
