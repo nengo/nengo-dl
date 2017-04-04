@@ -8,6 +8,9 @@ from .version import version as __version__  # noqa: E402,F401
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
+# import builtins
+# builtins.profile = lambda x: x
+
 # check GPU support
 from tensorflow.python.client import device_lib  # noqa: E402
 

@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import copy
 import logging
 
@@ -826,27 +826,26 @@ def create_signals(sigs, plan, float_type, minibatch_size):
     base_arrays = OrderedDict()
     curr_keys = {}
     sig_map = {}
+    sig_idxs = {s: i for i, s in enumerate(sigs)}
 
     # find the non-overlapping partitions of the signals
     breaks = []
-    starts = []
-    stops = []
+    diff = defaultdict(int)
     for ops in plan:
         # note: we don't include Resets, otherwise the big reset block
         # overrides most of the partitioning
         if not isinstance(ops[0], Reset):
             for i in range(len(ops[0].all_signals)):
-                idxs = [sigs.index(op.all_signals[i].base) for op in ops]
-                starts += [min(idxs)]
-                stops += [max(idxs)]
-    starts = np.asarray(starts)
-    stops = np.asarray(stops)
+                op_sigs = [op.all_signals[i].base for op in ops]
+                idxs = [sig_idxs[s] for s in op_sigs]
+                diff[op_sigs[np.argmin(idxs)]] += 1
+                diff[op_sigs[np.argmax(idxs)]] -= 1
 
     # find the partition points in signal list
     open = 0
-    for i in range(len(sigs)):
-        open += np.sum(starts == i)
-        open -= np.sum(stops == i)
+    for i, s in enumerate(sigs):
+        if s in diff:
+            open += diff[s]
 
         if open == 0:
             breaks += [i + 1]
@@ -893,14 +892,13 @@ def create_signals(sigs, plan, float_type, minibatch_size):
                 tuple(1 for _ in shape) + (minibatch_size,))
 
         if key in base_arrays:
-            base_arrays[key] = (
-                np.concatenate((base_arrays[key][0], initial_value), axis=0),
-                base_arrays[key][1])
+            base_arrays[key][0].append(initial_value)
+            base_arrays[key][2] += shape[0]
         else:
-            base_arrays[key] = (initial_value, sig.trainable)
+            base_arrays[key] = [[initial_value], sig.trainable, shape[0]]
 
-        indices = np.arange(base_arrays[key][0].shape[0] - shape[0],
-                            base_arrays[key][0].shape[0])
+        n = base_arrays[key][2]
+        indices = np.arange(n - shape[0], n)
 
         sig_map[sig] = signals.TensorSignal(
             indices, key, dtype, shape, not sig.trainable, label=sig.name)
@@ -909,32 +907,33 @@ def create_signals(sigs, plan, float_type, minibatch_size):
         logger.debug(sig)
         logger.debug(sig_map[sig])
 
+    for key in base_arrays:
+        arrs, t, _ = base_arrays[key]
+        base_arrays[key] = (np.concatenate(arrs, axis=0), t)
+
     # add any signal views to the sig_map
-    all_signals = [sig for ops in plan for op in ops for sig in op.all_signals]
-    for sig in all_signals:
-        if sig.is_view:
-            if sig.size == sig.base.size:
-                # reshape view
-                sig_map[sig] = sig_map[sig.base].reshape(sig.shape)
-            else:
-                if sig.shape[1:] != sig.base.shape[1:]:
-                    raise NotImplementedError(
-                        "Slicing and reshaping the same signal is not "
-                        "supported")
-
-                # slice view
-                assert np.all([x == 1 for x in sig.elemstrides[1:]])
-
-                start = sig.elemoffset
-                stride = sig.elemstrides[0]
-                stop = start + sig.size * stride
-                if stop < 0:
-                    stop = None
-
-                sig_map[sig] = sig_map[sig.base][slice(start, stop, stride)]
+    all_views = [sig for ops in plan for op in ops for sig in op.all_signals
+                 if sig.is_view]
+    for sig in all_views:
+        if sig.size == sig.base.size:
+            # reshape view
+            sig_map[sig] = sig_map[sig.base].reshape(sig.shape)
         else:
-            # if it isn't a view, the signal should already be in sig_map
-            assert sig in sig_map
+            if sig.shape[1:] != sig.base.shape[1:]:
+                raise NotImplementedError(
+                    "Slicing and reshaping the same signal is not "
+                    "supported")
+
+            # slice view
+            assert np.all([x == 1 for x in sig.elemstrides[1:]])
+
+            start = sig.elemoffset
+            stride = sig.elemstrides[0]
+            stop = start + sig.size * stride
+            if stop < 0:
+                stop = None
+
+            sig_map[sig] = sig_map[sig.base][slice(start, stop, stride)]
 
     # error checking
     for sig, tensor_sig in sig_map.items():
@@ -949,10 +948,6 @@ def create_signals(sigs, plan, float_type, minibatch_size):
         if not np.allclose(base_arrays[tensor_sig.key][0][tensor_sig.indices],
                            initial_value):
             raise BuildError("TensorSignal values don't match Signal values")
-
-    # copy the base arrays to make them contiguous in memory
-    for k in base_arrays:
-        base_arrays[k] = (np.array(base_arrays[k][0]), base_arrays[k][1])
 
     logger.debug("base arrays")
     logger.debug("\n".join([str((k, v[0].dtype, v[0].shape, v[1]))
