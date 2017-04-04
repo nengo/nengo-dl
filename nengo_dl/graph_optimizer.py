@@ -386,14 +386,19 @@ def order_signals(plan, n_passes=10):
     # note: we multiply by the number of duplicates, since read blocks that
     # are read by multiple op groups will have a proportionally larger impact
     # on performance
+    # TODO: maybe we should just care about duplicates (how much does the size
+    # of the block affect gather/slice time?)
     sorted_blocks = sorted(
         sorted_blocks, key=lambda b: np.sum([s.size for s in b[0]]) * b[1])
     sorted_blocks = [sorted_blocks[i][0] for i in
                      range(len(sorted_blocks) - 1, -1, -1)]
 
-    # mark the signals according to which blocks they are in
-    signal_blocks = {s: tuple(s in b for b in sorted_blocks)
-                     for s in all_signals}
+    # figure out which read blocks each signal participates in
+    signal_blocks = defaultdict(list)
+    for i, b in enumerate(sorted_blocks):
+        for s in b:
+            signal_blocks[s].append(i)
+    signal_blocks = {s: frozenset(b) for s, b in signal_blocks.items()}
 
     logger.debug("all signals")
     logger.debug(all_signals)
@@ -412,7 +417,8 @@ def order_signals(plan, n_passes=10):
 
     # reorder the signals into contiguous blocks (giving higher priority
     # to larger groups)
-    all_signals = hamming_sort(all_signals, signal_blocks)
+    sort_idxs = hamming_sort(signal_blocks)
+    all_signals = sorted(all_signals, key=lambda s: sort_idxs[s])
 
     logger.debug("hamming sorted signals")
     logger.debug(all_signals)
@@ -468,14 +474,15 @@ def order_signals(plan, n_passes=10):
     # error checking
     # make sure that overall signal block order didn't change
     for s, s2 in zip(all_signals, sorted_signals):
-        assert signal_blocks[s] == signal_blocks[s2]
+        if s in signal_blocks or s2 in signal_blocks:
+            assert signal_blocks[s] == signal_blocks[s2]
 
     # make sure that all ops are present
     assert len(new_plan) == len(plan)
     for ops, new_ops in new_plan.items():
         assert len(ops) == len(new_ops)
-        for op in ops:
-            assert op in new_ops
+        # for op in ops:
+        #     assert op in new_ops
 
     logger.debug("final sorted signals")
     logger.debug(sorted_signals)
@@ -485,40 +492,48 @@ def order_signals(plan, n_passes=10):
     return sorted_signals, [new_plan[ops] for ops in plan]
 
 
-def hamming_sort(sigs, blocks):
+def hamming_sort(blocks):
     """Reorder signals using heuristics to try to place signals that are read
     by the same operators into adjacent positions (giving priority to larger
     blocks).
 
     Parameters
     ----------
-    sigs : list of :class:`~nengo:nengo.builder.Signal`
-        the signals to be sorted
-    blocks : dict of {:class:`~nengo:nengo.builder.Signal`: tuple of bool}
+    blocks : dict of {:class:`~nengo:nengo.builder.Signal`: frozenset of int}
         dictionary indicating which read blocks each signal is a part of
+
+    Returns
+    -------
+    dict of {:class:`~nengo:nengo.builder.Signal`: int}
+        indices indicating where each signal should be in the sorted list
     """
 
-    sigs = np.asarray(sigs)
-    blocks = np.asarray([blocks[s] for s in sigs])
-
-    sorted_signals = []
-    curr_block = [False for _ in range(blocks.shape[1])]
-    curr_block[0] = True
+    sorted_blocks = []
+    curr_blocks = None
     active_block = None
 
+    unique_blocks = set(blocks.values())
+
+    n_unique = len(unique_blocks)
+
     logger.debug("hamming sort:")
+    logger.debug("unique blocks")
+    logger.debug(unique_blocks)
 
     while True:
-        logger.debug("curr_block %s", curr_block)
+        logger.debug("curr_blocks %s", curr_blocks)
 
-        # add any matching blocks to the sorted list
-        zero_dists = np.all(blocks == curr_block, axis=1)
-        sorted_signals += [s for s in sigs[zero_dists]]
+        if curr_blocks is None:
+            # first pass through loop, initialize with default first block
+            # (the rest of the loop will figure out what the actual first
+            # block will be)
+            curr_blocks = frozenset([0])
+        else:
+            # add the selected block to the sorted list
+            sorted_blocks.append(curr_blocks)
+            unique_blocks.remove(curr_blocks)
 
-        sigs = sigs[~zero_dists]
-        blocks = blocks[~zero_dists]
-
-        if len(sigs) == 0:
+        if len(sorted_blocks) == n_unique:
             break
 
         # pick which block to go to next
@@ -528,24 +543,17 @@ def hamming_sort(sigs, blocks):
         # jump around too much)
         if active_block is None:
             # pick the largest block in the current block to become the new
-            # active block (note: the boolean block arrays are sorted from
-            # largest to smallest, so argmax(curr_block) gives us the index of
-            # the first True block in the list, which is the largest. this
-            # ordering is used in several places.)
-            active_block = np.argmax(curr_block)
+            # active block (note: the blocks are sorted from largest to
+            # smallest, so the smallest value in curr_blocks is the largest
+            # block. this ordering is used in several places)
+            active_block = min(curr_blocks)
 
-        next_blocks = blocks[blocks[:, active_block]]
+        next_blocks = [b for b in unique_blocks if active_block in b]
         if len(next_blocks) == 0:
             # there are no remaining blocks that are a continuation of the
             # current block, so they're all up for grabs
-            next_blocks = blocks
+            next_blocks = unique_blocks
             active_block = None
-
-        # get the unique blocks
-        tmp = next_blocks.view(np.dtype(
-            (np.void, next_blocks.dtype.itemsize * next_blocks.shape[1])))
-        _, unique_idxs = np.unique(tmp, return_index=True)
-        next_blocks = next_blocks[unique_idxs]
 
         logger.debug("active block %s", active_block)
         logger.debug("next blocks")
@@ -553,36 +561,41 @@ def hamming_sort(sigs, blocks):
 
         # then within all the blocks that are a potential continuation,
         # pick the ones with the smallest hamming distance
-        next_dists = np.sum(np.not_equal(next_blocks, curr_block), axis=1)
-        next_blocks = next_blocks[next_dists == np.min(next_dists)]
+        # TODO: we should set this up so it prefers to add new blocks
+        # rather than discontinuing a block
+        next_dists = [len(curr_blocks ^ b) for b in next_blocks]
+        min_dist = min(next_dists)
+        next_blocks = [b for i, b in enumerate(next_blocks)
+                       if next_dists[i] == min_dist]
 
         logger.debug("hamming filter")
         logger.debug(next_blocks)
 
         # within all the blocks that have the same hamming distance, pick the
-        # next block that matches along the highest indices
-        for i in range(blocks.shape[1]):
+        # next block that matches along the largest blocks
+        for i in sorted(curr_blocks):
             if len(next_blocks) == 1:
                 break
 
-            if np.any(np.logical_and(next_blocks[:, i], curr_block[i])):
-                next_blocks = next_blocks[next_blocks[:, i]]
+            if any(i in b for b in next_blocks):
+                next_blocks = [b for b in next_blocks if i in b]
 
         # within the blocks that match curr_block equally, pick the next block
         # containing the largest read blocks
-        for i in range(blocks.shape[1] + 1):
-            if len(next_blocks) == 1:
-                break
+        if len(next_blocks) > 1:
+            next_blocks = [frozenset(min(sorted(b) for b in next_blocks))]
 
-            if np.any(next_blocks[:, i]):
-                next_blocks = next_blocks[next_blocks[:, i]]
-        else:
-            raise BuildError("Something is wrong in hamming sort, no unique "
-                             "next block")
+        curr_blocks = next_blocks[0]
 
-        curr_block = next_blocks[0]
+    # the sort index for each signal is just the position of its block in
+    # the sorted block list (since we don't care about the order of
+    # signals within each block). signals that aren't part of any read block
+    # get a default value of -1.
+    block_idxs = {b: i for i, b in enumerate(sorted_blocks)}
+    sort_idxs = defaultdict(
+        lambda: -1, [(s, block_idxs[b]) for s, b in blocks.items()])
 
-    return sorted_signals
+    return sort_idxs
 
 
 def sort_ops_by_signals(sorted_reads, sigs, sig_idxs, new_plan, blocks, reads):
@@ -610,7 +623,7 @@ def sort_ops_by_signals(sorted_reads, sigs, sig_idxs, new_plan, blocks, reads):
     new_plan : dict of {tuple of :class:`~nengo:nengo.builder.Operator`: \
                         tuple of :class:`~nengo:nengo.builder.Operator`}
         mapping from original operator group to the sorted operators
-    blocks : dict of {:class:`~nengo:nengo.builder.Signal`: tuple of bool}
+    blocks : dict of {:class:`~nengo:nengo.builder.Signal`: frozenset of int}
         indicates which read blocks each signal participates in
     reads : dict of {:class:`~nengo:nengo.builder.Operator`: \
                      list of :class:`~nengo:nengo.builder.Signal`}
@@ -687,7 +700,7 @@ def sort_signals_by_ops(sorted_reads, sigs, sig_idxs, new_plan, blocks, reads):
     new_plan : dict of {tuple of :class:`~nengo:nengo.builder.Operator`: \
                         tuple of :class:`~nengo:nengo.builder.Operator`}
         mapping from original operator group to the sorted operators
-    blocks : dict of {:class:`~nengo:nengo.builder.Signal`: tuple of bool}
+    blocks : dict of {:class:`~nengo:nengo.builder.Signal`: frozenset of int}
         indicates which read blocks each signal participates in
     reads : dict of {:class:`~nengo:nengo.builder.Operator`: \
                      list of :class:`~nengo:nengo.builder.Signal`}
