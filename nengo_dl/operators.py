@@ -299,9 +299,10 @@ class SimPyFuncBuilder(OpBuilder):
         inputs = ([] if self.input_data is None
                   else signals.gather(self.input_data))
 
-        node_outputs = tf.py_func(
-            self.merged_func, [time, inputs], self.output_dtype,
-            name=self.merged_func.__name__)
+        with tf.device("/cpu:0"):
+            node_outputs = tf.py_func(
+                self.merged_func, [time, inputs], self.output_dtype,
+                name=self.merged_func.__name__)
         node_outputs.set_shape(self.output_shape)
 
         if self.output_data is not None:

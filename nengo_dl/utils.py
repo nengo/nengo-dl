@@ -138,7 +138,8 @@ def print_op(input, message):
         print(message, str(x))
         return x
 
-    output = tf.py_func(print_func, [input], input.dtype)
+    with tf.device("/cpu:0"):
+        output = tf.py_func(print_func, [input], input.dtype)
     output.set_shape(input.get_shape())
 
     return output

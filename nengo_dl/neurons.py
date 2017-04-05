@@ -126,7 +126,7 @@ class GenericNeuronBuilder(object):
         # note: we need to make sure that the previous call to this function
         # has completed before the next starts, since we don't know that the
         # functions are thread safe
-        with tf.control_dependencies(self.prev_result):
+        with tf.control_dependencies(self.prev_result), tf.device("/cpu:0"):
             ret = tf.py_func(
                 self.neuron_step_math, [signals.dt, J] + states,
                 [self.output_data.dtype] + states_dtype,
