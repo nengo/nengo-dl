@@ -441,35 +441,43 @@ def order_signals(plan, n_passes=10):
 
     new_plan = {ops: ops for ops in plan}
     sig_idxs = {s: i for i, s in enumerate(all_signals)}
+
+    logger.debug("plan")
+    logger.debug("\n" + "\n".join([str(x) for x in new_plan.values()]))
+    logger.debug("signal indices")
+    logger.debug(sig_idxs)
+
     for n in range(n_passes):
         # TODO: every few iterations, eliminate the smallest unsatisfied block?
         logger.debug("======== pass %d ========", n)
 
+        # save previous plan/idxs, so we can check if they change for
+        # early termination
+        prev_plan = {k: v for k, v in new_plan.items()}
+        prev_sig_idxs = sig_idxs  # note: no copy necessary
+
         # reorder ops by signal order. this leaves the overall
         # hamming sort block order unchanged.
-        new_plan2, sig_idxs2 = sort_ops_by_signals(
+        new_plan, sig_idxs = sort_ops_by_signals(
             sorted_reads, all_signals, sig_idxs, new_plan, signal_blocks,
             reads)
 
         logger.debug("resorted ops")
-        logger.debug("\n".join([str(x) for x in new_plan.values()]))
+        logger.debug("\n" + "\n".join([str(x) for x in new_plan.values()]))
 
         logger.debug("reordered signal indices")
-        logger.debug(sig_idxs2)
+        logger.debug(sig_idxs)
 
         if (all([x == y for ops in plan
-                 for x, y in zip(new_plan[ops], new_plan2[ops])]) and
-                all([sig_idxs[s] == sig_idxs2[s] for s in all_signals])):
+                 for x, y in zip(new_plan[ops], prev_plan[ops])]) and
+                all([sig_idxs[s] == prev_sig_idxs[s] for s in all_signals])):
             # if the plan didn't change and the signals didn't change, then
             # there is no point in continuing (they're not going to change
             # in the future)
             logger.debug("early termination")
             break
-        else:
-            sig_idxs = sig_idxs2
-            new_plan = new_plan2
 
-    sorted_signals = sorted(all_signals, key=lambda s: sig_idxs2[s])
+    sorted_signals = sorted(all_signals, key=lambda s: sig_idxs[s])
 
     # error checking
     # make sure that overall signal block order didn't change
