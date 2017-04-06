@@ -99,6 +99,7 @@ def test_minibatch(Simulator, seed):
             for j, p in enumerate(ps):
                 probe_data[j] += [sim.data[p]]
 
+            # TODO: soft_reset?
             sim.reset()
 
         probe_data = [np.stack(x, axis=0) for x in probe_data]

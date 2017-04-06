@@ -74,6 +74,8 @@ class TensorGraph(object):
                 (isinstance(op, SimProcess) and op.input is None and
                  op.process in node_processes))]
 
+        logger.info("Initial plan length: %d", len(operators))
+
         utils.print_and_flush("Optimizing graph", end="")
         start = time.time()
 
@@ -94,6 +96,9 @@ class TensorGraph(object):
 
         print("\rOptimization completed in %s " %
               datetime.timedelta(seconds=int(time.time() - start)))
+
+        logger.info("Optimized plan length: %d", len(self.plan))
+        logger.info("Number of base arrays: %d", len(self.base_arrays_init))
 
     def build(self, rng):
         """Constructs a new graph to simulate the model.
@@ -182,8 +187,14 @@ class TensorGraph(object):
             self.build_loop()
 
             # ops for initializing variables (will be called by simulator)
-            self.trainable_init_op = tf.global_variables_initializer()
+            self.trainable_init_op = tf.variables_initializer(
+                tf.trainable_variables())
             self.local_init_op = tf.local_variables_initializer()
+            # note: the only non-trainable global variables should be those
+            # created inside TensorNodes
+            self.global_init_op = tf.variables_initializer(
+                [v for v in tf.global_variables()
+                 if v not in tf.trainable_variables()])
 
     def build_step(self):
         """Build the operators that execute a single simulation timestep

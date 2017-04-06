@@ -61,8 +61,8 @@ class SimOjaBuilder(OpBuilder):
         post = signals.gather(self.post_data)
         weights = signals.gather(self.weights_data)
 
-        update = self.learning_rate * signals.dt * post ** 2
-        update = -self.beta * weights * tf.expand_dims(update, 1)
+        update = tf.expand_dims(self.learning_rate * signals.dt * post ** 2, 1)
+        update *= -self.beta * weights
         update += (tf.expand_dims(self.learning_rate, 1) * signals.dt *
                    update * tf.expand_dims(pre, 0))
 

@@ -187,19 +187,29 @@ class Simulator(object):
         self.closed = False
 
         # initialize variables
-        self.sess.run([self.tensor_graph.local_init_op,
-                       self.tensor_graph.trainable_init_op])
+        self.soft_reset(include_trainable=True)
 
         self.n_steps = 0
         self.time = 0.0
         self.final_bases = [
             x[0] for x in self.tensor_graph.base_arrays_init.values()]
 
-    def soft_reset(self):
+    def soft_reset(self, include_trainable=False):
         """Resets the internal state of the simulation, but doesn't
-        start a new simulation run."""
+        rebuild the graph.
 
-        self.sess.run(self.tensor_graph.local_init_op)
+        Parameters
+        ----------
+        include_trainable : bool, optional
+            if True, also reset any training that has been performed on
+            network parameters (e.g., connection weights)
+        """
+
+        init_ops = [self.tensor_graph.local_init_op,
+                    self.tensor_graph.global_init_op]
+        if include_trainable:
+            init_ops.append(self.tensor_graph.trainable_init_op)
+        self.sess.run(init_ops)
 
     def step(self, **kwargs):
         """Run the simulation for one time step.
@@ -551,6 +561,8 @@ class Simulator(object):
         }
 
         # fill in values for base variables from previous run
+        # TODO: remove this if we're sure we're not going back to the tensor
+        # approach
         feed_dict.update(
             {k: v for k, v in zip(
                 self.tensor_graph.base_vars,

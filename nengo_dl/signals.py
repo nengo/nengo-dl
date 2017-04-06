@@ -2,6 +2,7 @@ from collections import defaultdict
 import logging
 import warnings
 
+from nengo import Connection
 from nengo.builder.signal import Signal
 from nengo.exceptions import BuildError
 from nengo.neurons import Direct
@@ -107,10 +108,11 @@ class TensorSignal(object):
         if shape.count(-1) > 1:
             raise BuildError("Only one inferred dimension allowed in reshape")
         n_elem = np.prod(self.shape)
-        n_shape = np.prod([x for x in shape if x != -1])
+        n_shape = int(np.prod([x for x in shape if x != -1]))
         if n_elem % n_shape != 0:
             raise BuildError("No valid length for inferred dimension")
-        shape = tuple([x if x != -1 else n_elem // n_shape for x in shape])
+
+        shape = tuple(x if x != -1 else n_elem // n_shape for x in shape)
 
         if np.prod(shape) != np.prod(self.shape):
             raise BuildError("Number of elements don't match in reshape")
@@ -218,8 +220,8 @@ class SignalDict(object):
         if dst.tf_indices is None:
             raise BuildError("Indices for %s have not been loaded into "
                              "Tensorflow" % dst)
-        if not dst.minibatched:
-            raise BuildError("Assigning to a trainable variable")
+        # if not dst.minibatched:
+        #     raise BuildError("Assigning to a trainable variable")
         if val.dtype.is_floating and val.dtype.base_dtype != self.dtype:
             raise BuildError("Tensor detected with wrong dtype (%s), should "
                              "be %s." % (val.dtype.base_dtype, self.dtype))
@@ -398,7 +400,7 @@ class SignalDict(object):
 
         self.gather_bases += [self.bases[src.key]]
 
-    def combine(self, sigs, load_indices=True):
+    def combine(self, sigs, load_indices=True, label="Combine"):
         """Combines several TensorSignals into one by concatenating along
         the first axis.
 
@@ -410,6 +412,8 @@ class SignalDict(object):
         load_indices : bool, optional
             if True, load the indices for the new signal into tensorflow right
             away (otherwise they will need to be manually loaded later)
+        label : str, optional
+            name for combined signal (to help with debugging)
 
         Returns
         -------
@@ -439,7 +443,7 @@ class SignalDict(object):
         shape = (np.sum([s.shape[0] for s in sigs]),) + sigs[0].shape[1:]
 
         output = TensorSignal(indices, key, sigs[0].dtype, shape,
-                              sigs[0].minibatched)
+                              sigs[0].minibatched, label=label)
 
         if load_indices:
             output.load_indices()
@@ -472,23 +476,31 @@ def mark_signals(model):
     if model.toplevel is None:
         warnings.warn("No top-level network in model")
     else:
+        # encoders and biases are trainable
         for ens in model.toplevel.all_ensembles:
             model.sig[ens]["encoders"].trainable = True
+            model.sig[ens]["encoders"].minibatched = False
 
             if not isinstance(ens.neuron_type, Direct):
                 model.sig[ens.neurons]["bias"].trainable = True
+                model.sig[ens.neurons]["bias"].minibatched = False
 
+        # connection weights are trainable
         for conn in model.toplevel.all_connections:
             # note: this doesn't include probe connections, since they aren't
             # added to the network
             # TODO: should we disable training on connections to learning
             # rules?
             model.sig[conn]["weights"].trainable = True
+            model.sig[conn]["weights"].minibatched = False
 
-            # parameters can't be modified by an online Nengo learning rule
-            # and offline training at the same time. (it is possible in theory,
-            # but it complicates things a lot and is probably not a common
-            # use case).
+        # parameters can't be modified by an online Nengo learning rule
+        # and offline training at the same time. (it is possible in theory,
+        # but it complicates things a lot and is probably not a common
+        # use case). we also make those signals minibatched (they
+        # wouldn't be normally), because we want to be able to learn
+        # independently in each minibatch
+        for conn in model.toplevel.all_connections:
             rule = conn.learning_rule
             if rule is not None:
                 if isinstance(rule, dict):
@@ -499,18 +511,34 @@ def mark_signals(model):
                 for r in rule:
                     if r.modifies == "weights" or r.modifies == "decoders":
                         model.sig[conn]["weights"].trainable = False
+                        model.sig[conn]["weights"].minibatched = True
                     elif r.modifies == "encoders":
                         model.sig[conn.post_obj]["encoders"].trainable = False
+                        model.sig[conn.post_obj]["encoders"].minibatched = True
                     else:
                         raise NotImplementedError
 
-    # mark everything as not trainable by default
+        # the connections to connection probes are not trainable, but
+        # also not minibatched
+        probe_seeds = [model.seeds[p] for p in model.probes]
+        for obj, seed in model.seeds.items():
+            if isinstance(obj, Connection) and seed in probe_seeds:
+                model.sig[obj]["weights"].trainable = False
+                model.sig[obj]["weights"].minibatched = False
+
+    # fill in defaults for all other signals
+    # signals are not trainable by default, and views take on the properties
+    # of their bases
     for op in model.operators:
         for sig in op.all_signals:
-            for x in (sig, sig.base):
-                if not hasattr(x, "trainable"):
-                    x.trainable = False
+            if not hasattr(sig.base, "trainable"):
+                sig.base.trainable = False
 
-                # at the moment minibatched is just the opposite of trainable,
-                # but it could be the case that the two are independent
-                x.minibatched = not x.trainable
+            if not hasattr(sig.base, "minibatched"):
+                sig.base.minibatched = not sig.base.trainable
+
+            if not hasattr(sig, "trainable"):
+                sig.trainable = sig.base.trainable
+
+            if not hasattr(sig, "minibatched"):
+                sig.minibatched = sig.base.minibatched

@@ -258,5 +258,3 @@ def test_mark_signals():
                 assert sig.trainable
             else:
                 assert not sig.trainable
-
-            assert sig.minibatched != sig.trainable

@@ -51,6 +51,7 @@ def mergeable(op, chosen_ops):
             len(op.updates) != len(c.updates)):
         return False
 
+    # signals must be mergeable into the same base array
     for s0, s1 in zip(op.all_signals, c.all_signals):
         # dtype of signals must match
         if s0.dtype != s1.dtype:
@@ -60,14 +61,13 @@ def mergeable(op, chosen_ops):
         if s0.base.shape[1:] != s1.base.shape[1:]:
             return False
 
-        # note: here we are comparing their display shapes (e.g., the
-        # shape after any reshape operations), not the shape of
-        # the base arrays
+        # display shape must also match (since we need the shape to be well
+        # defined when we combine the signals)
         if s0.shape[1:] != s1.shape[1:]:
             return False
 
-        # trainable must match
-        if s0.trainable != s1.trainable:
+        # trainable/minibatched must match
+        if s0.trainable != s1.trainable or s0.minibatched != s1.minibatched:
             return False
 
     # operator-specific checks
@@ -104,9 +104,8 @@ def mergeable(op, chosen_ops):
         if type(c.process) in processes.SimProcessBuilder.TF_PROCESS_IMPL:
             if type(c.process) != type(op.process):
                 return False
-        else:
-            if type(op.process) in processes.SimProcessBuilder.TF_PROCESS_IMPL:
-                return False
+        elif type(op.process) in processes.SimProcessBuilder.TF_PROCESS_IMPL:
+            return False
 
         # processes must also have the same mode
         if op.mode != c.mode:
@@ -893,7 +892,7 @@ def create_signals(sigs, plan, float_type, minibatch_size):
         shape = sig.shape if sig.shape != () else (1,)
 
         # parameters of signal that affect the base array
-        array_params = (dtype, shape[1:], sig.trainable)
+        array_params = (dtype, shape[1:], sig.trainable, sig.minibatched)
 
         # key used to map signals to base arrays
         if array_params not in curr_keys:
@@ -918,11 +917,11 @@ def create_signals(sigs, plan, float_type, minibatch_size):
         else:
             base_arrays[key] = [[initial_value], sig.trainable, shape[0]]
 
-        n = base_arrays[key][2]
+        n = base_arrays[key][-1]
         indices = np.arange(n - shape[0], n)
 
         sig_map[sig] = signals.TensorSignal(
-            indices, key, dtype, shape, not sig.trainable, label=sig.name)
+            indices, key, dtype, shape, sig.minibatched, label=sig.name)
 
         logger.debug("created base signal")
         logger.debug(sig)
