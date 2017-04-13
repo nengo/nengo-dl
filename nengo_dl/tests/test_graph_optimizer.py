@@ -1,6 +1,7 @@
 from nengo.neurons import LIF, LIFRate, Izhikevich, AdaptiveLIF
 from nengo.synapses import Lowpass, Triangle, Alpha
-from nengo.builder.operator import (SimPyFunc, DotInc, Copy, Reset)
+from nengo.builder.operator import (SimPyFunc, DotInc, Copy, Reset,
+                                    ElementwiseInc)
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 import numpy as np
@@ -101,15 +102,17 @@ def test_mergeable():
     assert not mergeable(Copy(DummySignal(), DummySignal(), inc=True),
                          [Copy(DummySignal(), DummySignal(), inc=False)])
 
-    # elementwise/dotinc (first dimension must match)
-    assert mergeable(DotInc(DummySignal(), DummySignal(), DummySignal()),
-                     [DotInc(DummySignal(), DummySignal(), DummySignal())])
+    # elementwise (first dimension must match)
     assert mergeable(
-        DotInc(DummySignal(shape=(1,)), DummySignal(), DummySignal()),
-        [DotInc(DummySignal(shape=()), DummySignal(), DummySignal())])
+        ElementwiseInc(DummySignal(), DummySignal(), DummySignal()),
+        [ElementwiseInc(DummySignal(), DummySignal(), DummySignal())])
+    assert mergeable(
+        ElementwiseInc(DummySignal(shape=(1,)), DummySignal(), DummySignal()),
+        [ElementwiseInc(DummySignal(shape=()), DummySignal(), DummySignal())])
     assert not mergeable(
-        DotInc(DummySignal(shape=(3,)), DummySignal(), DummySignal()),
-        [DotInc(DummySignal(shape=(2,)), DummySignal(), DummySignal())])
+        ElementwiseInc(DummySignal(shape=(3,)), DummySignal(), DummySignal()),
+        [ElementwiseInc(DummySignal(shape=(2,)), DummySignal(),
+                        DummySignal())])
 
     # simpyfunc (t input must match)
     time = DummySignal()

@@ -3,7 +3,7 @@ import copy
 import logging
 
 from nengo.synapses import Lowpass
-from nengo.builder.operator import (SimPyFunc, DotInc, ElementwiseInc, Copy,
+from nengo.builder.operator import (SimPyFunc, ElementwiseInc, Copy,
                                     Reset)
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
@@ -75,7 +75,7 @@ def mergeable(op, chosen_ops):
         # can't merge incs and updates
         if op.inc != c.inc:
             return False
-    elif isinstance(op, (DotInc, ElementwiseInc)):
+    elif isinstance(op, ElementwiseInc):
         # for these operations we also enforce that the first dimensions
         # match (we know all the other dimensions match due to checks above).
         # this allows us to stack all the arguments into continuous array
