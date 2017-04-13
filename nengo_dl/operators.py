@@ -294,7 +294,7 @@ class SparseDotIncBuilder(DotIncBuilder):
                     sparse_indices += [idxs]
 
             sparse_indices = np.concatenate(sparse_indices, axis=0)
-            self.sparse_indices = tf.constant(sparse_indices, dtype=tf.int32)
+            self.sparse_indices = tf.constant(sparse_indices, dtype=tf.int64)
             self.A_shape = tf.constant(count, dtype=tf.int64)
 
     def build_step(self, signals):
