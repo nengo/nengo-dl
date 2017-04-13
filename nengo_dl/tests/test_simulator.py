@@ -319,18 +319,23 @@ def test_train_rmsprop_gpu(Simulator, seed):
 
 def test_loss(Simulator):
     with nengo.Network() as net:
-        inp = nengo.Node([0])
-        out = nengo.Node(size_in=1)
-        nengo.Connection(inp, out, synapse=None)
-        p = nengo.Probe(out)
+        inp = nengo.Node([1])
+        ens = nengo.Ensemble(30, 1)
+        nengo.Connection(inp, ens)
+        p = nengo.Probe(ens)
 
-    with Simulator(net, step_blocks=1) as sim:
-        assert sim.loss({inp: np.ones((4, 1, 1))},
-                        {p: np.zeros((4, 1, 1))}, "mse") == 1
+    with Simulator(net, step_blocks=20) as sim:
+        sim.run_steps(20)
+        data = sim.data[p]
 
-        assert sim.loss({inp: np.ones((4, 1, 1))},
-                        {p: np.zeros((4, 1, 1))},
-                        objective=lambda x, y: tf.constant(2)) == 2
+        assert np.allclose(sim.loss({inp: np.ones((4, 20, 1))},
+                                    {p: np.zeros((4, 20, 1))}, "mse"),
+                           np.mean(data ** 2))
+
+        assert np.allclose(sim.loss({inp: np.ones((4, 20, 1))},
+                                    {p: np.zeros((4, 20, 1))},
+                                    objective=lambda x, y: tf.constant(2)),
+                           2)
 
 
 def test_generate_inputs(Simulator, seed):

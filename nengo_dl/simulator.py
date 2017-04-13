@@ -523,8 +523,10 @@ class Simulator(object):
         loss_val = 0
         for i, (inp, tar) in enumerate(utils.minibatch_generator(
                 inputs, targets, self.minibatch_size, rng=self.rng)):
+            self.soft_reset()
             loss_val += self.sess.run(
                 loss, feed_dict=self._fill_feed(self.step_blocks, inp, tar))
+        self.soft_reset()
         loss_val /= i + 1
 
         return loss_val
