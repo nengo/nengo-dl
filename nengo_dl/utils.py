@@ -5,6 +5,7 @@ import logging
 import re
 import sys
 import time
+import warnings
 
 from nengo.exceptions import SimulationError
 import numpy as np
@@ -12,7 +13,6 @@ import tensorflow as tf
 from tensorflow.python.framework.ops import get_gradient_function
 
 logger = logging.getLogger(__name__)
-
 
 if sys.version_info[:2] < (3, 3):
 
@@ -308,6 +308,7 @@ def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
     """
 
     n_inputs = next(iter(inputs.values())).shape[0]
+
     if rng is None:
         rng = np.random
 
@@ -315,6 +316,13 @@ def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
         perm = rng.permutation(n_inputs)
     else:
         perm = np.arange(n_inputs)
+
+    if n_inputs % minibatch_size != 0:
+        warnings.warn(UserWarning(
+            "Number of inputs (%d) is not an even multiple of "
+            "minibatch size (%d); inputs will be truncated" %
+            (n_inputs, minibatch_size)))
+        perm = perm[:-(n_inputs % minibatch_size)]
 
     for i in range(0, n_inputs - n_inputs % minibatch_size,
                    minibatch_size):

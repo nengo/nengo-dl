@@ -69,3 +69,25 @@ def test_minibatch_generator(shuffle):
 
     assert np.allclose(x_all, np.arange(100))
     assert np.allclose(y_all, np.arange(100) + 1)
+
+    x_all = []
+    y_all = []
+    with pytest.warns(UserWarning):
+        for x, y in utils.minibatch_generator(inputs, targets, 12,
+                                              shuffle=shuffle):
+            assert x["a"].shape[0] == 12
+            assert y["b"].shape[0] == 12
+            x_all += [x["a"]]
+            y_all += [y["b"]]
+    x_all = np.sort(np.concatenate(x_all))
+    y_all = np.sort(np.concatenate(y_all))
+
+    assert len(x_all) == 96
+    assert len(y_all) == 96
+
+    if shuffle:
+        assert not np.allclose(x_all, np.arange(96))
+        assert not np.allclose(y_all, np.arange(96) + 1)
+    else:
+        assert np.allclose(x_all, np.arange(96))
+        assert np.allclose(y_all, np.arange(96) + 1)
