@@ -150,10 +150,6 @@ class Simulator(object):
         # gradient descent training deterministic?
         tf.set_random_seed(self.seed)
 
-        # clear probe data
-        for p in self.model.probes:
-            self.model.params[p] = []
-
         # (re)build graph
         print_and_flush("Constructing graph", end="")
         start = time.time()
@@ -187,14 +183,14 @@ class Simulator(object):
         self.closed = False
 
         # initialize variables
-        self.soft_reset(include_trainable=True)
+        self.soft_reset(include_trainable=True, include_probes=True)
 
         self.n_steps = 0
         self.time = 0.0
         self.final_bases = [
             x[0] for x in self.tensor_graph.base_arrays_init.values()]
 
-    def soft_reset(self, include_trainable=False):
+    def soft_reset(self, include_trainable=False, include_probes=False):
         """Resets the internal state of the simulation, but doesn't
         rebuild the graph.
 
@@ -203,6 +199,8 @@ class Simulator(object):
         include_trainable : bool, optional
             if True, also reset any training that has been performed on
             network parameters (e.g., connection weights)
+        include_probes : bool, optional
+            if True, also clear probe data
         """
 
         init_ops = [self.tensor_graph.local_init_op,
@@ -210,6 +208,10 @@ class Simulator(object):
         if include_trainable:
             init_ops.append(self.tensor_graph.trainable_init_op)
         self.sess.run(init_ops)
+
+        if include_probes:
+            for p in self.model.probes:
+                self.model.params[p] = []
 
     def step(self, **kwargs):
         """Run the simulation for one time step.
@@ -393,11 +395,11 @@ class Simulator(object):
           will result in an error.  Examples of common non-differentiable
           elements include :class:`~nengo:nengo.LIF`,
           :class:`~nengo:nengo.Direct`, or processes/neurons that don't have a
-          custom Tensorflow implementation (see
+          custom TensorFlow implementation (see
           :class:`.processes.SimProcessBuilder`/
           :class:`.neurons.SimNeuronsBuilder`)
 
-        - Most Tensorflow optimizers do not have GPU support for networks with
+        - Most TensorFlow optimizers do not have GPU support for networks with
           sparse reads, which are a common element in Nengo models.  If your
           network contains sparse reads then training will have to be
           executed on the CPU (by creating the simulator via
@@ -490,6 +492,11 @@ class Simulator(object):
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
             that Probe (loss will be averaged across Probes)
+
+        Notes
+        -----
+        Calling this function will reset all values in the network, so it
+        should not be intermixed with calls to :meth:`.Simulator.run`.
         """
 
         if self.closed:

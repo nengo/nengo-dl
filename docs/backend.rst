@@ -1,5 +1,6 @@
-NengoDL developers
-==================
+Developer API
+=============
+
 These objects are not relevant to front-end users, only NengoDL developers.
 
 .. toctree::
