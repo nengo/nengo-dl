@@ -2,14 +2,17 @@ from collections import OrderedDict
 import datetime
 import logging
 import time
+import warnings
 
-from nengo import Process
+from nengo import Connection, Process
 from nengo.builder.operator import TimeUpdate, SimPyFunc
 from nengo.builder.processes import SimProcess
 from nengo.exceptions import SimulationError
+from nengo.neurons import Direct
 import tensorflow as tf
 
-from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node
+from nengo_dl import (builder, graph_optimizer, signals, utils, tensor_node,
+                      nengo_version)
 
 logger = logging.getLogger(__name__)
 
@@ -74,19 +77,22 @@ class TensorGraph(object):
                 (isinstance(op, SimProcess) and op.input is None and
                  op.process in node_processes))]
 
+        # mark trainable signals
+        mark_signals(model)
+
         logger.info("Initial plan length: %d", len(operators))
 
         utils.print_and_flush("Optimizing graph", end="")
         start = time.time()
 
         # group mergeable operators
-        plan = graph_optimizer.greedy_planner(operators)
-        # plan = graph_optimizer.tree_planner(operators)
-        # plan = graph_optimizer.noop_planner(operators)
+        if nengo_version < (2, 4, 0):
+            plan = graph_optimizer.greedy_planner(operators)
+        else:
+            plan = graph_optimizer.transitive_planner(operators)
 
         # order signals/operators to promote contiguous reads
         sigs, self.plan = graph_optimizer.order_signals(plan, n_passes=10)
-        # sigs, self.plan = graph_optimizer.noop_order_signals(plan)
 
         # create base arrays and map Signals to TensorSignals (views on those
         # base arrays)
@@ -484,3 +490,99 @@ class TensorGraph(object):
         self.losses[(objective, targets)] = loss
 
         return loss
+
+
+def mark_signals(model):
+    """Mark all the signals in ``model`` according to whether they represent
+    trainable parameters of the model (parameters that can be optimized by
+    deep learning methods).
+
+    Trainable parameters include connection weights, ensemble encoders, and
+    neuron biases.  Unless one of those signals is targeted by a Nengo learning
+    rule (otherwise the learning rule update conflicts with the deep learning
+    optimization).
+
+    Parameters
+    ----------
+    model : class:`~nengo:nengo.builder.Model`
+        built Nengo model
+    """
+
+    if model.toplevel is None:
+        warnings.warn("No top-level network in model")
+    else:
+        # encoders and biases are trainable
+        for ens in model.toplevel.all_ensembles:
+            model.sig[ens]["encoders"].trainable = True
+            model.sig[ens]["encoders"].minibatched = False
+
+            if not isinstance(ens.neuron_type, Direct):
+                model.sig[ens.neurons]["bias"].trainable = True
+                model.sig[ens.neurons]["bias"].minibatched = False
+
+        # connection weights are trainable
+        for conn in model.toplevel.all_connections:
+            # note: this doesn't include probe connections, since they aren't
+            # added to the network
+            # TODO: should we disable training on connections to learning
+            # rules?
+            model.sig[conn]["weights"].trainable = True
+            model.sig[conn]["weights"].minibatched = False
+
+        # parameters can't be modified by an online Nengo learning rule
+        # and offline training at the same time. (it is possible in theory,
+        # but it complicates things a lot and is probably not a common
+        # use case). we also make those signals minibatched (they
+        # wouldn't be normally), because we want to be able to learn
+        # independently in each minibatch
+        for conn in model.toplevel.all_connections:
+            rule = conn.learning_rule
+            if rule is not None:
+                if isinstance(rule, dict):
+                    rule = list(rule.values())
+                elif not isinstance(rule, list):
+                    rule = [rule]
+
+                for r in rule:
+                    if r.modifies == "weights" or r.modifies == "decoders":
+                        model.sig[conn]["weights"].trainable = False
+                        model.sig[conn]["weights"].minibatched = True
+                    elif r.modifies == "encoders":
+                        model.sig[conn.post_obj]["encoders"].trainable = False
+                        model.sig[conn.post_obj]["encoders"].minibatched = True
+                    else:
+                        raise NotImplementedError
+
+        # the connections to connection probes are not trainable, but
+        # also not minibatched
+        probe_seeds = [model.seeds[p] for p in model.probes]
+        for obj, seed in model.seeds.items():
+            if isinstance(obj, Connection) and seed in probe_seeds:
+                model.sig[obj]["weights"].trainable = False
+                model.sig[obj]["weights"].minibatched = False
+
+    # fill in defaults for all other signals
+    # signals are not trainable by default, and views take on the properties
+    # of their bases
+    for op in model.operators:
+        for sig in op.all_signals:
+            if not hasattr(sig.base, "trainable"):
+                sig.base.trainable = False
+
+            if not hasattr(sig.base, "minibatched"):
+                sig.base.minibatched = not sig.base.trainable
+
+            if not hasattr(sig, "trainable"):
+                sig.trainable = sig.base.trainable
+
+            if not hasattr(sig, "minibatched"):
+                sig.minibatched = sig.base.minibatched
+
+    for p in model.probes:
+        sig = model.sig[p]["in"]
+
+        if not hasattr(sig, "trainable"):
+            sig.trainable = sig.base.trainable
+
+        if not hasattr(sig, "minibatched"):
+            sig.minibatched = sig.base.minibatched

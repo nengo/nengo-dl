@@ -7,10 +7,19 @@ from nengo.builder.processes import SimProcess
 import numpy as np
 import pytest
 
-from nengo_dl import builder
+from nengo_dl import builder, nengo_version
 from nengo_dl.graph_optimizer import (
-    mergeable, greedy_planner, tree_planner, order_signals, create_signals)
+    mergeable, greedy_planner, tree_planner, transitive_planner,
+    order_signals, create_signals)
 from nengo_dl.tensor_node import SimTensorNode
+
+
+@pytest.fixture(
+    scope="module",
+    params=[greedy_planner, tree_planner] +
+           [transitive_planner] if nengo_version > (2, 4, 0) else [])
+def planner(request):
+    return request.param
 
 
 class DummySignal(object):
@@ -180,7 +189,6 @@ def test_mergeable():
     assert not mergeable(a, [a])
 
 
-@pytest.mark.parametrize("planner", [greedy_planner, tree_planner])
 def test_planner_mergeable(planner):
     # check that mergeable operators are merged
     input0 = DummySignal()
@@ -195,7 +203,6 @@ def test_planner_mergeable(planner):
     assert len(plan[0]) == 2
 
 
-@pytest.mark.parametrize("planner", [greedy_planner, tree_planner])
 def test_planner_unmergeable(planner):
     # check that non-mergeable operators aren't merged
     input0 = DummySignal()
@@ -209,8 +216,7 @@ def test_planner_unmergeable(planner):
     assert len(plan[1]) == 1
 
 
-@pytest.mark.parametrize("planner", [greedy_planner])
-def test_planner_size(planner):
+def test_planner_size():
     # check that operators are selected according to number of available ops
     input0 = DummySignal()
     operators = [Copy(input0, DummySignal(), inc=True)
@@ -218,14 +224,13 @@ def test_planner_size(planner):
     operators += [Copy(input0, DummySignal())]
     operators += [DotInc(input0, DummySignal(), DummySignal())
                   for _ in range(3)]
-    plan = planner(operators)
+    plan = greedy_planner(operators)
     assert len(plan) == 3
     assert len(plan[0]) == 3
     assert len(plan[1]) == 2
     assert len(plan[2]) == 1
 
 
-@pytest.mark.parametrize("planner", [greedy_planner, tree_planner])
 def test_planner_chain(planner):
     # test a chain
     input0 = DummySignal()

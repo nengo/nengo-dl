@@ -15,7 +15,7 @@ import tensorflow as tf
 from tensorflow.python.client.timeline import Timeline
 from tensorflow.python.ops import gradient_checker
 
-from nengo_dl import signals, utils, DATA_DIR
+from nengo_dl import utils, DATA_DIR
 from nengo_dl.tensor_graph import TensorGraph
 from nengo_dl.utils import print_and_flush
 
@@ -81,8 +81,8 @@ class Simulator(object):
     ]
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
-                 tensorboard=False, dtype=tf.float32, step_blocks=50,
-                 device=None, unroll_simulation=True, minibatch_size=None):
+                 tensorboard=False, dtype=tf.float32, step_blocks=None,
+                 device=None, unroll_simulation=False, minibatch_size=None):
         self.closed = None
         self.sess = None
         self.tensorboard = tensorboard
@@ -111,9 +111,6 @@ class Simulator(object):
             self.model.build(network, progress_bar=False)
             print("\rBuilding completed in %s " %
                   datetime.timedelta(seconds=int(time.time() - start)))
-
-        # mark trainable signals
-        signals.mark_signals(self.model)
 
         # set up tensorflow graph plan
         self.tensor_graph = TensorGraph(

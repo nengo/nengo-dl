@@ -13,7 +13,8 @@ from nengo.utils.graphs import toposort
 from nengo.utils.simulator import operator_depencency_graph
 import numpy as np
 
-from nengo_dl import signals, processes, builder, tensor_node
+from nengo_dl import (signals, processes, builder, tensor_node, operators,
+                      learning_rules, neurons)
 
 logger = logging.getLogger(__name__)
 
@@ -194,7 +195,7 @@ def greedy_planner(operators):
             del successors_of[op]
 
     logger.debug("GREEDY PLAN")
-    logger.debug("\n".join([str(x) for x in plan]))
+    logger.debug("\n" + "\n".join([str(x) for x in plan]))
 
     assert len(operators) == sum(len(ops) for ops in plan)
 
@@ -312,8 +313,202 @@ def noop_planner(operators):
     """
 
     dependency_graph = operator_depencency_graph(operators)
+    plan = [(op,) for op in toposort(dependency_graph)]
 
-    return [(op,) for op in toposort(dependency_graph)]
+    logger.debug("NOOP PLAN")
+    logger.debug("\n" + "\n".join([str(x) for x in plan]))
+
+    return plan
+
+
+def transitive_planner(op_list):
+    """Create merged execution plan through transitive closure construction.
+
+    This is something like a middle ground between :func:`.greedy_planner` and
+    :func:`.tree_planner`; it can improve simulation time over the greedy
+    planner, but comes with potentially significant build time increases.
+
+    Parameters
+    ----------
+    op_list : list of :class:`~nengo:nengo.builder.Operator`
+        all the ``nengo`` operators in a model (unordered)
+
+    Returns
+    -------
+    list of tuple of :class:`~nengo:nengo.builder.Operator`
+        operators combined into mergeable groups and in execution order
+    """
+
+    # note: importing this here since it only exists in nengo 2.4.0
+    from nengo.utils.graphs import BidirectionalDAG
+
+    n_ele = len(op_list)
+    merge_groups = {}
+    dg = operator_depencency_graph(op_list)
+    op_codes = {op: np.uint32(i) for i, op in enumerate(op_list)}
+    dg = {op_codes[k]: set(op_codes[x] for x in v) for k, v in dg.items()}
+    op_codes = None  # so it will get garbage collected
+    dg = BidirectionalDAG(dg)
+
+    op_builders = [builder.Builder.builders[type(op)] for op in op_list]
+
+    # sort operators by builder (we'll only be interested in one builder type
+    # at a time, because we can't merge operators between builder types anyway)
+    ops_by_type = defaultdict(set)
+    for i, op in enumerate(op_list):
+        ops_by_type[op_builders[i]].add(np.uint32(i))
+
+    # heuristic ordering for builder types (earlier items in the list will
+    # have higher priority, meaning that we will choose to merge those ops
+    # and potentially break lower-priority groups)
+    order = [
+        operators.SparseDotIncBuilder, operators.ElementwiseIncBuilder,
+        neurons.SimNeuronsBuilder, processes.SimProcessBuilder,
+        operators.SimPyFuncBuilder,
+        learning_rules.SimOjaBuilder, learning_rules.SimVojaBuilder,
+        learning_rules.SimBCMBuilder,
+        operators.CopyBuilder, operators.ResetBuilder,
+        tensor_node.SimTensorNodeBuilder]
+
+    for builder_type in order:
+        if builder_type not in ops_by_type:
+            # no ops of this type in the model
+            continue
+
+        ops = ops_by_type[builder_type]
+
+        # compute transitive closure
+        trans = [None for _ in range(n_ele)]
+        transitive_closure_recurse(dg.forward, ops, trans, builder_type,
+                                   op_builders, {})
+
+        # reduce it to the elements we care about (ops of the current
+        # builder type)
+        trans = {i: v for i, v in enumerate(trans[:len(op_list)]) if i in ops}
+
+        while len(trans) > 0:
+            # find all the ops that have no downstream dependents
+            available = set(k for k, v in trans.items() if len(v) == 0)
+
+            # sort those ops into mergeable groups
+            groups = []
+            for op in available:
+                for g in groups:
+                    if mergeable(op_list[op], (op_list[g[0]],)):
+                        g.append(op)
+                        break
+                else:
+                    groups.append([op])
+
+            # merge the groups
+            for g in groups:
+                dg.merge(g, n_ele)
+                merge_groups[n_ele] = g
+                n_ele += 1
+
+            # remove those ops from the transitive closure
+            for op in available:
+                del trans[op]
+
+            # remove those ops from the transitive closure of upstream ops
+            # note: we first remove all the duplicate aliased transitive sets,
+            # to reduce the number of set operations we need to do
+            unique_trans = {id(v): v for v in trans.values()}
+            for t in unique_trans.values():
+                t -= available
+
+        # trans_reverse = [None for _ in range(n_ele)]
+        # transitive_closure_recurse(dg.backward, ops, trans_reverse,
+        #                            builder_type, op_builders, cache)
+        # trans_reverse = {i: v for i, v in
+        #                  enumerate(trans_reverse[:len(op_list)]) if i in ops}
+        # group = None
+        # for op in toposort(trans, trans_reverse):
+        #     if group is None:
+        #         group = [op]
+        #         continue
+        #
+        #     if mergeable(op_list[op], (op_list[group[0]],)) and all(
+        #             x not in trans[op] for x in group):
+        #         group.append(op)
+        #     else:
+        #         dg.merge(group, n_ele)
+        #         merge_groups[n_ele] = group
+        #         n_ele += 1
+        #         group = [op]
+        #
+        # dg.merge(group, n_ele)
+        # merge_groups[n_ele] = group
+        # n_ele += 1
+
+        del ops_by_type[builder_type]
+
+    assert len(ops_by_type) == 0
+
+    # toposort the merged graph to come up with execution plan
+    plan = toposort(dg.forward)
+    plan = [tuple(op_list[x] for x in merge_groups[group]) for group in plan]
+
+    logger.debug("TRANSITIVE PLAN")
+    logger.debug("\n" + "\n".join([str(x) for x in plan]))
+
+    return plan
+
+
+def transitive_closure_recurse(dg, ops, trans, builder_type, op_builders,
+                               cache):
+    """Computes the transitive closure for the given graph, restricted to the
+    operators with the given builder type.
+
+    Parameters
+    ----------
+    dg : dict of {int: set of int}
+        dependency graph where ``dg[a] = {b, c}`` indicates that operators
+        ``b`` and ``c`` are dependent on ``a``
+    ops : list of int
+        the operators for which we want to compute the transitive closure
+    trans : dict of {int: set of int}
+        the transitive closure for the graph (will be filled in-place)
+    builder_type : type
+        one of the ``nengo_dl`` build classes (e.g.,
+        :class:`~.operators.CopyBuilder`), specifying the type of operators
+        to include in the transitive closure
+    op_builders : list of type
+        the build class for each operator
+    cache : dict of {frozenset of int: set of int}
+        stores base sets which ``trans`` will reference (to reduce memory
+        usage, since many elements in ``trans`` will have the same value)
+
+    Notes
+    -----
+    This function uses ints to refer to operators, where the int indicates
+    the index of the operator in the overall op list (this is done to save
+    memory).  See :func:`.transitive_planner`.
+    """
+
+    for op in ops:
+        todo = [x for x in dg[op] if trans[x] is None]
+        transitive_closure_recurse(dg, todo, trans, builder_type, op_builders,
+                                   cache)
+
+        merged = set(
+            x for x in dg[op] if x < len(op_builders) and
+            op_builders[x] == builder_type)
+
+        unique_posts = {id(trans[x]): trans[x] for x in dg[op]}
+
+        if len(merged) == 0 and len(unique_posts) == 1:
+            trans[op] = next(iter(unique_posts.values()))
+        else:
+            for x in unique_posts.values():
+                merged |= x
+
+            key = frozenset(merged)
+            try:
+                trans[op] = cache[key]
+            except KeyError:
+                trans[op] = merged
+                cache[key] = merged
 
 
 def order_signals(plan, n_passes=10):
@@ -494,7 +689,7 @@ def order_signals(plan, n_passes=10):
     logger.debug("final sorted signals")
     logger.debug(sorted_signals)
     logger.debug("new plan")
-    logger.debug("\n".join([str(new_plan[ops]) for ops in plan]))
+    logger.debug("\n" + "\n".join([str(x) for x in new_plan.values()]))
 
     return sorted_signals, [new_plan[ops] for ops in plan]
 

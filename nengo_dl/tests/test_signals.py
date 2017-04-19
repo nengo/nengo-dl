@@ -1,10 +1,9 @@
-import nengo
 from nengo.exceptions import BuildError
 import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl.signals import TensorSignal, SignalDict, mark_signals
+from nengo_dl.signals import TensorSignal, SignalDict
 
 
 def test_tensor_signal_basic():
@@ -248,40 +247,3 @@ def test_signal_dict_combine():
     assert y.shape == (6, 2)
 
     assert np.all(y.indices == [0, 1, 2, 4, 5, 6])
-
-
-def test_mark_signals():
-    with nengo.Network() as net:
-        ens0 = nengo.Ensemble(10, 1, neuron_type=nengo.LIF())
-        ens1 = nengo.Ensemble(20, 1, neuron_type=nengo.Direct())
-        ens2 = nengo.Ensemble(30, 1)
-        conn0 = nengo.Connection(ens0, ens1)
-        conn1 = nengo.Connection(ens0, ens1, learning_rule_type=nengo.PES())
-        conn2 = nengo.Connection(ens0, ens2, learning_rule_type=nengo.Voja())
-        nengo.Probe(ens2)
-
-    model = nengo.builder.Model()
-    model.build(net)
-
-    mark_signals(model)
-
-    assert model.sig[ens0]["encoders"].trainable
-    assert model.sig[ens1]["encoders"].trainable
-    assert not model.sig[ens2]["encoders"].trainable
-    assert model.sig[ens0.neurons]["bias"].trainable
-    assert model.sig[ens2.neurons]["bias"].trainable
-    assert model.sig[conn0]["weights"].trainable
-    assert not model.sig[conn1]["weights"].trainable
-    assert model.sig[conn2]["weights"].trainable
-
-    trainables = (
-        model.sig[ens0]["encoders"], model.sig[ens1]["encoders"],
-        model.sig[ens0.neurons]["bias"], model.sig[ens2.neurons]["bias"],
-        model.sig[conn0]["weights"], model.sig[conn2]["weights"])
-
-    for op in model.operators:
-        for sig in op.all_signals:
-            if sig in trainables:
-                assert sig.trainable
-            else:
-                assert not sig.trainable
