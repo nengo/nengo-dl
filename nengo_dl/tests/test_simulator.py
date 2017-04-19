@@ -454,3 +454,22 @@ def test_devices(Simulator, device, unroll, seed):
                    step_blocks=10) as sim:
         sim.run_steps(50)
         assert np.allclose(sim.data[p], canonical)
+
+
+@pytest.mark.parametrize("unroll", (True, False))
+def test_side_effects(Simulator, unroll):
+    class MyFunc:
+        x = 0
+
+        def __call__(self, t):
+            self.x += 1
+
+    func = MyFunc()
+
+    with nengo.Network() as net:
+        nengo.Node(output=func)
+
+    with Simulator(net, unroll_simulation=unroll, step_blocks=1) as sim:
+        sim.run_steps(10)
+
+    assert func.x == 11

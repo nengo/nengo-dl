@@ -272,10 +272,16 @@ class TensorGraph(object):
                 [(k, v) for k, v in zip(self.base_arrays_init.keys(),
                                         base_vars)])
 
-            # note: nengo step counter is incremented at the beginning of the
-            # timestep
+            # note: nengo step counter is incremented at the beginning of
+            # the timestep
             step += 1
             self.signals.step = step
+
+            # fill in invariant input data
+            for n in self.invariant_ph:
+                self.signals.scatter(
+                    self.sig_map[self.model.sig[n]["out"]],
+                    self.invariant_ph[n][loop_i])
 
             # build the operators for a single step
             # note: we tie things to the `loop_i` variable so that we can be
@@ -283,12 +289,6 @@ class TensorGraph(object):
             # effects and probes) from the previous timestep are executed
             # before the next step starts
             with self.graph.control_dependencies([loop_i]):
-                # fill in invariant input data
-                for n in self.invariant_ph:
-                    self.signals.scatter(
-                        self.sig_map[self.model.sig[n]["out"]],
-                        self.invariant_ph[n][loop_i])
-
                 probe_tensors, side_effects = self.build_step()
 
             # copy probe data to array
@@ -352,7 +352,7 @@ class TensorGraph(object):
         # do this for the unrolled case
         with tf.control_dependencies(self.end_base_arrays if
                                      self.unroll_simulation else []):
-            self.end_step = tf.identity(loop_vars[0])
+            self.steps_run = tf.identity(loop_vars[2])
 
     def build_inputs(self, rng):
         """Sets up the inputs in the model (which will be computed outside of

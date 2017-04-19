@@ -89,6 +89,10 @@ class Simulator(object):
         self.step_blocks = step_blocks
         self.minibatch_size = 1 if minibatch_size is None else minibatch_size
 
+        if unroll_simulation and step_blocks is None:
+            raise SimulationError("`step_blocks` must be specified when the "
+                                  "simulation is being unrolled")
+
         # TODO: allow the simulator to be called flexibly with/without
         # minibatching
 
@@ -330,8 +334,8 @@ class Simulator(object):
 
         # execute the simulation loop
         try:
-            final_step, probe_data = self.sess.run(
-                [self.tensor_graph.end_step, self.tensor_graph.probe_arrays],
+            steps_run, probe_data = self.sess.run(
+                [self.tensor_graph.steps_run, self.tensor_graph.probe_arrays],
                 feed_dict=self._fill_feed(n_steps, input_feeds,
                                           start=self.n_steps),
                 options=run_options, run_metadata=run_metadata)
@@ -344,8 +348,8 @@ class Simulator(object):
                 raise e
 
         # update n_steps
-        assert final_step - self.n_steps == n_steps
-        self.n_steps = final_step
+        assert steps_run == n_steps
+        self.n_steps += steps_run
         self.time = self.n_steps * self.dt
 
         if profile:
