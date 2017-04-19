@@ -25,7 +25,7 @@ else:
 from nengo.version import version_info  # noqa: E402
 
 minimum_nengo_version = (2, 3, 1)
-latest_nengo_version = (2, 3, 2)
+latest_nengo_version = (2, 4, 0)
 if version_info < minimum_nengo_version:
     raise ValueError(
         "`nengo_dl` does not support `nengo` version %s. Upgrade "

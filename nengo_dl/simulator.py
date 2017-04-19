@@ -339,7 +339,7 @@ class Simulator(object):
                 feed_dict=self._fill_feed(n_steps, input_feeds,
                                           start=self.n_steps),
                 options=run_options, run_metadata=run_metadata)
-        except tf.errors.InternalError as e:
+        except (tf.errors.InternalError, tf.errors.UnknownError) as e:
             if e.op.type == "PyFunc":
                 raise SimulationError(
                     "Function '%s' caused an error "
