@@ -111,12 +111,13 @@ def test_tensor_signal_load_indices():
 
 def test_signal_dict_scatter():
     minibatch_size = 1
+    var_size = 19
     signals = SignalDict(None, tf.float32, minibatch_size)
 
     sess = tf.InteractiveSession()
 
     key = object()
-    val = np.random.randn(20, minibatch_size)
+    val = np.random.randn(var_size, minibatch_size)
     signals.bases = {key: tf.assign(tf.Variable(val, dtype=tf.float32),
                                     val)}
 
@@ -148,23 +149,32 @@ def test_signal_dict_scatter():
     assert np.allclose(y[4:], val[4:])
 
     # recognize assignment to full array
-    x = TensorSignal(np.arange(20), key, tf.float32, (20,), True)
+    x = TensorSignal(np.arange(var_size), key, tf.float32, (var_size,), True)
     x.load_indices()
-    y = tf.ones((20, 1))
+    y = tf.ones((var_size, 1))
     signals.scatter(x, y)
     assert signals.bases[key].op.type == "Assign"
+
+    # recognize assignment to strided full array
+    x = TensorSignal(np.arange(0, var_size, 2), key, tf.float32,
+                     (var_size // 2 + 1,), True)
+    x.load_indices()
+    y = tf.ones((var_size // 2 + 1, 1))
+    signals.scatter(x, y)
+    assert signals.bases[key].op.type == "ScatterUpdate"
 
     sess.close()
 
 
 def test_signal_dict_gather():
     minibatch_size = 1
+    var_size = 19
     signals = SignalDict(None, tf.float32, minibatch_size)
 
     sess = tf.InteractiveSession()
 
     key = object()
-    val = np.random.randn(20, minibatch_size)
+    val = np.random.randn(var_size, minibatch_size)
     signals.bases = {key: tf.constant(val, dtype=tf.float32)}
 
     x = TensorSignal([0, 1, 2, 3], key, tf.float32, (4,), True)
@@ -195,10 +205,18 @@ def test_signal_dict_gather():
     assert y.op.type == "Gather"
 
     # reading from full array
-    x = TensorSignal(np.arange(20), key, tf.float32, (20,), True)
+    x = TensorSignal(np.arange(var_size), key, tf.float32, (var_size,), True)
     x.load_indices()
     y = signals.gather(x)
     assert y.op.type == "Identity"
+    assert y.op.inputs[0] is signals.bases[key]
+
+    # reading from strided full array
+    x = TensorSignal(np.arange(0, var_size, 2), key, tf.float32,
+                     (var_size // 2 + 1,), True)
+    x.load_indices()
+    y = signals.gather(x)
+    assert y.op.type == "StridedSlice"
     assert y.op.inputs[0] is signals.bases[key]
 
     # minibatch dimension

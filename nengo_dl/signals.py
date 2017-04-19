@@ -315,7 +315,8 @@ class SignalDict(object):
         if (dst.as_slice is not None and
                 var.get_shape().is_compatible_with(src.get_shape()) and
                 dst.indices[0] == 0 and
-                dst.indices[-1] == var.get_shape()[0].value - 1):
+                dst.indices[-1] == var.get_shape()[0].value - 1 and
+                len(dst.indices) == var.get_shape()[0]):
             if mode == "inc":
                 result = tf.assign_add(var, src)
             else:
@@ -364,7 +365,8 @@ class SignalDict(object):
         if force_copy or src.as_slice is None:
             result = tf.gather(var, src.tf_indices)
         elif (src.indices[0] == 0 and
-              src.indices[-1] == var.get_shape()[0].value - 1):
+              src.indices[-1] == var.get_shape()[0].value - 1 and
+              len(src.indices) == var.get_shape()[0]):
             result = tf.identity(var)
         else:
             result = tf.strided_slice(var, *src.as_slice)
