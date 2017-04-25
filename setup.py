@@ -52,7 +52,7 @@ setup(
     long_description=read('README.rst', 'CHANGES.rst'),
     install_requires=["nengo>=2.3.1", "numpy>=1.11", tf_req],
     entry_points={"nengo.backends":
-                  ["deeplearning = nengo_dl:Simulator"]},
+                  ["dl = nengo_dl:Simulator"]},
     classifiers=['Development Status :: 4 - Beta',
                  'Intended Audience :: Science/Research',
                  'License :: Free for non-commercial use',
