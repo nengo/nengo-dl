@@ -220,7 +220,7 @@ class Simulator(object):
         Parameters
         ----------
         kwargs : dict
-            see :meth:`._run_steps`
+            see :meth:`.run_steps`
         """
 
         self.run_steps(1, **kwargs)
@@ -233,21 +233,26 @@ class Simulator(object):
         time_in_seconds : float
             amount of time to run the simulation for
         kwargs : dict
-            see :meth:`._run_steps`
+            see :meth:`.run_steps`
         """
 
         steps = int(np.round(float(time_in_seconds) / self.dt))
         self.run_steps(steps, **kwargs)
 
-    def run_steps(self, n_steps, **kwargs):
+    def run_steps(self, n_steps, input_feeds=None, profile=False):
         """Simulate for the given number of steps.
 
         Parameters
         ----------
         n_steps : int
             the number of simulation steps to be executed
-        kwargs : dict
-            see :meth:`._run_steps`
+        input_feeds : dict of {:class:`~nengo:nengo.Node`: \
+                               :class:`~numpy:numpy.ndarray`}
+            override the values of input Nodes with the given data.  arrays
+            should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
+        profile : bool, optional
+            if True, collect TensorFlow profiling information while the
+            simulation is running (this will slow down the simulation)
 
         Notes
         -----
@@ -271,42 +276,49 @@ class Simulator(object):
         start = time.time()
 
         if self.step_blocks is None:
-            probe_data = self._run_steps(n_steps, **kwargs)
+            probe_data = self._run_steps(n_steps, input_feeds=input_feeds,
+                                         profile=profile)
 
             self._update_probe_data(probe_data, self.n_steps - n_steps,
                                     n_steps)
         else:
             # break the run up into `step_blocks` sized chunks
-            remaining_steps = n_steps
-            while remaining_steps > 0:
-                probe_data = self._run_steps(self.step_blocks, **kwargs)
-                remaining_steps -= self.step_blocks
+            count = 0
+            while count < n_steps:
+                sub_feed = (
+                    None if input_feeds is None else
+                    {n: v[:, count:count + self.step_blocks]
+                     for n, v in input_feeds.items()})
+                probe_data = self._run_steps(
+                    self.step_blocks, input_feeds=sub_feed,
+                    profile=profile if count == 0 else False)
+                count += self.step_blocks
 
                 self._update_probe_data(
                     probe_data, self.n_steps - self.step_blocks,
-                    self.step_blocks + min(remaining_steps, 0))
+                    self.step_blocks + min(n_steps - count, 0))
 
             # update n_steps/time
-            self.n_steps += remaining_steps
+            self.n_steps -= count % n_steps
             self.time = self.n_steps * self.dt
 
         print("\rSimulation completed in %s" %
               datetime.timedelta(seconds=int(time.time() - start)))
 
-    def _run_steps(self, n_steps, profile=False, input_feeds=None):
+    def _run_steps(self, n_steps, input_feeds=None, profile=False):
         """Execute ``step_blocks`` sized segments of the simulation.
 
         Parameters
         ----------
         n_steps : int
             the number of simulation steps to be executed
-        profile : bool, optional
-            if True, collect TensorFlow profiling information while the
-            simulation is running (this will slow down the simulation)
         input_feeds : dict of {:class:`~nengo:nengo.Node`: \
                                :class:`~numpy:numpy.ndarray`}
             override the values of input Nodes with the given data.  arrays
             should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
+        profile : bool, optional
+            if True, collect TensorFlow profiling information while the
+            simulation is running (this will slow down the simulation)
 
         Notes
         -----

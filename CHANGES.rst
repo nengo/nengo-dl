@@ -21,6 +21,10 @@ Release History
 0.3.1 (unreleased)
 ------------------
 
+**Fixed**
+
+- Correctly handle input feeds when n_steps > step_blocks
+
 
 0.3.0 (April 25, 2017)
 ----------------------

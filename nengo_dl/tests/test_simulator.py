@@ -124,13 +124,22 @@ def test_input_feeds(Simulator):
 
     with Simulator(net, minibatch_size=minibatch_size,
                    step_blocks=step_blocks) as sim:
-        val = np.random.randn(minibatch_size, step_blocks, 3)
-        sim.run_steps(step_blocks, input_feeds={inp: val})
+        val = np.random.randn(minibatch_size, step_blocks * 4, 3)
+        sim.run_steps(step_blocks * 4, input_feeds={inp: val})
         assert np.allclose(sim.data[p], val)
 
         with pytest.raises(nengo.exceptions.SimulationError):
             sim.run_steps(step_blocks, input_feeds={
-                inp: np.random.randn(minibatch_size, step_blocks + 1, 3)})
+                inp: np.random.randn(
+                    minibatch_size + 1, step_blocks, 3)})
+
+        with pytest.raises(nengo.exceptions.SimulationError):
+            sim.run_steps(step_blocks, input_feeds={
+                inp: np.random.randn(minibatch_size, step_blocks - 1, 3)})
+
+        with pytest.raises(nengo.exceptions.SimulationError):
+            sim.run_steps(step_blocks, input_feeds={
+                inp: np.random.randn(minibatch_size, step_blocks, 4)})
 
 
 @pytest.mark.parametrize("neurons", (True, False))
