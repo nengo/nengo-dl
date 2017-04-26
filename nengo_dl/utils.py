@@ -81,8 +81,8 @@ def align_func(output_shape, output_dtype):
     """Decorator that ensures the output of ``func`` is an
     :class:`~numpy:numpy.ndarray` with the given shape and dtype.
 
-    Raises a ``SimulationError`` if the
-    function returns ``None``.
+    Raises a ``SimulationError`` if the function returns ``None`` or a
+    non-finite value.
 
     Parameters
     ----------

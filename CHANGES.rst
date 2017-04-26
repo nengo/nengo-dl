@@ -21,6 +21,10 @@ Release History
 0.3.1 (unreleased)
 ------------------
 
+**Added**
+
+- Added more documentation on Simulator arguments
+
 **Fixed**
 
 - Correctly handle input feeds when n_steps > step_blocks

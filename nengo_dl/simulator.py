@@ -36,17 +36,14 @@ class Simulator(object):
         seed for all stochastic operators used in this simulator
     model : :class:`~nengo:nengo.builder.Model`, optional
         pre-built model object
-    tensorboard : bool, optional
-        if True, save network output in the Tensorflow summary format,
-        which can be loaded into Tensorboard
     dtype : ``tf.DType``, optional
         floating point precision to use for simulation
-    step_blocks : int, optional
-        controls how many simulation steps run each time the graph is
-        executed (affects memory usage and graph construction time)
     device : None or ``"/cpu:0"`` or ``"/gpu:[0-n]"``, optional
         device on which to execute computations (if None then uses the
         default device as determined by Tensorflow)
+    step_blocks : int, optional
+        controls how many simulation steps run each time the graph is
+        executed (affects memory usage and graph construction time)
     unroll_simulation : bool, optional
         if True, unroll simulation loop by explicitly building each iteration
         (up to ``step_blocks``) into the computation graph. if False, use a
@@ -55,6 +52,9 @@ class Simulator(object):
     minibatch_size : int, optional
         the number of simultaneous inputs that will be passed through the
         network
+    tensorboard : bool, optional
+        if True, save network output in the Tensorflow summary format,
+        which can be loaded into Tensorboard
     """
 
     # unsupported unit tests
@@ -81,8 +81,9 @@ class Simulator(object):
     ]
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
-                 tensorboard=False, dtype=tf.float32, step_blocks=None,
-                 device=None, unroll_simulation=False, minibatch_size=None):
+                 dtype=tf.float32, device=None, step_blocks=None,
+                 unroll_simulation=False, minibatch_size=None,
+                 tensorboard=False):
         self.closed = None
         self.sess = None
         self.tensorboard = tensorboard
@@ -363,7 +364,7 @@ class Simulator(object):
 
         if profile:
             timeline = Timeline(run_metadata.step_stats)
-            with open("nengo_dl_profile.json", "w") as f:
+            with open("%s/nengo_dl_profile.json" % DATA_DIR, "w") as f:
                 f.write(timeline.generate_chrome_trace_format())
 
         return probe_data

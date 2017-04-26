@@ -65,8 +65,7 @@ input nodes:
     minibatch_size = 20
     n_steps = 10
 
-    with nengo_dl.Simulator(
-            net, step_blocks=n_steps, minibatch_size=minibatch_size) as sim:
+    with nengo_dl.Simulator(net, step_blocks=n_steps, minibatch_size=minibatch_size) as sim:
         sim.train(inputs={a: np.random.randn(n_inputs, n_steps, 1),
                           b: np.random.randn(n_inputs, n_steps, 3)},
                   ...)
@@ -135,7 +134,7 @@ arguments required by that optimizer), and that instance is then passed to
 
     with nengo_dl.Simulator(net, ...) as sim:
         sim.train(optimizer=tf.train.MomentumOptimizer(
-            learning_rate=0.1, momentum=0.9, use_nesterov=True), ...)
+            learning_rate=1e-2, momentum=0.9, use_nesterov=True), ...)
 
 Objective
 ---------
@@ -152,7 +151,7 @@ the user doesn't specify an objective.
 Users can specify a custom objective by creating a function and passing that
 to the ``objective`` argument in :meth:`.Simulator.train`.  Note that the
 objective is defined using TensorFlow operators.  It should accept Tensors
-representing outputs and targets as input (with shape
+representing outputs and targets as input (each with shape
 ``(minibatch_size, n_steps, probe.size_in)``) and return a scalar Tensor
 representing the error. This example manually computes mean squared error,
 rather than using the default:
@@ -167,20 +166,20 @@ rather than using the default:
     with nengo_dl.Simulator(net, ...) as sim:
         sim.train(objective=my_objective, ...)
 
-If there are multiple output Probes defined in ``targets``, then the error
+If there are multiple output Probes defined in ``targets`` then the error
 will be computed for each output individually (using the specified objective).
 Then the error will be averaged across outputs to produce an overall
 error value.
 
-Note that the :meth:`.Simulator.loss` function can be used to check the loss
+Note that :meth:`.Simulator.loss` can be used to check the loss
 (error) value for a given objective.
 
 Other parameters
 ----------------
 
-- ``n_epochs``: run training for this many passes through the input data
-- ``shuffle``: if True (default), randomly assign data to different minibatches
-  each epoch
+- ``n_epochs`` (int): run training for this many passes through the input data
+- ``shuffle`` (bool): if ``True`` (default), randomly assign data to different
+  minibatches each epoch
 
 Examples
 --------
@@ -217,7 +216,7 @@ but it shows how all of the above parts can fit together.
         p = nengo.Probe(d)
 
     n_steps = 5  # the number of simulation steps we want to run our model for
-    mini_size = 10 # minibatch size
+    mini_size = 100  # minibatch size
 
     with nengo_dl.Simulator(net, step_blocks=n_steps, minibatch_size=mini_size,
                             device="/cpu:0") as sim:
@@ -230,7 +229,7 @@ but it shows how all of the above parts can fit together.
         # `target_data` to our output probe `p`. we can use whatever TensorFlow
         # optimizer we want here.
         sim.train({a: input_data}, {p: target_data},
-                  tf.train.MomentumOptimizer(1e-2, 0.9), n_epochs=10)
+                  tf.train.MomentumOptimizer(5e-2, 0.9), n_epochs=30)
 
         # run the model to see the results of the training. note that this will
         # use the input values specified in our `nengo.Node` definition
