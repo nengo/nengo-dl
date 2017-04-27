@@ -28,6 +28,7 @@ env:
       NENGO_DL_TEST_STEP_BLOCKS="10"
     - PYTHON_VERSION="2.7"
     - PYTHON_VERSION="3.4"
+    - PYTHON_VERSION="3.6"
     - NUMPY_VERSION="numpy==1.11.0"
     - TF_VERSION="tensorflow==1.0.0"
     - NENGO_VERSION="nengo==2.3.1"
