@@ -23,8 +23,11 @@ further optimize those parameters based on some inputs and desired
 outputs.  We'll go through each of those components in more detail
 below.
 
+Simulator.train arguments
+-------------------------
+
 Inputs
-------
+^^^^^^
 
 The first argument to the :meth:`.Simulator.train` function is the input data.
 We can think of a model as computing a function
@@ -77,7 +80,7 @@ inputs can only be defined for Nodes with no incoming connections (i.e., Nodes
 with ``size_in == 0``).
 
 Targets
--------
+^^^^^^^
 
 Returning to the network equation :math:`y = f(x, \theta)`, the goal in
 optimization is to find a set of parameter values such that given inputs
@@ -116,7 +119,7 @@ In practice we would do something like ``targets={p: my_func(inputs)}``, where
 inputs.
 
 Optimizer
----------
+^^^^^^^^^
 
 The optimizer is the algorithm that defines how to update the
 network parameters during training.  Any of the optimization methods
@@ -137,7 +140,7 @@ arguments required by that optimizer), and that instance is then passed to
             learning_rate=1e-2, momentum=0.9, use_nesterov=True), ...)
 
 Objective
----------
+^^^^^^^^^
 
 The goal in optimization is to minimize the error between the network's actual
 outputs :math:`y` and the targets :math:`t`.  The objective is the
@@ -175,7 +178,7 @@ Note that :meth:`.Simulator.loss` can be used to check the loss
 (error) value for a given objective.
 
 Other parameters
-----------------
+^^^^^^^^^^^^^^^^
 
 - ``n_epochs`` (int): run training for this many passes through the input data
 - ``shuffle`` (bool): if ``True`` (default), randomly assign data to different
