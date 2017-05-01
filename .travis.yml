@@ -22,6 +22,7 @@ env:
   matrix:
     - MODE="pep8"
     - MODE="docs"
+    - MODE="coverage"
     - # default build
     - NENGO_DL_TEST_PRECISION="64"
     - NENGO_DL_TEST_UNROLL="True"
@@ -60,10 +61,15 @@ script:
       flake8;
     elif [[ "$MODE" == "docs" ]]; then
       python setup.py build_sphinx;
+    elif [[ "$MODE" == "coverage" ]]; then
+      python setup.py develop;
+      coverage run -m py.test;
+      coverage run -a -m py.test --pyargs nengo;
+      coverage report;
     else
       python setup.py develop;
-      py.test --pyargs nengo;
-      py.test;
+      py.test -v --pyargs nengo;
+      py.test -v --durations 10;
     fi
 
 after_success:
@@ -73,4 +79,6 @@ after_success:
       git config --global user.email "travis@travis-ci.org";
       git config --global user.name "TravisCI";
       git push -fq "https://$GH_TOKEN@github.com/nengo/nengo_dl.git" gh-pages;
+    elif [[ "$MODE" == "coverage" ]]; then
+      eval "bash <(curl -s https://codecov.io/bash)";
     fi

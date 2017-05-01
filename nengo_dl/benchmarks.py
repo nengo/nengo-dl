@@ -6,6 +6,7 @@ import nengo_ocl
 import numpy as np
 
 import nengo_dl
+from nengo_dl import DATA_DIR
 
 
 def cconv(dimensions, neurons_per_d, neuron_type):
@@ -179,9 +180,9 @@ def compare_backends(raw=False):
                                 print(e)
                                 data[i, j, k, l, m] = np.nan
 
-        np.savez("benchmark_data.npz", data)
+        np.savez("%s/benchmark_data.npz" % DATA_DIR, data)
     else:
-        data = np.load("benchmark_data.npz")["arr_0"]
+        data = np.load("%s/benchmark_data.npz" % DATA_DIR)["arr_0"]
 
     bench_names = ["pes", "integrator", "cconv"]
     neuron_names = ["relu", "lif"]

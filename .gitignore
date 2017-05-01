@@ -9,6 +9,7 @@ dist
 *.swp
 .ipynb_checkpoints/
 .cache
+.coverage
 .idea
 data
 docs/mnist.pkl
