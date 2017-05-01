@@ -10,7 +10,12 @@ from nengo.builder.processes import SimProcess
 from nengo.exceptions import BuildError
 from nengo.utils.compat import iteritems
 from nengo.utils.graphs import toposort
-from nengo.utils.simulator import operator_depencency_graph
+try:
+    from nengo.utils.simulator import operator_dependency_graph
+except ImportError:
+    # TODO: remove this and bump nengo version once there is a release
+    from nengo.utils.simulator import (
+        operator_depencency_graph as operator_dependency_graph)
 import numpy as np
 
 from nengo_dl import (signals, processes, builder, tensor_node, operators,
@@ -121,8 +126,6 @@ def mergeable(op, chosen_ops):
     return True
 
 
-# TODO: implement transitive-closure based planner
-
 def greedy_planner(operators):
     """Combine mergeable operators into groups that will be executed as a
     single computation.
@@ -142,7 +145,7 @@ def greedy_planner(operators):
     Originally based on ``nengo_ocl`` greedy planner
     """
 
-    dependency_graph = operator_depencency_graph(operators)
+    dependency_graph = operator_dependency_graph(operators)
 
     # map unscheduled ops to their direct predecessors and successors
     predecessors_of = {}
@@ -276,7 +279,7 @@ def tree_planner(operators):
 
         return shortest
 
-    dependency_graph = operator_depencency_graph(operators)
+    dependency_graph = operator_dependency_graph(operators)
 
     predecessors_of = {}
     successors_of = {}
@@ -312,7 +315,7 @@ def noop_planner(operators):
         operators in execution order
     """
 
-    dependency_graph = operator_depencency_graph(operators)
+    dependency_graph = operator_dependency_graph(operators)
     plan = [(op,) for op in toposort(dependency_graph)]
 
     logger.debug("NOOP PLAN")
@@ -344,7 +347,7 @@ def transitive_planner(op_list):
 
     n_ele = len(op_list)
     merge_groups = {}
-    dg = operator_depencency_graph(op_list)
+    dg = operator_dependency_graph(op_list)
     op_codes = {op: np.uint32(i) for i, op in enumerate(op_list)}
     dg = {op_codes[k]: set(op_codes[x] for x in v) for k, v in dg.items()}
     op_codes = None  # so it will get garbage collected

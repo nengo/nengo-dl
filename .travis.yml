@@ -32,6 +32,7 @@ env:
     - PYTHON_VERSION="3.6"
     - NUMPY_VERSION="numpy==1.11.0"
     - TF_VERSION="tensorflow==1.0.0"
+    - NENGO_VERSION="git+https://github.com/nengo/nengo.git"
     - NENGO_VERSION="nengo==2.3.1"
 
 # Setup Miniconda
@@ -63,13 +64,12 @@ script:
       python setup.py build_sphinx;
     elif [[ "$MODE" == "coverage" ]]; then
       python setup.py develop;
-      coverage run -m py.test;
-      coverage run -a -m py.test --pyargs nengo;
+      coverage run -m py.test --pyargs nengo;
+      coverage run -a -m py.test;
       coverage report;
     else
       python setup.py develop;
-      py.test -v --pyargs nengo;
-      py.test -v --durations 10;
+      py.test -v --pyargs nengo && py.test -v --durations 10;
     fi
 
 after_success:
