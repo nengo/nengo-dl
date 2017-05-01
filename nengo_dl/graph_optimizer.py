@@ -353,6 +353,9 @@ def transitive_planner(op_list):
     op_codes = None  # so it will get garbage collected
     dg = BidirectionalDAG(dg)
 
+    # fail fast here if the op graph has cycles
+    toposort(dg.forward)
+
     op_builders = [builder.Builder.builders[type(op)] for op in op_list]
 
     # sort operators by builder (we'll only be interested in one builder type
@@ -490,6 +493,11 @@ def transitive_closure_recurse(dg, ops, trans, builder_type, op_builders,
     """
 
     for op in ops:
+        if trans[op] is not None:
+            # this can occur if the downstream calculations of an earlier
+            # op filled in the value for this op
+            continue
+
         todo = [x for x in dg[op] if trans[x] is None]
         transitive_closure_recurse(dg, todo, trans, builder_type, op_builders,
                                    cache)

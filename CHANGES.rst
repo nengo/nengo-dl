@@ -28,6 +28,7 @@ Release History
 **Fixed**
 
 - Correctly handle input feeds when n_steps > step_blocks
+- Detect cycles in transitive planner
 
 
 0.3.0 (April 25, 2017)
