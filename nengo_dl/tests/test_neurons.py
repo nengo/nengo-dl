@@ -13,7 +13,7 @@ def test_lif_deterministic(Simulator, seed):
 
     canonical = sim.data[p]
 
-    for _ in range(10):
+    for _ in range(5):
         with Simulator(net) as sim:
             sim.run_steps(50)
 

@@ -62,11 +62,11 @@ def test_unroll_simulation(Simulator, seed):
             nengo.Connection(inp, ens)
             p = nengo.Probe(ens)
 
-        with Simulator(net, step_blocks=10, unroll_simulation=False) as sim1:
-            sim1.run_steps(50)
+        with Simulator(net, step_blocks=None, unroll_simulation=False) as sim1:
+            sim1.run_steps(30)
 
         with Simulator(net, step_blocks=10, unroll_simulation=True) as sim2:
-            sim2.run_steps(50)
+            sim2.run_steps(30)
 
         assert np.allclose(sim1.data[p], sim2.data[p])
 
@@ -94,18 +94,17 @@ def test_minibatch(Simulator, seed):
     with Simulator(net, minibatch_size=None) as sim:
         probe_data = [[] for _ in ps]
         for i in range(5):
-            sim.run_steps(1000)
+            sim.run_steps(100)
 
             for j, p in enumerate(ps):
                 probe_data[j] += [sim.data[p]]
 
-            # TODO: soft_reset?
             sim.reset()
 
         probe_data = [np.stack(x, axis=0) for x in probe_data]
 
     with Simulator(net, minibatch_size=5) as sim:
-        sim.run_steps(1000)
+        sim.run_steps(100)
 
     assert np.allclose(sim.data[ps[0]], probe_data[0], atol=1e-6)
     assert np.allclose(sim.data[ps[1]], probe_data[1], atol=1e-6)
@@ -146,7 +145,7 @@ def test_input_feeds(Simulator):
 def test_train_ff(Simulator, neurons, seed):
     minibatch_size = 4
     step_blocks = 1
-    n_hidden = 5
+    n_hidden = 20
 
     np.random.seed(seed)
 
@@ -156,15 +155,15 @@ def test_train_ff(Simulator, neurons, seed):
         net.config[nengo.Connection].synapse = None
 
         inp = nengo.Node([0, 0])
-        ens = nengo.Ensemble(n_hidden, n_hidden,
+        ens = nengo.Ensemble(n_hidden + 1, n_hidden,
                              neuron_type=nengo.Sigmoid(tau_ref=1))
         out = nengo.Ensemble(1, 1, neuron_type=nengo.Sigmoid(tau_ref=1))
         nengo.Connection(
             inp, ens.neurons if neurons else ens,
-            transform=np.random.uniform(-1, 1, size=(n_hidden, 2)))
+            transform=np.random.uniform(-1, 1, size=(n_hidden + neurons, 2)))
         nengo.Connection(
             ens.neurons if neurons else ens, out.neurons if neurons else out,
-            transform=np.random.uniform(-1, 1, size=(1, n_hidden)))
+            transform=np.random.uniform(-1, 1, size=(1, n_hidden + neurons)))
 
         # TODO: why does training fail if we probe out instead of out.neurons?
         p = nengo.Probe(out.neurons)
@@ -175,51 +174,49 @@ def test_train_ff(Simulator, neurons, seed):
         y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
 
         sim.train({inp: x}, {p: y}, tf.train.GradientDescentOptimizer(1),
-                  n_epochs=10000)
+                  n_epochs=5000)
 
-        sim.check_gradients(atol=2e-5)
+        sim.check_gradients(atol=5e-5)
 
         sim.step(input_feeds={inp: x})
 
         assert np.allclose(sim.data[p], y, atol=1e-4)
 
 
-@pytest.mark.parametrize("neurons", (True, False))
-def test_train_recurrent(Simulator, neurons, seed):
+def test_train_recurrent(Simulator, seed):
     batch_size = 100
-    minibatch_size = 10
+    minibatch_size = 100
     step_blocks = 10
-    n_hidden = 20
+    n_hidden = 30
 
     with nengo.Network(seed=seed) as net:
         inp = nengo.Node([0])
         ens = nengo.Ensemble(
-            n_hidden, 1, neuron_type=nengo.Sigmoid(tau_ref=1),
-            gain=nengo.dists.Choice([1]), bias=nengo.dists.Uniform(-1, 1))
+            n_hidden, 1, neuron_type=nengo.RectifiedLinear(),
+            gain=np.ones(n_hidden), bias=np.linspace(-1, 1, n_hidden))
         out = nengo.Node(size_in=1)
 
         nengo.Connection(inp, ens, synapse=None)
-        nengo.Connection(ens, ens, synapse=0,
-                         solver=nengo.solvers.LstsqL2(weights=neurons))
+        nengo.Connection(ens, ens, synapse=0)
         nengo.Connection(ens, out, synapse=None)
 
         p = nengo.Probe(out)
 
     with Simulator(net, minibatch_size=minibatch_size, step_blocks=step_blocks,
                    seed=seed) as sim:
-        x = np.outer(np.linspace(0.1, 0.9, batch_size),
+        x = np.outer(np.linspace(0, 1, batch_size),
                      np.ones(step_blocks))[:, :, None]
-        y = np.outer(np.linspace(0.1, 0.9, batch_size),
+        y = np.outer(np.linspace(0, 1, batch_size),
                      np.linspace(0, 1, step_blocks))[:, :, None]
 
-        sim.train({inp: x}, {p: y}, tf.train.GradientDescentOptimizer(1e-2),
-                  n_epochs=1000)
+        sim.train({inp: x}, {p: y}, tf.train.GradientDescentOptimizer(2e-3),
+                  n_epochs=2000)
 
         sim.check_gradients(sim.tensor_graph.losses[("mse", (p,))])
 
         sim.run_steps(step_blocks, input_feeds={inp: x[:minibatch_size]})
 
-    assert np.sqrt(np.sum((sim.data[p] - y[:minibatch_size]) ** 2)) < 0.4
+    assert np.sqrt(np.mean((sim.data[p] - y[:minibatch_size]) ** 2)) < 0.05
 
 
 @pytest.mark.parametrize("unroll", (True, False))
