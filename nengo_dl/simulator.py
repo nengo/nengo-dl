@@ -300,7 +300,7 @@ class Simulator(object):
                     self.step_blocks + min(n_steps - count, 0))
 
             # update n_steps/time
-            self.n_steps -= count % n_steps
+            self.n_steps += n_steps - count
             self.time = self.n_steps * self.dt
 
         print("\rSimulation completed in %s" %

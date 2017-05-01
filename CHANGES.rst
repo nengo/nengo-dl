@@ -29,6 +29,7 @@ Release History
 
 - Correctly handle input feeds when n_steps > step_blocks
 - Detect cycles in transitive planner
+- Fix bug in uneven step_blocks rounding
 
 
 0.3.0 (April 25, 2017)
