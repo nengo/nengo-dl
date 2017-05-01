@@ -15,9 +15,8 @@ from nengo_dl.tensor_node import SimTensorNode
 
 
 @pytest.fixture(
-    scope="module",
     params=[greedy_planner, tree_planner] +
-           [transitive_planner] if nengo_version > (2, 4, 0) else [])
+    ([transitive_planner] if nengo_version >= (2, 4, 0) else []))
 def planner(request):
     return request.param
 
