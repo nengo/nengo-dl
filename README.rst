@@ -1,3 +1,15 @@
+.. image:: https://img.shields.io/pypi/v/nengo_dl.svg
+  :target: https://pypi.python.org/pypi/nengo_dl
+  :alt: Latest PyPI version
+
+.. image:: https://img.shields.io/travis/nengo/nengo_dl/master.svg
+  :target: https://travis-ci.org/nengo/nengo_dl
+  :alt: Travis-CI build status
+
+.. image:: https://img.shields.io/codecov/c/github/nengo/nengo_dl/master.svg
+  :target: https://codecov.io/gh/nengo/nengo_dl/branch/master
+  :alt: Test coverage
+
 ********************************************
 NengoDL: Deep learning integration for Nengo
 ********************************************
