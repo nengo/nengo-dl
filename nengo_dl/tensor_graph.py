@@ -155,15 +155,6 @@ class TensorGraph(object):
                         except KeyError:
                             duplicate = False
 
-                # if trainable:
-                #     # trainable signal, so create Variable
-                #     with tf.variable_scope("base_vars", reuse=False):
-                #         var = tf.get_variable(
-                #             name, initializer=tf.constant_initializer(v),
-                #             dtype=v.dtype, shape=v.shape, trainable=True)
-                # else:
-                #     var = tf.placeholder(tf.as_dtype(v.dtype), shape=v.shape,
-                #                          name=name)
                 if trainable:
                     with tf.variable_scope("trainable_vars", reuse=False):
                         var = tf.get_variable(

@@ -160,8 +160,6 @@ class TensorSignal(object):
         that slice."""
 
         self.tf_indices = tf.constant(self.indices, dtype=tf.int32)
-        self.tf_indices_nd = tf.expand_dims(
-            tf.cast(self.tf_indices, tf.int64), 1)
 
         start = self.indices[0]
         stop = self.indices[-1] + 1
@@ -256,46 +254,6 @@ class SignalDict(object):
         self.gather_bases = []
 
         logger.debug("new dst base %s", self.bases[dst.key])
-
-    def _scatter_f(self, dst, src, mode="update"):
-        dst_shape = self.bases[dst.key].get_shape()
-        if dst_shape.is_compatible_with(src.get_shape()) and np.all(
-                np.arange(dst_shape[0].value) == dst.indices):
-            if mode == "update":
-                result = tf.identity(src)
-            elif mode == "inc":
-                result = self.bases[dst.key] + src
-        elif mode == "update":
-            scatter_src = tf.scatter_nd(
-                dst.tf_indices_nd, src, self.bases[dst.key].get_shape())
-            mask = tf.scatter_nd(
-                dst.tf_indices_nd, tf.ones_like(src, dtype=tf.float32),
-                self.bases[dst.key].get_shape())
-            result = tf.where(mask > 0, scatter_src, self.bases[dst.key])
-
-            # the dynamic stitch approach appears to be slower, because it is
-            # doing some HtoD memcpy's
-            # base_idxs = self.base_ranges[dst.key]
-            # result = tf.dynamic_stitch([base_idxs, dst.tf_indices],
-            #                            [self.bases[dst.key], src])
-        elif mode == "inc":
-            # TODO: switch to sparse_add if they implement a GPU kernel?
-            # idxs = tf.constant(list(itertools.product(
-            #     dst.indices, range(self.minibatch_size))),
-            #     dtype=tf.int64)
-            # tmp = tf.SparseTensor(
-            #     idxs, tf.reshape(src, (-1,)),
-            #     [dst.shape[0]] + src.get_shape().as_list()[1:])
-            # result = tf.sparse_add(self.bases[dst.key], tmp)
-
-            result = self.bases[dst.key] + tf.scatter_nd(
-                dst.tf_indices_nd, src, self.bases[dst.key].get_shape())
-
-        else:
-            raise NotImplementedError
-
-        result.set_shape(self.bases[dst.key].get_shape())
-        return result
 
     def _scatter_f_var(self, dst, src, mode="update"):
         # create a temporary variable for dst so that we can use the sparse
