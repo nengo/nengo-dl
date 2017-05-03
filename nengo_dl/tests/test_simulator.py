@@ -1,11 +1,16 @@
+from collections import OrderedDict
 import itertools
 import os
 import shutil
 
 import nengo
+from nengo.exceptions import SimulationError, SimulatorClosed, ReadonlyError
 import numpy as np
 import pytest
 import tensorflow as tf
+
+from nengo_dl import DATA_DIR
+from nengo_dl.simulator import ProbeDict
 
 
 def test_persistent_state(Simulator, seed):
@@ -51,11 +56,15 @@ def test_step_blocks(Simulator, seed):
     assert np.allclose(sim1.data[p], sim2.data[p])
     assert np.allclose(sim2.data[p], sim3.data[p])
 
+    with pytest.warns(RuntimeWarning):
+        with Simulator(net, step_blocks=5) as sim:
+            sim.run_steps(2)
+
 
 def test_unroll_simulation(Simulator, seed):
     # note: we run this multiple times because the effects of unrolling can
     # be somewhat stochastic depending on the op order
-    for i in range(10):
+    for i in range(5):
         with nengo.Network(seed=seed + i) as net:
             inp = nengo.Node(np.sin)
             ens = nengo.Ensemble(10, 1)
@@ -69,6 +78,9 @@ def test_unroll_simulation(Simulator, seed):
             sim2.run_steps(30)
 
         assert np.allclose(sim1.data[p], sim2.data[p])
+
+    with pytest.raises(SimulationError):
+        Simulator(net, step_blocks=None, unroll_simulation=True)
 
 
 def test_minibatch(Simulator, seed):
@@ -323,6 +335,36 @@ def test_train_rmsprop_gpu(Simulator, seed):
         assert np.allclose(sim.data[p], y, atol=1e-4)
 
 
+def test_train_errors(Simulator):
+    with nengo.Network() as net:
+        a = nengo.Node([0])
+        p = nengo.Probe(a)
+
+    n_steps = 5
+    with Simulator(net, step_blocks=n_steps) as sim:
+        with pytest.raises(SimulationError):
+            sim.train({a: np.ones((1, n_steps + 1, 1))},
+                      {p: np.ones((1, n_steps, 1))}, None)
+
+        with pytest.raises(SimulationError):
+            sim.train({a: np.ones((1, n_steps, 2))},
+                      {p: np.ones((1, n_steps, 1))}, None)
+
+        with pytest.raises(SimulationError):
+            sim.train({a: np.ones((1, n_steps, 1))},
+                      {p: np.ones((1, n_steps + 1, 1))}, None)
+
+        with pytest.raises(SimulationError):
+            sim.train({a: np.ones((1, n_steps, 1))},
+                      {p: np.ones((1, n_steps, 2))}, None)
+
+    with Simulator(net, unroll_simulation=False, step_blocks=None) as sim:
+        with pytest.raises(SimulationError):
+            sim.train(None, None, None)
+    with pytest.raises(SimulatorClosed):
+        sim.train(None, None, None)
+
+
 def test_loss(Simulator):
     with nengo.Network() as net:
         inp = nengo.Node([1])
@@ -330,7 +372,8 @@ def test_loss(Simulator):
         nengo.Connection(inp, ens)
         p = nengo.Probe(ens)
 
-    with Simulator(net, step_blocks=20) as sim:
+    n_steps = 20
+    with Simulator(net, step_blocks=n_steps) as sim:
         sim.run_steps(20)
         data = sim.data[p]
 
@@ -342,6 +385,28 @@ def test_loss(Simulator):
                                     {p: np.zeros((4, 20, 1))},
                                     objective=lambda x, y: tf.constant(2)),
                            2)
+
+        with pytest.raises(SimulationError):
+            sim.loss({inp: np.ones((1, n_steps + 1, 1))},
+                     {p: np.ones((1, n_steps, 1))}, None)
+
+        with pytest.raises(SimulationError):
+            sim.loss({inp: np.ones((1, n_steps, 2))},
+                     {p: np.ones((1, n_steps, 1))}, None)
+
+        with pytest.raises(SimulationError):
+            sim.loss({inp: np.ones((1, n_steps, 1))},
+                     {p: np.ones((1, n_steps + 1, 1))}, None)
+
+        with pytest.raises(SimulationError):
+            sim.loss({inp: np.ones((1, n_steps, 1))},
+                     {p: np.ones((1, n_steps, 2))}, None)
+
+    with Simulator(net, unroll_simulation=False, step_blocks=None) as sim:
+        with pytest.raises(SimulationError):
+            sim.loss(None, None, None)
+    with pytest.raises(SimulatorClosed):
+        sim.loss(None, None, None)
 
 
 def test_generate_inputs(Simulator, seed):
@@ -391,6 +456,16 @@ def test_save_load_params(Simulator):
                        if x.get_shape() == (1, 10)][0]
         weights0 = sim.sess.run(weights_var)
         sim.save_params("./tmp/tmp")
+
+        # just check that this doesn't produce an error
+        sim.print_params()
+
+    with pytest.raises(SimulationError):
+        sim.save_params(None)
+    with pytest.raises(SimulationError):
+        sim.load_params(None)
+    with pytest.raises(SimulationError):
+        sim.print_params(None)
 
     with Simulator(net2) as sim:
         weights_var = [x for x in sim.tensor_graph.base_vars
@@ -479,3 +554,58 @@ def test_side_effects(Simulator, unroll):
         sim.run_steps(10)
 
     assert func.x == 11
+
+
+def test_tensorboard(Simulator):
+    with nengo.Network() as net:
+        a = nengo.Node([0])
+        nengo.Probe(a)
+
+    with Simulator(net, tensorboard=True):
+        assert os.path.exists("%s/None/run_0" % DATA_DIR)
+
+    with Simulator(net, tensorboard=True):
+        assert os.path.exists("%s/None/run_1" % DATA_DIR)
+
+    net.label = "test"
+
+    with Simulator(net, tensorboard=True):
+        assert os.path.exists("%s/test/run_0" % DATA_DIR)
+
+
+def test_profile(Simulator):
+    with nengo.Network() as net:
+        a = nengo.Node([0])
+        nengo.Probe(a)
+
+    with Simulator(net) as sim:
+        sim.run_steps(5, profile=True)
+
+        assert os.path.exists("%s/nengo_dl_profile.json" % DATA_DIR)
+
+
+def test_dt_readonly(Simulator):
+    with nengo.Network() as net:
+        a = nengo.Node([0])
+        nengo.Probe(a)
+
+    with Simulator(net) as sim:
+        with pytest.raises(ReadonlyError):
+            sim.dt = 1
+
+
+def test_probe_dict():
+    a = ProbeDict(OrderedDict({0: [np.zeros((1, 3, 5)), np.ones((1, 3, 5))],
+                               1: [np.ones((1, 3, 1)), np.zeros((1, 3, 1))]}),
+                  {0: 5, 1: None})
+    assert a[0].shape == (5, 2, 3)
+    assert np.all(a[0][:, 0] == 0)
+    assert np.all(a[0][:, 1] == 1)
+
+    assert a[1].shape == (2, 3)
+    assert np.all(a[1][1] == 0)
+    assert np.all(a[1][0] == 1)
+
+    assert len(a) == 2
+    for x, y in zip(a, (0, 1)):
+        assert x == y

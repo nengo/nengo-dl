@@ -96,6 +96,7 @@ class Simulator(object):
 
         # TODO: allow the simulator to be called flexibly with/without
         # minibatching
+        # TODO: multi-GPU support
 
         # build model (uses default nengo builder)
         if model is None:
@@ -271,7 +272,12 @@ class Simulator(object):
                 " (%d).  Simulation will run for %d steps, which may have "
                 "unintended side effects." %
                 (n_steps, self.step_blocks,
-                 self.step_blocks * (n_steps // self.step_blocks + 1)))
+                 self.step_blocks * (n_steps // self.step_blocks + 1)),
+                RuntimeWarning)
+
+        if input_feeds is not None:
+            self._check_data(input_feeds, mode="out", check_mini=True,
+                             n_steps=n_steps)
 
         print_and_flush("Simulation started", end="")
         start = time.time()
@@ -424,34 +430,16 @@ class Simulator(object):
           on Tensorflow GPU support.
         """
 
+        # error checking
         if self.closed:
             raise SimulatorClosed("Simulator cannot be trained because it is "
                                   "closed.")
-
         if self.step_blocks is None:
             raise SimulationError(
                 "Simulator `step_blocks` must be set for training "
                 "(`Simulator(..., step_blocks=n)`)")
-
-        for n, x in inputs.items():
-            if x.shape[1] != self.step_blocks:
-                raise SimulationError(
-                    "Length of input sequence (%s) does not match "
-                    "`step_blocks` (%s)" % (x.shape[1], self.step_blocks))
-            if x.shape[2] != n.size_out:
-                raise SimulationError(
-                    "Dimensionality of input sequence (%d) does not match "
-                    "node.size_out (%d)" % (x.shape[2], n.size_out))
-
-        for p, x in targets.items():
-            if x.shape[1] != self.step_blocks:
-                raise SimulationError(
-                    "Length of target sequence (%s) does not match "
-                    "`step_blocks` (%s)" % (x.shape[1], self.step_blocks))
-            if x.shape[2] != p.size_in:
-                raise SimulationError(
-                    "Dimensionality of target sequence (%d) does not match "
-                    "probe.size_in (%d)" % (x.shape[2], p.size_in))
+        self._check_data(inputs, mode="out")
+        self._check_data(targets, mode="in")
 
         # check for non-differentiable elements in graph
         # utils.find_non_differentiable(
@@ -513,29 +501,16 @@ class Simulator(object):
         should not be intermixed with calls to :meth:`.Simulator.run`.
         """
 
+        # error checking
         if self.closed:
             raise SimulatorClosed("Loss cannot be computed after simulator is "
                                   "closed.")
-
-        for n, x in inputs.items():
-            if x.shape[1] != self.step_blocks:
-                raise SimulationError(
-                    "Length of input sequence (%s) does not match "
-                    "`step_blocks` (%s)" % (x.shape[1], self.step_blocks))
-            if x.shape[2] != n.size_out:
-                raise SimulationError(
-                    "Dimensionality of input sequence (%d) does not match "
-                    "node.size_out (%d)" % (x.shape[2], n.size_out))
-
-        for p, x in targets.items():
-            if x.shape[1] != self.step_blocks:
-                raise SimulationError(
-                    "Length of target sequence (%s) does not match "
-                    "`step_blocks` (%s)" % (x.shape[1], self.step_blocks))
-            if x.shape[2] != p.size_in:
-                raise SimulationError(
-                    "Dimensionality of target sequence (%d) does not match "
-                    "probe.size_in (%d)" % (x.shape[2], p.size_in))
+        if self.step_blocks is None:
+            raise SimulationError(
+                "Simulator `step_blocks` must be set to compute loss "
+                "(`Simulator(..., step_blocks=n)`)")
+        self._check_data(inputs, mode="out")
+        self._check_data(targets, mode="in")
 
         # get loss op
         loss = self.tensor_graph.build_loss(objective, tuple(targets.keys()))
@@ -619,14 +594,6 @@ class Simulator(object):
 
         if input_feeds is None:
             input_feeds = {}
-        else:
-            # validate inputs
-            for n, v in input_feeds.items():
-                target_shape = (self.minibatch_size, n_steps, n.size_out)
-                if v.shape != target_shape:
-                    raise SimulationError(
-                        "Input feed for node %s has wrong shape; expected %s, "
-                        "saw %s" % (n, target_shape, v.shape))
 
         feed_vals = {}
         for n in self.tensor_graph.invariant_inputs:
@@ -745,7 +712,8 @@ class Simulator(object):
 
         param_sigs = {k: v for k, v in self.tensor_graph.sig_map.items()
                       if k.trainable}
-        params = {v.key: self.tensor_graph.signals.bases[v.key]
+        keys = list(self.tensor_graph.signals.bases.keys())
+        params = {v.key: self.tensor_graph.base_vars[keys.index(v.key)]
                   for v in param_sigs.values()}
 
         param_vals = self.sess.run(params)
@@ -911,6 +879,36 @@ class Simulator(object):
 
         logger.info("Gradient check passed")
 
+    def _check_data(self, data, mode="out", check_mini=False, n_steps=None):
+        """Performs error checking on simulation data.
+
+        Parameters
+        ----------
+        data : dict of {``nengo object``: :class:`~numpy:numpy.ndarray`}
+            array of data associated with given object in model
+        mode : "in" or "out", optional
+            whether this data corresponds to the input or output of the
+            nengo object
+        check_mini : bool, optional
+            if True, also validate minibatch_size
+        n_steps : int, optional
+            number of simulation steps (if None, will use sim.step_blocks)
+        """
+
+        for n, x in data.items():
+            shape = (self.minibatch_size if check_mini else None,
+                     self.step_blocks if n_steps is None else n_steps,
+                     n.size_out if mode == "out" else n.size_in)
+
+            if any(x is not None and x != y for x, y in zip(shape, x.shape)):
+                raise SimulationError(
+                    "Shape of data array %s does not match expected shape "
+                    "(%s, %s, %s.size_%s) -> %s" %
+                    (x.shape,
+                     "sim.minibatch_size" if check_mini else "_",
+                     "sim.step_blocks" if n_steps is None else "n_steps",
+                     n, mode, shape))
+
 
 class ProbeDict(Mapping):
     """Map from :class:`~nengo:nengo.Probe` -> :class:`~numpy:numpy.ndarray`,
@@ -968,9 +966,3 @@ class ProbeDict(Mapping):
 
     def __len__(self):
         return len(self.raw)
-
-    def __repr__(self):
-        return repr(self.raw)
-
-    def __str__(self):
-        return str(self.raw)

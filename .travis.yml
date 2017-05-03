@@ -69,7 +69,7 @@ script:
       coverage report;
     else
       python setup.py develop;
-      py.test -v --pyargs nengo && py.test -v --durations 10;
+      py.test -v --pyargs nengo && py.test -v --durations 20;
     fi
 
 after_success:
