@@ -299,6 +299,7 @@ def test_train_rmsprop(Simulator, seed):
 
 
 @pytest.mark.xfail
+@pytest.mark.gpu
 def test_train_rmsprop_gpu(Simulator, seed):
     minibatch_size = 4
     step_blocks = 1

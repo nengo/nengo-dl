@@ -139,7 +139,7 @@ def print_op(input, message):
     consistently.
     """
 
-    def print_func(x):
+    def print_func(x):  # pragma: no cover
         print(message, str(x))
         return x
 
@@ -195,10 +195,17 @@ def find_non_differentiable(inputs, outputs):
             continue
         else:
             try:
-                get_gradient_function(o.op)
+                grad = get_gradient_function(o.op)
+
+                if grad is None and len(o.op.inputs) > 0:
+                    # note: technically we're not sure that this op is
+                    # on the path to inputs. we could wait and propagate this
+                    # until we find inputs, but that can take a long time for
+                    # large graphs. it seems more useful to fail quickly, and
+                    # risk some false positives
+                    raise LookupError
                 find_non_differentiable(inputs, o.op.inputs)
-            except LookupError as e:
-                logger.exception(e)
+            except LookupError:
                 raise SimulationError(
                     "Graph contains non-differentiable "
                     "elements: %s" % o.op)

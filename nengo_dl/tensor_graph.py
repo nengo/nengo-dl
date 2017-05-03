@@ -145,15 +145,11 @@ class TensorGraph(object):
                         unique_idx)
 
                     if any([name in x.name for x in (
-                            tf.global_variables() if trainable else
+                            tf.trainable_variables() if trainable else
                             tf.local_variables())]):
                         unique_idx += 1
                     else:
-                        try:
-                            self.graph.get_tensor_by_name(name + ":0")
-                            unique_idx += 1
-                        except KeyError:
-                            duplicate = False
+                        duplicate = False
 
                 if trainable:
                     with tf.variable_scope("trainable_vars", reuse=False):
@@ -414,7 +410,8 @@ class TensorGraph(object):
                 try:
                     opt_op = optimizer.minimize(
                         loss, var_list=tf.trainable_variables())
-                except ValueError:
+                except ValueError as e:
+                    logger.exception(e)
                     raise SimulationError(
                         "Network graph contains non-differentiable elements")
 
@@ -444,9 +441,6 @@ class TensorGraph(object):
         targets : tuple of :class:`~nengo:nengo.Probe`
             the Probes corresponding to target values in objective
         """
-
-        if isinstance(targets, list):
-            targets = tuple(targets)
 
         if (objective, targets) in self.losses:
             return self.losses[(objective, targets)]
@@ -569,11 +563,11 @@ def mark_signals(model):
             if not hasattr(sig, "minibatched"):
                 sig.minibatched = sig.base.minibatched
 
-    for p in model.probes:
-        sig = model.sig[p]["in"]
-
-        if not hasattr(sig, "trainable"):
-            sig.trainable = sig.base.trainable
-
-        if not hasattr(sig, "minibatched"):
-            sig.minibatched = sig.base.minibatched
+    # for p in model.probes:
+    #     sig = model.sig[p]["in"]
+    #
+    #     if not hasattr(sig, "trainable"):
+    #         sig.trainable = sig.base.trainable
+    #
+    #     if not hasattr(sig, "minibatched"):
+    #         sig.minibatched = sig.base.minibatched

@@ -5,6 +5,7 @@ from nengo.builder.operator import (
     Reset, Copy, ElementwiseInc, DotInc, SimPyFunc)
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.ops import gen_sparse_ops
 
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
@@ -89,7 +90,6 @@ class CopyBuilder(OpBuilder):
 
 
 @Builder.register(ElementwiseInc)
-# @Builder.register(DotInc)
 class ElementwiseIncBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.operator.ElementwiseInc`
     operators."""
@@ -101,8 +101,6 @@ class ElementwiseIncBuilder(OpBuilder):
         logger.debug("A %s", [op.A for op in ops])
         logger.debug("X %s", [op.X for op in ops])
 
-        self.dot_inc = isinstance(ops[0], DotInc)
-
         self.Y_data = signals.combine([op.Y for op in ops])
 
         # group all the A's and X's
@@ -113,16 +111,11 @@ class ElementwiseIncBuilder(OpBuilder):
         self.A_data = A_data.reshape((len(ops), -1) + A_data.shape[1:])
         self.X_data = X_data.reshape((len(ops), -1) + X_data.shape[1:])
 
-        if self.dot_inc:
-            # add empty dimension to X for broadcasting across rows
-            self.X_data = self.X_data.reshape((self.X_data.shape[0], 1) +
-                                              self.X_data.shape[1:])
-        else:
-            # add empty trailing dimensions for elementwise broadcasting
-            while self.A_data.ndim < self.X_data.ndim:
-                self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
-            while self.X_data.ndim < self.A_data.ndim:
-                self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
+        # add empty trailing dimensions for elementwise broadcasting
+        while self.A_data.ndim < self.X_data.ndim:
+            self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
+        while self.X_data.ndim < self.A_data.ndim:
+            self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
 
         # add broadcast dimension for minibatch, if needed
         if not self.A_data.minibatched and self.X_data.minibatched:
@@ -138,11 +131,6 @@ class ElementwiseIncBuilder(OpBuilder):
         X = signals.gather(self.X_data)
 
         result = tf.multiply(A, X)
-
-        if self.dot_inc:
-            reduce_axis = -1 - (self.A_data.minibatched or
-                                self.X_data.minibatched)
-            result = tf.reduce_sum(result, axis=reduce_axis)
 
         signals.scatter(self.Y_data, result, mode="inc")
 
@@ -191,7 +179,7 @@ class DotIncBuilder(OpBuilder):
             # add empty minibatch dimension if needed
             if not self.A_data.minibatched and self.X_data.minibatched:
                 self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
-            if self.A_data.minibatched and not self.X_data.minibatched:
+            elif self.A_data.minibatched and not self.X_data.minibatched:
                 self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
 
         self.A_data.load_indices()
@@ -317,9 +305,6 @@ class SparseDotIncBuilder(DotIncBuilder):
         assert A.get_shape()[0] == self.sparse_indices.get_shape()[0]
 
         # approach 1: using sparse_tensor_dense_matmul
-        # sparse_A = tf.SparseTensor(self.sparse_indices, A, self.A_shape)
-        # dot = tf.sparse_tensor_dense_matmul(sparse_A, X)
-        from tensorflow.python.ops import gen_sparse_ops
         dot = gen_sparse_ops._sparse_tensor_dense_mat_mul(
             self.sparse_indices, A, self.A_shape, X)
 
@@ -360,7 +345,7 @@ class SimPyFuncBuilder(OpBuilder):
             self.output_data = None
             self.output_dtype = signals.dtype
 
-        def merged_func(time, inputs):
+        def merged_func(time, inputs):  # pragma: no cover
             outputs = []
             offset = 0
             for i, op in enumerate(ops):

@@ -1,3 +1,4 @@
+from nengo.exceptions import SimulationError
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -91,3 +92,38 @@ def test_minibatch_generator(shuffle):
     else:
         assert np.allclose(x_all, np.arange(96))
         assert np.allclose(y_all, np.arange(96) + 1)
+
+
+def test_print_and_flush(capsys):
+    utils.print_and_flush("hello", end="")
+    utils.print_and_flush("world")
+    out, _ = capsys.readouterr()
+    assert out == "helloworld\n"
+
+
+def test_print_op(capsys):
+    x = tf.constant(0)
+    y = utils.print_op(x, "hello")
+    z = y + 0
+
+    with tf.Session() as sess:
+        sess.run(z)
+
+    out, _ = capsys.readouterr()
+
+    assert out == "hello 0\n"
+
+
+def test_find_non_differentiable():
+    x = tf.constant(0)
+    y = utils.print_op(x, "test")
+    z = y + 1
+
+    with pytest.raises(SimulationError):
+        utils.find_non_differentiable([x], [z])
+
+    x = tf.constant(0)
+    y = x * 2
+    z = y + 1
+
+    utils.find_non_differentiable([x], [z])

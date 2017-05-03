@@ -1,3 +1,4 @@
+from nengo.exceptions import BuildError
 from nengo.neurons import LIF, LIFRate, Izhikevich, AdaptiveLIF
 from nengo.synapses import Lowpass, Triangle, Alpha
 from nengo.builder.operator import (SimPyFunc, DotInc, Copy, Reset,
@@ -9,8 +10,8 @@ import pytest
 
 from nengo_dl import builder, nengo_version
 from nengo_dl.graph_optimizer import (
-    mergeable, greedy_planner, tree_planner, transitive_planner,
-    order_signals, create_signals)
+    mergeable, greedy_planner, tree_planner, transitive_planner, noop_planner,
+    order_signals, noop_order_signals, create_signals)
 from nengo_dl.tensor_node import SimTensorNode
 
 
@@ -27,7 +28,8 @@ class DummySignal(object):
         self.shape = (1,) if shape is None else shape
         self.dtype = np.float32 if dtype is None else dtype
         self.base = (self if base_shape is None else
-                     DummySignal(shape=base_shape, dtype=self.dtype))
+                     DummySignal(shape=base_shape, dtype=self.dtype,
+                                 label="%s.base" % label))
         self.elemoffset = offset
         self.name = label
         self.ndim = len(self.shape)
@@ -215,6 +217,31 @@ def test_planner_unmergeable(planner):
     assert len(plan[1]) == 1
 
 
+def test_planner_chain(planner):
+    # test a chain
+    input0 = DummySignal()
+    input1 = DummySignal()
+    output0 = DummySignal()
+    output1 = DummySignal()
+    operators = [Copy(input0, input1, inc=True)]
+    operators += [Copy(input1, output0, inc=True) for _ in range(2)]
+    operators += [Copy(output0, output1, inc=True) for _ in range(3)]
+    plan = planner(operators)
+    assert len(plan) == 3
+    assert len(plan[0]) == 1
+    assert len(plan[1]) == 2
+    assert len(plan[2]) == 3
+
+
+def test_planner_cycle(planner):
+    inputs = [DummySignal() for _ in range(3)]
+    operators = [Copy(inputs[0], inputs[1]), Copy(inputs[1], inputs[2]),
+                 Copy(inputs[2], inputs[0])]
+
+    with pytest.raises(BuildError):
+        planner(operators)
+
+
 def test_planner_size():
     # check that operators are selected according to number of available ops
     input0 = DummySignal()
@@ -230,20 +257,14 @@ def test_planner_size():
     assert len(plan[2]) == 1
 
 
-def test_planner_chain(planner):
-    # test a chain
-    input0 = DummySignal()
-    input1 = DummySignal()
-    output0 = DummySignal()
-    output1 = DummySignal()
-    operators = [Copy(input0, input1, inc=True)]
-    operators += [Copy(input1, output0, inc=True) for _ in range(2)]
-    operators += [Copy(output0, output1, inc=True) for _ in range(3)]
-    plan = planner(operators)
-    assert len(plan) == 3
-    assert len(plan[0]) == 1
-    assert len(plan[1]) == 2
-    assert len(plan[2]) == 3
+def test_noop_planner():
+    inputs = [DummySignal() for _ in range(3)]
+    operators = [Copy(inputs[1], inputs[2]), Copy(inputs[0], inputs[1])]
+
+    plan = noop_planner(operators)
+    assert len(plan) == len(operators)
+    assert plan[0] == (operators[1],)
+    assert plan[1] == (operators[0],)
 
 
 def contiguous(sigs, all_signals):
@@ -302,7 +323,7 @@ def test_order_signals_partial():
     assert ordered(new_plan[1], sigs)
 
 
-def test_order_signals_partial_complex():
+def test_order_signals_partial2():
     # more complex partial overlap
     # (A, A/B, B/C, C)
     inputs = [DummySignal(label=str(i)) for i in range(10)]
@@ -315,6 +336,21 @@ def test_order_signals_partial_complex():
     assert contiguous(inputs[:5], sigs)
     assert contiguous(inputs[5:8], sigs)
     assert contiguous(inputs[2:6], sigs)
+    assert ordered(new_plan[0], sigs)
+    assert ordered(new_plan[1], sigs)
+    assert ordered(new_plan[2], sigs)
+
+
+def test_order_signals_partial3():
+    inputs = [DummySignal(label=str(i)) for i in range(10)]
+    plan = [
+        tuple(DummyOp(reads=[inputs[i]]) for i in [0, 1, 2, 3]),
+        tuple(DummyOp(reads=[inputs[i]]) for i in [0, 4, 7]),
+        tuple(DummyOp(reads=[inputs[i]]) for i in [5, 6, 7])]
+    sigs, new_plan = order_signals(plan)
+    assert contiguous(inputs[:4], sigs)
+    assert contiguous([inputs[0], inputs[4], inputs[7]], sigs)
+    assert contiguous(inputs[5:8], sigs)
     assert ordered(new_plan[0], sigs)
     assert ordered(new_plan[1], sigs)
     assert ordered(new_plan[2], sigs)
@@ -537,6 +573,21 @@ def test_order_signals_duplicate_read_blocks():
     assert (ordered(new_plan[2], sigs, block=0) or
             ordered(new_plan[2], sigs, block=1))
     assert not ordered(new_plan[2], sigs)
+
+
+def test_noop_order_signals():
+    inputs = [DummySignal(label="a"), DummySignal(label="b"),
+              DummySignal(label="c", base_shape=(2,))]
+    plan = [(DummyOp(reads=[x]),) for x in inputs]
+
+    sigs, new_plan = noop_order_signals(plan)
+
+    assert all(x == y for x, y in zip(plan, new_plan))
+    assert len(sigs) == 3
+
+    sigs.remove(inputs[0])
+    sigs.remove(inputs[1])
+    assert sigs[0].name == "c.base"
 
 
 def test_create_signals():

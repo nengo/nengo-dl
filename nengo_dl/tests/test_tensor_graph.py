@@ -1,5 +1,7 @@
 import nengo
+from nengo.exceptions import SimulationError
 import pytest
+import tensorflow as tf
 
 from nengo_dl import tensor_graph
 
@@ -63,7 +65,28 @@ def test_build_loss(Simulator):
         assert (sim.tensor_graph.build_loss(loss, (p,)) is
                 sim.tensor_graph.build_loss(loss, (p,)))
 
-# TODO: add test for optimizer caching
+
+def test_build_optimizer(Simulator):
+    with nengo.Network() as net:
+        inp = nengo.Node([0])
+        ens = nengo.Ensemble(10, 1, neuron_type=nengo.Sigmoid())
+        nengo.Connection(inp, ens)
+        p = nengo.Probe(ens)
+
+    # check optimizer caching
+    with Simulator(net) as sim:
+        opt = tf.train.GradientDescentOptimizer(0)
+        assert (sim.tensor_graph.build_optimizer(opt, (p,), "mse") is
+                sim.tensor_graph.build_optimizer(opt, (p,), "mse"))
+
+    # error when no trainable elements
+    with nengo.Network() as net:
+        inp = nengo.Node([0])
+        p = nengo.Probe(inp)
+
+    with Simulator(net) as sim:
+        with pytest.raises(SimulationError):
+            sim.tensor_graph.build_optimizer(opt, (p,), "mse")
 
 
 def test_mark_signals():

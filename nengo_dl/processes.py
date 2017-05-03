@@ -85,7 +85,7 @@ class GenericProcessBuilder(object):
         # `merged_func` calls the step function for each process and
         # combines the result
         @utils.align_func(self.output_shape, self.output_data.dtype)
-        def merged_func(time, input):
+        def merged_func(time, input):  # pragma: no cover
             input_offset = 0
             func_output = []
             for i, op in enumerate(ops):
@@ -148,12 +148,8 @@ class LowpassBuilder(object):
                 assert len(num) == 1
                 num = num[0]
 
-                den = den[1:]  # drop first element (equal to 1)
-                if len(den) == 0:
-                    den = 0
-                else:
-                    assert len(den) == 1
-                    den = den[0]
+                assert len(den) == 2
+                den = den[1]
 
             nums += [num] * op.input.shape[0]
             dens += [den] * op.input.shape[0]

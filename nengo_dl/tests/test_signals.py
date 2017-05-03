@@ -61,6 +61,9 @@ def test_tensor_signal_reshape():
     with pytest.raises(BuildError):
         sig.reshape((-1, -1))
 
+    with pytest.raises(BuildError):
+        sig.reshape((4, 4))
+
 
 def test_tensor_signal_broadcast():
     sig = TensorSignal([0, 1, 2, 3], object(), None, (4,), None)

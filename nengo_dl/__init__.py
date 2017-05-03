@@ -15,11 +15,8 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 from tensorflow.python.client import device_lib  # noqa: E402
 
 if not any(["gpu" in x.name for x in device_lib.list_local_devices()]):
-    default_device = "/cpu:0"
     warnings.warn("No GPU support detected. It is recommended that you "
                   "install tensorflow-gpu (`pip install tensorflow-gpu`).")
-else:
-    default_device = "/gpu:0"
 
 # check nengo version
 from nengo.version import version_info as nengo_version  # noqa: E402

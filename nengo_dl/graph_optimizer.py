@@ -3,8 +3,7 @@ import copy
 import logging
 
 from nengo.synapses import Lowpass
-from nengo.builder.operator import (SimPyFunc, ElementwiseInc, Copy,
-                                    Reset)
+from nengo.builder.operator import SimPyFunc, ElementwiseInc, Reset
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 from nengo.exceptions import BuildError
@@ -77,11 +76,7 @@ def mergeable(op, chosen_ops):
             return False
 
     # operator-specific checks
-    if isinstance(op, Copy):
-        # can't merge incs and updates
-        if op.inc != c.inc:
-            return False
-    elif isinstance(op, ElementwiseInc):
+    if isinstance(op, ElementwiseInc):
         # for these operations we also enforce that the first dimensions
         # match (we know all the other dimensions match due to checks above).
         # this allows us to stack all the arguments into continuous array
@@ -1163,17 +1158,15 @@ def create_signals(sigs, plan, float_type, minibatch_size):
 
     # error checking
     for sig, tensor_sig in sig_map.items():
-        if tensor_sig.shape != (sig.shape if sig.shape != () else (1,)):
-            raise BuildError("TensorSignal shape %s does not match Signal "
-                             "shape %s" % (tensor_sig.shape, sig.shape))
+        # tensorsignal shapes should match signal shapes
+        assert tensor_sig.shape == (sig.shape if sig.shape != () else (1,))
 
+        # tensorsignal values should match signal values
         initial_value = sig.initial_value
         if sig.minibatched:
             initial_value = initial_value[..., None]
-
-        if not np.allclose(base_arrays[tensor_sig.key][0][tensor_sig.indices],
-                           initial_value):
-            raise BuildError("TensorSignal values don't match Signal values")
+        assert np.allclose(base_arrays[tensor_sig.key][0][tensor_sig.indices],
+                           initial_value)
 
     logger.debug("base arrays")
     logger.debug("\n".join([str((k, v[0].dtype, v[0].shape, v[1]))

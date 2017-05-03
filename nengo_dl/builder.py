@@ -21,7 +21,7 @@ class Builder(object):
 
         Parameters
         ----------
-        ops : list of :class:`~nengo:nengo.builder.Operator`
+        ops : tuple of :class:`~nengo:nengo.builder.Operator`
             the operator group to build into the model
         signals : :class:`.signals.SignalDict`
             mapping from :class:`~nengo:nengo.builder.Signal` to
@@ -55,7 +55,7 @@ class Builder(object):
 
         Parameters
         ----------
-        ops : list of :class:`~nengo:nengo.builder.Operator`
+        ops : tuple of :class:`~nengo:nengo.builder.Operator`
             the operator group to build into the model
         signals : :class:`.signals.SignalDict`
             mapping from :class:`~nengo:nengo.builder.Signal` to
@@ -102,7 +102,7 @@ class Builder(object):
         return register_builder
 
 
-class OpBuilder(object):
+class OpBuilder(object):  # pragma: no cover
     """The constructor should set up any computations that are fixed for
     this op (i.e., things that do not need to be recomputed each timestep).
 

@@ -104,15 +104,16 @@ class TensorSignal(object):
         # replace -1 with inferred dimension
         if shape.count(-1) > 1:
             raise BuildError("Only one inferred dimension allowed in reshape")
-        n_elem = np.prod(self.shape)
-        n_shape = int(np.prod([x for x in shape if x != -1]))
-        if n_elem % n_shape != 0:
-            raise BuildError("No valid length for inferred dimension")
+        elif shape.count(-1) == 1:
+            n_elem = np.prod(self.shape)
+            n_shape = int(np.prod([x for x in shape if x != -1]))
+            if n_elem % n_shape != 0:
+                raise BuildError("No valid length for inferred dimension")
 
-        shape = tuple(x if x != -1 else n_elem // n_shape for x in shape)
-
-        if np.prod(shape) != np.prod(self.shape):
-            raise BuildError("Number of elements don't match in reshape")
+            shape = tuple(x if x != -1 else n_elem // n_shape for x in shape)
+        else:
+            if np.prod(shape) != np.prod(self.shape):
+                raise BuildError("Number of elements don't match in reshape")
 
         return TensorSignal(
             self.indices, self.key, self.dtype, shape, self.minibatched,
@@ -406,9 +407,3 @@ class SignalDict(object):
             output.load_indices()
 
         return output
-
-    def __str__(self):
-        """Pretty-print the signals and current values."""
-
-        return "\n".join(["%s: %s" % (repr(k), repr(self[k]))
-                          for k in self])
