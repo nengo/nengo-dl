@@ -937,72 +937,38 @@ def sort_signals_by_ops(sorted_reads, sigs, sig_idxs, new_plan, blocks, reads):
             # only one read signal, so nothing to sort
             continue
 
-        first_block = True
-        last_block = False
-        curr_block = None
-        pre = []
-        post = []
-        curr_max = -1
-        sortable = True
         sort_idxs = [sig_idxs[s] for s in sort_vals]
         min_index = min(sort_idxs)
         max_index = max(sort_idxs)
 
+        if max_index - min_index != len(sort_idxs) - 1:
+            # this block isn't contiguous, so it isn't sortable
+            continue
+
+        # we try to sort things into everything <= the first read block
+        # in op_reads and everything after, with the op_reads signals in
+        # the middle (ordered to match op_reads)
+        curr_block = None
+        curr_max = -1
         for i, s in enumerate(sigs[min_index:max_index + 1]):
-            # we try to sort things into everything <= the first read block
-            # in op_reads and everything after, with the op_reads signals in
-            # the middle (ordered to match op_reads)
-            sort_item = s in sort_vals
-
             if blocks[s] != curr_block:
-                if last_block:
-                    # if the block changes after the last block, that means
-                    # that there are still sortable items in the new block,
-                    # but there were `post` items in the previous block,
-                    # so the list is not sortable
-                    sortable = False
-                    break
-
-                first_block = False
                 prev_max = curr_max
                 curr_max = -1
                 curr_block = blocks[s]
 
-            if sort_item:
-                idx = sort_vals[s]
-                if idx < prev_max:
-                    # if the sort position for this signal is less than the
-                    # end of the previous sorted block, then the list is not
-                    # sortable
-                    sortable = False
-                    break
+            idx = sort_vals[s]
+            if idx < prev_max:
+                # if the sort position for this signal is less than the
+                # end of the previous sorted block, then the list is not
+                # sortable
+                break
 
-                # update the max sort index in this block
-                curr_max = max(curr_max, idx)
-            elif first_block:
-                # only for the first block, we want to add non-sort items to
-                # the beginning of the list instead of the end
-                pre.append(s)
-            else:
-                # s is not in sort_vals, and this is not the first block,
-                # so this must be the last block (we can't have items
-                # not in sort_vals in a middle block, or they will be
-                # unsortable)
-                last_block = True
-                post.append(s)
-
-        if sortable:
-            for i, s in enumerate(pre):
+            # update the max sort index in this block
+            curr_max = max(curr_max, idx)
+        else:
+            for i, s in enumerate(
+                    sorted(sort_vals, key=lambda s: sort_vals[s])):
                 sig_idxs[s] = min_index + i
-
-            offset = min_index + len(pre)
-            for i, s in enumerate(sorted(sort_vals,
-                                         key=lambda s: sort_vals[s])):
-                sig_idxs[s] = offset + i
-
-            offset += len(sort_vals)
-            for i, s in enumerate(post):
-                sig_idxs[s] = offset + i
 
             logger.log(logging.DEBUG - 1, "sorted indices %s", sig_idxs)
 
