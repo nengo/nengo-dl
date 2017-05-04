@@ -1,7 +1,10 @@
+import copy
 import traceback
 
 from tensorflow.python.framework import dtypes, ops
 from tensorflow.python.ops import math_ops, array_ops, data_flow_ops
+
+saved_registry = copy.copy(ops._gradient_registry._registry)
 
 
 def patch_dynamic_stitch_grad():
@@ -99,3 +102,9 @@ def patch_state_grads():
         "type": AssignGrads, "location": traceback.extract_stack()}
     ops._gradient_registry._registry["AssignAdd"] = {
         "type": AssignAddGrads, "location": traceback.extract_stack()}
+
+
+def undo_patch():
+    """Restores TensorFlow to its original state."""
+
+    ops._gradient_registry._registry = copy.copy(saved_registry)

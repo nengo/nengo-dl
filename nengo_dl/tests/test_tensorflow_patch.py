@@ -1,24 +1,13 @@
-import traceback
-
 import numpy as np
 import pytest
 import tensorflow as tf
-from tensorflow.python.framework import ops
-from tensorflow.python.ops import data_flow_grad
 
 from nengo_dl import tensorflow_patch
 
 
 @pytest.fixture
 def undo_patch(request):
-    # TODO: ideally we would just reload(tensorflow) here, but that crashes atm
-    ops._gradient_registry._registry["DynamicStitch"] = {
-        "type": data_flow_grad._DynamicStitchGrads,
-        "location": traceback.extract_stack()}
-    ops._gradient_registry._registry["ScatterUpdate"] = None
-    ops._gradient_registry._registry["ScatterAdd"] = None
-    ops._gradient_registry._registry["Assign"] = None
-    ops._gradient_registry._registry["AssignAdd"] = None
+    tensorflow_patch.undo_patch()
 
     yield
 
@@ -29,13 +18,13 @@ def undo_patch(request):
 @pytest.mark.xfail
 @pytest.mark.usefixtures("undo_patch")
 def test_dynamic_stitch_fail():
-    x = tf.zeros((1, 3))
-    y = tf.dynamic_stitch([[0], [0]], [x, tf.ones((1, 3))])
+    test_dynamic_stitch()
 
-    with tf.Session():
-        analytic, numeric = tf.test.compute_gradient(x, (1, 3), y, (1, 3))
 
-        assert np.allclose(analytic, numeric)
+@pytest.mark.xfail
+@pytest.mark.usefixtures("undo_patch")
+def test_state_grads_fail():
+    test_state_grads()
 
 
 def test_dynamic_stitch():
