@@ -219,13 +219,13 @@ def test_planner_unmergeable(planner):
 
 def test_planner_chain(planner):
     # test a chain
-    input0 = DummySignal()
-    input1 = DummySignal()
-    output0 = DummySignal()
-    output1 = DummySignal()
-    operators = [Copy(input0, input1, inc=True)]
-    operators += [Copy(input1, output0, inc=True) for _ in range(2)]
-    operators += [Copy(output0, output1, inc=True) for _ in range(3)]
+    a = DummySignal(label="a")
+    b = DummySignal(label="b")
+    c = DummySignal(label="c")
+    d = DummySignal(label="d")
+    operators = [Copy(a, b, inc=True)]
+    operators += [Copy(b, c, inc=True) for _ in range(2)]
+    operators += [Copy(c, d, inc=True) for _ in range(3)]
     plan = planner(operators)
     assert len(plan) == 3
     assert len(plan[0]) == 1

@@ -24,6 +24,7 @@ Release History
 **Added**
 
 - Added more documentation on Simulator arguments
+- Improved efficiency of tree_planner, made it the new default planner
 
 **Fixed**
 

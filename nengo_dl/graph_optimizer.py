@@ -1,5 +1,4 @@
 from collections import OrderedDict, defaultdict
-import copy
 import logging
 
 from nengo.synapses import Lowpass
@@ -9,6 +8,7 @@ from nengo.builder.processes import SimProcess
 from nengo.exceptions import BuildError
 from nengo.utils.compat import iteritems
 from nengo.utils.graphs import toposort
+
 try:
     from nengo.utils.simulator import operator_dependency_graph
 except ImportError:
@@ -44,7 +44,7 @@ def mergeable(op, chosen_ops):
 
     # note: we only need to check against the first item in the list,
     # since we know the rest all match
-    c = chosen_ops[0]
+    c = next(iter(chosen_ops))
 
     # must share the same builder
     if builder.Builder.builders[type(op)] != builder.Builder.builders[type(c)]:
@@ -200,17 +200,21 @@ def greedy_planner(operators):
     return plan
 
 
-def tree_planner(operators):
+def tree_planner(op_list, max_depth=3):
     """Create merged execution plan through exhaustive tree search.
 
-    Unlike :func:`.graph_optimizer.greedy_planner`, this is guaranteed to find
-    the shortest plan. However, depending on the structure of the operator
-    graph, it can take a long time to execute.
+    The ``max_depth`` parameter scales the planner between full tree search
+    and greedy search.  ``max_depth==1`` is equivalent to
+    :func:`.greedy_planner`, and ``max_depth==len(op_list)`` is full tree
+    search (guaranteed to find the optimal plan, but likely very slow).
 
     Parameters
     ----------
-    operators : list of :class:`~nengo:nengo.builder.Operator`
+    op_list : list of :class:`~nengo:nengo.builder.Operator`
         all the ``nengo`` operators in a model (unordered)
+    max_depth : int, optional
+        the planner will search this many steps ahead before selecting which
+        group to schedule next
 
     Returns
     -------
@@ -218,81 +222,136 @@ def tree_planner(operators):
         operators combined into mergeable groups and in execution order
     """
 
-    def shortest_plan(ops, successors_of, predecessors_of, cache):
-        logger.debug("shortest_plan")
-        logger.debug(ops)
+    def shortest_plan(selected, successors_of, predecessors_of, cache,
+                      max_depth, available):
+        """Recursively check what the shortest plan is after selecting each
+        available group."""
 
-        if len(ops) <= 1:
-            # normal termination
-            return [ops] if len(ops) == 1 else []
-        elif ops in cache:
-            # we've already found the shortest path for this set of ops
-            # (plans are markovian)
-            return cache[ops]
+        shortest = (None, len(successors_of) + 1)
+        nonempty_available = [x for x in enumerate(available) if len(x[1]) > 0]
+        n_remaining = len(successors_of) - len(selected)
+        for i, group in nonempty_available:
+            new_len = n_remaining - len(group)
 
-        # get the groups that could be scheduled next
-        free = [op for op in ops if len(predecessors_of[op]) == 0]
-
-        logger.debug("free %s", free)
-
-        available = []
-        for op in free:
-            for i, group in enumerate(available):
-                if mergeable(op, group):
-                    available[i] += (op,)
-                    break
+            if max_depth == 1 or new_len == 0:
+                # we've reached the end, so just return the number
+                # of remaining operators after selecting this group
+                result, length = [], new_len
             else:
-                available += [(op,)]
+                # update the selected ops after adding group
+                new_selected = selected | group
 
-        logger.debug("available")
-        logger.debug(available)
+                try:
+                    # check if we've already computed the shortest path
+                    # for the selected ops and depth
+                    result, length = cache[max_depth - 1][new_selected]
 
-        if len(available) == 0:
+                except KeyError:
+                    # update the list of available items after selecting
+                    # this group
+                    available[i] = set()
+                    successors = [x for op in group for x in successors_of[op]]
+                    for op in successors:
+                        predecessors_of[op] -= 1
+
+                        if predecessors_of[op] == 0:
+                            available[mergeable_cache[op]].add(op)
+
+                    # recursively find the best plan on the remaining
+                    # operators
+                    result, length = shortest_plan(
+                        new_selected, successors_of, predecessors_of, cache,
+                        max_depth - 1, available)
+
+                    # return the available list to its original state for
+                    # the next group (note: this is faster than copying
+                    # the list)
+                    for op in successors:
+                        predecessors_of[op] += 1
+
+                        if predecessors_of[op] == 1:
+                            available[mergeable_cache[op]].remove(op)
+                    available[i] = group
+
+            if length + 1 < shortest[1]:
+                # new shortest path found
+                shortest = ([tuple(group)] + result, length + 1)
+
+        if shortest[0] is None:
             raise BuildError("Cycle detected during graph optimization")
 
-        # check what the shortest plan is after selecting each available group
-        shortest = None
-        for group in available:
-            pred = {k: copy.copy(v) for k, v in predecessors_of.items()}
-            for op in group:
-                for op2 in successors_of[op]:
-                    pred[op2].remove(op)
-
-            logger.debug("selecting %s", group)
-
-            result = shortest_plan(
-                tuple(op for op in ops if op not in group),
-                successors_of, pred, cache)
-
-            if shortest is None or len(result) + 1 < len(shortest):
-                shortest = [group] + result
-
-                logger.debug("new shortest plan detected")
-                logger.debug(shortest)
-
-        cache[ops] = shortest
+        cache[max_depth][selected] = shortest
 
         return shortest
 
-    dependency_graph = operator_dependency_graph(operators)
+    # compute operator dependency graph
+    successors_of = operator_dependency_graph(op_list)
 
+    # convert operators to integer indices (to save memory and make
+    # lookup faster)
+    op_codes = {op: np.uint32(i) for i, op in enumerate(op_list)}
+    successors_of = {op_codes[k]: set(op_codes[x] for x in v)
+                     for k, v in successors_of.items()}
+
+    # track the number of incoming edges to each operator
     predecessors_of = {}
-    successors_of = {}
-    for op in operators:
-        predecessors_of[op] = set()
-        successors_of[op] = set()
-    for op in operators:
-        dests = dependency_graph[op]
+    for op in successors_of:
+        predecessors_of[op] = 0
+    for op, dests in successors_of.items():
         for op2 in dests:
-            predecessors_of[op2].add(op)
-        successors_of[op].update(dests)
+            predecessors_of[op2] += 1
 
-    tmp = shortest_plan(tuple(operators), successors_of, predecessors_of, {})
+    # precompute which operators are theoretically mergeable (this doesn't mean
+    # we can actually merge these ops, since they may be dependent on one
+    # another)
+    mergeable_cache = [None for _ in op_list]
+    groups = []
+    for j, op in enumerate(op_list):
+        for i, g in enumerate(groups):
+            if mergeable(op, g):
+                mergeable_cache[j] = i
+                g.append(op)
+                break
+        else:
+            mergeable_cache[j] = len(groups)
+            groups.append([op])
+    groups = [[op_codes[x] for x in g] for g in groups]
+
+    # find the ops that could be scheduled next in each merge group
+    available = [set(op for op in g if predecessors_of[op] == 0)
+                 for g in groups]
+
+    plan = []
+    while len(successors_of) > 0:
+        # find the best plan of the given depth
+        short_plan, _ = shortest_plan(
+            frozenset(), successors_of, predecessors_of,
+            [{} for _ in range(max_depth + 1)], max_depth, available)
+
+        # select the first item in that plan (i.e., the best group to select
+        # after looking ahead for max_depth steps)
+        selected = short_plan[0]
+        plan.append(selected)
+
+        # update the operator availability
+        available[mergeable_cache[next(iter(selected))]] = set()
+        for op in selected:
+            for op2 in successors_of[op]:
+                predecessors_of[op2] -= 1
+
+                if predecessors_of[op2] == 0:
+                    available[mergeable_cache[op2]].add(op2)
+
+            del predecessors_of[op]
+            del successors_of[op]
+
+    # convert indices back to operators
+    plan = [tuple(op_list[x] for x in g) for g in plan]
 
     logger.debug("TREE PLAN")
-    logger.debug("\n".join([str(x) for x in tmp]))
+    logger.debug("\n".join([str(x) for x in plan]))
 
-    return tmp
+    return plan
 
 
 def noop_planner(operators):
