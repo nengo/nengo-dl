@@ -181,8 +181,7 @@ class Simulator(object):
             log_device_placement=False,
         )
 
-        self.sess = tf.InteractiveSession(graph=self.tensor_graph.graph,
-                                          config=config)
+        self.sess = tf.Session(graph=self.tensor_graph.graph, config=config)
         self.closed = False
 
         # initialize variables
@@ -679,7 +678,8 @@ class Simulator(object):
             raise SimulationError("Simulation has been closed, cannot save "
                                   "parameters")
 
-        path = tf.train.Saver().save(self.sess, path)
+        with self.tensor_graph.graph.as_default():
+            path = tf.train.Saver().save(self.sess, path)
         logger.info("Model parameters saved to %s", path)
 
     def load_params(self, path):
@@ -694,7 +694,8 @@ class Simulator(object):
             raise SimulationError("Simulation has been closed, cannot load "
                                   "parameters")
 
-        tf.train.Saver().restore(self.sess, path)
+        with self.tensor_graph.graph.as_default():
+            tf.train.Saver().restore(self.sess, path)
 
     def print_params(self, msg=None):
         """Print current values of trainable network parameters.
@@ -861,9 +862,10 @@ class Simulator(object):
                 dx, dy = gradient_checker._compute_dx_and_dy(
                     inp, out, out_shape)
 
-                analytic = gradient_checker._compute_theoretical_jacobian(
-                    inp, inp_shape, np.zeros(inp_shape), dy, out_shape, dx,
-                    extra_feed_dict=feed)
+                with self.sess.as_default():
+                    analytic = gradient_checker._compute_theoretical_jacobian(
+                        inp, inp_shape, np.zeros(inp_shape), dy, out_shape, dx,
+                        extra_feed_dict=feed)
 
                 if np.any(np.isnan(analytic)) or np.any(np.isnan(numeric)):
                     raise SimulationError("NaNs detected in gradient")

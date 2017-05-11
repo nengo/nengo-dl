@@ -464,9 +464,9 @@ class TensorGraph(object):
                 else:
                     raise NotImplementedError
 
-        # average loss across probes (note: this will also average across
-        # the output of `objective` if it doesn't return a scalar)
-        loss = tf.reduce_mean(loss)
+            # average loss across probes (note: this will also average across
+            # the output of `objective` if it doesn't return a scalar)
+            loss = tf.reduce_mean(loss)
 
         self.losses[(objective, targets)] = loss
 

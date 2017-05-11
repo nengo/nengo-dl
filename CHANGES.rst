@@ -33,6 +33,8 @@ Release History
 - Fix bug in uneven step_blocks rounding
 - Fix bug in Simulator.print_params
 - Fix bug related to merging of learning rule with different dimensionality
+- Use tf.Session instead of tf.InteractiveSession, to avoid strange side
+  effects if the simulator isn't closed properly
 
 
 0.3.0 (April 25, 2017)

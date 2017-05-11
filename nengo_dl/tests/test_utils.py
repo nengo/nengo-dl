@@ -102,11 +102,11 @@ def test_print_and_flush(capsys):
 
 
 def test_print_op(capsys):
-    x = tf.constant(0)
-    y = utils.print_op(x, "hello")
-    z = y + 0
-
     with tf.Session() as sess:
+        x = tf.constant(0)
+        y = utils.print_op(x, "hello")
+        z = y + 0
+
         sess.run(z)
 
     out, _ = capsys.readouterr()
