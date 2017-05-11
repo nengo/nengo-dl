@@ -2,7 +2,7 @@ from collections import OrderedDict, defaultdict
 import logging
 
 from nengo.synapses import Lowpass
-from nengo.builder.operator import SimPyFunc, ElementwiseInc, Reset
+from nengo.builder.operator import SimPyFunc, ElementwiseInc, DotInc, Reset
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 from nengo.exceptions import BuildError
@@ -87,6 +87,15 @@ def mergeable(op, chosen_ops):
             shape1 = s1.shape[0] if s1.shape != () else 1
             if shape0 != shape1:
                 return False
+    elif isinstance(op, DotInc):
+        # if the matrix (A) is minibatched, then the first dimensions need
+        # to match up (to allow us to transpose the dimensions)
+        if op.A.minibatched:
+            for s0, s1 in zip(op.all_signals, c.all_signals):
+                shape0 = s0.shape[0] if s0.shape != () else 1
+                shape1 = s1.shape[0] if s1.shape != () else 1
+                if shape0 != shape1:
+                    return False
     elif isinstance(op, SimPyFunc):
         # for these we need to make a special check that the functions
         # all do/do not get time as input, otherwise we could end
@@ -117,6 +126,14 @@ def mergeable(op, chosen_ops):
         # point trying to execute all those functions at once, because they're
         # already integrated into the Tensorflow graph.
         return False
+    elif isinstance(op, (learning_rules.SimVoja, learning_rules.SimOja,
+                         learning_rules.SimBCM)):
+        # pre inputs must have the same dimensionality so that we can broadcast
+        # them when computing the outer product
+        attr = ("pre_decoded" if isinstance(op, learning_rules.SimVoja) else
+                "pre_filtered")
+        if getattr(op, attr).shape[0] != getattr(c, attr).shape[0]:
+            return False
 
     return True
 

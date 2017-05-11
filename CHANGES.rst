@@ -32,6 +32,7 @@ Release History
 - Detect cycles in transitive planner
 - Fix bug in uneven step_blocks rounding
 - Fix bug in Simulator.print_params
+- Fix bug related to merging of learning rule with different dimensionality
 
 
 0.3.0 (April 25, 2017)
