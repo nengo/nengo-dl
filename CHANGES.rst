@@ -18,12 +18,15 @@ Release History
    - Removed
    - Fixed
 
-0.3.1 (unreleased)
-------------------
+0.3.1 (May 12, 2017)
+--------------------
 
 **Added**
 
 - Added more documentation on Simulator arguments
+
+**Changed**
+
 - Improved efficiency of tree_planner, made it the new default planner
 
 **Fixed**
