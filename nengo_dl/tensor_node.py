@@ -17,26 +17,32 @@ class TensorFuncParam(Parameter):
         super(TensorFuncParam, self).__init__(
             name, optional=False, readonly=readonly)
 
-    def __set__(self, node, output):
-        super(TensorFuncParam, self).validate(node, output)
+    def coerce(self, node, func):
+        output = super(TensorFuncParam, self).coerce(node, func)
 
-        # We trust user's size_out if set, because calling output
-        # may have unintended consequences
         if node.size_out is None:
-            node.size_out = self.check_size_out(node, output)
+            node.size_out = self.check_size_out(node, func)
 
-        # --- Set output
-        self.data[node] = output
+        return output
 
-    def check_size_out(self, node, output):
-        if not callable(output):
+    def validate(self, node, func):
+        # TODO: this method is just here for compatibility with nengo<2.4.1,
+        # can be removed if we update requirements
+
+        super(TensorFuncParam, self).validate(node, func)
+
+        if node.size_out is None:
+            node.size_out = self.check_size_out(node, func)
+
+    def check_size_out(self, node, func):
+        if not callable(func):
             raise ValidationError("TensorNode output must be a function",
                                   attr=self.name, obj=node)
 
         t, x = tf.constant(0.0), tf.zeros((1, node.size_in))
         args = (t, x) if node.size_in > 0 else (t,)
         try:
-            result = output(*args)
+            result = func(*args)
         except Exception as e:
             raise ValidationError(
                 "Calling TensorNode function with arguments %s produced an "
@@ -145,6 +151,7 @@ class SimTensorNode(builder.Operator):
     3. reads ``[time] if input is None else [time, input]``
     4. updates ``[]``
     """
+
     def __init__(self, func, time, input, output, tag=None):
         super(SimTensorNode, self).__init__(tag=tag)
 
@@ -172,6 +179,7 @@ class SimTensorNode(builder.Operator):
 @Builder.register(SimTensorNode)
 class SimTensorNodeBuilder(OpBuilder):
     """Builds a :class:`.SimTensorNode` operator into a NengoDL model."""
+
     def __init__(self, ops, signals):
         # SimTensorNodes should never be merged
         assert len(ops) == 1

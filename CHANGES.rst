@@ -21,6 +21,10 @@ Release History
 0.3.2 (unreleased)
 ------------------
 
+**Changed**
+
+- Updated TensorFuncParam to new Nengo Param syntax
+
 
 0.3.1 (May 12, 2017)
 --------------------
