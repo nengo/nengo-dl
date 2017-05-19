@@ -21,6 +21,11 @@ Release History
 0.3.2 (unreleased)
 ------------------
 
+**Added**
+
+- Added ability to manually specify which parts of a model are trainable
+  (see the `documentation <https://nengo.github.io/nengo_dl/training.html`_)
+
 **Changed**
 
 - Updated TensorFuncParam to new Nengo Param syntax

@@ -1,11 +1,14 @@
 import logging
 import os
+import warnings
 
 import nengo.tests.test_synapses
 import numpy as np
 import tensorflow as tf
 
 from nengo_dl import simulator
+
+warnings.simplefilter("always")
 
 
 # set looser tolerances on synapse tests

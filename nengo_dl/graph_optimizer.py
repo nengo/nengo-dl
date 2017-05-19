@@ -662,8 +662,6 @@ def order_signals(plan, n_passes=10):
     # note: we multiply by the number of duplicates, since read blocks that
     # are read by multiple op groups will have a proportionally larger impact
     # on performance
-    # TODO: maybe we should just care about duplicates (how much does the size
-    # of the block affect gather/slice time?)
     sorted_blocks = sorted(
         sorted_blocks, key=lambda b: np.sum([s.size for s in b[0]]) * b[1])
     sorted_blocks = [sorted_blocks[i][0] for i in

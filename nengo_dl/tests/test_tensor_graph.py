@@ -3,7 +3,7 @@ from nengo.exceptions import SimulationError
 import pytest
 import tensorflow as tf
 
-from nengo_dl import tensor_graph
+from nengo_dl import tensor_graph, utils
 
 
 @pytest.mark.parametrize("unroll", (True, False))
@@ -124,3 +124,85 @@ def test_mark_signals():
                 assert sig.trainable
             else:
                 assert not sig.trainable
+
+
+def test_mark_signals_config():
+    with nengo.Network() as net:
+        utils.configure_trainable(net)
+        net.config[nengo.Ensemble].trainable = False
+
+        with nengo.Network() as subnet:
+            utils.configure_trainable(subnet)
+
+            # check that object in subnetwork inherits config from parent
+            ens0 = nengo.Ensemble(10, 1, label="ens0")
+
+            # check that ens.neurons can be set independent of ens
+            subnet.config[ens0.neurons].trainable = True
+
+            with nengo.Network():
+                with nengo.Network() as subsubnet:
+                    utils.configure_trainable(subsubnet)
+
+                    # check that subnetworks can override parent configs
+                    subsubnet.config[nengo.Ensemble].trainable = True
+                    ens1 = nengo.Ensemble(10, 1, label="ens1")
+
+            # check that instances can be set independent of class
+            ens2 = nengo.Ensemble(10, 1, label="ens2")
+            subnet.config[ens2].trainable = True
+
+    model = nengo.builder.Model()
+    model.build(net)
+    tensor_graph.mark_signals(model)
+
+    assert not model.sig[ens0]["encoders"].trainable
+    assert model.sig[ens0.neurons]["bias"].trainable
+
+    assert model.sig[ens1]["encoders"].trainable
+
+    assert model.sig[ens2]["encoders"].trainable
+
+    # check that learning rule connections can be manually set to True
+    with nengo.Network() as net:
+        utils.configure_trainable(net)
+
+        a = nengo.Ensemble(10, 1)
+        b = nengo.Ensemble(10, 1)
+        conn0 = nengo.Connection(a, b, learning_rule_type=nengo.PES())
+        net.config[conn0].trainable = True
+
+    model = nengo.builder.Model()
+    model.build(net)
+
+    with pytest.warns(UserWarning):
+        tensor_graph.mark_signals(model)
+
+    assert model.sig[conn0]["weights"].trainable
+
+    with nengo.Network() as net:
+        utils.configure_trainable(net)
+
+        a = nengo.Node([0])
+        ens = nengo.Ensemble(10, 1)
+        nengo.Connection(a, ens, learning_rule_type=nengo.Voja())
+        net.config[nengo.Ensemble].trainable = True
+
+    model = nengo.builder.Model()
+    model.build(net)
+
+    with pytest.warns(UserWarning):
+        tensor_graph.mark_signals(model)
+
+    assert model.sig[ens]["encoders"].trainable
+
+    # check that models with no toplevel work
+    sig = nengo.builder.signal.Signal([0])
+    op = nengo.builder.operator.Reset(sig, 1)
+    model = nengo.builder.Model()
+    model.add_op(op)
+
+    with pytest.warns(UserWarning):
+        tensor_graph.mark_signals(model)
+
+    assert not sig.trainable

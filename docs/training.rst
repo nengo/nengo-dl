@@ -184,6 +184,105 @@ Other parameters
 - ``shuffle`` (bool): if ``True`` (default), randomly assign data to different
   minibatches each epoch
 
+Choosing which elements to optimize
+-----------------------------------
+
+By default, NengoDL will optimize the following elements in a model:
+
+1. Connection weights (neuron--neuron weight matrices or decoders)
+2. Ensemble encoders
+3. Neuron biases
+
+These elements will *not* be optimized if they are targeted by an online
+learning rule.  For example, :class:`nengo:nengo.PES` modifies connection
+weights as a model is running.  If we tried to optimize those weights with
+some offline training method as well then those two processes would conflict
+with each other, likely resulting in unintended effects.  So NengoDL will
+assume that those elements should not be optimized.
+
+Any of these default behaviours can be overriden using `Nengo's config system
+<https://pythonhosted.org/nengo/config.html>`_.  Specifically, setting the
+``trainable`` config attribute for an object will control whether or not it
+will be optimized.
+
+:func:`.configure_trainable` is a utility function that will add a configurable
+``trainable`` attribute to the objects in a network.  It can also
+set the initial value of ``trainable`` on all those objects at the same time,
+for convenience.
+
+For example, suppose we only want to optimize one
+connection in our network, while leaving everything else unchanged.  This
+could be achieved via
+
+.. code-block:: python
+
+    with nengo.Network() as net:
+        # this adds the `trainable` attribute to all the trainable objects
+        # in the network, and initializes it to `False`
+        nengo_dl.configure_trainable(net, default=False)
+
+        a = nengo.Node([0])
+        b = nengo.Ensemble(10, 1)
+        c = nengo.Node(size_in=1)
+
+        nengo.Connection(a, b)
+
+        # make this specific connection trainable
+        conn = nengo.Connection(b, c)
+        net.config[conn].trainable = True
+
+Or if we wanted to disable training on the overall network, but enable it for
+Connections within some subnetwork:
+
+.. code-block:: python
+
+    with nengo.Network() as net:
+        nengo_dl.configure_trainable(net, default=False)
+        ...
+        with nengo.Network() as subnet:
+            nengo_dl.configure_trainable(subnet)
+            subnet.config[nengo.Connection].trainable = True
+            ...
+
+Note that ``config[nengo.Ensemble].trainable`` controls both encoders and
+biases, as both are properties of an Ensemble.  However, it is possible to
+separately control the biases via ``config[nengo.ensemble.Neurons].trainable``
+or ``config[my_ensemble.neurons].trainable``.
+
+There are two important caveats to keep in mind when configuring ``trainable``,
+which differ from the standard config behaviour:
+
+1. ``trainable`` applies to all objects in a network, regardless of whether
+   they were created before or after ``trainable`` is set.  For example,
+
+   .. code-block:: python
+
+       with nengo.Network() as net:
+           ...
+           net.config[nengo.Ensemble].trainable = False
+           a = nengo.Ensemble(10, 1)
+           ...
+
+   is the same as
+
+   .. code-block:: python
+
+       with nengo.Network() as net:
+           ...
+           a = nengo.Ensemble(10, 1)
+           net.config[nengo.Ensemble].trainable = False
+           ...
+
+
+2. ``trainable`` cannot be set on manually created
+   :class:`~nengo:nengo.Config` objects, only ``net.config``.  For
+   example, the following would have no effect:
+
+   .. code-block:: python
+
+       with nengo.Config(nengo.Ensemble) as conf:
+           conf[nengo.Ensemble].trainable = False
+
 Examples
 --------
 
@@ -255,8 +354,8 @@ Limitations
 
 - Almost all deep learning methods require the network to be differentiable,
   which means that trying to train a network with non-differentiable elements
-  will result in an error.  Examples of common non-differentiable
-  elements include :class:`nengo:nengo.LIF`,
+  will result in an error or poor training.  Examples of common
+  non-differentiable elements include :class:`nengo:nengo.LIF`,
   :class:`nengo:nengo.Direct`, or processes/neurons that don't have a
   custom TensorFlow implementation (see
   :class:`.processes.SimProcessBuilder`/

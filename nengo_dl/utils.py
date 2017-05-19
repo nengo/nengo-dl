@@ -7,7 +7,9 @@ import sys
 import time
 import warnings
 
-from nengo.exceptions import SimulationError
+from nengo import Connection, Ensemble, Network, ensemble
+from nengo.exceptions import SimulationError, ConfigError
+from nengo.params import BoolParam
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework.ops import get_gradient_function
@@ -340,3 +342,35 @@ def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
                    minibatch_size):
         yield ({n: inputs[n][perm[i:i + minibatch_size]] for n in inputs},
                {p: targets[p][perm[i:i + minibatch_size]] for p in targets})
+
+
+def configure_trainable(config, default=None):
+    """Adds a configurable attribute called ``trainable`` to trainable objects.
+
+    Used to manually configure whether or not those parts of the model can
+    be optimized by :meth:`.Simulator.train`.
+
+    Parameters
+    ----------
+    config : :class:`~nengo:nengo.config.Config` or \
+             :class:`~nengo:nengo.Network`
+        the config object to be modified (or a Network to modify
+        ``net.config``)
+    default : bool, optional
+        the default value for ``trainable`` (``None`` means that the value
+        is deferred to the parent config, or ``True`` if this is the top-level
+        config)
+    """
+
+    if isinstance(config, Network):
+        config = config.config
+
+    for obj in (Ensemble, Connection, ensemble.Neurons):
+        try:
+            params = config[obj]
+        except ConfigError:
+            config.configures(obj)
+            params = config[obj]
+
+        params.set_param("trainable", BoolParam("trainable", default,
+                                                optional=True))
