@@ -839,21 +839,18 @@ def hamming_sort(blocks):
             next_blocks = unique_blocks
             active_block = None
 
-        logger.debug("active block %s", active_block)
-        logger.debug("next blocks")
-        logger.debug(next_blocks)
+        # find all the matching blocks (blocks which contain all the same
+        # elements as curr_blocks, plus something extra)
+        matching = [b for b in next_blocks if len(b | curr_blocks) == len(b)]
+        if len(matching) > 0:
+            next_blocks = matching
 
-        # then within all the blocks that are a potential continuation,
-        # pick the ones with the smallest hamming distance
-        # TODO: we should set this up so it prefers to add new blocks
-        # rather than discontinuing a block
+        # then within all the matching blocks, pick the ones with the smallest
+        # hamming distance
         next_dists = [len(curr_blocks ^ b) for b in next_blocks]
         min_dist = min(next_dists)
         next_blocks = [b for i, b in enumerate(next_blocks)
                        if next_dists[i] == min_dist]
-
-        logger.debug("hamming filter")
-        logger.debug(next_blocks)
 
         # within all the blocks that have the same hamming distance, pick the
         # next block that matches along the largest blocks
