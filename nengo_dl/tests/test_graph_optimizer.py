@@ -1,9 +1,10 @@
 from nengo.exceptions import BuildError
 from nengo.neurons import LIF, LIFRate, Izhikevich, AdaptiveLIF
 from nengo.synapses import Lowpass, Triangle, Alpha
+from nengo.builder.learning_rules import SimBCM
+from nengo.builder.neurons import SimNeurons
 from nengo.builder.operator import (SimPyFunc, DotInc, Copy, Reset,
                                     ElementwiseInc)
-from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 import numpy as np
 import pytest
@@ -188,6 +189,13 @@ def test_mergeable():
     # simtensornode
     a = SimTensorNode(None, DummySignal(), None, DummySignal())
     assert not mergeable(a, [a])
+
+    # learning rules
+    a = SimBCM(DummySignal((4,)), DummySignal(), DummySignal(), DummySignal(),
+               DummySignal())
+    b = SimBCM(DummySignal((5,)), DummySignal(), DummySignal(), DummySignal(),
+               DummySignal())
+    assert not mergeable(a, [b])
 
 
 def test_planner_mergeable(planner):

@@ -114,14 +114,10 @@ class ElementwiseIncBuilder(OpBuilder):
         # add empty trailing dimensions for elementwise broadcasting
         while self.A_data.ndim < self.X_data.ndim:
             self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
-        while self.X_data.ndim < self.A_data.ndim:
-            self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
 
         # add broadcast dimension for minibatch, if needed
         if not self.A_data.minibatched and self.X_data.minibatched:
             self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
-        elif self.A_data.minibatched and not self.X_data.minibatched:
-            self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
 
         self.A_data.load_indices()
         self.X_data.load_indices()
@@ -179,8 +175,6 @@ class DotIncBuilder(OpBuilder):
             # add empty minibatch dimension if needed
             if not self.A_data.minibatched and self.X_data.minibatched:
                 self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
-            elif self.A_data.minibatched and not self.X_data.minibatched:
-                self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
 
         self.A_data.load_indices()
         self.X_data.load_indices()

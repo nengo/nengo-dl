@@ -22,8 +22,11 @@ env:
   matrix:
     - MODE="pep8"
     - MODE="docs"
-    - MODE="coverage"
     - # default build
+    - MODE="coverage"
+    - MODE="coverage"
+      PYTHON_VERSION="2.7"
+      NENGO_VERSION="git+https://github.com/nengo/nengo.git"
     - NENGO_DL_TEST_PRECISION="64"
     - NENGO_DL_TEST_UNROLL="True"
       NENGO_DL_TEST_STEP_BLOCKS="10"
@@ -31,9 +34,9 @@ env:
     - PYTHON_VERSION="3.4"
     - PYTHON_VERSION="3.6"
     - NUMPY_VERSION="numpy==1.11.0"
-    - TF_VERSION="tensorflow==1.0.0"
+      TF_VERSION="tensorflow==1.0.0"
+      NENGO_VERSION="nengo==2.3.1"
     - NENGO_VERSION="git+https://github.com/nengo/nengo.git"
-    - NENGO_VERSION="nengo==2.3.1"
 
 # Setup Miniconda
 before_install:
