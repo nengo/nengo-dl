@@ -47,12 +47,10 @@ containing the training values.  This training array should have shape
 training examples, ``n_steps`` is the number of simulation steps to train
 across, and ``node.size_out`` is the dimensionality of the Node.
 
-When training a NengoDL model there are two :class:`.Simulator` parameters
-that must be provided.  The first is ``minibatch_size``, which defines how
-many inputs (out of the total ``n_inputs`` defined above) will be used for each
-optimization step.  The second is ``step_blocks``, which tells the simulator
-the value of ``n_steps`` above, so that the simulation graph is configured
-to run the appropriate number of simulation steps.
+When training a NengoDL model the user must specify the ``minibatch_size``
+to use during training, via the ``Simulator(..., minibatch_size=n``) argument.
+This defines how many inputs (out of the total ``n_inputs`` defined above) will
+be used for each optimization step.
 
 Here is an example illustrating how to define the input values for two
 input nodes:
@@ -68,7 +66,7 @@ input nodes:
     minibatch_size = 20
     n_steps = 10
 
-    with nengo_dl.Simulator(net, step_blocks=n_steps, minibatch_size=minibatch_size) as sim:
+    with nengo_dl.Simulator(net, minibatch_size=minibatch_size) as sim:
         sim.train(inputs={a: np.random.randn(n_inputs, n_steps, 1),
                           b: np.random.randn(n_inputs, n_steps, 3)},
                   ...)
@@ -108,8 +106,7 @@ For example:
     minibatch_size = 20
     n_steps = 10
 
-    with nengo_dl.Simulator(
-            net, step_blocks=n_steps, minibatch_size=minibatch_size) as sim:
+    with nengo_dl.Simulator(net, minibatch_size=minibatch_size) as sim:
         sim.train(targets={p: np.random.randn(n_inputs, n_steps, 2)},
                   ...)
 
@@ -320,7 +317,7 @@ but it shows how all of the above parts can fit together.
     n_steps = 5  # the number of simulation steps we want to run our model for
     mini_size = 100  # minibatch size
 
-    with nengo_dl.Simulator(net, step_blocks=n_steps, minibatch_size=mini_size,
+    with nengo_dl.Simulator(net, minibatch_size=mini_size,
                             device="/cpu:0") as sim:
         # create input/target data. this could be whatever we want, but here
         # we'll train the network to output 2x its input

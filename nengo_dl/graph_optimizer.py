@@ -1119,9 +1119,9 @@ def create_signals(sigs, plan, float_type, minibatch_size):
                 curr_keys[k] = object()
 
         # convert to appropriate dtype
-        if sig.dtype in (np.float32, np.float64):
+        if np.issubdtype(sig.dtype, np.float):
             dtype = float_type
-        elif sig.dtype in (np.int32, np.int64):
+        elif np.issubdtype(sig.dtype, np.integer):
             dtype = np.int32
         else:
             raise NotImplementedError
@@ -1202,8 +1202,9 @@ def create_signals(sigs, plan, float_type, minibatch_size):
         initial_value = sig.initial_value
         if sig.minibatched:
             initial_value = initial_value[..., None]
+
         assert np.allclose(base_arrays[tensor_sig.key][0][tensor_sig.indices],
-                           initial_value)
+                           initial_value.astype(dtype))
 
     logger.debug("base arrays")
     logger.debug("\n".join([str((k, v[0].dtype, v[0].shape, v[1]))

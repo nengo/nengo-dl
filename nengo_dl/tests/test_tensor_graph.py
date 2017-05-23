@@ -6,9 +6,8 @@ import tensorflow as tf
 from nengo_dl import tensor_graph, utils
 
 
-@pytest.mark.parametrize("unroll", (True, False))
+@pytest.mark.parametrize("unroll", (1, 2))
 def test_gradients(Simulator, unroll, seed):
-    step_blocks = 10
     minibatch_size = 4
 
     with nengo.Network(seed=seed) as net:
@@ -43,7 +42,7 @@ def test_gradients(Simulator, unroll, seed):
         nengo.Probe(ens)
         nengo.Probe(ens2)
 
-    with Simulator(net, step_blocks=step_blocks, unroll_simulation=unroll,
+    with Simulator(net, unroll_simulation=unroll,
                    minibatch_size=minibatch_size) as sim:
         sim.check_gradients(atol=1e-4)
 

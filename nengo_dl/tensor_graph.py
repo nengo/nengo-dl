@@ -26,14 +26,9 @@ class TensorGraph(object):
         pre-built Nengo model describing the network to be simulated
     dt : float
         length of a simulator timestep, in seconds
-    step_blocks : int
-        controls how many simulation steps run each time the graph is
-        executed (affects memory usage and graph construction time)
-    unroll_simulation : bool
-        if True, unroll simulation loop by explicitly building each iteration
-        (up to ``step_blocks``) into the computation graph. if False, use a
-        symbolic loop, which is more general and produces a simpler graph, but
-        is likely to be slower to simulate
+    unroll_simulation : int
+        unroll simulation loop by explicitly building ``unroll_simulation``
+        iterations into the computation graph
     dtype : ``tf.DType``
         floating point precision to use for simulation
     minibatch_size : int
@@ -44,12 +39,11 @@ class TensorGraph(object):
         default device as determined by Tensorflow)
     """
 
-    def __init__(self, model, dt, step_blocks, unroll_simulation, dtype,
+    def __init__(self, model, dt, unroll_simulation, dtype,
                  minibatch_size, device):
         self.model = model
         self.dt = dt
-        self.step_blocks = step_blocks
-        self.unroll_simulation = unroll_simulation
+        self.unroll = unroll_simulation
         self.dtype = dtype
         self.minibatch_size = minibatch_size
         self.device = device
@@ -262,35 +256,41 @@ class TensorGraph(object):
                 [(k, v) for k, v in zip(self.base_arrays_init.keys(),
                                         base_vars)])
 
-            # note: nengo step counter is incremented at the beginning of
-            # the timestep
-            step += 1
-            self.signals.step = step
+            for n in range(self.unroll):
+                logger.debug("BUILDING ITERATION %d", n)
+                with self.graph.name_scope("iteration_%d" % n):
+                    # note: nengo step counter is incremented at the beginning
+                    # of the timestep
+                    step += 1
+                    self.signals.step = step
 
-            # fill in invariant input data
-            for n in self.invariant_ph:
-                self.signals.scatter(
-                    self.sig_map[self.model.sig[n]["out"]],
-                    self.invariant_ph[n][loop_i])
+                    # fill in invariant input data
+                    for n in self.invariant_ph:
+                        self.signals.scatter(
+                            self.sig_map[self.model.sig[n]["out"]],
+                            self.invariant_ph[n][loop_i])
 
-            # build the operators for a single step
-            # note: we tie things to the `loop_i` variable so that we can be
-            # sure the other things we're tying to the simulation step (side
-            # effects and probes) from the previous timestep are executed
-            # before the next step starts
-            with self.graph.control_dependencies([loop_i]):
-                probe_tensors, side_effects = self.build_step()
+                    # build the operators for a single step
+                    # note: we tie things to the `loop_i` variable so that we
+                    # can be sure the other things we're tying to the
+                    # simulation step (side effects and probes) from the
+                    # previous timestep are executed before the next step
+                    # starts
+                    with self.graph.control_dependencies([loop_i]):
+                        probe_tensors, side_effects = self.build_step()
 
-            # copy probe data to array
-            for i, p in enumerate(probe_tensors):
-                probe_arrays[i] = probe_arrays[i].write(loop_i, p)
+                    # copy probe data to array
+                    for i, p in enumerate(probe_tensors):
+                        probe_arrays[i] = probe_arrays[i].write(loop_i, p)
 
-            # need to make sure that any operators that could have side
-            # effects run each timestep, so we tie them to the loop increment.
-            # we also need to make sure that all the probe reads happen before
-            # those values get overwritten on the next timestep
-            with self.graph.control_dependencies(side_effects + probe_tensors):
-                loop_i += 1
+                    # need to make sure that any operators that could have side
+                    # effects run each timestep, so we tie them to the loop
+                    # increment. we also need to make sure that all the probe
+                    # reads happen before those values get overwritten on the
+                    # next timestep
+                    with self.graph.control_dependencies(side_effects +
+                                                         probe_tensors):
+                        loop_i += 1
 
             base_vars = tuple(self.signals.bases.values())
 
@@ -302,9 +302,8 @@ class TensorGraph(object):
 
         probe_arrays = [
             tf.TensorArray(
-                self.signals.dtype, clear_after_read=False,
-                size=0 if self.step_blocks is None else self.step_blocks,
-                dynamic_size=self.step_blocks is None)
+                self.signals.dtype, clear_after_read=True, size=0,
+                dynamic_size=True)
             for _ in self.model.probes]
 
         # build simulation loop
@@ -313,36 +312,18 @@ class TensorGraph(object):
             tuple(x._ref() if isinstance(x, tf.Variable) else x
                   for x in self.base_vars))
 
-        if self.unroll_simulation:
-            for n in range(self.step_blocks):
-                logger.debug("BUILDING ITERATION %d", n)
-                with self.graph.name_scope("iteration_%d" % n):
-                    loop_vars = loop_body(*loop_vars)
-        else:
-            # TODO: get parallel iterations working? nengo simulations are
-            # pretty serial though, so I'm not sure how much benefit we would
-            # get (and it seems non-trivial to get working correctly)
-            loop_vars = tf.while_loop(
-                loop_condition, loop_body, loop_vars=loop_vars,
-                parallel_iterations=1, back_prop=True)
+        # TODO: get parallel iterations working? nengo simulations are
+        # pretty serial though, so I'm not sure how much benefit we would
+        # get (and it seems non-trivial to get working correctly)
+        loop_vars = tf.while_loop(
+            loop_condition, loop_body, loop_vars=loop_vars,
+            parallel_iterations=1, back_prop=True)
 
-        self.end_base_arrays = loop_vars[4]
+        self.steps_run = loop_vars[2]
         self.probe_arrays = []
         for p in loop_vars[3]:
             x = p.stack()
-            if self.step_blocks is not None:
-                x.set_shape([self.step_blocks] +
-                            x.get_shape().as_list()[1:])
             self.probe_arrays += [x]
-
-        # note: we need to make sure the final base array updates get computed,
-        # even if they aren't being read by anything, because they may be
-        # being read on the next `_run_steps` call. the `tf.while_loop`
-        # enter/exit logic takes care of that on its own, so we only need to
-        # do this for the unrolled case
-        with tf.control_dependencies(self.end_base_arrays if
-                                     self.unroll_simulation else []):
-            self.steps_run = tf.identity(loop_vars[2])
 
     def build_inputs(self, rng):
         """Sets up the inputs in the model (which will be computed outside of
@@ -365,8 +346,7 @@ class TensorGraph(object):
 
                 # set up a placeholder input for this node
                 self.invariant_ph[n] = tf.placeholder(
-                    self.dtype, (self.step_blocks, n.size_out,
-                                 self.minibatch_size))
+                    self.dtype, (None, n.size_out, self.minibatch_size))
 
             # build the node functions, which will be called offline to
             # generate the input values
@@ -450,8 +430,8 @@ class TensorGraph(object):
                 # create a placeholder for the target values
                 if p not in self.target_phs:
                     self.target_phs[p] = tf.placeholder(
-                        self.dtype, (self.step_blocks, p.size_in,
-                                     self.minibatch_size), name="targets")
+                        self.dtype, (None, p.size_in, self.minibatch_size),
+                        name="targets")
 
                 # compute loss
                 if objective == "mse":
@@ -578,7 +558,7 @@ def mark_signals(model):
 
     if model.toplevel is None:
         warnings.warn("No top-level network in model; assuming no trainable "
-                      "parameters")
+                      "parameters", UserWarning)
     else:
         mark_network(model.toplevel)
 

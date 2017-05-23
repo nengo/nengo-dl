@@ -5,7 +5,7 @@ represents a release version. Commits for which the version doesn't have
 """
 
 name = "nengo_dl"
-version_info = (0, 3, 2)  # (major, minor, patch)
+version_info = (0, 4, 0)  # (major, minor, patch)
 dev = True
 
 version = "{v}{dev}".format(v='.'.join(str(v) for v in version_info),

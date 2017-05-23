@@ -166,7 +166,8 @@ class TensorSignal(object):
         stop = self.indices[-1] + 1
         step = (self.indices[1] - self.indices[0] if len(self.indices) > 1
                 else 1)
-        if step != 0 and np.all(self.indices == np.arange(start, stop, step)):
+        if step != 0 and np.array_equal(self.indices,
+                                        np.arange(start, stop, step)):
             self.as_slice = (tf.constant([start]), tf.constant([stop]),
                              tf.constant([step]))
         else:

@@ -18,7 +18,7 @@ Release History
    - Removed
    - Fixed
 
-0.3.2 (unreleased)
+0.4.0 (unreleased)
 ------------------
 
 **Added**
@@ -29,6 +29,15 @@ Release History
 **Changed**
 
 - Updated TensorFuncParam to new Nengo Param syntax
+- The interface for Simulator ``step_blocks``/``unroll_simulation`` has been
+  changed.  Now ``unroll_simulation`` takes an integer as argument which is
+  equivalent to the old ``step_blocks`` value, and ``unroll_simulation=1`` is
+  equivalent to the old ``unroll_simulation=False``.  For example,
+  ``Simulator(..., unroll_simulation=True, step_blocks=10)`` is now equivalent
+  to ``Simulator(..., unroll_simulation=10)``.
+- Simulator.train/Simulator.loss no longer require ``step_blocks`` (or the new
+  ``unroll_simulation``) to be specified; the number of steps to train across
+  will now be inferred from the input data.
 
 
 0.3.1 (May 12, 2017)
