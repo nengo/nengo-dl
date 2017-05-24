@@ -13,4 +13,6 @@ dist
 .idea
 data
 docs/mnist.pkl
+docs/examples/*
+!docs/examples/*.ipynb
 tmp
