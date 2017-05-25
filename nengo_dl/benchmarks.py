@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import nengo
 import nengo_ocl
 import numpy as np
+import tensorflow as tf
 
 import nengo_dl
 from nengo_dl import DATA_DIR
@@ -27,7 +28,7 @@ def cconv(dimensions, neurons_per_d, neuron_type):
         benchmark network
     """
 
-    with nengo.Network(label="cconv") as net:
+    with nengo.Network(label="cconv", seed=0) as net:
         net.config[nengo.Ensemble].neuron_type = neuron_type
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1, -1])
         net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-1, 1)
@@ -39,9 +40,9 @@ def cconv(dimensions, neurons_per_d, neuron_type):
         nengo.Connection(inp_a, cconv.A)
         nengo.Connection(inp_b, cconv.B)
 
-        nengo.Probe(cconv.output)
+        p = nengo.Probe(cconv.output)
 
-    return net
+    return net, p
 
 
 def integrator(dimensions, neurons_per_d, neuron_type):
@@ -62,7 +63,7 @@ def integrator(dimensions, neurons_per_d, neuron_type):
         benchmark network
     """
 
-    with nengo.Network(label="integrator") as net:
+    with nengo.Network(label="integrator", seed=0) as net:
         net.config[nengo.Ensemble].neuron_type = neuron_type
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1, -1])
         net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-1, 1)
@@ -73,9 +74,9 @@ def integrator(dimensions, neurons_per_d, neuron_type):
         inp = nengo.Node([0] * dimensions)
         nengo.Connection(inp, integ.input)
 
-        nengo.Probe(integ.ensemble)
+        p = nengo.Probe(integ.ensemble)
 
-    return net
+    return net, p
 
 
 def pes(dimensions, neurons_per_d, neuron_type):
@@ -96,7 +97,7 @@ def pes(dimensions, neurons_per_d, neuron_type):
         benchmark network
     """
 
-    with nengo.Network(label="pes") as net:
+    with nengo.Network(label="pes", seed=0) as net:
         net.config[nengo.Ensemble].neuron_type = neuron_type
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1, -1])
         net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-1, 1)
@@ -112,9 +113,9 @@ def pes(dimensions, neurons_per_d, neuron_type):
         conn = nengo.Connection(pre, post, learning_rule_type=nengo.PES())
         nengo.Connection(err, conn.learning_rule)
 
-        nengo.Probe(post)
+        p = nengo.Probe(post)
 
-    return net
+    return net, p
 
 
 def compare_backends(raw=False):
@@ -132,7 +133,7 @@ def compare_backends(raw=False):
     n_range = [32]
     d_range = [64, 128, 256]
     neuron_types = [nengo.RectifiedLinear, nengo.LIF]
-    backends = [nengo_dl, nengo, nengo_ocl]
+    backends = [nengo, nengo_dl, nengo_ocl]
 
     if raw:
         data = np.zeros((len(benchmarks), len(n_range), len(d_range),
@@ -145,7 +146,7 @@ def compare_backends(raw=False):
                         print("-" * 30)
                         print(bench, neurons, dimensions, neuron_type)
 
-                        net = bench(dimensions, neurons, neuron_type())
+                        net, p = bench(dimensions, neurons, neuron_type())
                         model = nengo.builder.Model()
                         model.build(net)
 
@@ -154,18 +155,22 @@ def compare_backends(raw=False):
 
                             if backend is None:
                                 continue
-
-                            if backend == nengo_dl:
-                                kwargs = {"unroll_simulation": 50,
-                                          "minibatch_size": 1,
-                                          "device": "/gpu:0"
+                            elif backend == nengo_dl:
+                                kwargs = {"unroll_simulation": 25,
+                                          "minibatch_size": None,
+                                          "device": "/gpu:0",
+                                          "dtype": tf.float32,
                                           }
-                            else:
+                            elif backend == nengo:
+                                kwargs = {"progress_bar": None,
+                                          "optimize": True}
+                            elif backend == nengo_ocl:
                                 kwargs = {"progress_bar": None}
 
                             # reps = 1 if backend == nengo_dl else 50
 
                             try:
+                                # with backend.Simulator(net, **kwargs) as sim:
                                 with backend.Simulator(None, model=model,
                                                        **kwargs) as sim:
                                     start = time.time()
@@ -178,6 +183,12 @@ def compare_backends(raw=False):
                                 print(backend, "CRASHED")
                                 print(e)
                                 data[i, j, k, l, m] = np.nan
+
+                            # if backend == nengo:
+                            #     canonical = sim.data[p]
+                            # else:
+                            #     assert np.allclose(canonical, sim.data[p],
+                            #                        atol=1e-3)
 
         np.savez("%s/benchmark_data.npz" % DATA_DIR, data)
     else:
@@ -216,7 +227,7 @@ def profiling():
 
     # note: in order for GPU profiling to work, you have to manually add
     # ...\CUDA\v8.0\extras\CUPTI\libx64 to your path
-    net = pes(128, 32, nengo.RectifiedLinear())
+    net, p = pes(128, 32, nengo.RectifiedLinear())
     with nengo_dl.Simulator(net, tensorboard=False, unroll_simulation=50,
                             device="/gpu:0") as sim:
         sim.run_steps(150, profile=True)
