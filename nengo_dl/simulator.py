@@ -10,7 +10,7 @@ import warnings
 from nengo import Process
 from nengo.builder import Model
 from nengo.exceptions import (ReadonlyError, SimulatorClosed, NengoWarning,
-                              SimulationError)
+                              SimulationError, ValidationError)
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.client.timeline import Timeline
@@ -291,8 +291,8 @@ class Simulator(object):
                 (n_steps, self.unroll, actual_steps), RuntimeWarning)
 
         if input_feeds is not None:
-            self._check_data(input_feeds, mode="out", check_mini=True,
-                             n_steps=n_steps)
+            self._check_data(input_feeds, mode="input",
+                             n_batch=self.minibatch_size, n_steps=n_steps)
 
         print_and_flush("Simulation started", end="")
         start = time.time()
@@ -393,8 +393,9 @@ class Simulator(object):
         if self.closed:
             raise SimulatorClosed("Simulator cannot be trained because it is "
                                   "closed.")
-        self._check_data(inputs, mode="out", n_steps=n_steps)
-        self._check_data(targets, mode="in", n_steps=n_steps)
+        self._check_data(inputs, mode="input")
+        self._check_data(targets, mode="target", n_steps=n_steps,
+                         n_batch=batch_size)
 
         # check for non-differentiable elements in graph
         # utils.find_non_differentiable(
@@ -454,14 +455,15 @@ class Simulator(object):
         should not be intermixed with calls to :meth:`.Simulator.run`.
         """
 
-        n_steps = next(iter(inputs.values())).shape[1]
+        batch_size, n_steps = next(iter(inputs.values())).shape[:2]
 
         # error checking
         if self.closed:
             raise SimulatorClosed("Loss cannot be computed after simulator is "
                                   "closed.")
-        self._check_data(inputs, mode="out", n_steps=n_steps)
-        self._check_data(targets, mode="in", n_steps=n_steps)
+        self._check_data(inputs, mode="input")
+        self._check_data(targets, mode="target", n_steps=n_steps,
+                         n_batch=batch_size)
 
         # get loss op
         loss = self.tensor_graph.build_loss(objective, tuple(targets.keys()))
@@ -866,37 +868,66 @@ class Simulator(object):
 
         logger.info("Gradient check passed")
 
-    def _check_data(self, data, mode="out", check_mini=False, n_steps=None):
+    def _check_data(self, data, mode="input", n_batch=None, n_steps=None):
         """Performs error checking on simulation data.
 
         Parameters
         ----------
-        data : dict of {``nengo object``: :class:`~numpy:numpy.ndarray`}
-            array of data associated with given object in model
-        mode : "in" or "out", optional
-            whether this data corresponds to the input or output of the
-            nengo object
-        check_mini : bool, optional
-            if True, also validate minibatch_size
+        data : dict of {:class:`~nengo:nengo.Node` or \
+                            :class:`~nengo:nengo.Probe`: \
+                        :class:`~numpy:numpy.ndarray`}
+            array of data associated with given objects in model (Nodes if
+            mode=="input" or Probes if mode=="target")
+        mode : "input" or "target", optional
+            whether this data corresponds to an input or target value
+        n_batch : int, optional
+            number of elements in batch (if None, will just verify that all
+            data items have same batch size)
         n_steps : int, optional
-            number of simulation steps (if None, will use sim.unroll)
+            number of simulation steps (if None, will just verify that all
+            data items have same number of steps)
         """
 
-        # TODO: error if object not in invariant_inputs or model.probes
+        for d in data:
+            if mode == "input":
+                if d not in self.tensor_graph.invariant_inputs:
+                    raise ValidationError(
+                        "%s is not an input Node (a nengo.Node with "
+                        "size_in==0), or is from a different network." % d,
+                        "%s data" % mode)
+            else:
+                if d not in self.model.probes:
+                    raise ValidationError(
+                        "%s is not a Probe, or is from a different "
+                        "network" % d, "%s data" % mode)
+
+        args = [n_batch, n_steps]
+        labels = ["batch size", "number of timesteps"]
+
+        for i in range(2):
+            if args[i] is None:
+                val = next(iter(data.values())).shape[i]
+                for n, x in data.items():
+                    if x.shape[i] != val:
+                        raise ValidationError(
+                            "Elements have different %s: %s vs %s" %
+                            (labels[i], val, x.shape[0]), "%s data" % mode)
+            else:
+                for n, x in data.items():
+                    if x.shape[i] != args[i]:
+                        raise ValidationError(
+                            "Data for %s has %s=%s, which does not match "
+                            "expected size %s" % (n, labels[i], x.shape[i],
+                                                  args[i]),
+                            "%s data" % mode)
 
         for n, x in data.items():
-            shape = (self.minibatch_size if check_mini else None,
-                     self.unroll if n_steps is None else n_steps,
-                     n.size_out if mode == "out" else n.size_in)
-
-            if any(x is not None and x != y for x, y in zip(shape, x.shape)):
-                raise SimulationError(
-                    "Shape of data array %s does not match expected shape "
-                    "(%s, %s, %s.size_%s) -> %s" %
-                    (x.shape,
-                     "sim.minibatch_size" if check_mini else "_",
-                     "sim.unroll" if n_steps is None else "n_steps",
-                     n, mode, shape))
+            d = n.size_out if mode == "input" else n.size_in
+            if x.shape[2] != d:
+                raise ValidationError(
+                    "Dimensionality of data (%s) does not match "
+                    "dimensionality of %s (%s)" % (x.shape[2], n, d),
+                    "%s data" % mode)
 
 
 class ProbeDict(Mapping):

@@ -3,7 +3,8 @@ import itertools
 import os
 
 import nengo
-from nengo.exceptions import SimulationError, SimulatorClosed, ReadonlyError
+from nengo.exceptions import (SimulationError, SimulatorClosed, ReadonlyError,
+                              ValidationError)
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -111,19 +112,6 @@ def test_input_feeds(Simulator):
         sim.run_steps(50, input_feeds={inp: val})
         assert np.allclose(sim.data[p], val)
 
-        with pytest.raises(nengo.exceptions.SimulationError):
-            sim.run_steps(5, input_feeds={
-                inp: np.random.randn(
-                    minibatch_size + 1, 5, 3)})
-
-        with pytest.raises(nengo.exceptions.SimulationError):
-            sim.run_steps(5, input_feeds={
-                inp: np.random.randn(minibatch_size, 4, 3)})
-
-        with pytest.raises(nengo.exceptions.SimulationError):
-            sim.run_steps(5, input_feeds={
-                inp: np.random.randn(minibatch_size, 5, 4)})
-
 
 @pytest.mark.parametrize("neurons", (True, False))
 def test_train_ff(Simulator, neurons, seed):
@@ -137,6 +125,8 @@ def test_train_ff(Simulator, neurons, seed):
         net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
         net.config[nengo.Connection].synapse = None
 
+        # TODO: separate this into two different inputs to test that
+        # functionality
         inp = nengo.Node([0, 0])
         ens = nengo.Ensemble(n_hidden + 1, n_hidden,
                              neuron_type=nengo.Sigmoid(tau_ref=1))
@@ -206,6 +196,8 @@ def test_train_objective(Simulator, unroll, seed):
     n_hidden = 20
     n_steps = 10
 
+    # TODO: make this have multiple outputs to test that functionality
+
     with nengo.Network(seed=seed) as net:
         inp = nengo.Node([1])
         ens = nengo.Ensemble(n_hidden, 1, neuron_type=nengo.RectifiedLinear())
@@ -272,21 +264,21 @@ def test_train_errors(Simulator):
 
     n_steps = 20
     with Simulator(net) as sim:
-        with pytest.raises(SimulationError):
+        with pytest.raises(ValidationError):
             sim.train({a: np.ones((1, n_steps + 1, 1))},
                       {p: np.ones((1, n_steps, 1))}, None)
 
-        with pytest.raises(SimulationError):
-            sim.train({a: np.ones((1, n_steps, 2))},
+        with pytest.raises(ValidationError):
+            sim.train({a: np.ones((2, n_steps, 1))},
                       {p: np.ones((1, n_steps, 1))}, None)
 
-        with pytest.raises(SimulationError):
+        with pytest.raises(ValidationError):
             sim.train({a: np.ones((1, n_steps, 1))},
                       {p: np.ones((1, n_steps + 1, 1))}, None)
 
-        with pytest.raises(SimulationError):
+        with pytest.raises(ValidationError):
             sim.train({a: np.ones((1, n_steps, 1))},
-                      {p: np.ones((1, n_steps, 2))}, None)
+                      {p: np.ones((2, n_steps, 1))}, None)
 
     with pytest.raises(SimulatorClosed):
         sim.train({None: np.zeros((1, 1))}, None, None)
@@ -313,21 +305,21 @@ def test_loss(Simulator):
                                     objective=lambda x, y: tf.constant(2)),
                            2)
 
-        with pytest.raises(SimulationError):
+        with pytest.raises(ValidationError):
             sim.loss({inp: np.ones((1, n_steps + 1, 1))},
                      {p: np.ones((1, n_steps, 1))}, None)
 
-        with pytest.raises(SimulationError):
-            sim.loss({inp: np.ones((1, n_steps, 2))},
+        with pytest.raises(ValidationError):
+            sim.loss({inp: np.ones((2, n_steps, 1))},
                      {p: np.ones((1, n_steps, 1))}, None)
 
-        with pytest.raises(SimulationError):
+        with pytest.raises(ValidationError):
             sim.loss({inp: np.ones((1, n_steps, 1))},
                      {p: np.ones((1, n_steps + 1, 1))}, None)
 
-        with pytest.raises(SimulationError):
+        with pytest.raises(ValidationError):
             sim.loss({inp: np.ones((1, n_steps, 1))},
-                     {p: np.ones((1, n_steps, 2))}, None)
+                     {p: np.ones((2, n_steps, 1))}, None)
 
     with pytest.raises(SimulatorClosed):
         sim.loss({None: np.zeros((1, 1))}, None, None)
@@ -606,3 +598,64 @@ def test_check_gradients_error(Simulator):
     with Simulator(net) as sim:
         with pytest.raises(SimulationError):
             sim.check_gradients()
+
+
+def test_check_data(Simulator):
+    with nengo.Network() as net:
+        inpa = nengo.Node([0, 0])
+        inpb = nengo.Node([0])
+        n = nengo.Node(size_in=2)
+        pa = nengo.Probe(inpa)
+        pb = nengo.Probe(inpb)
+
+    with nengo.Network():
+        inp2 = nengo.Node([0, 0])
+        p2 = nengo.Probe(inp2)
+
+    with Simulator(net) as sim:
+        zeros1 = np.zeros((1, 1, 1))
+        zeros2 = np.zeros((1, 1, 2))
+
+        # make sure that valid inputs pass
+        sim._check_data({inpa: zeros2, inpb: zeros1}, mode="input")
+        sim._check_data({pa: zeros2, pb: zeros1}, mode="target")
+
+        # invalid input objects
+        with pytest.raises(ValidationError):
+            sim._check_data({inp2: zeros2})
+        with pytest.raises(ValidationError):
+            sim._check_data({n: zeros2})
+
+        # invalid target object
+        with pytest.raises(ValidationError):
+            sim._check_data({p2: zeros2}, mode="target")
+
+        # mismatched input data
+        with pytest.raises(ValidationError):
+            sim._check_data({inpa: zeros2, inpb: np.zeros((2, 1, 1))})
+        with pytest.raises(ValidationError):
+            sim._check_data({inpa: zeros2, inpb: np.zeros((1, 2, 1))})
+
+        # mismatched target data
+        with pytest.raises(ValidationError):
+            sim._check_data({pa: zeros2, pb: np.zeros((2, 1, 1))},
+                            mode="target")
+        with pytest.raises(ValidationError):
+            sim._check_data({pa: zeros2, pb: np.zeros((1, 2, 1))},
+                            mode="target")
+
+        # data that doesn't match explicit target
+        with pytest.raises(ValidationError):
+            sim._check_data({inpa: zeros2}, n_batch=2)
+        with pytest.raises(ValidationError):
+            sim._check_data({inpa: zeros2}, n_steps=2)
+        with pytest.raises(ValidationError):
+            sim._check_data({pa: zeros2}, n_batch=2, mode="target")
+        with pytest.raises(ValidationError):
+            sim._check_data({pa: zeros2}, n_steps=2, mode="target")
+
+        # data with wrong object dimensionality
+        with pytest.raises(ValidationError):
+            sim._check_data({inpa: zeros1})
+        with pytest.raises(ValidationError):
+            sim._check_data({pa: zeros1}, mode="target")
