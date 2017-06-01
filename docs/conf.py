@@ -31,6 +31,11 @@ todo_include_todos = True
 # -- numpydoc config
 numpydoc_show_class_members = False
 
+# -- sphinx-versioning
+scv_whitelist_branches = ('master',)
+scv_show_banner = True
+scv_banner_recent_tag = True
+
 # -- sphinx
 exclude_patterns = ['_build']
 source_suffix = '.rst'
@@ -44,7 +49,7 @@ mathjax_path = ("https://cdn.mathjax.org/mathjax/latest/MathJax.js"
 project = u'NengoDL'
 authors = u'Applied Brain Research'
 copyright = nengo_dl.__copyright__
-version = '.'.join(nengo_dl.__version__.split('.')[:2])  # Short X.Y version
+# version = '.'.join(nengo_dl.__version__.split('.')[:2])  # Short X.Y version
 release = nengo_dl.__version__  # Full version, with tags
 pygments_style = 'default'
 
@@ -52,7 +57,7 @@ pygments_style = 'default'
 
 html_theme = 'sphinx_rtd_theme'
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-html_title = "NengoDL {0} docs".format(release)
+html_title = "NengoDL documentation"
 html_static_path = ['_static']
 html_context = {
     'css_files': [os.path.join('_static', 'custom.css')],

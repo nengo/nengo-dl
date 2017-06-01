@@ -62,7 +62,7 @@ script:
   - if [[ "$MODE" == "pep8" ]]; then
       flake8;
     elif [[ "$MODE" == "docs" ]]; then
-      python setup.py build_sphinx;
+      sphinx-versioning build docs docs/_build/html;
     elif [[ "$MODE" == "coverage" ]]; then
       python setup.py develop;
       coverage run -m py.test --pyargs nengo;
