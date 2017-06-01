@@ -7,6 +7,7 @@ NengoDL
     introduction
     installation
     frontend
+    examples
     resources
     backend
 

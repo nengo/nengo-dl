@@ -133,7 +133,7 @@ def compare_backends(raw=False):
     n_range = [32]
     d_range = [64, 128, 256]
     neuron_types = [nengo.RectifiedLinear, nengo.LIF]
-    backends = [nengo, nengo_dl, nengo_ocl]
+    backends = [nengo_dl, nengo_ocl, nengo]
 
     if raw:
         data = np.zeros((len(benchmarks), len(n_range), len(d_range),
@@ -167,14 +167,13 @@ def compare_backends(raw=False):
                             elif backend == nengo_ocl:
                                 kwargs = {"progress_bar": None}
 
-                            # reps = 1 if backend == nengo_dl else 50
-
                             try:
                                 # with backend.Simulator(net, **kwargs) as sim:
                                 with backend.Simulator(None, model=model,
                                                        **kwargs) as sim:
                                     start = time.time()
                                     sim.run(5)
+                                    # reps = 1 if backend == nengo_dl else 50
                                     # for r in range(reps):
                                     #     sim.run(1.0)
                                     data[i, j, k, l, m] = time.time() - start
@@ -202,13 +201,13 @@ def compare_backends(raw=False):
         for i in range(len(benchmarks)):
             plt.figure()
             plt.title("%s (%s)" % (bench_names[i], neuron_names[j]))
-            plt.plot(d_range, data[i, 0, :, j, 0] / data[i, 0, :, j, 1])
+            plt.plot(d_range, data[i, 0, :, j, 0] / data[i, 0, :, j, 2])
             plt.xlabel("dimensions")
             plt.ylabel("nengo_dl / nengo")
 
             plt.figure()
             plt.title("%s (%s)" % (bench_names[i], neuron_names[j]))
-            plt.plot(d_range, data[i, 0, :, j, 0] / data[i, 0, :, j, 2])
+            plt.plot(d_range, data[i, 0, :, j, 0] / data[i, 0, :, j, 1])
             plt.xlabel("dimensions")
             plt.ylabel("nengo_dl / nengo_ocl")
 
@@ -216,7 +215,7 @@ def compare_backends(raw=False):
             axes[i].plot(d_range, data[i, 0, :, j, :])
             axes[i].set_xlabel("dimensions")
             axes[i].set_ylabel("seconds")
-            axes[i].legend(["nengo_dl", "nengo", "nengo_ocl"])
+            axes[i].legend(["nengo_dl", "nengo_ocl", "nengo"])
             axes[i].set_ylim([0, 100])
 
     plt.show()

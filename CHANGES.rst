@@ -24,7 +24,9 @@ Release History
 **Added**
 
 - Added ability to manually specify which parts of a model are trainable
-  (see the `documentation <https://nengo.github.io/nengo_dl/training.html`_)
+  (see the `documentation <https://nengo.github.io/nengo_dl/training.html>`_)
+- Added some code examples (see the ``<nengo_dl/examples`` directory, or the
+  `documentation <https://nengo.github.io/nengo_dl/examples.html>`_)
 
 **Changed**
 

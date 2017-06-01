@@ -1,4 +1,4 @@
 flake8>=2.5.1
-matplotlib>=1.5.3
+matplotlib>=2.0.0
 pytest>=3.0.4
 coverage>=4.3.4

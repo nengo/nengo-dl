@@ -221,6 +221,7 @@ class Simulator(object):
         if include_probes:
             for p in self.model.probes:
                 self.model.params[p] = []
+            self.n_steps = 0
 
     def step(self, **kwargs):
         """Run the simulation for one time step.
