@@ -22,11 +22,11 @@ env:
     - MODE="pep8"
     - MODE="docs"
     - # default build
-    - MODE="examples"
     - MODE="coverage"
     - MODE="coverage"
       PYTHON_VERSION="2.7"
       NENGO_VERSION="git+https://github.com/nengo/nengo.git"
+    - MODE="examples"
     - NENGO_DL_TEST_PRECISION="64"
     - NENGO_DL_TEST_UNROLL="10"
     - PYTHON_VERSION="2.7"

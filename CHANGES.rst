@@ -27,6 +27,8 @@ Release History
   (see the `documentation <https://nengo.github.io/nengo_dl/training.html>`_)
 - Added some code examples (see the ``<nengo_dl/examples`` directory, or the
   `documentation <https://nengo.github.io/nengo_dl/examples.html>`_)
+- Added the SoftLIFRate neuron type for training LIF networks (based on
+  `this paper <https://arxiv.org/abs/1510.08829>`_)
 
 **Changed**
 

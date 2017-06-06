@@ -2,6 +2,7 @@ import logging
 
 from nengo.neurons import RectifiedLinear, Sigmoid, LIF, LIFRate
 from nengo.builder.neurons import SimNeurons
+from nengo.params import NumberParam
 import numpy as np
 import tensorflow as tf
 
@@ -9,6 +10,75 @@ from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
 
 logger = logging.getLogger(__name__)
+
+
+class SoftLIFRate(LIFRate):
+    """LIF neuron with smoothing around the firing threshold.
+
+    This is a rate version of the LIF neuron whose tuning curve has a
+    continuous first derivative, due to the smoothing around the firing
+    threshold. It can be used as a substitute for LIF neurons in deep networks
+    during training, and then replaced with LIF neurons when running
+    the network [1]_.
+
+    Parameters
+    ----------
+    sigma : float
+        Amount of smoothing around the firing threshold. Larger values mean
+        more smoothing.
+    tau_rc : float
+        Membrane RC time constant, in seconds. Affects how quickly the membrane
+        voltage decays to zero in the absence of input (larger = slower decay).
+    tau_ref : float
+        Absolute refractory period, in seconds. This is how long the
+        membrane voltage is held at zero after a spike.
+
+    References
+    ----------
+    .. [1] E. Hunsberger & C. Eliasmith (2015). Spiking Deep Networks with
+       LIF Neurons. arXiv Preprint, 1510. http://arxiv.org/abs/1510.08829
+
+    Notes
+    -----
+    Adapted from
+    https://github.com/nengo/nengo_extras/blob/master/nengo_extras/neurons.py
+    """
+
+    sigma = NumberParam('sigma', low=0, low_open=True)
+
+    def __init__(self, sigma=1., **lif_args):
+        super(SoftLIFRate, self).__init__(**lif_args)
+        self.sigma = sigma
+
+    @property
+    def _argreprs(self):
+        args = super(SoftLIFRate, self)._argreprs
+        if self.sigma != 1.:
+            args.append("sigma=%s" % self.sigma)
+        return args
+
+    def rates(self, x, gain, bias):
+        J = gain * x
+        J += bias
+        out = np.zeros_like(J)
+        self.step_math(dt=1, J=J, output=out)
+        return out
+
+    def step_math(self, dt, J, output):
+        """Compute rates in Hz for input current (incl. bias)"""
+
+        x = J - 1
+        y = x / self.sigma
+        valid = y < 34
+        y_v = y[valid]
+        np.exp(y_v, out=y_v)
+        np.log1p(y_v, out=y_v)
+        y_v *= self.sigma
+        x[valid] = y_v
+
+        output[:] = 0
+        output[x > 0] = 1. / (
+            self.tau_ref + self.tau_rc * np.log1p(1. / x[x > 0]))
 
 
 @Builder.register(SimNeurons)
@@ -24,7 +94,7 @@ class SimNeuronsBuilder(OpBuilder):
         the neuron types that have a custom implementation
     """
 
-    TF_NEURON_IMPL = (RectifiedLinear, Sigmoid, LIF, LIFRate)
+    TF_NEURON_IMPL = (RectifiedLinear, Sigmoid, LIF, LIFRate, SoftLIFRate)
 
     def __init__(self, ops, signals):
         logger.debug("sim_neurons")
@@ -49,6 +119,8 @@ class SimNeuronsBuilder(OpBuilder):
                 self.built_neurons = LIFRateBuilder(ops, signals)
             elif neuron_type == LIF:
                 self.built_neurons = LIFBuilder(ops, signals)
+            elif neuron_type == SoftLIFRate:
+                self.built_neurons = SoftLIFRateBuilder(ops, signals)
         else:
             self.built_neurons = GenericNeuronBuilder(ops, signals)
 
@@ -189,9 +261,9 @@ class LIFRateBuilder(object):
         self.zeros = tf.zeros(self.J_data.shape + (signals.minibatch_size,),
                               signals.dtype)
 
-    def build_step(self, signals):
-        J = signals.gather(self.J_data)
-        j = J - 1
+    def build_step(self, signals, j=None):
+        if j is None:
+            j = signals.gather(self.J_data) - 1
 
         # indices = tf.cast(tf.where(j > 0), tf.int32)
         # tau_ref = tf.gather_nd(
@@ -270,3 +342,19 @@ class LIFBuilder(object):
         voltage = tf.where(spiked, self.zeros,
                            tf.maximum(voltage, self.min_voltage))
         signals.scatter(self.voltage_data, voltage)
+
+
+class SoftLIFRateBuilder(LIFRateBuilder):
+    def __init__(self, ops, signals):
+        super(SoftLIFRateBuilder, self).__init__(ops, signals)
+
+        self.sigma = tf.constant(
+            [[op.neurons.sigma] for op in ops
+             for _ in range(op.J.shape[0])], dtype=signals.dtype)
+
+    def build_step(self, signals):
+        x = signals.gather(self.J_data) - 1
+        y = x / self.sigma
+        z = tf.where(y < 34, self.sigma * tf.log1p(tf.exp(y)), x)
+
+        super(SoftLIFRateBuilder, self).build_step(signals, j=z)
