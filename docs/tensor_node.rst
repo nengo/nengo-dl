@@ -15,11 +15,11 @@ Here is a simple example that uses a TensorNode to compute a ``sin`` wave:
     import tensorflow as tf
 
     with nengo.Network() as net:
-        node = nengo_dl.TensorNode(lambda t: tf.sin(t))
+        node = nengo_dl.TensorNode(lambda t: tf.reshape(tf.sin(t), (1, 1)))
         p = nengo.Probe(node)
 
     with nengo_dl.Simulator(net) as sim:
-        sim.run_steps(1.0)
+        sim.run(1.0)
 
 Note that probing and connecting to TensorNodes works in the same way as
 regular Nodes.

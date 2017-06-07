@@ -56,13 +56,16 @@ before_install:
   - conda create -q -n test python=$PYTHON_VERSION pip $NUMPY_VERSION
   - source activate test
 
-# install requirements that weren't installed via conda
+# install python requirements
 install:
   - pip install $TF_VERSION
   - pip install $NENGO_VERSION
   - pip install -r requirements.txt
   - pip install -r requirements-test.txt
-  - if [[ "$MODE" == "docs" ]]; then pip install -r requirements-docs.txt; fi
+  - if [[ "$MODE" == "docs" || "$MODE" == "examples" ]]; then
+      pip install -r requirements-docs.txt;
+      conda install pandoc;
+    fi
   - python setup.py develop;
   - conda list -e
   - pip freeze
@@ -75,10 +78,10 @@ script:
       sphinx-versioning build docs docs/_build/html;
     elif [[ "$MODE" == "coverage" ]]; then
       coverage run -m py.test --pyargs nengo;
-      coverage run -a -m py.test;
+      coverage run -a -m py.test nengo_dl;
       coverage report;
     elif [[ "$MODE" == "examples" ]]; then
-      py.test -v --durations 20 examples;
+      py.test -v --durations 20 --nbval-lax docs/examples;
     else
       py.test -v --pyargs nengo && py.test -v --durations 20 nengo_dl;
     fi

@@ -13,6 +13,8 @@ extensions = [
     'sphinx.ext.viewcode',
     'numpydoc',
     'nengo.utils.docutils',
+    'nbsphinx',
+    'IPython.sphinxext.ipython_console_highlighting',
 ]
 
 # -- sphinx.ext.autodoc
@@ -37,7 +39,7 @@ scv_show_banner = True
 scv_banner_recent_tag = True
 
 # -- sphinx
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', '**.ipynb_checkpoints']
 source_suffix = '.rst'
 source_encoding = 'utf-8'
 master_doc = 'index'
