@@ -7,6 +7,7 @@ import os
 import time
 import warnings
 
+from nengo import Process
 from nengo.builder import Model
 from nengo.exceptions import (ReadonlyError, SimulatorClosed, NengoWarning,
                               SimulationError)
@@ -154,7 +155,10 @@ class Simulator(object):
         # gradient descent training deterministic?
         tf.set_random_seed(self.seed)
 
+        self.input_funcs = {}
+
         # (re)build graph
+        # TODO: do we need to rebuild the graph?
         print_and_flush("Constructing graph", end="")
         start = time.time()
         self.tensor_graph.build(self.rng)
@@ -555,6 +559,18 @@ class Simulator(object):
                 self.model.sig[n]["out"] in self.tensor_graph.sig_map and
                 n.size_out > 0)
 
+            if (not isinstance(n.output, np.ndarray) and
+                    n.output not in self.input_funcs):
+                if isinstance(n.output, Process):
+                    self.input_funcs[n.output] = n.output.make_step(
+                        (n.size_in,), (n.size_out,), self.dt,
+                        n.output.get_rng(self.rng))
+                elif n.size_out > 0:
+                    self.input_funcs[n.output] = utils.align_func(
+                        (n.size_out,), self.tensor_graph.dtype)(n.output)
+                else:
+                    self.input_funcs[n.output] = n.output
+
             if using_output:
                 if n in input_feeds:
                     # move minibatch dimension to the end
@@ -563,7 +579,7 @@ class Simulator(object):
                     feed_val = np.tile(n.output[None, :, None],
                                        (n_steps, 1, self.minibatch_size))
                 else:
-                    func = self.tensor_graph.invariant_funcs[n]
+                    func = self.input_funcs[n.output]
 
                     feed_val = []
                     for i in range(self.n_steps + 1,
@@ -577,11 +593,10 @@ class Simulator(object):
                                        (1, 1, self.minibatch_size))
 
                 feed_vals[self.tensor_graph.invariant_ph[n]] = feed_val
-            elif (not isinstance(n.output, np.ndarray) and
-                  n.output in self.tensor_graph.invariant_funcs.values()):
+            elif not isinstance(n.output, np.ndarray):
                 # note: we still call the function even if the output
                 # is not being used, because it may have side-effects
-                func = self.tensor_graph.invariant_funcs[n]
+                func = self.input_funcs[n.output]
                 for i in range(self.n_steps + 1, self.n_steps + n_steps + 1):
                     func(i * self.dt)
 

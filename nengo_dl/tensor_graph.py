@@ -159,7 +159,7 @@ class TensorGraph(object):
             logger.debug([str(x) for x in self.base_vars])
 
             # set up invariant inputs
-            self.build_inputs(rng)
+            self.build_inputs()
 
             # pre-build stage
             for ops in self.plan:
@@ -325,17 +325,11 @@ class TensorGraph(object):
             x = p.stack()
             self.probe_arrays += [x]
 
-    def build_inputs(self, rng):
+    def build_inputs(self):
         """Sets up the inputs in the model (which will be computed outside of
         Tensorflow and fed in each simulation block).
-
-        Parameters
-        ----------
-        rng : :class:`~numpy:numpy.random.RandomState`
-            the Simulator's random number generator
         """
 
-        self.invariant_funcs = {}
         self.invariant_ph = {}
         for n in self.invariant_inputs:
             if self.model.sig[n]["out"] in self.sig_map:
@@ -347,18 +341,6 @@ class TensorGraph(object):
                 # set up a placeholder input for this node
                 self.invariant_ph[n] = tf.placeholder(
                     self.dtype, (None, n.size_out, self.minibatch_size))
-
-            # build the node functions, which will be called offline to
-            # generate the input values
-            if isinstance(n.output, Process):
-                self.invariant_funcs[n] = n.output.make_step(
-                    (n.size_in,), (n.size_out,), self.dt,
-                    n.output.get_rng(rng))
-            elif n.size_out > 0:
-                self.invariant_funcs[n] = utils.align_func(
-                    (n.size_out,), self.dtype)(n.output)
-            else:
-                self.invariant_funcs[n] = n.output
 
     def build_optimizer(self, optimizer, targets, objective):
         """Adds elements into the graph to execute the given optimizer.

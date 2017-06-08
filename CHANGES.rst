@@ -21,6 +21,10 @@ Release History
 0.4.1 (unreleased)
 ------------------
 
+**Fixed**
+
+- Fixed bug related to changing the output of a Node after the model is
+  constructed (`#4 <https://github.com/nengo/nengo_dl/issues/4)>`_)
 
 0.4.0 (June 8, 2017)
 --------------------

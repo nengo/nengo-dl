@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import itertools
 import os
 import shutil
 
@@ -576,3 +577,32 @@ def test_deprecation(Simulator):
 
     with pytest.warns(DeprecationWarning):
         Simulator(None, unroll_simulation=True)
+
+
+@pytest.mark.parametrize(
+    "pre_val, post_val", itertools.product(
+        [0, lambda t: 0, nengo.processes.WhiteNoise(seed=0)],
+        [1, lambda t: 1, nengo.processes.WhiteNoise(seed=1)]))
+def test_node_output_change(Simulator, pre_val, post_val, seed):
+    with nengo.Network(seed=seed) as net:
+        inp = nengo.Node(pre_val)
+        p = nengo.Probe(inp)
+
+    with Simulator(net, unroll_simulation=1) as sim:
+        sim.step()
+        inp.output = post_val
+        sim.step()
+        inp.output = pre_val
+        sim.step()
+
+    if isinstance(pre_val, nengo.Process):
+        step0, step2 = pre_val.run_steps(2)[:, 0]
+    else:
+        step0 = step2 = 0
+
+    if isinstance(post_val, nengo.Process):
+        step1 = post_val.run_steps(1)[0, 0]
+    else:
+        step1 = 1
+
+    assert np.allclose(sim.data[p][:, 0], (step0, step1, step2))
