@@ -18,15 +18,17 @@ Release History
    - Removed
    - Fixed
 
-0.4.0 (unreleased)
-------------------
+0.4.0 (June 8, 2017)
+--------------------
 
 **Added**
 
 - Added ability to manually specify which parts of a model are trainable
-  (see the `documentation <https://nengo.github.io/nengo_dl/training.html>`_)
-- Added some code examples (see the ``<nengo_dl/examples`` directory, or the
-  `documentation <https://nengo.github.io/nengo_dl/examples.html>`_)
+  (see the `sim.train documentation
+  <https://nengo.github.io/nengo_dl/training.html>`_)
+- Added some code examples (see the ``docs/examples`` directory, or the
+  `pre-built examples in the documentation
+  <https://nengo.github.io/nengo_dl/examples.html>`_)
 - Added the SoftLIFRate neuron type for training LIF networks (based on
   `this paper <https://arxiv.org/abs/1510.08829>`_)
 
