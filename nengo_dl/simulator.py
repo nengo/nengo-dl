@@ -76,6 +76,10 @@ class Simulator(object):
          "need to set `unroll_simulation` to ensure node runs the correct "
          "number of times (see "
          "tests/test_nengo_tests.py:test_unconnected_node"),
+
+        # TODO: put this test back in when we bump nengo version
+        ("nengo/utils/tests/test_ensemble.py:test_tuning_curves[*",
+         "this test is not compatible with numpy>=1.13"),
     ]
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
