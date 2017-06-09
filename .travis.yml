@@ -28,7 +28,7 @@ env:
       NENGO_VERSION="git+https://github.com/nengo/nengo.git"
     - MODE="examples"
     - NENGO_DL_TEST_PRECISION="64"
-    - NENGO_DL_TEST_UNROLL="10"
+    - NENGO_DL_TEST_UNROLL="5"
     - PYTHON_VERSION="2.7"
     - PYTHON_VERSION="3.4"
     - PYTHON_VERSION="3.6"
@@ -83,7 +83,7 @@ script:
     elif [[ "$MODE" == "examples" ]]; then
       py.test -v --durations 20 --nbval-lax docs/examples;
     else
-      py.test -v --pyargs nengo && py.test -v --durations 20 nengo_dl;
+      py.test -v -n 2 --pyargs nengo && py.test -v -n 2 --durations 20 nengo_dl;
     fi
 
 # upload results
