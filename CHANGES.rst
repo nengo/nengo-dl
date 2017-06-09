@@ -21,6 +21,12 @@ Release History
 0.4.1 (unreleased)
 ------------------
 
+**Added**
+
+- Added ``nengo_dl.tensor_layer`` to help with the construction of
+  layer-style TensorNodes (see the `TensorNode documentation
+  <https://nengo.github.io/nengo_dl/tensor_node.html>`_)
+
 **Fixed**
 
 - Fixed bug related to changing the output of a Node after the model is

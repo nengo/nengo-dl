@@ -40,7 +40,8 @@ from nengo_dl import (  # noqa: F401
 
 # import into top-level namespace
 from nengo_dl.simulator import Simulator  # noqa: F401
-from nengo_dl.tensor_node import TensorNode  # noqa: F401
+from nengo_dl.tensor_node import (  # noqa: F401
+    TensorNode, tensor_layer, reshaped)
 from nengo_dl.utils import configure_trainable  # noqa: F401
 from nengo_dl.neurons import SoftLIFRate  # noqa: F401
 

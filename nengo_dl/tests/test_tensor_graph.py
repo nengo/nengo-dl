@@ -101,7 +101,8 @@ def test_mark_signals():
     model = nengo.builder.Model()
     model.build(net)
 
-    tensor_graph.mark_signals(model)
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
+    tg.mark_signals()
 
     assert model.sig[ens0]["encoders"].trainable
     assert model.sig[ens1]["encoders"].trainable
@@ -153,7 +154,9 @@ def test_mark_signals_config():
 
     model = nengo.builder.Model()
     model.build(net)
-    tensor_graph.mark_signals(model)
+
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
+    tg.mark_signals()
 
     assert not model.sig[ens0]["encoders"].trainable
     assert model.sig[ens0.neurons]["bias"].trainable
@@ -174,8 +177,9 @@ def test_mark_signals_config():
     model = nengo.builder.Model()
     model.build(net)
 
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
     with pytest.warns(UserWarning):
-        tensor_graph.mark_signals(model)
+        tg.mark_signals()
 
     assert model.sig[conn0]["weights"].trainable
 
@@ -190,8 +194,9 @@ def test_mark_signals_config():
     model = nengo.builder.Model()
     model.build(net)
 
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
     with pytest.warns(UserWarning):
-        tensor_graph.mark_signals(model)
+        tg.mark_signals()
 
     assert model.sig[ens]["encoders"].trainable
 
@@ -201,7 +206,8 @@ def test_mark_signals_config():
     model = nengo.builder.Model()
     model.add_op(op)
 
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
     with pytest.warns(UserWarning):
-        tensor_graph.mark_signals(model)
+        tg.mark_signals()
 
     assert not sig.trainable

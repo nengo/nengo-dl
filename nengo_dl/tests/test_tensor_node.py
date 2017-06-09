@@ -5,6 +5,7 @@ import pytest
 import tensorflow as tf
 
 import nengo_dl
+from nengo_dl import TensorNode, configure_trainable, reshaped, tensor_layer
 
 
 def test_validation():
@@ -77,3 +78,53 @@ def test_pre_build():
         sim.reset()
         sim.step()
         assert np.allclose(sim.data[p], [[2, 2, 2]])
+
+
+def test_reshaped():
+    x = tf.zeros((5, 12))
+
+    @reshaped((4, 3))
+    def my_func(_, a):
+        with tf.control_dependencies([tf.assert_equal(tf.shape(a),
+                                                      (5, 4, 3))]):
+            return tf.identity(a)
+
+    y = my_func(None, x)
+
+    with tf.Session() as sess:
+        sess.run(y)
+
+
+def test_tensor_layer(Simulator):
+    with nengo.Network() as net:
+        inp = nengo.Node(np.arange(12))
+
+        layer0 = tensor_layer(inp, tf.identity, transform=2)
+
+        assert isinstance(layer0, TensorNode)
+        p0 = nengo.Probe(layer0)
+
+        layer1 = tensor_layer(
+            layer0, lambda x, axis: tf.reduce_sum(x, axis=axis), axis=1,
+            shape_in=(2, 6))
+        assert layer1.size_out == 6
+        p1 = nengo.Probe(layer1)
+
+        layer2 = tensor_layer(layer1, nengo.RectifiedLinear(), gain=[1] * 6,
+                              bias=[-20] * 6)
+        assert isinstance(layer2, nengo.ensemble.Neurons)
+        assert np.allclose(layer2.ensemble.gain, 1)
+        assert np.allclose(layer2.ensemble.bias, -20)
+        p2 = nengo.Probe(layer2)
+
+    with Simulator(net, minibatch_size=2) as sim:
+        sim.step()
+
+    x = np.arange(12) * 2
+    assert np.allclose(sim.data[p0], x)
+
+    x = np.sum(np.reshape(x, (2, 6)), axis=0)
+    assert np.allclose(sim.data[p1], x)
+
+    x = np.maximum(x - 20, 0)
+    assert np.allclose(sim.data[p2], x)

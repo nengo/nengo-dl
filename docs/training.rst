@@ -192,8 +192,8 @@ By default, NengoDL will optimize the following elements in a model:
 
 These elements will *not* be optimized if they are targeted by an online
 learning rule.  For example, :class:`nengo:nengo.PES` modifies connection
-weights as a model is running.  If we tried to optimize those weights with
-some offline training method as well then those two processes would conflict
+weights as a model is running.  If we also tried to optimize those weights with
+some offline training method then those two processes would conflict
 with each other, likely resulting in unintended effects.  So NengoDL will
 assume that those elements should not be optimized.
 

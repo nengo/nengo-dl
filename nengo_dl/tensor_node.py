@@ -1,7 +1,8 @@
-from nengo import Node, builder
+from nengo import Node, Connection, Ensemble, builder
 from nengo.base import NengoObject
 from nengo.builder.operator import Reset
 from nengo.exceptions import ValidationError, SimulationError
+from nengo.neurons import NeuronType
 from nengo.params import Default, IntParam, Parameter
 import numpy as np
 import tensorflow as tf
@@ -219,3 +220,84 @@ class SimTensorNodeBuilder(OpBuilder):
             output, [output_dim] + [i for i in range(output_dim)])
 
         signals.scatter(self.dst_data, output)
+
+
+def reshaped(shape_in):
+    """A decorator to reshape the inputs to a function into non-vector shapes.
+
+    The output of the function will be flatten back into (batched) vectors.
+
+    Parameters
+    ----------
+    shape_in : tuple of int
+        the desired shape for inputs to the function (not including the first
+        dimension, which corresponds to the batch axis)
+
+    Returns
+    -------
+    callable
+        the decorated function
+    """
+
+    def reshape_dec(func):
+        def reshaped_func(t, x):
+            batch_size = x.get_shape()[0].value
+            x = tf.reshape(x, (batch_size,) + shape_in)
+            x = func(t, x)
+            x = tf.reshape(x, (batch_size, -1))
+            return x
+
+        return reshaped_func
+
+    return reshape_dec
+
+
+def tensor_layer(input, layer_func, shape_in=None, synapse=None,
+                 transform=1, **layer_args):
+    """A utility function to construct TensorNodes that apply some function
+    to their input (analogous to the ``tf.layers`` syntax).
+
+    Parameters
+    ----------
+    input : :class:`~nengo:nengo.base.NengoObject`
+        object providing input to the layer
+    layer_func : callable or :class:`~nengo:nengo.neurons.NeuronType`
+        a function that takes the value from ``input`` (represented as a
+        ``tf.Tensor``) and maps it to some output value. or a Nengo neuron
+        type, defining a nonlinearity that will be applied to ``input``
+    shape_in : tuple of int, optional
+        if not None, reshape the input to the given shape
+    synapse : float or :class:`~nengo:nengo.synapses.Synapse`, optional
+        synapse to apply on connection from ``input`` to this layer
+    transform : :class:`~numpy:numpy.ndarray`, optional
+        transform matrix to apply on connection from ``input`` to this layer
+    layer_args : dict, optional
+        these arguments will be passed to ``layer_func`` if it is callable, or
+        :class:`~nengo:nengo.Ensemble` if ``layer_func`` is a
+        :class:`~nengo:nengo.neurons.NeuronType`
+
+    Returns
+    -------
+    :class:`.TensorNode` or :class:`~nengo:nengo.ensemble.Neurons`
+        a TensorNode that implements the given layer function (if
+        ``layer_func`` was a callable), or a Neuron object with the given
+        neuron type, connected to ``input``
+    """
+
+    if isinstance(layer_func, NeuronType):
+        node = Ensemble(input.size_out, 1, neuron_type=layer_func,
+                        **layer_args).neurons
+    else:
+        # add (ignored) time input and pass kwargs
+        def node_func(_, x):
+            return layer_func(x, **layer_args)
+
+        # reshape input if necessary
+        if shape_in is not None:
+            node_func = reshaped(shape_in)(node_func)
+
+        node = TensorNode(node_func, size_in=input.size_out)
+
+    Connection(input, node, synapse=synapse, transform=transform)
+
+    return node

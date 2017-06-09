@@ -202,7 +202,7 @@ minibatch:
 
     with nengo_dl.Simulator(net, minibatch_size=mini) as sim:
         sim.run_steps(n_steps, input_feeds={
-            node: np.ones((mini, n_steps, 1)) + np.arange(mini)[:, None, None]})
+            node: np.zeros((mini, n_steps, 1)) + np.arange(mini)[:, None, None]})
         print(sim.data[p])
     >>> [[[ 0.] [ 0.] [ 0.] [ 0.] [ 0.]]
          [[ 1.] [ 1.] [ 1.] [ 1.] [ 1.]]
