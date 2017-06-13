@@ -36,6 +36,7 @@ Release History
   simulation/training speed
 - The default graph planner can now be modified by setting the ``planner``
   attribute on the top-level Network config
+- Added TensorFlow implementation for general linear synapses
 
 **Changed**
 

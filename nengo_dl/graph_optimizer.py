@@ -1,7 +1,7 @@
 from collections import OrderedDict, defaultdict
 import logging
 
-from nengo.synapses import Lowpass
+from nengo.synapses import Lowpass, LinearFilter
 from nengo.builder.learning_rules import SimVoja, SimOja, SimBCM
 from nengo.builder.operator import (SimPyFunc, ElementwiseInc, DotInc, Reset,
                                     Copy)
@@ -113,10 +113,22 @@ def mergeable(op, chosen_ops):
         # we can merge ops if they have a custom implementation, or merge
         # generic processes, but can't mix the two
         custom_impl = process_builders.SimProcessBuilder.TF_PROCESS_IMPL
-        if type(c.process) in custom_impl:
-            if type(c.process) != type(op.process):
-                return False
-        elif type(op.process) in custom_impl:
+        if isinstance(op.process, custom_impl):
+            if type(op.process) == Lowpass:
+                # lowpass ops can only be merged with other lowpass ops, since
+                # they have a custom implementation
+                if type(c.process) != Lowpass:
+                    return False
+            elif isinstance(op.process, LinearFilter):
+                # we can only merge linearfilters that have the same state
+                # dimensionality and the same signal dimensionality
+                if (not isinstance(c.process, LinearFilter) or
+                        len(c.process.den) != len(op.process.den) or
+                        op.input.shape[0] != c.input.shape[0]):
+                    return False
+            else:
+                raise NotImplementedError
+        elif isinstance(c.process, custom_impl):
             return False
 
         # processes must also have the same mode

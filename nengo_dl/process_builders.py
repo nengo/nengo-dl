@@ -1,10 +1,13 @@
 import logging
+import warnings
 
 from nengo.builder.processes import SimProcess
-from nengo.synapses import Lowpass
-from nengo.utils.filter_design import cont2discrete
+from nengo.synapses import Lowpass, LinearFilter
+from nengo.utils.filter_design import (cont2discrete, tf2ss, ss2tf,
+                                       BadCoefficients)
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.ops import gen_sparse_ops
 
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
@@ -25,7 +28,7 @@ class SimProcessBuilder(OpBuilder):
         the process types that have a custom implementation
     """
 
-    TF_PROCESS_IMPL = (Lowpass,)
+    TF_PROCESS_IMPL = (Lowpass, LinearFilter)
     pass_rng = True
 
     def __init__(self, ops, signals, rng):
@@ -36,18 +39,20 @@ class SimProcessBuilder(OpBuilder):
         logger.debug("output %s", [op.output for op in ops])
         logger.debug("t %s", [op.t for op in ops])
 
-        process_type = type(ops[0].process)
-
         # if we have a custom tensorflow implementation for this process type,
         # then we build that. otherwise we'll just execute the process step
         # function externally (using `tf.py_func`), so we just need to set up
         # the inputs/outputs for that.
-        if process_type in self.TF_PROCESS_IMPL:
+
+        if isinstance(ops[0].process, self.TF_PROCESS_IMPL):
             # note: we do this two-step check (even though it's redundant) to
             # make sure that TF_PROCESS_IMPL is kept up to date
 
-            if process_type == Lowpass:
+            if type(ops[0].process) == Lowpass:
                 self.built_process = LowpassBuilder(ops, signals)
+            elif isinstance(ops[0].process, LinearFilter):
+                self.built_process = LinearFilterBuilder(ops, signals)
+                # self.built_process = GenericProcessBuilder(ops, signals, rng)
         else:
             self.built_process = GenericProcessBuilder(ops, signals, rng)
 
@@ -66,6 +71,7 @@ class GenericProcessBuilder(object):
     simulation, so any performance-critical processes should consider
     adding a custom Tensorflow implementation for their type instead.
     """
+
     def __init__(self, ops, signals, rng):
         self.input_data = (None if ops[0].input is None else
                            signals.combine([op.input for op in ops]))
@@ -127,10 +133,7 @@ class LowpassBuilder(object):
     """Build a group of :class:`~nengo:nengo.Lowpass` synapse operators."""
 
     def __init__(self, ops, signals):
-        # TODO: implement general linear filter (using queues?)
-
-        self.input_data = (None if ops[0].input is None else
-                           signals.combine([op.input for op in ops]))
+        self.input_data = signals.combine([op.input for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
 
         nums = []
@@ -174,3 +177,117 @@ class LowpassBuilder(object):
         output = signals.gather(self.output_data)
         signals.scatter(self.output_data,
                         self.dens * output + self.nums * input)
+
+
+class LinearFilterBuilder(object):
+    """Build a group of :class:`~nengo:nengo.LinearFilter` synapse
+    operators."""
+
+    def __init__(self, ops, signals):
+        self.input_data = signals.combine([op.input for op in ops])
+        self.output_data = signals.combine([op.output for op in ops])
+
+        self.n_ops = len(ops)
+        self.signal_d = ops[0].input.shape[0]
+        As = []
+        Cs = []
+        Ds = []
+        # compute the A/C/D matrices for each operator
+        for op in ops:
+            A, B, C, D = tf2ss(op.process.num, op.process.den)
+
+            if op.process.analog:
+                # convert to discrete system
+                A, B, C, D, _ = cont2discrete((A, B, C, D), signals.dt_val,
+                                              method="zoh")
+
+            # convert to controllable form
+            num, den = ss2tf(A, B, C, D)
+
+            if op.process.analog:
+                # add shift
+                num = np.concatenate((num, [[0]]), axis=1)
+
+            with warnings.catch_warnings():
+                # ignore the warning about B, since we aren't using it anyway
+                warnings.simplefilter("ignore", BadCoefficients)
+                A, _, C, D = tf2ss(num, den)
+
+            As.append(A)
+            Cs.append(C[0])
+            Ds.append(D.item())
+
+        self.state_d = sum(x.shape[0] for x in Cs)
+
+        # build a sparse matrix containing the A matrices as blocks
+        # along the diagonal
+        sparse_indices = []
+        corner = np.zeros(2, dtype=np.int64)
+        for A in As:
+            idxs = np.reshape(np.dstack(np.meshgrid(
+                np.arange(A.shape[0]), np.arange(A.shape[1]),
+                indexing="ij")), (-1, 2))
+            idxs += corner
+            corner += A.shape
+            sparse_indices += [idxs]
+        sparse_indices = np.concatenate(sparse_indices, axis=0)
+        self.A = tf.constant(np.concatenate(As, axis=0).flatten(),
+                             dtype=signals.dtype)
+        self.A_indices = tf.constant(sparse_indices, dtype=(
+            tf.int32 if np.all(sparse_indices < np.iinfo(np.int32).max)
+            else tf.int64))
+        self.A_shape = tf.constant(corner, dtype=tf.int64)
+
+        if np.allclose(Cs, 0):
+            self.C = None
+        else:
+            # add empty dimension for broadcasting
+            self.C = tf.constant(np.concatenate(Cs)[:, None],
+                                 dtype=signals.dtype)
+
+        if np.allclose(Ds, 0):
+            self.D = None
+        else:
+            # add empty dimension for broadcasting
+            self.D = tf.constant(np.asarray(Ds)[:, None], dtype=signals.dtype)
+
+        self.offsets = tf.range(0, len(ops) * As[0].shape[0], As[0].shape[0])
+
+        # create a variable to represent the internal state of the filter
+        with tf.variable_scope(utils.sanitize_name(str(op.process)),
+                               reuse=False):
+            self.state = tf.get_local_variable(
+                "state", shape=(self.state_d,
+                                signals.minibatch_size * self.signal_d),
+                dtype=signals.dtype, trainable=False,
+                initializer=tf.zeros_initializer())
+
+    def build_step(self, signals):
+        input = signals.gather(self.input_data)
+        input = tf.reshape(input, (self.n_ops, -1))
+
+        if self.C is None:
+            output = tf.zeros_like(input)
+        else:
+            output = self.state * self.C
+            output = tf.reshape(
+                output, (self.n_ops, -1,
+                         signals.minibatch_size * self.signal_d))
+            output = tf.reduce_sum(output, axis=1)
+
+        if self.D is not None:
+            output += self.D * input
+
+        r = gen_sparse_ops._sparse_tensor_dense_mat_mul(
+            self.A_indices, self.A, self.A_shape, self.state)
+
+        # make sure that the values based on state have been computed before
+        # we update the state
+        with tf.control_dependencies([output, r]):
+            self.state = tf.assign(self.state, r)
+            self.state = tf.scatter_add(self.state, self.offsets, input)
+
+        # make sure that the state update ops run before the next time we
+        # apply the filter
+        with tf.control_dependencies([self.state]):
+            signals.scatter(self.output_data, output)

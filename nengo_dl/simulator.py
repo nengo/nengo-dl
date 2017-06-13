@@ -80,6 +80,10 @@ class Simulator(object):
         # TODO: put this test back in when we bump nengo version
         ("nengo/utils/tests/test_ensemble.py:test_tuning_curves[*",
          "this test is not compatible with numpy>=1.13"),
+
+        ("nengo/tests/test_synapses.py:test_alpha",
+         "need to set looser tolerances due to float32 implementation (see "
+         "tests/test_processes.py:test_alpha"),
     ]
 
     def __init__(self, network, dt=0.001, seed=None, model=None,

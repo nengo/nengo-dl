@@ -608,10 +608,10 @@ def test_check_gradients_error(Simulator):
             sim.check_gradients()
 
     # check_gradients detects errors in gradient (in this case caused by the
-    # fact that nengo.Alpha doesn't have a TensorFlow implementation)
+    # fact that nengo.Triangle doesn't have a TensorFlow implementation)
     with nengo.Network() as net:
         x = nengo.Node([0])
-        nengo.Probe(x, synapse=nengo.Alpha(0.1))
+        nengo.Probe(x, synapse=nengo.Triangle(0.1))
 
     with Simulator(net) as sim:
         with pytest.raises(SimulationError):

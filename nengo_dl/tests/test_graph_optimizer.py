@@ -1,6 +1,6 @@
 from nengo.exceptions import BuildError
 from nengo.neurons import LIF, LIFRate, Izhikevich, AdaptiveLIF
-from nengo.synapses import Lowpass, Triangle, Alpha
+from nengo.synapses import Lowpass, Triangle, Alpha, LinearFilter
 from nengo.builder.learning_rules import SimBCM
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.operator import (SimPyFunc, DotInc, Copy, Reset,
@@ -20,8 +20,8 @@ from nengo_dl.tensor_node import SimTensorNode
 
 
 @pytest.fixture(
-    params=[greedy_planner, tree_planner] +
-    ([transitive_planner] if nengo_version >= (2, 4, 0) else []))
+    params=[greedy_planner, tree_planner] + (
+        [transitive_planner] if nengo_version >= (2, 4, 0) else []))
 def planner(request):
     return request.param
 
@@ -175,19 +175,27 @@ def test_mergeable():
         SimProcess(Lowpass(0), None, None, DummySignal(), mode="inc"),
         [SimProcess(Lowpass(0), None, None, DummySignal(), mode="set")])
 
-    # check matching TF_PROCESS_IMPL
-    # note: we only have one item in TF_PROCESS_IMPL at the moment, so no
-    # such thing as a mismatch
+    # check that lowpass match
     assert mergeable(SimProcess(Lowpass(0), None, None, DummySignal()),
                      [SimProcess(Lowpass(0), None, None, DummySignal())])
 
-    # check custom vs non custom
+    # check that lowpass and linear don't match
     assert not mergeable(SimProcess(Lowpass(0), None, None, DummySignal()),
+                         [SimProcess(Alpha(0), None, None, DummySignal())])
+
+    # check that two linear do match
+    assert mergeable(
+        SimProcess(Alpha(0.1), DummySignal(), None, DummySignal()),
+        [SimProcess(LinearFilter([1], [1, 1, 1]), DummySignal(), None,
+                    DummySignal())])
+
+    # check custom and non-custom don't match
+    assert not mergeable(SimProcess(Triangle(0), None, None, DummySignal()),
                          [SimProcess(Alpha(0), None, None, DummySignal())])
 
     # check non-custom matching
     assert mergeable(SimProcess(Triangle(0), None, None, DummySignal()),
-                     [SimProcess(Alpha(0), None, None, DummySignal())])
+                     [SimProcess(Triangle(0), None, None, DummySignal())])
 
     # simtensornode
     a = SimTensorNode(None, DummySignal(), None, DummySignal())

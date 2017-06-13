@@ -57,6 +57,10 @@ def _test_variance_scaling(dist, scale, mode, seed):
         assert np.allclose(np.var(samples), tnorm_var(std, 2 * std),
                            rtol=5e-3)
 
+    # test with default rng
+    samples = dist.sample(shape[0], shape[1])
+    assert samples.shape == shape
+
 
 @pytest.mark.parametrize(
     "scale, mode, distribution",
@@ -97,3 +101,7 @@ def test_truncated_normal(limit, stddev, seed):
     assert np.allclose(np.var(samples), tnorm_var(stddev, limit), rtol=5e-3)
     assert np.all(samples < limit)
     assert np.all(samples > -limit)
+
+    # test with default rng
+    samples = dist.sample(1000, 2000)
+    assert samples.shape == (1000, 2000)
