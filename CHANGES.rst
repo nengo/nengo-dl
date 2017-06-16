@@ -30,6 +30,10 @@ Release History
   that can run in spiking neurons
   <https://nengo.github.io/nengo_dl/examples/spiking_mnist.html>`_
 
+**Changed**
+
+- Increased minimum TensorFlow version to 1.2.0
+
 **Fixed**
 
 - Fixed bug related to changing the output of a Node after the model is

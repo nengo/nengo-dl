@@ -281,28 +281,6 @@ which differ from the standard config behaviour:
            conf[nengo.Ensemble].trainable = False
 
 
-Limitations
------------
-
-- Almost all deep learning methods require the network to be differentiable,
-  which means that trying to train a network with non-differentiable elements
-  will result in an error or poor training.  Examples of common
-  non-differentiable elements include :class:`nengo:nengo.LIF`,
-  :class:`nengo:nengo.Direct`, or processes/neurons that don't have a
-  custom TensorFlow implementation (see
-  :class:`.processes.SimProcessBuilder`/
-  :class:`.neurons.SimNeuronsBuilder`)
-
-- Most TensorFlow optimizers do not have GPU support for networks with
-  sparse reads, which are a common element in Nengo models.  If your
-  network contains sparse reads then training will have to be
-  executed on the CPU (by creating the simulator via
-  ``nengo_dl.Simulator(..., device="/cpu:0")``), or is limited to
-  optimizers with GPU support (currently this is only
-  ``tf.train.GradientDescentOptimizer``). Follow `this issue
-  <https://github.com/tensorflow/tensorflow/issues/2314>`_ for updates
-  on Tensorflow GPU support.
-
 Examples
 --------
 .. toctree::

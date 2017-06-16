@@ -373,29 +373,19 @@ class Simulator(object):
 
         Notes
         -----
-        - Deep learning methods require the network to be differentiable, which
-          means that trying to train a network with non-differentiable elements
-          will result in an error.  Examples of common non-differentiable
-          elements include :class:`~nengo:nengo.LIF`,
-          :class:`~nengo:nengo.Direct`, or processes/neurons that don't have a
-          custom TensorFlow implementation (see
-          :class:`.processes.SimProcessBuilder`/
-          :class:`.neurons.SimNeuronsBuilder`)
-
-        - Most TensorFlow optimizers do not have GPU support for networks with
-          sparse reads, which are a common element in Nengo models.  If your
-          network contains sparse reads then training will have to be
-          executed on the CPU (by creating the simulator via
-          ``nengo_dl.Simulator(..., device="/cpu:0")``), or is limited to
-          optimizers with GPU support (currently this is only
-          ``tf.train.GradientDescentOptimizer``). Follow `this issue
-          <https://github.com/tensorflow/tensorflow/issues/2314>`_ for updates
-          on Tensorflow GPU support.
+        Most deep learning methods require the network to be differentiable,
+        which means that trying to train a network with non-differentiable
+        elements will result in an error.  Examples of common
+        non-differentiable elements include :class:`~nengo:nengo.LIF`,
+        :class:`~nengo:nengo.Direct`, or processes/neurons that don't have a
+        custom TensorFlow implementation (see
+        :class:`.processes.SimProcessBuilder`/
+        :class:`.neurons.SimNeuronsBuilder`)
         """
 
         # TODO: we could save the internal state of the simulator before
-        # training and then restore it afterwards, so that calling train doesn't
-        # reset a run
+        # training and then restore it afterwards, so that calling train
+        # doesn't reset a run
 
         batch_size, n_steps = next(iter(inputs.values())).shape[:2]
 
@@ -428,13 +418,10 @@ class Simulator(object):
                     shuffle=shuffle):
                 # TODO: set up queue to feed in data more efficiently
                 self.soft_reset()
-                try:
-                    self.sess.run([opt_op], feed_dict=self._fill_feed(
-                        n_steps, inp, tar))
-                except tf.errors.InvalidArgumentError:
-                    raise SimulationError(
-                        "TensorFlow does not yet support this optimizer on "
-                        "the GPU; try `Simulator(..., device='/cpu:0')`")
+
+                self.sess.run([opt_op], feed_dict=self._fill_feed(
+                    n_steps, inp, tar))
+
                 progress.step()
 
         self.soft_reset()
