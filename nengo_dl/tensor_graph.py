@@ -260,9 +260,9 @@ class TensorGraph(object):
                 [(k, v) for k, v in zip(self.base_arrays_init.keys(),
                                         base_vars)])
 
-            for n in range(self.unroll):
-                logger.debug("BUILDING ITERATION %d", n)
-                with self.graph.name_scope("iteration_%d" % n):
+            for iter in range(self.unroll):
+                logger.debug("BUILDING ITERATION %d", iter)
+                with self.graph.name_scope("iteration_%d" % iter):
                     # note: nengo step counter is incremented at the beginning
                     # of the timestep
                     step += 1
@@ -281,7 +281,12 @@ class TensorGraph(object):
                     # previous timestep are executed before the next step
                     # starts
                     with self.graph.control_dependencies([loop_i]):
-                        probe_tensors, side_effects = self.build_step()
+                        # note: we use the variable scope to make sure that we
+                        # aren't accidentally creating new variables for
+                        # unrolled iterations (this is really only a concern
+                        # with TensorNodes)
+                        with tf.variable_scope("", reuse=iter > 0):
+                            probe_tensors, side_effects = self.build_step()
 
                     # copy probe data to array
                     for i, p in enumerate(probe_tensors):

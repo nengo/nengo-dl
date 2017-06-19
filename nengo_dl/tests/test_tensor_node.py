@@ -4,34 +4,33 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-import nengo_dl
 from nengo_dl import TensorNode, configure_trainable, reshaped, tensor_layer
 
 
 def test_validation():
     with nengo.Network() as net:
         with pytest.raises(ValidationError):
-            nengo_dl.TensorNode([0])
+            TensorNode([0])
 
         with pytest.raises(ValidationError):
-            nengo_dl.TensorNode(lambda t: t, size_out=0)
+            TensorNode(lambda t: t, size_out=0)
 
         with pytest.raises(ValidationError):
-            nengo_dl.TensorNode(lambda a, b, c: a)
+            TensorNode(lambda a, b, c: a)
 
         with pytest.raises(ValidationError):
-            nengo_dl.TensorNode(lambda x: None)
+            TensorNode(lambda x: None)
 
         with pytest.raises(ValidationError):
-            nengo_dl.TensorNode(lambda x: [0])
+            TensorNode(lambda x: [0])
 
         with pytest.raises(ValidationError):
-            nengo_dl.TensorNode(lambda t: tf.zeros((2, 2, 2)))
+            TensorNode(lambda t: tf.zeros((2, 2, 2)))
 
-        n = nengo_dl.TensorNode(lambda t: tf.zeros((5, 2)))
+        n = TensorNode(lambda t: tf.zeros((5, 2)))
         assert n.size_out == 2
 
-        n = nengo_dl.TensorNode(lambda t: tf.zeros((5, 2)), size_out=4)
+        n = TensorNode(lambda t: tf.zeros((5, 2)), size_out=4)
         assert n.size_out == 4
 
     with nengo.Simulator(net) as sim:
@@ -39,39 +38,39 @@ def test_validation():
             sim.step()
 
 
-def test_node():
+def test_node(Simulator):
     minibatch_size = 3
     with nengo.Network() as net:
-        node0 = nengo_dl.TensorNode(lambda t: tf.tile(tf.reshape(t, (1, -1)),
-                                                      (minibatch_size, 1)))
-        node1 = nengo_dl.TensorNode(lambda t, x: tf.sin(x), size_in=1)
+        node0 = TensorNode(lambda t: tf.tile(tf.reshape(t, (1, -1)),
+                                             (minibatch_size, 1)))
+        node1 = TensorNode(lambda t, x: tf.sin(x), size_in=1)
         nengo.Connection(node0, node1, synapse=None)
 
         p0 = nengo.Probe(node0)
         p1 = nengo.Probe(node1)
 
-    with nengo_dl.Simulator(net, minibatch_size=minibatch_size) as sim:
+    with Simulator(net, minibatch_size=minibatch_size) as sim:
         sim.run_steps(10)
 
     assert np.allclose(sim.data[p0], sim.trange()[None, :, None])
     assert np.allclose(sim.data[p1], np.sin(sim.trange()[None, :, None]))
 
 
-def test_pre_build():
+def test_pre_build(Simulator):
     class TestFunc:
         def pre_build(self, size_in, size_out):
             self.weights = tf.Variable(tf.ones((size_in[1], size_out[1])))
 
         def __call__(self, t, x):
-            return tf.matmul(x, self.weights)
+            return tf.matmul(x, tf.cast(self.weights, x.dtype))
 
     with nengo.Network() as net:
         inp = nengo.Node([1, 1])
-        test = nengo_dl.TensorNode(TestFunc(), size_in=2, size_out=3)
+        test = TensorNode(TestFunc(), size_in=2, size_out=3)
         nengo.Connection(inp, test, synapse=None)
         p = nengo.Probe(test)
 
-    with nengo_dl.Simulator(net) as sim:
+    with Simulator(net) as sim:
         sim.step()
         assert np.allclose(sim.data[p], [[2, 2, 2]])
 
@@ -128,3 +127,32 @@ def test_tensor_layer(Simulator):
 
     x = np.maximum(x - 20, 0)
     assert np.allclose(sim.data[p2], x)
+
+
+def test_reuse_vars(Simulator):
+    def my_func(t, x):
+        # note: the control dependencies thing is due to some weird tensorflow
+        # issue with creating variables inside while loops
+        with tf.control_dependencies(None):
+            w = tf.get_variable("weights", initializer=tf.constant(2.0))
+
+        return x * tf.cast(w, x.dtype)
+
+    with nengo.Network() as net:
+        configure_trainable(net, default=False)
+
+        inp = nengo.Node([1])
+        node = TensorNode(my_func, size_in=1)
+        p = nengo.Probe(node)
+        nengo.Connection(inp, node, synapse=None)
+
+    with Simulator(net, unroll_simulation=5) as sim:
+        sim.run_steps(5)
+        assert np.allclose(sim.data[p], 2)
+
+        with sim.tensor_graph.graph.as_default():
+            vars = tf.trainable_variables()
+
+        assert len(vars) == 1
+        assert vars[0].get_shape() == ()
+        assert sim.sess.run(vars[0]) == 2

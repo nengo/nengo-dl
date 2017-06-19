@@ -42,6 +42,8 @@ Release History
   parameters more reliable)
 - Configuring whether or not a model element is trainable does not affect
   whether or not that element is minibatched
+- Correctly reuse variables created inside a TensorNode when
+  ``unroll_simulation`` > 1
 
 0.4.0 (June 8, 2017)
 --------------------
