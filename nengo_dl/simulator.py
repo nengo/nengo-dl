@@ -637,36 +637,51 @@ class Simulator(object):
             # update stored probe data
             self.model.params[p] += [probe_data[i]]
 
-    def save_params(self, path):
-        """Save trainable network parameters to the given ``path``.
+    def save_params(self, path, include_local=False):
+        """Save network parameters to the given ``path``.
 
         Parameters
         ----------
         path : str
             filepath of parameter output file
+        include_local : bool, optional
+            if True, also save local (non-trainable) network variables
         """
         if self.closed:
             raise SimulationError("Simulation has been closed, cannot save "
                                   "parameters")
 
         with self.tensor_graph.graph.as_default():
-            path = tf.train.Saver().save(self.sess, path)
+            vars = tf.global_variables()
+            if include_local:
+                vars.extend(tf.local_variables())
+
+            path = tf.train.Saver(vars).save(self.sess, path)
+
         logger.info("Model parameters saved to %s", path)
 
-    def load_params(self, path):
-        """Load trainable network parameters from the given ``path``.
+    def load_params(self, path, include_local=False):
+        """Load network parameters from the given ``path``.
 
         Parameters
         ----------
         path : str
             filepath of parameter input file
+        include_local : bool, optional
+            if True, also load local (non-trainable) network variables
         """
         if self.closed:
             raise SimulationError("Simulation has been closed, cannot load "
                                   "parameters")
 
         with self.tensor_graph.graph.as_default():
-            tf.train.Saver().restore(self.sess, path)
+            vars = tf.global_variables()
+            if include_local:
+                vars.extend(tf.local_variables())
+
+            tf.train.Saver(vars).restore(self.sess, path)
+
+        logger.info("Model parameters loaded from %s", path)
 
     def print_params(self, msg=None):
         """Print current values of trainable network parameters.
@@ -769,7 +784,8 @@ class Simulator(object):
 
         Parameters
         ----------
-        outputs : ``tf.Tensor`` or list of ``tf.Tensor``
+        outputs : ``tf.Tensor`` or list of ``tf.Tensor`` or \
+                  list of :class:`~nengo:nengo.Probe`
             compute gradients wrt this output (if None, computes wrt each
             output probe)
         atol : float, optional
@@ -798,6 +814,10 @@ class Simulator(object):
             outputs = [x + 0 for x in self.tensor_graph.probe_arrays]
         elif isinstance(outputs, tf.Tensor):
             outputs = [outputs]
+        else:
+            outputs = [
+                self.tensor_graph.probe_arrays[self.model.probes.index(p)] + 0
+                for p in outputs]
 
         # check gradient wrt inp
         for node, inp in self.tensor_graph.invariant_ph.items():
@@ -869,6 +889,8 @@ class Simulator(object):
         n_steps : int, optional
             number of simulation steps (if None, will use sim.unroll)
         """
+
+        # TODO: error if object not in invariant_inputs or model.probes
 
         for n, x in data.items():
             shape = (self.minibatch_size if check_mini else None,

@@ -615,12 +615,12 @@ def order_signals(plan, n_passes=10):
     """
 
     # get all the unique base signals
-    all_signals = list(set([s.base for ops in plan for op in ops
-                            for s in op.all_signals]))
+    all_signals = sorted(set([s.base for ops in plan for op in ops
+                              for s in op.all_signals]), key=lambda s: s.name)
 
     # figure out all the read blocks in the plan (in theory we would like each
     # block to become a contiguous chunk in the base array)
-    read_blocks = {}
+    read_blocks = OrderedDict()
 
     # note: reads[op] contains all the signals that are inputs to op. this is
     # generally equivalent to op.reads, but there are some ops that also

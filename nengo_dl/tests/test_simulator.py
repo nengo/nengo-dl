@@ -1,7 +1,6 @@
 from collections import OrderedDict
 import itertools
 import os
-import shutil
 
 import nengo
 from nengo.exceptions import SimulationError, SimulatorClosed, ReadonlyError
@@ -9,7 +8,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import DATA_DIR
+from nengo_dl import configure_trainable, tensor_layer, DATA_DIR
 from nengo_dl.simulator import ProbeDict
 
 
@@ -135,7 +134,7 @@ def test_train_ff(Simulator, neurons, seed):
 
     with nengo.Network() as net:
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
-        net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-0.1, 0.1)
+        net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
         net.config[nengo.Connection].synapse = None
 
         inp = nengo.Node([0, 0])
@@ -195,7 +194,7 @@ def test_train_recurrent(Simulator, seed):
         sim.train({inp: x}, {p: y}, tf.train.GradientDescentOptimizer(2e-3),
                   n_epochs=2000)
 
-        sim.check_gradients(sim.tensor_graph.losses[("mse", (p,))])
+        sim.check_gradients([p])
 
         sim.run_steps(n_steps, input_feeds={inp: x[:minibatch_size]})
 
@@ -233,7 +232,7 @@ def test_train_objective(Simulator, unroll, seed):
                            atol=1e-3)
 
 
-def test_train_rmsprop(Simulator, seed):
+def _test_train_rmsprop(Simulator, seed, device):
     minibatch_size = 4
     n_hidden = 5
 
@@ -241,23 +240,25 @@ def test_train_rmsprop(Simulator, seed):
 
     with nengo.Network(seed=seed) as net:
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
-        net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-0.1, 0.1)
+        net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
         net.config[nengo.Connection].synapse = None
 
-        inp = nengo.Node([0, 0])
+        inp = nengo.Node([0, 0, 0, 0, 0])
         ens = nengo.Ensemble(n_hidden, n_hidden,
                              neuron_type=nengo.Sigmoid(tau_ref=1))
         out = nengo.Ensemble(1, 1, neuron_type=nengo.Sigmoid(tau_ref=1))
         nengo.Connection(
-            inp, ens, transform=np.random.uniform(-1, 1, size=(n_hidden, 2)))
+            inp[[0, 2, 3]], ens,
+            transform=np.random.uniform(-1, 1, size=(n_hidden, 3)))
         nengo.Connection(
             ens, out, transform=np.random.uniform(-1, 1, size=(1, n_hidden)))
 
         p = nengo.Probe(out.neurons)
 
     with Simulator(net, minibatch_size=minibatch_size, unroll_simulation=1,
-                   seed=seed, device="/cpu:0") as sim:
-        x = np.asarray([[[0, 0]], [[0, 1]], [[1, 0]], [[1, 1]]])
+                   seed=seed, device=device) as sim:
+        x = np.asarray([[[0, 0, 0, 0, 0]], [[0, 0, 1, 0, 0]],
+                        [[1, 0, 0, 0, 0]], [[1, 0, 1, 0, 0]]])
         y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
 
         sim.train({inp: x}, {p: y}, tf.train.RMSPropOptimizer(2e-4),
@@ -265,44 +266,18 @@ def test_train_rmsprop(Simulator, seed):
 
         sim.step(input_feeds={inp: x})
 
-        assert np.allclose(sim.data[p], y, atol=1e-4)
+        assert np.allclose(sim.data[p], y, atol=1e-3)
+
+
+def test_train_rmsprop_cpu(Simulator, seed):
+    _test_train_rmsprop(Simulator, seed, "/cpu:0")
 
 
 @pytest.mark.xfail
 @pytest.mark.gpu
 def test_train_rmsprop_gpu(Simulator, seed):
-    minibatch_size = 4
-    n_hidden = 5
-
-    np.random.seed(seed)
-
-    with nengo.Network(seed=seed) as net:
-        net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
-        net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-0.1, 0.1)
-        net.config[nengo.Connection].synapse = None
-
-        inp = nengo.Node([0, 0])
-        ens = nengo.Ensemble(n_hidden, n_hidden,
-                             neuron_type=nengo.Sigmoid(tau_ref=1))
-        out = nengo.Ensemble(1, 1, neuron_type=nengo.Sigmoid(tau_ref=1))
-        nengo.Connection(
-            inp, ens, transform=np.random.uniform(-1, 1, size=(n_hidden, 2)))
-        nengo.Connection(
-            ens, out, transform=np.random.uniform(-1, 1, size=(1, n_hidden)))
-
-        p = nengo.Probe(out.neurons)
-
-    with Simulator(net, minibatch_size=minibatch_size, unroll_simulation=1,
-                   seed=seed, device="/gpu:0") as sim:
-        x = np.asarray([[[0, 0]], [[0, 1]], [[1, 0]], [[1, 1]]])
-        y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
-
-        sim.train({inp: x}, {p: y}, tf.train.RMSPropOptimizer(2e-4),
-                  n_epochs=10000)
-
-        sim.step(input_feeds={inp: x})
-
-        assert np.allclose(sim.data[p], y, atol=1e-4)
+    # TODO: this is xpassing right now, I think due to soft placement
+    _test_train_rmsprop(Simulator, seed, "/gpu:0")
 
 
 def test_train_errors(Simulator):
@@ -401,25 +376,25 @@ def test_generate_inputs(Simulator, seed):
             assert np.allclose(sim.data[p[i]], x.transpose(2, 0, 1))
 
 
-def test_save_load_params(Simulator):
+def test_save_load_params(Simulator, tmpdir):
     with nengo.Network(seed=0) as net:
         out = nengo.Node(size_in=1)
         ens = nengo.Ensemble(10, 1)
         nengo.Connection(ens, out)
 
-    with nengo.Network(seed=1) as net2:
-        out = nengo.Node(size_in=1)
-        ens = nengo.Ensemble(10, 1)
-        nengo.Connection(ens, out)
-
-    if not os.path.exists("./tmp"):
-        os.makedirs("tmp")
+        configure_trainable(net)
+        net.config[ens].trainable = False
 
     with Simulator(net) as sim:
         weights_var = [x for x in sim.tensor_graph.base_vars
                        if x.get_shape() == (1, 10)][0]
-        weights0 = sim.sess.run(weights_var)
-        sim.save_params("./tmp/tmp")
+        enc_var = sim.tensor_graph.base_vars[
+            list(sim.tensor_graph.base_arrays_init.keys()).index(
+                sim.tensor_graph.sig_map[sim.model.sig[ens]["encoders"]].key)]
+        weights0, enc0 = sim.sess.run([weights_var, enc_var])
+        sim.save_params(os.path.join(str(tmpdir), "train"))
+        sim.save_params(os.path.join(str(tmpdir), "local"),
+                        include_local=True)
 
         # just check that this doesn't produce an error
         sim.print_params()
@@ -431,18 +406,36 @@ def test_save_load_params(Simulator):
     with pytest.raises(SimulationError):
         sim.print_params(None)
 
+    with nengo.Network(seed=1) as net2:
+        configure_trainable(net2)
+        out = nengo.Node(size_in=1)
+        ens = nengo.Ensemble(10, 1)
+        nengo.Connection(ens, out)
+
+        configure_trainable(net2)
+        net2.config[ens].trainable = False
+
     with Simulator(net2) as sim:
         weights_var = [x for x in sim.tensor_graph.base_vars
                        if x.get_shape() == (1, 10)][0]
-        weights1 = sim.sess.run(weights_var)
+        enc_var = sim.tensor_graph.base_vars[
+            list(sim.tensor_graph.base_arrays_init.keys()).index(
+                sim.tensor_graph.sig_map[sim.model.sig[ens]["encoders"]].key)]
+        weights1, enc1 = sim.sess.run([weights_var, enc_var])
         assert not np.allclose(weights0, weights1)
+        assert not np.allclose(enc0, enc1)
 
-        sim.load_params("./tmp/tmp")
+        sim.load_params(os.path.join(str(tmpdir), "train"))
 
-        weights2 = sim.sess.run(weights_var)
+        weights2, enc2 = sim.sess.run([weights_var, enc_var])
         assert np.allclose(weights0, weights2)
+        assert not np.allclose(enc0, enc2)
 
-    shutil.rmtree("./tmp")
+        sim.load_params(os.path.join(str(tmpdir), "local"), include_local=True)
+
+        weights3, enc3 = sim.sess.run([weights_var, enc_var])
+        assert np.allclose(weights0, weights3)
+        assert np.allclose(enc0, enc3)
 
 
 def test_model_passing(Simulator):
@@ -606,3 +599,25 @@ def test_node_output_change(Simulator, pre_val, post_val, seed):
         step1 = 1
 
     assert np.allclose(sim.data[p][:, 0], (step0, step1, step2))
+
+
+def test_check_gradients_error(Simulator):
+    # check_gradients detects nans in gradient
+    with nengo.Network() as net:
+        x = nengo.Node([0])
+        y = tensor_layer(x, lambda x: 1 / x)
+        nengo.Probe(y)
+
+    with Simulator(net) as sim:
+        with pytest.raises(SimulationError):
+            sim.check_gradients()
+
+    # check_gradients detects errors in gradient (in this case caused by the
+    # fact that nengo.Alpha doesn't have a TensorFlow implementation)
+    with nengo.Network() as net:
+        x = nengo.Node([0])
+        nengo.Probe(x, synapse=nengo.Alpha(0.1))
+
+    with Simulator(net) as sim:
+        with pytest.raises(SimulationError):
+            sim.check_gradients()

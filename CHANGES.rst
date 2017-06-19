@@ -31,6 +31,8 @@ Release History
 
 - Fixed bug related to changing the output of a Node after the model is
   constructed (`#4 <https://github.com/nengo/nengo_dl/issues/4)>`_)
+- Order of variable creation is now deterministic (helps make saving/loading
+  parameters more reliable)
 
 0.4.0 (June 8, 2017)
 --------------------
