@@ -26,6 +26,9 @@ Release History
 - Added ``nengo_dl.tensor_layer`` to help with the construction of
   layer-style TensorNodes (see the `TensorNode documentation
   <https://nengo.github.io/nengo_dl/tensor_node.html>`_)
+- Added an example demonstrating `how to train a neural network
+  that can run in spiking neurons
+  <https://nengo.github.io/nengo_dl/examples/spiking_mnist.html>`_
 
 **Fixed**
 

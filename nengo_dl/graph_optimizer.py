@@ -1207,7 +1207,7 @@ def create_signals(sigs, plan, float_type, minibatch_size):
                            initial_value.astype(dtype))
 
     logger.debug("base arrays")
-    logger.debug("\n".join([str((k, v[0].dtype, v[0].shape, v[1]))
-                            for k, v in base_arrays.items()]))
+    logger.debug("\n".join([str((k, v.dtype, v.shape, trainable))
+                            for k, (v, trainable) in base_arrays.items()]))
 
     return base_arrays, sig_map

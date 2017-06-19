@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 import nengo_dl
 import sphinx_rtd_theme
@@ -34,9 +35,17 @@ todo_include_todos = True
 numpydoc_show_class_members = False
 
 # -- sphinx-versioning
-scv_whitelist_branches = ('master',)
+if "TRAVIS_BRANCH" in os.environ:
+    curr_branch = os.environ["TRAVIS_BRANCH"]
+else:
+    curr_branch = str(subprocess.check_output(
+        "git rev-parse --abbrev-ref HEAD"), "utf-8").strip()
+scv_whitelist_branches = ('master', curr_branch)
 scv_show_banner = True
 scv_banner_recent_tag = True
+
+# -- nbsphinx
+nbsphinx_timeout = 300
 
 # -- sphinx
 exclude_patterns = ['_build', '**.ipynb_checkpoints']

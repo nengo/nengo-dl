@@ -49,6 +49,7 @@ class SoftLIFRate(LIFRate):
     def __init__(self, sigma=1., **lif_args):
         super(SoftLIFRate, self).__init__(**lif_args)
         self.sigma = sigma
+        self._epsilon = 1e-15
 
     @property
     def _argreprs(self):
@@ -75,10 +76,10 @@ class SoftLIFRate(LIFRate):
         np.log1p(y_v, out=y_v)
         y_v *= self.sigma
         x[valid] = y_v
+        x += self._epsilon
 
-        output[:] = 0
-        output[x > 0] = 1. / (
-            self.tau_ref + self.tau_rc * np.log1p(1. / x[x > 0]))
+        output[:] = 1. / (
+            self.tau_ref + self.tau_rc * np.log1p(1. / x))
 
 
 @Builder.register(SimNeurons)
@@ -261,9 +262,8 @@ class LIFRateBuilder(object):
         self.zeros = tf.zeros(self.J_data.shape + (signals.minibatch_size,),
                               signals.dtype)
 
-    def build_step(self, signals, j=None):
-        if j is None:
-            j = signals.gather(self.J_data) - 1
+    def build_step(self, signals):
+        j = signals.gather(self.J_data)
 
         # indices = tf.cast(tf.where(j > 0), tf.int32)
         # tau_ref = tf.gather_nd(
@@ -276,6 +276,7 @@ class LIFRateBuilder(object):
         #     tf.scatter_nd(indices, 1 / (tau_ref + tau_rc * tf.log1p(1 / j)),
         #                   tf.shape(J)))
 
+        j -= 1
         rates = 1 / (self.tau_ref + self.tau_rc * tf.log1p(1 / j))
         signals.scatter(self.output_data, tf.where(j > 0, rates, self.zeros))
 
@@ -351,10 +352,17 @@ class SoftLIFRateBuilder(LIFRateBuilder):
         self.sigma = tf.constant(
             [[op.neurons.sigma] for op in ops
              for _ in range(op.J.shape[0])], dtype=signals.dtype)
+        self.epsilon = tf.constant(ops[0].neurons._epsilon,
+                                   dtype=signals.dtype)
 
     def build_step(self, signals):
-        x = signals.gather(self.J_data) - 1
-        y = x / self.sigma
-        z = tf.where(y < 34, self.sigma * tf.log1p(tf.exp(y)), x)
+        j = signals.gather(self.J_data)
 
-        super(SoftLIFRateBuilder, self).build_step(signals, j=z)
+        j -= 1
+
+        z = tf.nn.softplus(j / self.sigma) * self.sigma
+        z += self.epsilon
+
+        rates = 1 / (self.tau_ref + self.tau_rc * tf.log1p(1 / z))
+
+        signals.scatter(self.output_data, rates)

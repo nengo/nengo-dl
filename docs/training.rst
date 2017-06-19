@@ -302,3 +302,10 @@ Limitations
   ``tf.train.GradientDescentOptimizer``). Follow `this issue
   <https://github.com/tensorflow/tensorflow/issues/2314>`_ for updates
   on Tensorflow GPU support.
+
+Examples
+--------
+.. toctree::
+
+   examples/nef_init
+   examples/spiking_mnist

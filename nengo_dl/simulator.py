@@ -393,7 +393,11 @@ class Simulator(object):
           on Tensorflow GPU support.
         """
 
-        n_steps = next(iter(inputs.values())).shape[1]
+        # TODO: we could save the internal state of the simulator before
+        # training and then restore it afterwards, so that calling train doesn't
+        # reset a run
+
+        batch_size, n_steps = next(iter(inputs.values())).shape[:2]
 
         # error checking
         if self.closed:
@@ -415,7 +419,8 @@ class Simulator(object):
         # initialize any variables that were created by the optimizer
         self.sess.run(opt_slots_init)
 
-        progress = utils.ProgressBar(n_epochs, "Training")
+        progress = utils.ProgressBar(
+            n_epochs * batch_size // self.minibatch_size, "Training")
 
         for n in range(n_epochs):
             for inp, tar in utils.minibatch_generator(
@@ -430,7 +435,7 @@ class Simulator(object):
                     raise SimulationError(
                         "TensorFlow does not yet support this optimizer on "
                         "the GPU; try `Simulator(..., device='/cpu:0')`")
-            progress.step()
+                progress.step()
 
         self.soft_reset()
 
