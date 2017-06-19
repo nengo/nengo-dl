@@ -36,6 +36,8 @@ Release History
   constructed (`#4 <https://github.com/nengo/nengo_dl/issues/4)>`_)
 - Order of variable creation is now deterministic (helps make saving/loading
   parameters more reliable)
+- Configuring whether or not a model element is trainable does not affect
+  whether or not that element is minibatched
 
 0.4.0 (June 8, 2017)
 --------------------

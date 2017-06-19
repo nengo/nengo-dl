@@ -483,16 +483,16 @@ class TensorGraph(object):
                 # encoders and biases are trainable
                 for ens in net.ensembles:
                     ens_trainable = get_trainable(ens)
-                    if ens_trainable:
-                        self.model.sig[ens]["encoders"].trainable = True
-                        self.model.sig[ens]["encoders"].minibatched = False
+                    self.model.sig[ens]["encoders"].trainable = ens_trainable
+                    self.model.sig[ens]["encoders"].minibatched = False
 
-                    neurons_trainable = get_trainable(ens.neurons)
-                    if neurons_trainable is 1:
-                        neurons_trainable = ens_trainable
-                    if neurons_trainable and not isinstance(ens.neuron_type,
-                                                            Direct):
-                        self.model.sig[ens.neurons]["bias"].trainable = True
+                    if not isinstance(ens.neuron_type, Direct):
+                        neurons_trainable = get_trainable(ens.neurons)
+                        if neurons_trainable is 1:
+                            neurons_trainable = ens_trainable
+
+                        self.model.sig[ens.neurons]["bias"].trainable = (
+                            neurons_trainable)
                         self.model.sig[ens.neurons]["bias"].minibatched = False
 
                 # connection weights are trainable
@@ -501,9 +501,9 @@ class TensorGraph(object):
                     # aren't added to the network
                     # TODO: should we disable training on connections to
                     # learning rules?
-                    if get_trainable(conn):
-                        self.model.sig[conn]["weights"].trainable = True
-                        self.model.sig[conn]["weights"].minibatched = False
+                    self.model.sig[conn]["weights"].trainable = get_trainable(
+                        conn)
+                    self.model.sig[conn]["weights"].minibatched = False
 
                 # parameters can't be modified by an online Nengo learning rule
                 # and offline training at the same time. (it is possible in
@@ -537,7 +537,8 @@ class TensorGraph(object):
                                     obj)
                             else:
                                 self.model.sig[obj][attr].trainable = False
-                                self.model.sig[obj][attr].minibatched = True
+
+                            self.model.sig[obj][attr].minibatched = True
 
         if self.model.toplevel is None:
             warnings.warn(
