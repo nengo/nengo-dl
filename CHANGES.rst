@@ -29,6 +29,7 @@ Release History
 - Added an example demonstrating `how to train a neural network
   that can run in spiking neurons
   <https://nengo.github.io/nengo_dl/examples/spiking_mnist.html>`_
+- Added some distributions for weight initialization to ``nengo_dl.dists``
 
 **Changed**
 

@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import configure_trainable, tensor_layer, DATA_DIR
+from nengo_dl import configure_trainable, tensor_layer, dists, DATA_DIR
 from nengo_dl.simulator import ProbeDict
 
 
@@ -142,11 +142,10 @@ def test_train_ff(Simulator, neurons, seed):
                              neuron_type=nengo.Sigmoid(tau_ref=1))
         out = nengo.Ensemble(1, 1, neuron_type=nengo.Sigmoid(tau_ref=1))
         nengo.Connection(
-            inp, ens.neurons if neurons else ens,
-            transform=np.random.uniform(-1, 1, size=(n_hidden + neurons, 2)))
+            inp, ens.neurons if neurons else ens, transform=dists.Glorot())
         nengo.Connection(
-            ens.neurons if neurons else ens, out.neurons if neurons else out,
-            transform=np.random.uniform(-1, 1, size=(1, n_hidden + neurons)))
+            ens.neurons if neurons else ens, out.neurons,
+            transform=dists.Glorot())
 
         # TODO: why does training fail if we probe out instead of out.neurons?
         p = nengo.Probe(out.neurons)
@@ -156,14 +155,14 @@ def test_train_ff(Simulator, neurons, seed):
         x = np.asarray([[[0, 0]], [[0, 1]], [[1, 0]], [[1, 1]]])
         y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
 
-        sim.train({inp: x}, {p: y}, tf.train.GradientDescentOptimizer(1),
-                  n_epochs=5000)
+        sim.train({inp: x}, {p: y}, tf.train.MomentumOptimizer(1, 0.9),
+                  n_epochs=500)
 
         sim.check_gradients(atol=5e-5)
 
         sim.step(input_feeds={inp: x})
 
-        assert np.allclose(sim.data[p], y, atol=1e-4)
+        assert np.allclose(sim.data[p], y, atol=1e-3)
 
 
 def test_train_recurrent(Simulator, seed):
@@ -191,10 +190,10 @@ def test_train_recurrent(Simulator, seed):
         y = np.outer(np.linspace(0, 1, batch_size),
                      np.linspace(0, 1, n_steps))[:, :, None]
 
-        sim.train({inp: x}, {p: y}, tf.train.GradientDescentOptimizer(2e-3),
-                  n_epochs=2000)
+        sim.train(
+            {inp: x}, {p: y}, tf.train.RMSPropOptimizer(1e-3), n_epochs=200)
 
-        sim.check_gradients([p])
+        sim.check_gradients(sim.tensor_graph.losses[("mse", (p,))])
 
         sim.run_steps(n_steps, input_feeds={inp: x[:minibatch_size]})
 
@@ -221,10 +220,10 @@ def test_train_objective(Simulator, unroll, seed):
         def obj(output, target):
             return tf.reduce_mean((output[:, -1] - 0.5 - target[:, -1]) ** 2)
 
-        sim.train({inp: x}, {p: y}, tf.train.GradientDescentOptimizer(1e-2),
-                  n_epochs=1000, objective=obj)
+        sim.train({inp: x}, {p: y}, tf.train.MomentumOptimizer(1e-2, 0.9),
+                  n_epochs=100, objective=obj)
 
-        sim.check_gradients(sim.tensor_graph.losses[(obj, (p,))])
+        sim.check_gradients([p])
 
         sim.run_steps(n_steps, input_feeds={inp: x})
 
@@ -232,7 +231,7 @@ def test_train_objective(Simulator, unroll, seed):
                            atol=1e-3)
 
 
-def _test_train_rmsprop(Simulator, seed, device):
+def test_train_sparse(Simulator, seed):
     minibatch_size = 4
     n_hidden = 5
 
@@ -246,38 +245,24 @@ def _test_train_rmsprop(Simulator, seed, device):
         inp = nengo.Node([0, 0, 0, 0, 0])
         ens = nengo.Ensemble(n_hidden, n_hidden,
                              neuron_type=nengo.Sigmoid(tau_ref=1))
-        out = nengo.Ensemble(1, 1, neuron_type=nengo.Sigmoid(tau_ref=1))
-        nengo.Connection(
-            inp[[0, 2, 3]], ens,
-            transform=np.random.uniform(-1, 1, size=(n_hidden, 3)))
-        nengo.Connection(
-            ens, out, transform=np.random.uniform(-1, 1, size=(1, n_hidden)))
+        out = nengo.Ensemble(2, 2, neuron_type=nengo.Sigmoid(tau_ref=1))
+        nengo.Connection(inp[[0, 2, 3]], ens, transform=dists.Glorot())
+        nengo.Connection(ens, out, transform=dists.Glorot())
 
         p = nengo.Probe(out.neurons)
 
     with Simulator(net, minibatch_size=minibatch_size, unroll_simulation=1,
-                   seed=seed, device=device) as sim:
+                   seed=seed) as sim:
         x = np.asarray([[[0, 0, 0, 0, 0]], [[0, 0, 1, 0, 0]],
                         [[1, 0, 0, 0, 0]], [[1, 0, 1, 0, 0]]])
-        y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
+        y = np.asarray([[[0.1, 0]], [[0.9, 0]], [[0.9, 0]], [[0.1, 0]]])
 
-        sim.train({inp: x}, {p: y}, tf.train.RMSPropOptimizer(2e-4),
-                  n_epochs=10000)
+        sim.train({inp: x}, {p: y}, tf.train.MomentumOptimizer(1, 0.9),
+                  n_epochs=500)
 
         sim.step(input_feeds={inp: x})
 
         assert np.allclose(sim.data[p], y, atol=1e-3)
-
-
-def test_train_rmsprop_cpu(Simulator, seed):
-    _test_train_rmsprop(Simulator, seed, "/cpu:0")
-
-
-@pytest.mark.xfail
-@pytest.mark.gpu
-def test_train_rmsprop_gpu(Simulator, seed):
-    # TODO: this is xpassing right now, I think due to soft placement
-    _test_train_rmsprop(Simulator, seed, "/gpu:0")
 
 
 def test_train_errors(Simulator):
