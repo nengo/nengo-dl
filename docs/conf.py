@@ -77,6 +77,8 @@ html_use_smartypants = True
 htmlhelp_basename = 'Nengodoc'
 html_last_updated_fmt = ''  # Suppress 'Last updated on:' timestamp
 html_show_sphinx = False
+html_favicon = os.path.join("_static", "favicon.ico")
+html_logo = os.path.join("_static", "logo.png")
 
 # -- Options for LaTeX output -------------------------------------------------
 
