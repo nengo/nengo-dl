@@ -30,6 +30,8 @@ Release History
   that can run in spiking neurons
   <https://nengo.github.io/nengo_dl/examples/spiking_mnist.html>`_
 - Added some distributions for weight initialization to ``nengo_dl.dists``
+- Added ``sim.train(..., profile=True)` option to collect profiling information
+  during training
 
 **Changed**
 

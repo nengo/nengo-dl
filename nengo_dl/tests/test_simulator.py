@@ -503,15 +503,38 @@ def test_tensorboard(Simulator):
         assert os.path.exists("%s/test/run_0" % DATA_DIR)
 
 
-def test_profile(Simulator):
+@pytest.mark.parametrize("mode", ("run", "train"))
+def test_profile(Simulator, mode):
     with nengo.Network() as net:
         a = nengo.Node([0])
-        nengo.Probe(a)
+        x = nengo.Node(size_in=1)
+        nengo.Connection(a, x)
+        p = nengo.Probe(x)
+
+    filename = os.path.join(DATA_DIR, "nengo_dl_profile.json")
+    if os.path.exists(filename):
+        os.remove(filename)
+    elif not os.path.exists(os.path.dirname(filename)):
+        os.makedirs(os.path.dirname(filename))
 
     with Simulator(net) as sim:
-        sim.run_steps(5, profile=True)
+        if mode == "run":
+            sim.run_steps(5, profile=True)
+        else:
+            sim.train({a: np.zeros((1, 5, 1))}, {p: np.zeros((1, 5, 1))},
+                      tf.train.GradientDescentOptimizer(1), profile=True)
 
-        assert os.path.exists("%s/nengo_dl_profile.json" % DATA_DIR)
+        assert os.path.exists(filename)
+        os.remove(filename)
+
+        if mode == "run":
+            sim.run_steps(5, profile="tmp.txt")
+        else:
+            sim.train({a: np.zeros((1, 5, 1))}, {p: np.zeros((1, 5, 1))},
+                      tf.train.GradientDescentOptimizer(1), profile="tmp.txt")
+
+        assert os.path.exists("tmp.txt")
+        os.remove("tmp.txt")
 
 
 def test_dt_readonly(Simulator):

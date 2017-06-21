@@ -330,16 +330,20 @@ class Simulator(object):
         self.n_steps += n_steps
         self.time = self.n_steps * self.dt
 
-        if profile:
-            timeline = Timeline(run_metadata.step_stats)
-            with open("%s/nengo_dl_profile.json" % DATA_DIR, "w") as f:
-                f.write(timeline.generate_chrome_trace_format())
-
         print("\rSimulation completed in %s" %
               datetime.timedelta(seconds=int(time.time() - start)))
 
+        if profile:
+            if isinstance(profile, str):
+                filename = profile
+            else:
+                filename = os.path.join(DATA_DIR, "nengo_dl_profile.json")
+            timeline = Timeline(run_metadata.step_stats)
+            with open(filename, "w") as f:
+                f.write(timeline.generate_chrome_trace_format())
+
     def train(self, inputs, targets, optimizer, n_epochs=1, objective="mse",
-              shuffle=True):
+              shuffle=True, profile=False):
         """Optimize the trainable parameters of the network using the given
         optimization method, minimizing the objective value over the given
         inputs and targets.
@@ -370,6 +374,9 @@ class Simulator(object):
             that Probe (loss will be averaged across Probes).
         shuffle : bool, optional
             if True, randomize the data into different minibatches each epoch
+        profile : bool, optional
+            if True, collect TensorFlow profiling information while training
+            (this will slow down the training)
 
         Notes
         -----
@@ -410,6 +417,13 @@ class Simulator(object):
         # initialize any variables that were created by the optimizer
         self.sess.run(opt_slots_init)
 
+        if profile:
+            run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+            run_metadata = tf.RunMetadata()
+        else:
+            run_options = None
+            run_metadata = None
+
         progress = utils.ProgressBar(
             n_epochs * batch_size // self.minibatch_size, "Training")
 
@@ -420,12 +434,22 @@ class Simulator(object):
                 # TODO: set up queue to feed in data more efficiently
                 self.soft_reset()
 
-                self.sess.run([opt_op], feed_dict=self._fill_feed(
-                    n_steps, inp, tar))
+                self.sess.run(
+                    [opt_op], feed_dict=self._fill_feed(n_steps, inp, tar),
+                    options=run_options, run_metadata=run_metadata)
 
                 progress.step()
 
         self.soft_reset()
+
+        if profile:
+            if isinstance(profile, str):
+                filename = profile
+            else:
+                filename = os.path.join(DATA_DIR, "nengo_dl_profile.json")
+            timeline = Timeline(run_metadata.step_stats)
+            with open(filename, "w") as f:
+                f.write(timeline.generate_chrome_trace_format())
 
     def loss(self, inputs, targets, objective):
         """Compute the loss value for the given objective and inputs/targets.

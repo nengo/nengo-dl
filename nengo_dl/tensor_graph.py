@@ -8,7 +8,6 @@ from nengo import Connection, Process
 from nengo.builder.operator import TimeUpdate, SimPyFunc
 from nengo.builder.processes import SimProcess
 from nengo.config import Config, ConfigError
-from nengo.exceptions import SimulationError
 from nengo.neurons import Direct
 import tensorflow as tf
 
@@ -375,13 +374,8 @@ class TensorGraph(object):
             key = (optimizer, targets, objective)
             if key not in self.optimizers:
                 # create optimizer operator
-                try:
-                    opt_op = optimizer.minimize(
-                        loss, var_list=tf.trainable_variables())
-                except ValueError as e:
-                    logger.exception(e)
-                    raise SimulationError(
-                        "Network graph contains non-differentiable elements")
+                opt_op = optimizer.minimize(
+                    loss, var_list=tf.trainable_variables())
 
                 # get any new variables created by optimizer (so they can be
                 # initialized)

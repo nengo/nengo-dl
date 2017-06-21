@@ -180,6 +180,8 @@ Other parameters
 - ``n_epochs`` (int): run training for this many passes through the input data
 - ``shuffle`` (bool): if ``True`` (default), randomly assign data to different
   minibatches each epoch
+- ``profile`` (bool or str): collect profiling information
+  (`:ref:`as in Simulator.run <sim-profile>`)
 
 Choosing which elements to optimize
 -----------------------------------

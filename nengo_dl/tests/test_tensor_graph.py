@@ -1,5 +1,4 @@
 import nengo
-from nengo.exceptions import SimulationError
 import pytest
 import tensorflow as tf
 
@@ -84,7 +83,7 @@ def test_build_optimizer(Simulator):
         p = nengo.Probe(inp)
 
     with Simulator(net) as sim:
-        with pytest.raises(SimulationError):
+        with pytest.raises(ValueError):
             sim.tensor_graph.build_optimizer(opt, (p,), "mse")
 
 
