@@ -231,14 +231,14 @@ def test_planner_chain(planner):
     b = DummySignal(label="b")
     c = DummySignal(label="c")
     d = DummySignal(label="d")
-    operators = [Copy(a, b, inc=True)]
-    operators += [Copy(b, c, inc=True) for _ in range(2)]
-    operators += [Copy(c, d, inc=True) for _ in range(3)]
+    operators = [Copy(a, b, inc=True) for _ in range(3)]
+    operators += [SimPyFunc(c, lambda x: x, None, b)]
+    operators += [Copy(c, d, inc=True) for _ in range(2)]
     plan = planner(operators)
     assert len(plan) == 3
-    assert len(plan[0]) == 1
-    assert len(plan[1]) == 2
-    assert len(plan[2]) == 3
+    assert len(plan[0]) == 3
+    assert len(plan[1]) == 1
+    assert len(plan[2]) == 2
 
 
 def test_planner_cycle(planner):
