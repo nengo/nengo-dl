@@ -11,9 +11,15 @@ class SimBCMBuilder(OpBuilder):
     operators."""
 
     def __init__(self, ops, signals):
-        self.pre_data = signals.combine([op.pre_filtered for op in ops])
         self.post_data = signals.combine([op.post_filtered for op in ops])
         self.theta_data = signals.combine([op.theta for op in ops])
+
+        self.pre_data = signals.combine(
+            [op.pre_filtered for op in ops
+             for _ in range(op.post_filtered.shape[0])], load_indices=False)
+        self.pre_data = self.pre_data.reshape((self.post_data.shape[0],
+                                               ops[0].pre_filtered.shape[0]))
+        self.pre_data.load_indices()
 
         self.learning_rate = tf.constant(
             [[op.learning_rate] for op in ops
@@ -29,7 +35,6 @@ class SimBCMBuilder(OpBuilder):
 
         post = self.learning_rate * signals.dt * post * (post - theta)
 
-        pre = tf.expand_dims(pre, 0)
         post = tf.expand_dims(post, 1)
 
         signals.scatter(self.output_data, post * pre)
@@ -41,13 +46,20 @@ class SimOjaBuilder(OpBuilder):
         operators."""
 
     def __init__(self, ops, signals):
-        self.pre_data = signals.combine([op.pre_filtered for op in ops])
         self.post_data = signals.combine([op.post_filtered for op in ops])
+
+        self.pre_data = signals.combine(
+            [op.pre_filtered for op in ops
+             for _ in range(op.post_filtered.shape[0])], load_indices=False)
+        self.pre_data = self.pre_data.reshape((self.post_data.shape[0],
+                                               ops[0].pre_filtered.shape[0]))
+        self.pre_data.load_indices()
+
         self.weights_data = signals.combine([op.weights for op in ops])
         self.output_data = signals.combine([op.delta for op in ops])
 
         self.learning_rate = tf.constant(
-            [[op.learning_rate] for op in ops
+            [[[op.learning_rate]] for op in ops
              for _ in range(op.post_filtered.shape[0])],
             dtype=signals.dtype)
 
@@ -61,10 +73,13 @@ class SimOjaBuilder(OpBuilder):
         post = signals.gather(self.post_data)
         weights = signals.gather(self.weights_data)
 
-        update = tf.expand_dims(self.learning_rate * signals.dt * post ** 2, 1)
+        post = tf.expand_dims(post, 1)
+
+        alpha = self.learning_rate * signals.dt
+
+        update = alpha * post ** 2
         update *= -self.beta * weights
-        update += (tf.expand_dims(self.learning_rate, 1) * signals.dt *
-                   update * tf.expand_dims(pre, 0))
+        update += alpha * post * pre
 
         signals.scatter(self.output_data, update)
 
@@ -75,8 +90,15 @@ class SimVojaBuilder(OpBuilder):
         operators."""
 
     def __init__(self, ops, signals):
-        self.pre_data = signals.combine([op.pre_decoded for op in ops])
         self.post_data = signals.combine([op.post_filtered for op in ops])
+
+        self.pre_data = signals.combine(
+            [op.pre_decoded for op in ops
+             for _ in range(op.post_filtered.shape[0])], load_indices=False)
+        self.pre_data = self.pre_data.reshape((self.post_data.shape[0],
+                                               ops[0].pre_decoded.shape[0]))
+        self.pre_data.load_indices()
+
         self.learning_data = signals.combine(
             [op.learning_signal for op in ops
              for _ in range(op.post_filtered.shape[0])])
@@ -100,7 +122,6 @@ class SimVojaBuilder(OpBuilder):
         alpha = tf.expand_dims(
             self.learning_rate * signals.dt * learning_signal, 1)
         post = tf.expand_dims(post, 1)
-        pre = tf.expand_dims(pre, 0)
 
         update = alpha * (self.scale * post * pre - post * scaled_encoders)
 

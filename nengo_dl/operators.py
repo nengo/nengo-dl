@@ -114,14 +114,10 @@ class ElementwiseIncBuilder(OpBuilder):
         # add empty trailing dimensions for elementwise broadcasting
         while self.A_data.ndim < self.X_data.ndim:
             self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
-        while self.X_data.ndim < self.A_data.ndim:
-            self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
 
         # add broadcast dimension for minibatch, if needed
         if not self.A_data.minibatched and self.X_data.minibatched:
             self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
-        elif self.A_data.minibatched and not self.X_data.minibatched:
-            self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
 
         self.A_data.load_indices()
         self.X_data.load_indices()
@@ -179,8 +175,6 @@ class DotIncBuilder(OpBuilder):
             # add empty minibatch dimension if needed
             if not self.A_data.minibatched and self.X_data.minibatched:
                 self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
-            elif self.A_data.minibatched and not self.X_data.minibatched:
-                self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
 
         self.A_data.load_indices()
         self.X_data.load_indices()
@@ -256,49 +250,36 @@ class SparseDotIncBuilder(DotIncBuilder):
             self.Y_data = signals.combine([op.Y for op in ops])
 
             # group all the A's and X's
-            self.A_data = signals.combine(
-                [op.A for op in ops], load_indices=False, label=str(ops))
-            self.X_data = signals.combine(
-                [op.X for op in ops], load_indices=False)
-            if self.A_data.minibatched:
-                self.A_data = self.A_data.reshape((len(ops), -1) +
-                                                  self.A_data.shape[1:])
-                self.X_data = self.X_data.reshape((len(ops), -1))
-            self.A_data.load_indices()
-            self.X_data.load_indices()
+            self.A_data = signals.combine([op.A for op in ops], label=str(ops))
+            self.X_data = signals.combine([op.X for op in ops])
 
-            assert self.X_data.minibatched
+            assert not self.A_data.minibatched
+            assert self.X_data.minibatched and self.Y_data.minibatched
 
             sparse_indices = []
-            count = np.zeros(2, dtype=np.int64)
+            corner = np.zeros(2, dtype=np.int64)
             for op in ops:
-                for i in range(signals.minibatch_size if
-                               self.A_data.minibatched else 1):
-                    idxs = np.reshape(np.dstack(np.meshgrid(
-                        np.arange(op.A.shape[0]), np.arange(op.A.shape[1]),
-                        indexing="ij")), (-1, 2))
-                    idxs += count
-                    count += op.A.shape[:2]
-                    sparse_indices += [idxs]
+                block_shape = (op.A.shape[0], op.A.shape[1])
+                idxs = np.reshape(np.dstack(np.meshgrid(
+                    np.arange(block_shape[0]), np.arange(block_shape[1]),
+                    indexing="ij")), (-1, 2))
+                idxs += corner
+                corner += block_shape
+                sparse_indices += [idxs]
 
             sparse_indices = np.concatenate(sparse_indices, axis=0)
-            self.sparse_indices = tf.constant(sparse_indices, dtype=tf.int64)
-            self.A_shape = tf.constant(count, dtype=tf.int64)
+            self.sparse_indices = tf.constant(sparse_indices, dtype=(
+                tf.int32 if np.all(sparse_indices < np.iinfo(np.int32).max)
+                else tf.int64))
+            self.A_shape = tf.constant(corner, dtype=tf.int64)
 
     def build_step(self, signals):
-        # TODO: use elemwise for small matrices
         if self.len_match:
             super(SparseDotIncBuilder, self).build_step(signals)
             return
 
         A = signals.gather(self.A_data)
         X = signals.gather(self.X_data)
-
-        if self.A_data.minibatched:
-            A = tf.transpose(A, (0, 3, 1, 2))
-
-            X = tf.transpose(X, (0, 2, 1))
-            X = tf.reshape(X, (-1, 1))
 
         A = tf.reshape(A, (-1,))
 
@@ -312,13 +293,7 @@ class SparseDotIncBuilder(DotIncBuilder):
         # sparse_A = tf.scatter_nd(self.sparse_indices, A, self.A_shape)
         # dot = tf.matmul(sparse_A, X, a_is_sparse=self.is_sparse)
 
-        if self.A_data.minibatched:
-            dot = tf.reshape(dot, (signals.minibatch_size, -1))
-            dot = tf.transpose(dot)
-
-        dot.set_shape(
-            self.Y_data.shape +
-            (signals.minibatch_size,) if self.Y_data.minibatched else ())
+        dot.set_shape(self.Y_data.shape + (signals.minibatch_size,))
 
         signals.scatter(self.Y_data, dot, mode="inc")
 

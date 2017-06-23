@@ -1,9 +1,10 @@
 from nengo.exceptions import BuildError
 from nengo.neurons import LIF, LIFRate, Izhikevich, AdaptiveLIF
 from nengo.synapses import Lowpass, Triangle, Alpha
+from nengo.builder.learning_rules import SimBCM
+from nengo.builder.neurons import SimNeurons
 from nengo.builder.operator import (SimPyFunc, DotInc, Copy, Reset,
                                     ElementwiseInc)
-from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 import numpy as np
 import pytest
@@ -189,6 +190,13 @@ def test_mergeable():
     a = SimTensorNode(None, DummySignal(), None, DummySignal())
     assert not mergeable(a, [a])
 
+    # learning rules
+    a = SimBCM(DummySignal((4,)), DummySignal(), DummySignal(), DummySignal(),
+               DummySignal())
+    b = SimBCM(DummySignal((5,)), DummySignal(), DummySignal(), DummySignal(),
+               DummySignal())
+    assert not mergeable(a, [b])
+
 
 def test_planner_mergeable(planner):
     # check that mergeable operators are merged
@@ -219,18 +227,18 @@ def test_planner_unmergeable(planner):
 
 def test_planner_chain(planner):
     # test a chain
-    input0 = DummySignal()
-    input1 = DummySignal()
-    output0 = DummySignal()
-    output1 = DummySignal()
-    operators = [Copy(input0, input1, inc=True)]
-    operators += [Copy(input1, output0, inc=True) for _ in range(2)]
-    operators += [Copy(output0, output1, inc=True) for _ in range(3)]
+    a = DummySignal(label="a")
+    b = DummySignal(label="b")
+    c = DummySignal(label="c")
+    d = DummySignal(label="d")
+    operators = [Copy(a, b, inc=True) for _ in range(3)]
+    operators += [SimPyFunc(c, lambda x: x, None, b)]
+    operators += [Copy(c, d, inc=True) for _ in range(2)]
     plan = planner(operators)
     assert len(plan) == 3
-    assert len(plan[0]) == 1
-    assert len(plan[1]) == 2
-    assert len(plan[2]) == 3
+    assert len(plan[0]) == 3
+    assert len(plan[1]) == 1
+    assert len(plan[2]) == 2
 
 
 def test_planner_cycle(planner):

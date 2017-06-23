@@ -47,12 +47,10 @@ containing the training values.  This training array should have shape
 training examples, ``n_steps`` is the number of simulation steps to train
 across, and ``node.size_out`` is the dimensionality of the Node.
 
-When training a NengoDL model there are two :class:`.Simulator` parameters
-that must be provided.  The first is ``minibatch_size``, which defines how
-many inputs (out of the total ``n_inputs`` defined above) will be used for each
-optimization step.  The second is ``step_blocks``, which tells the simulator
-the value of ``n_steps`` above, so that the simulation graph is configured
-to run the appropriate number of simulation steps.
+When training a NengoDL model the user must specify the ``minibatch_size``
+to use during training, via the ``Simulator(..., minibatch_size=n``) argument.
+This defines how many inputs (out of the total ``n_inputs`` defined above) will
+be used for each optimization step.
 
 Here is an example illustrating how to define the input values for two
 input nodes:
@@ -68,7 +66,7 @@ input nodes:
     minibatch_size = 20
     n_steps = 10
 
-    with nengo_dl.Simulator(net, step_blocks=n_steps, minibatch_size=minibatch_size) as sim:
+    with nengo_dl.Simulator(net, minibatch_size=minibatch_size) as sim:
         sim.train(inputs={a: np.random.randn(n_inputs, n_steps, 1),
                           b: np.random.randn(n_inputs, n_steps, 3)},
                   ...)
@@ -108,8 +106,7 @@ For example:
     minibatch_size = 20
     n_steps = 10
 
-    with nengo_dl.Simulator(
-            net, step_blocks=n_steps, minibatch_size=minibatch_size) as sim:
+    with nengo_dl.Simulator(net, minibatch_size=minibatch_size) as sim:
         sim.train(targets={p: np.random.randn(n_inputs, n_steps, 2)},
                   ...)
 
@@ -184,90 +181,109 @@ Other parameters
 - ``shuffle`` (bool): if ``True`` (default), randomly assign data to different
   minibatches each epoch
 
-Examples
---------
+Choosing which elements to optimize
+-----------------------------------
 
-Here is a complete example showing how to train a network using NengoDL.  The
-function being learned here is not particularly interesting (multiplying by 2),
-but it shows how all of the above parts can fit together.
+By default, NengoDL will optimize the following elements in a model:
+
+1. Connection weights (neuron--neuron weight matrices or decoders)
+2. Ensemble encoders
+3. Neuron biases
+
+These elements will *not* be optimized if they are targeted by an online
+learning rule.  For example, :class:`nengo:nengo.PES` modifies connection
+weights as a model is running.  If we also tried to optimize those weights with
+some offline training method then those two processes would conflict
+with each other, likely resulting in unintended effects.  So NengoDL will
+assume that those elements should not be optimized.
+
+Any of these default behaviours can be overriden using `Nengo's config system
+<https://pythonhosted.org/nengo/config.html>`_.  Specifically, setting the
+``trainable`` config attribute for an object will control whether or not it
+will be optimized.
+
+:func:`.configure_trainable` is a utility function that will add a configurable
+``trainable`` attribute to the objects in a network.  It can also
+set the initial value of ``trainable`` on all those objects at the same time,
+for convenience.
+
+For example, suppose we only want to optimize one
+connection in our network, while leaving everything else unchanged.  This
+could be achieved via
 
 .. code-block:: python
 
-    import nengo
-    import nengo_dl
-    import numpy as np
-    import tensorflow as tf
+    with nengo.Network() as net:
+        # this adds the `trainable` attribute to all the trainable objects
+        # in the network, and initializes it to `False`
+        nengo_dl.configure_trainable(net, default=False)
 
-    with nengo.Network(seed=0) as net:
-        # these parameter settings aren't necessary, but they set things up in
-        # a more standard machine learning way, for familiarity
-        net.config[nengo.Ensemble].neuron_type = nengo.RectifiedLinear()
-        net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
-        net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-1, 1)
-        net.config[nengo.Connection].synapse = None
+        a = nengo.Node([0])
+        b = nengo.Ensemble(10, 1)
+        c = nengo.Node(size_in=1)
 
-        # connect up our input node, and 3 ensembles in series
-        a = nengo.Node([0.5])
-        b = nengo.Ensemble(30, 1)
-        c = nengo.Ensemble(30, 1)
-        d = nengo.Ensemble(30, 1)
         nengo.Connection(a, b)
-        nengo.Connection(b, c)
-        nengo.Connection(c, d)
 
-        # define our outputs with a probe on the last ensemble in the chain
-        p = nengo.Probe(d)
+        # make this specific connection trainable
+        conn = nengo.Connection(b, c)
+        net.config[conn].trainable = True
 
-    n_steps = 5  # the number of simulation steps we want to run our model for
-    mini_size = 100  # minibatch size
+Or if we wanted to disable training on the overall network, but enable it for
+Connections within some subnetwork:
 
-    with nengo_dl.Simulator(net, step_blocks=n_steps, minibatch_size=mini_size,
-                            device="/cpu:0") as sim:
-        # create input/target data. this could be whatever we want, but here
-        # we'll train the network to output 2x its input
-        input_data = np.random.uniform(-1, 1, size=(10000, n_steps, 1))
-        target_data = input_data * 2
+.. code-block:: python
 
-        # train the model, passing `input_data` to our input node `a` and
-        # `target_data` to our output probe `p`. we can use whatever TensorFlow
-        # optimizer we want here.
-        sim.train({a: input_data}, {p: target_data},
-                  tf.train.MomentumOptimizer(5e-2, 0.9), n_epochs=30)
+    with nengo.Network() as net:
+        nengo_dl.configure_trainable(net, default=False)
+        ...
+        with nengo.Network() as subnet:
+            nengo_dl.configure_trainable(subnet)
+            subnet.config[nengo.Connection].trainable = True
+            ...
 
-        # run the model to see the results of the training. note that this will
-        # use the input values specified in our `nengo.Node` definition
-        # above (0.5)
-        sim.run_steps(n_steps)
+Note that ``config[nengo.Ensemble].trainable`` controls both encoders and
+biases, as both are properties of an Ensemble.  However, it is possible to
+separately control the biases via ``config[nengo.ensemble.Neurons].trainable``
+or ``config[my_ensemble.neurons].trainable``.
 
-        # so the output should be 1
-        assert np.allclose(sim.data[p], 1, atol=1e-2)
+There are two important caveats to keep in mind when configuring ``trainable``,
+which differ from the standard config behaviour:
 
-        sim.soft_reset(include_probes=True)
+1. ``trainable`` applies to all objects in a network, regardless of whether
+   they were created before or after ``trainable`` is set.  For example,
 
-        # or if we wanted to see the performance on a test dataset, we could do
-        test_data = np.random.uniform(-1, 1, size=(mini_size, n_steps, 1))
-        sim.run_steps(n_steps, input_feeds={a: test_data})
+   .. code-block:: python
 
-        assert np.allclose(test_data * 2, sim.data[p], atol=1e-2)
+       with nengo.Network() as net:
+           ...
+           net.config[nengo.Ensemble].trainable = False
+           a = nengo.Ensemble(10, 1)
+           ...
 
-Limitations
------------
+   is the same as
 
-- Almost all deep learning methods require the network to be differentiable,
-  which means that trying to train a network with non-differentiable elements
-  will result in an error.  Examples of common non-differentiable
-  elements include :class:`nengo:nengo.LIF`,
-  :class:`nengo:nengo.Direct`, or processes/neurons that don't have a
-  custom TensorFlow implementation (see
-  :class:`.processes.SimProcessBuilder`/
-  :class:`.neurons.SimNeuronsBuilder`)
+   .. code-block:: python
 
-- Most TensorFlow optimizers do not have GPU support for networks with
-  sparse reads, which are a common element in Nengo models.  If your
-  network contains sparse reads then training will have to be
-  executed on the CPU (by creating the simulator via
-  ``nengo_dl.Simulator(..., device="/cpu:0")``), or is limited to
-  optimizers with GPU support (currently this is only
-  ``tf.train.GradientDescentOptimizer``). Follow `this issue
-  <https://github.com/tensorflow/tensorflow/issues/2314>`_ for updates
-  on Tensorflow GPU support.
+       with nengo.Network() as net:
+           ...
+           a = nengo.Ensemble(10, 1)
+           net.config[nengo.Ensemble].trainable = False
+           ...
+
+
+2. ``trainable`` cannot be set on manually created
+   :class:`~nengo:nengo.Config` objects, only ``net.config``.  For
+   example, the following would have no effect:
+
+   .. code-block:: python
+
+       with nengo.Config(nengo.Ensemble) as conf:
+           conf[nengo.Ensemble].trainable = False
+
+
+Examples
+--------
+.. toctree::
+
+   examples/nef_init
+   examples/spiking_mnist

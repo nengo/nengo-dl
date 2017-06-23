@@ -91,7 +91,7 @@ def test_unconnected_node(Simulator):
     model = nengo.Network()
     with model:
         nengo.Node(f, size_in=0, size_out=0)
-    with Simulator(model, step_blocks=1) as sim:
+    with Simulator(model, unroll_simulation=1) as sim:
         assert hits == 0
         sim.run(dt)
         assert hits == 1

@@ -46,45 +46,43 @@ overhead of communicating with the GPU outweighs the actual computations.  On
 systems with multiple GPUs, ``device="/gpu:0"``/``"/gpu:1"``/etc. will select
 which one to use.
 
-step_blocks
-^^^^^^^^^^^
-
-The default is ``None``, which means that the simulator will always execute
-the number of timesteps specified by :meth:`.Simulator.run`.  If instead
-``step_blocks=n``, where ``n`` is some integer, then the simulator will
-break the overall run up into blocks of ``n`` timesteps.  For example, if
-``step_blocks=10``, then ``sim.run_steps(200)`` will be executed internally
-as (omitting some details) ``for i in range(20): sim.run_steps(10)``.  The
-simulation results will look exactly the same, this only affects
-the internal simulator execution.
-
-The only case in which this may affect the
-simulation is if the number of simulation steps is not evenly divisible by
-``step_blocks``.  In that case extra simulation steps will be executed, and
-then data will be truncated to the correct number of steps.  However, those
-extra steps could still change the internal state of the simulation, which
-will affect any subsequent calls to ``sim.run``.  So it is
-recommended that the number of steps always be evenly divisible by
-``step_blocks``.
-
-A user may want to use this parameter if the simulator is running out of memory
-during execution, due to the accumulation of values (such as
-:class:`~nengo:nengo.Probe` outputs) over time.  Breaking up the simulation
-into smaller blocks will reduce the maximum memory usage.  Most
-commonly ``step_blocks`` is used in combination with ``unroll_simulation``
-(see below).
-
 unroll_simulation
 ^^^^^^^^^^^^^^^^^
 
-If ``unroll_simulation=False`` then the simulation graph will
-be constructed using a symbolic loop, in order to run arbitrary numbers of
-timesteps.  If ``unroll_simulation=True`` then the computations for each
-simulation step will be explicitly built into the simulation graph.  This
-results in faster simulation speed, but increased build time and memory usage
-due to the increased graph complexity.  If ``unroll_simulation=True`` then
-``step_blocks`` must be defined as well (see above), in order to specify how
-many simulation steps should be built into the graph.
+This controls how many simulation iterations are executed each time through
+the outer simulation loop.  That is, we could run 20 timesteps as
+
+.. code-block:: python
+
+    for i in range(20):
+        <run 1 step>
+
+or
+
+.. code-block:: python
+
+    for i in range(5):
+        <run 1 step>
+        <run 1 step>
+        <run 1 step>
+        <run 1 step>
+
+This is an optimization process known as "loop unrolling", and
+``unroll_simulation`` controls how many simulation steps are unrolled.  The
+first example above would correspond to ``unroll_simulation=1``, and the
+second would be ``unroll_simulation=4``.
+
+Unrolling the simulation will result in faster simulation speed, but increased
+build time and memory usage.
+
+In general, unrolling the simulation will have no impact on the output of a
+simulation.  The only case in which unrolling may have an impact is if
+the number of simulation steps is not evenly divisible by
+``unroll_simulation``.  In that case extra simulation steps will be executed,
+and then data will be truncated to the correct number of steps.  However, those
+extra steps could still change the internal state of the simulation, which
+will affect any subsequent calls to ``sim.run``.  So it is recommended that the
+number of steps always be evenly divisible by ``unroll_simulation``.
 
 
 .. _minibatch_size:
@@ -204,7 +202,7 @@ minibatch:
 
     with nengo_dl.Simulator(net, minibatch_size=mini) as sim:
         sim.run_steps(n_steps, input_feeds={
-            node: np.ones((mini, n_steps, 1)) + np.arange(mini)[:, None, None]})
+            node: np.zeros((mini, n_steps, 1)) + np.arange(mini)[:, None, None]})
         print(sim.data[p])
     >>> [[[ 0.] [ 0.] [ 0.] [ 0.] [ 0.]]
          [[ 1.] [ 1.] [ 1.] [ 1.] [ 1.]]
@@ -233,5 +231,4 @@ Documentation
 -------------
 
 .. autoclass:: nengo_dl.simulator.Simulator
-    :private-members:
-    :exclude-members: unsupported, _generate_inputs, _update_probe_data, dt
+    :exclude-members: unsupported, dt

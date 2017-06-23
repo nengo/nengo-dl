@@ -30,21 +30,22 @@ def test_state_grads_fail():
 def test_dynamic_stitch():
     x = tf.zeros((1, 3))
     y = tf.dynamic_stitch([[0], [0]], [x, tf.ones((1, 3))])
+    z = tf.gather(y, [0])
 
     with tf.Session():
-        analytic, numeric = tf.test.compute_gradient(x, (1, 3), y, (1, 3))
+        analytic, numeric = tf.test.compute_gradient(x, (1, 3), z, (1, 3))
 
         assert np.allclose(analytic, numeric)
 
 
 def test_state_grads():
-    v = tf.Variable([0., 0., 0.])
-    x = tf.ones((3,))
-
-    y0 = tf.assign(v, x)
-    y1 = tf.assign_add(v, x)
-
     with tf.Session() as sess:
+        v = tf.Variable([0., 0., 0.])
+        x = tf.ones((3,))
+
+        y0 = tf.assign(v, x)
+        y1 = tf.assign_add(v, x)
+
         # TODO: the ._ref() is necessary due to something in tensorflow 1.0.0,
         # can remove if we upgrade requirements
         grad0 = tf.gradients(y0, [v._ref(), x])
@@ -57,11 +58,12 @@ def test_state_grads():
         assert np.allclose(grad_vals[1][0], 1)
         assert np.allclose(grad_vals[1][1], 1)
 
-    x = tf.ones((1,))
-    y0 = tf.scatter_update(v, [0], x)
-    y1 = tf.scatter_add(v, [0], x)
-
     with tf.Session() as sess:
+        v = tf.Variable([0., 0., 0.])
+        x = tf.ones((1,))
+        y0 = tf.scatter_update(v, [0], x)
+        y1 = tf.scatter_add(v, [0], x)
+
         grad0 = tf.gradients(y0, [v._ref(), x])
         grad1 = tf.gradients(y1, [v._ref(), x])
         grad_vals = sess.run((grad0, grad1))

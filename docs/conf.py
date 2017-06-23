@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 import nengo_dl
 import sphinx_rtd_theme
@@ -13,6 +14,8 @@ extensions = [
     'sphinx.ext.viewcode',
     'numpydoc',
     'nengo.utils.docutils',
+    'nbsphinx',
+    'IPython.sphinxext.ipython_console_highlighting',
 ]
 
 # -- sphinx.ext.autodoc
@@ -31,8 +34,21 @@ todo_include_todos = True
 # -- numpydoc config
 numpydoc_show_class_members = False
 
+# -- sphinx-versioning
+if "TRAVIS_BRANCH" in os.environ:
+    curr_branch = os.environ["TRAVIS_BRANCH"]
+else:
+    curr_branch = str(subprocess.check_output(
+        "git rev-parse --abbrev-ref HEAD"), "utf-8").strip()
+scv_whitelist_branches = ('master', curr_branch)
+scv_show_banner = True
+scv_banner_recent_tag = True
+
+# -- nbsphinx
+nbsphinx_timeout = 300
+
 # -- sphinx
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', '**.ipynb_checkpoints']
 source_suffix = '.rst'
 source_encoding = 'utf-8'
 master_doc = 'index'
@@ -44,7 +60,7 @@ mathjax_path = ("https://cdn.mathjax.org/mathjax/latest/MathJax.js"
 project = u'NengoDL'
 authors = u'Applied Brain Research'
 copyright = nengo_dl.__copyright__
-version = '.'.join(nengo_dl.__version__.split('.')[:2])  # Short X.Y version
+# version = '.'.join(nengo_dl.__version__.split('.')[:2])  # Short X.Y version
 release = nengo_dl.__version__  # Full version, with tags
 pygments_style = 'default'
 
@@ -52,7 +68,7 @@ pygments_style = 'default'
 
 html_theme = 'sphinx_rtd_theme'
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-html_title = "NengoDL {0} docs".format(release)
+html_title = "NengoDL documentation"
 html_static_path = ['_static']
 html_context = {
     'css_files': [os.path.join('_static', 'custom.css')],
@@ -61,6 +77,8 @@ html_use_smartypants = True
 htmlhelp_basename = 'Nengodoc'
 html_last_updated_fmt = ''  # Suppress 'Last updated on:' timestamp
 html_show_sphinx = False
+html_favicon = os.path.join("_static", "favicon.ico")
+html_logo = os.path.join("_static", "logo.png")
 
 # -- Options for LaTeX output -------------------------------------------------
 

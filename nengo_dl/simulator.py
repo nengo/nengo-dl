@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, division
 
 from collections import Mapping
 import datetime
@@ -7,6 +7,7 @@ import os
 import time
 import warnings
 
+from nengo import Process
 from nengo.builder import Model
 from nengo.exceptions import (ReadonlyError, SimulatorClosed, NengoWarning,
                               SimulationError)
@@ -41,14 +42,10 @@ class Simulator(object):
     device : None or ``"/cpu:0"`` or ``"/gpu:[0-n]"``, optional
         device on which to execute computations (if None then uses the
         default device as determined by Tensorflow)
-    step_blocks : int, optional
-        controls how many simulation steps run each time the graph is
-        executed (affects memory usage and graph construction time)
-    unroll_simulation : bool, optional
-        if True, unroll simulation loop by explicitly building each iteration
-        (up to ``step_blocks``) into the computation graph. if False, use a
-        symbolic loop, which is more general and produces a simpler graph, but
-        is likely to be slower to simulate
+    unroll_simulation : int, optional
+        unroll simulation loop by explicitly building the given number of
+        iterations into the computation graph (improves simulation speed
+        but increases build time)
     minibatch_size : int, optional
         the number of simultaneous inputs that will be passed through the
         network
@@ -76,23 +73,32 @@ class Simulator(object):
          "tests/test_nengo_tests.py:test_args"),
 
         ("nengo/tests/test_node.py:test_unconnected_node",
-         "need to set `step_blocks` to ensure node runs the correct number "
-         "of times (see tests/test_nengo_tests.py:test_unconnected_node"),
+         "need to set `unroll_simulation` to ensure node runs the correct "
+         "number of times (see "
+         "tests/test_nengo_tests.py:test_unconnected_node"),
+
+        # TODO: put this test back in when we bump nengo version
+        ("nengo/utils/tests/test_ensemble.py:test_tuning_curves[*",
+         "this test is not compatible with numpy>=1.13"),
     ]
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
-                 dtype=tf.float32, device=None, step_blocks=None,
-                 unroll_simulation=False, minibatch_size=None,
-                 tensorboard=False):
+                 dtype=tf.float32, device=None, unroll_simulation=1,
+                 minibatch_size=None, tensorboard=False,
+                 step_blocks="deprecated"):
         self.closed = None
         self.sess = None
         self.tensorboard = tensorboard
-        self.step_blocks = step_blocks
+        self.unroll = unroll_simulation
         self.minibatch_size = 1 if minibatch_size is None else minibatch_size
 
-        if unroll_simulation and step_blocks is None:
-            raise SimulationError("`step_blocks` must be specified when the "
-                                  "simulation is being unrolled")
+        if step_blocks != "deprecated" or isinstance(unroll_simulation, bool):
+            # TODO: remove this in 0.5
+            warnings.warn(
+                "`step_blocks` has been deprecated and will be ignored; "
+                "`Simulator(..., unroll_simulation=n)` is now equivalent to "
+                "`Simulator(..., unroll_simulation=True, step_blocks=n).",
+                DeprecationWarning)
 
         # TODO: allow the simulator to be called flexibly with/without
         # minibatching
@@ -116,8 +122,8 @@ class Simulator(object):
 
         # set up tensorflow graph plan
         self.tensor_graph = TensorGraph(
-            self.model, self.dt, step_blocks, unroll_simulation, dtype,
-            self.minibatch_size, device)
+            self.model, self.dt, unroll_simulation, dtype, self.minibatch_size,
+            device)
 
         self.data = ProbeDict(
             self.model.params,
@@ -153,7 +159,10 @@ class Simulator(object):
         # gradient descent training deterministic?
         tf.set_random_seed(self.seed)
 
+        self.input_funcs = {}
+
         # (re)build graph
+        # TODO: do we need to rebuild the graph?
         print_and_flush("Constructing graph", end="")
         start = time.time()
         self.tensor_graph.build(self.rng)
@@ -176,13 +185,18 @@ class Simulator(object):
         # start session
         # note: we need to allow soft placement when using tf.while_loop,
         # because tensorflow pins loop variables to the CPU
+        # TODO: switch allow_soft_placement to False once tensorflow
+        # adds the RefExit GPU kernel
         config = tf.ConfigProto(
-            allow_soft_placement=not self.tensor_graph.unroll_simulation,
+            allow_soft_placement=True,
             log_device_placement=False,
         )
+        # TODO: XLA compiling doesn't seem to provide any benefit at the
+        # moment, revisit later after tensorflow has developed it further
+        # config.graph_options.optimizer_options.global_jit_level = (
+        #     tf.OptimizerOptions.ON_1)
 
-        self.sess = tf.InteractiveSession(graph=self.tensor_graph.graph,
-                                          config=config)
+        self.sess = tf.Session(graph=self.tensor_graph.graph, config=config)
         self.closed = False
 
         # initialize variables
@@ -215,6 +229,7 @@ class Simulator(object):
         if include_probes:
             for p in self.model.probes:
                 self.model.params[p] = []
+            self.n_steps = 0
 
     def step(self, **kwargs):
         """Run the simulation for one time step.
@@ -258,22 +273,22 @@ class Simulator(object):
 
         Notes
         -----
-        If ``step_blocks`` is specified, and ``n_steps > step_blocks``, this
-        will repeatedly execute ``step_blocks`` timesteps until the the number
-        of steps executed is >= ``n_steps``.
+        If ``unroll_simulation=x`` is specified, and ``n_steps > x``, this will
+        repeatedly execute ``x`` timesteps until the the number of steps
+        executed is >= ``n_steps``.
         """
 
         if self.closed:
             raise SimulatorClosed("Simulator cannot run because it is closed.")
 
-        if self.step_blocks is not None and n_steps % self.step_blocks != 0:
+        actual_steps = self.unroll * int(np.ceil(n_steps / self.unroll))
+
+        if actual_steps != n_steps:
             warnings.warn(
-                "Number of steps (%d) is not an even multiple of `step_blocks`"
-                " (%d).  Simulation will run for %d steps, which may have "
-                "unintended side effects." %
-                (n_steps, self.step_blocks,
-                 self.step_blocks * (n_steps // self.step_blocks + 1)),
-                RuntimeWarning)
+                "Number of steps (%d) is not an even multiple of "
+                "`unroll_simulation` (%d).  Simulation will run for %d steps, "
+                "which may have unintended side effects." %
+                (n_steps, self.unroll, actual_steps), RuntimeWarning)
 
         if input_feeds is not None:
             self._check_data(input_feeds, mode="out", check_mini=True,
@@ -281,65 +296,6 @@ class Simulator(object):
 
         print_and_flush("Simulation started", end="")
         start = time.time()
-
-        if self.step_blocks is None:
-            probe_data = self._run_steps(n_steps, input_feeds=input_feeds,
-                                         profile=profile)
-
-            self._update_probe_data(probe_data, self.n_steps - n_steps,
-                                    n_steps)
-        else:
-            # break the run up into `step_blocks` sized chunks
-            count = 0
-            while count < n_steps:
-                sub_feed = (
-                    None if input_feeds is None else
-                    {n: v[:, count:count + self.step_blocks]
-                     for n, v in input_feeds.items()})
-                probe_data = self._run_steps(
-                    self.step_blocks, input_feeds=sub_feed,
-                    profile=profile if count == 0 else False)
-                count += self.step_blocks
-
-                self._update_probe_data(
-                    probe_data, self.n_steps - self.step_blocks,
-                    self.step_blocks + min(n_steps - count, 0))
-
-            # update n_steps/time
-            self.n_steps += n_steps - count
-            self.time = self.n_steps * self.dt
-
-        print("\rSimulation completed in %s" %
-              datetime.timedelta(seconds=int(time.time() - start)))
-
-    def _run_steps(self, n_steps, input_feeds=None, profile=False):
-        """Execute ``step_blocks`` sized segments of the simulation.
-
-        Parameters
-        ----------
-        n_steps : int
-            the number of simulation steps to be executed
-        input_feeds : dict of {:class:`~nengo:nengo.Node`: \
-                               :class:`~numpy:numpy.ndarray`}
-            override the values of input Nodes with the given data.  arrays
-            should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
-        profile : bool, optional
-            if True, collect TensorFlow profiling information while the
-            simulation is running (this will slow down the simulation)
-
-        Notes
-        -----
-        - This function should not be called directly; run the simulator
-          through :meth:`.Simulator.step`, :meth:`.Simulator.run_steps`, or
-          :meth:`.Simulator.run`.
-
-        - The ``input_feeds`` argument allows the user to pass several
-          simultaneous input sequences through the model.  That is, instead of
-          running the model ``n`` times with 1 input at a time, the model
-          can be run once with ``n`` inputs at a time.  Only the values of
-          input nodes (nodes with no incoming Connections) can be overwritten
-          in this way.
-        """
 
         if profile:
             run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
@@ -352,20 +308,26 @@ class Simulator(object):
         try:
             steps_run, probe_data = self.sess.run(
                 [self.tensor_graph.steps_run, self.tensor_graph.probe_arrays],
-                feed_dict=self._fill_feed(n_steps, input_feeds,
+                feed_dict=self._fill_feed(actual_steps, input_feeds,
                                           start=self.n_steps),
                 options=run_options, run_metadata=run_metadata)
         except (tf.errors.InternalError, tf.errors.UnknownError) as e:
             if e.op.type == "PyFunc":
                 raise SimulationError(
-                    "Function '%s' caused an error "
-                    "(see error log above)" % e.op.name)
+                    "Function '%s' caused an error (see error log above)" %
+                    e.op.name)
             else:
-                raise e
+                raise e  # pragma: no cover
+
+        # update probe data
+        self._update_probe_data(probe_data, self.n_steps, n_steps)
 
         # update n_steps
-        assert steps_run == n_steps
-        self.n_steps += steps_run
+        # note: we update n_steps according to the number of steps that the
+        # user asked for, not the number of steps that were actually run (
+        # in the case of uneven unroll_simulation)
+        assert steps_run == actual_steps
+        self.n_steps += n_steps
         self.time = self.n_steps * self.dt
 
         if profile:
@@ -373,7 +335,8 @@ class Simulator(object):
             with open("%s/nengo_dl_profile.json" % DATA_DIR, "w") as f:
                 f.write(timeline.generate_chrome_trace_format())
 
-        return probe_data
+        print("\rSimulation completed in %s" %
+              datetime.timedelta(seconds=int(time.time() - start)))
 
     def train(self, inputs, targets, optimizer, n_epochs=1, objective="mse",
               shuffle=True):
@@ -386,12 +349,12 @@ class Simulator(object):
         inputs : dict of {:class:`~nengo:nengo.Node`: \
                           :class:`~numpy:numpy.ndarray`}
             input values for Nodes in the network; arrays should have shape
-            ``(batch_size, sim.step_blocks, node.size_out)``
+            ``(batch_size, n_steps, node.size_out)``
         targets : dict of {:class:`~nengo:nengo.Probe`: \
                            :class:`~numpy:numpy.ndarray`}
             desired output value at Probes, corresponding to each value in
             ``inputs``; arrays should have shape
-            ``(batch_size, sim.step_blocks, probe.size_in)``
+            ``(batch_size, n_steps, probe.size_in)``
         optimizer : ``tf.train.Optimizer``
             Tensorflow optimizer, e.g.
             ``tf.train.GradientDescentOptimizer(learning_rate=0.1)``
@@ -410,36 +373,28 @@ class Simulator(object):
 
         Notes
         -----
-        - Deep learning methods require the network to be differentiable, which
-          means that trying to train a network with non-differentiable elements
-          will result in an error.  Examples of common non-differentiable
-          elements include :class:`~nengo:nengo.LIF`,
-          :class:`~nengo:nengo.Direct`, or processes/neurons that don't have a
-          custom TensorFlow implementation (see
-          :class:`.processes.SimProcessBuilder`/
-          :class:`.neurons.SimNeuronsBuilder`)
-
-        - Most TensorFlow optimizers do not have GPU support for networks with
-          sparse reads, which are a common element in Nengo models.  If your
-          network contains sparse reads then training will have to be
-          executed on the CPU (by creating the simulator via
-          ``nengo_dl.Simulator(..., device="/cpu:0")``), or is limited to
-          optimizers with GPU support (currently this is only
-          ``tf.train.GradientDescentOptimizer``). Follow `this issue
-          <https://github.com/tensorflow/tensorflow/issues/2314>`_ for updates
-          on Tensorflow GPU support.
+        Most deep learning methods require the network to be differentiable,
+        which means that trying to train a network with non-differentiable
+        elements will result in an error.  Examples of common
+        non-differentiable elements include :class:`~nengo:nengo.LIF`,
+        :class:`~nengo:nengo.Direct`, or processes/neurons that don't have a
+        custom TensorFlow implementation (see
+        :class:`.processes.SimProcessBuilder`/
+        :class:`.neurons.SimNeuronsBuilder`)
         """
+
+        # TODO: we could save the internal state of the simulator before
+        # training and then restore it afterwards, so that calling train
+        # doesn't reset a run
+
+        batch_size, n_steps = next(iter(inputs.values())).shape[:2]
 
         # error checking
         if self.closed:
             raise SimulatorClosed("Simulator cannot be trained because it is "
                                   "closed.")
-        if self.step_blocks is None:
-            raise SimulationError(
-                "Simulator `step_blocks` must be set for training "
-                "(`Simulator(..., step_blocks=n)`)")
-        self._check_data(inputs, mode="out")
-        self._check_data(targets, mode="in")
+        self._check_data(inputs, mode="out", n_steps=n_steps)
+        self._check_data(targets, mode="in", n_steps=n_steps)
 
         # check for non-differentiable elements in graph
         # utils.find_non_differentiable(
@@ -454,7 +409,8 @@ class Simulator(object):
         # initialize any variables that were created by the optimizer
         self.sess.run(opt_slots_init)
 
-        progress = utils.ProgressBar(n_epochs, "Training")
+        progress = utils.ProgressBar(
+            n_epochs * batch_size // self.minibatch_size, "Training")
 
         for n in range(n_epochs):
             for inp, tar in utils.minibatch_generator(
@@ -462,14 +418,11 @@ class Simulator(object):
                     shuffle=shuffle):
                 # TODO: set up queue to feed in data more efficiently
                 self.soft_reset()
-                try:
-                    self.sess.run([opt_op], feed_dict=self._fill_feed(
-                        self.step_blocks, inp, tar))
-                except tf.errors.InvalidArgumentError:
-                    raise SimulationError(
-                        "TensorFlow does not yet support this optimizer on "
-                        "the GPU; try `Simulator(..., device='/cpu:0')`")
-            progress.step()
+
+                self.sess.run([opt_op], feed_dict=self._fill_feed(
+                    n_steps, inp, tar))
+
+                progress.step()
 
         self.soft_reset()
 
@@ -481,12 +434,12 @@ class Simulator(object):
         inputs : dict of {:class:`~nengo:nengo.Node`: \
                           :class:`~numpy:numpy.ndarray`}
             input values for Nodes in the network; arrays should have shape
-            ``(batch_size, sim.step_blocks, node.size_out)``
+            ``(batch_size, n_steps, node.size_out)``
         targets : dict of {:class:`~nengo:nengo.Probe`: \
                            :class:`~numpy:numpy.ndarray`}
             desired output value at Probes, corresponding to each value in
             ``inputs``; arrays should have shape
-            ``(batch_size, sim.step_blocks, probe.size_in)``
+            ``(batch_size, n_steps, probe.size_in)``
         objective : ``"mse"`` or callable
             the objective used to compute loss. passing ``"mse"`` will use
             mean squared error. a custom function
@@ -501,16 +454,14 @@ class Simulator(object):
         should not be intermixed with calls to :meth:`.Simulator.run`.
         """
 
+        n_steps = next(iter(inputs.values())).shape[1]
+
         # error checking
         if self.closed:
             raise SimulatorClosed("Loss cannot be computed after simulator is "
                                   "closed.")
-        if self.step_blocks is None:
-            raise SimulationError(
-                "Simulator `step_blocks` must be set to compute loss "
-                "(`Simulator(..., step_blocks=n)`)")
-        self._check_data(inputs, mode="out")
-        self._check_data(targets, mode="in")
+        self._check_data(inputs, mode="out", n_steps=n_steps)
+        self._check_data(targets, mode="in", n_steps=n_steps)
 
         # get loss op
         loss = self.tensor_graph.build_loss(objective, tuple(targets.keys()))
@@ -521,7 +472,7 @@ class Simulator(object):
                 inputs, targets, self.minibatch_size, rng=self.rng)):
             self.soft_reset()
             loss_val += self.sess.run(
-                loss, feed_dict=self._fill_feed(self.step_blocks, inp, tar))
+                loss, feed_dict=self._fill_feed(n_steps, inp, tar))
         self.soft_reset()
         loss_val /= i + 1
 
@@ -604,6 +555,18 @@ class Simulator(object):
                 self.model.sig[n]["out"] in self.tensor_graph.sig_map and
                 n.size_out > 0)
 
+            if (not isinstance(n.output, np.ndarray) and
+                    n.output not in self.input_funcs):
+                if isinstance(n.output, Process):
+                    self.input_funcs[n.output] = n.output.make_step(
+                        (n.size_in,), (n.size_out,), self.dt,
+                        n.output.get_rng(self.rng))
+                elif n.size_out > 0:
+                    self.input_funcs[n.output] = utils.align_func(
+                        (n.size_out,), self.tensor_graph.dtype)(n.output)
+                else:
+                    self.input_funcs[n.output] = n.output
+
             if using_output:
                 if n in input_feeds:
                     # move minibatch dimension to the end
@@ -612,7 +575,7 @@ class Simulator(object):
                     feed_val = np.tile(n.output[None, :, None],
                                        (n_steps, 1, self.minibatch_size))
                 else:
-                    func = self.tensor_graph.invariant_funcs[n]
+                    func = self.input_funcs[n.output]
 
                     feed_val = []
                     for i in range(self.n_steps + 1,
@@ -626,11 +589,10 @@ class Simulator(object):
                                        (1, 1, self.minibatch_size))
 
                 feed_vals[self.tensor_graph.invariant_ph[n]] = feed_val
-            elif (not isinstance(n.output, np.ndarray) and
-                  n.output in self.tensor_graph.invariant_funcs.values()):
+            elif not isinstance(n.output, np.ndarray):
                 # note: we still call the function even if the output
                 # is not being used, because it may have side-effects
-                func = self.tensor_graph.invariant_funcs[n]
+                func = self.input_funcs[n.output]
                 for i in range(self.n_steps + 1, self.n_steps + n_steps + 1):
                     func(i * self.dt)
 
@@ -654,7 +616,7 @@ class Simulator(object):
             the number of timesteps over which we want to collect data
         """
 
-        # first, remove any extra timesteps (due to `step_blocks` mismatch)
+        # remove any extra timesteps (due to `unroll_simulation` mismatch)
         probe_data = [p[:n_steps] for p in probe_data]
 
         for i, p in enumerate(self.model.probes):
@@ -667,34 +629,51 @@ class Simulator(object):
             # update stored probe data
             self.model.params[p] += [probe_data[i]]
 
-    def save_params(self, path):
-        """Save trainable network parameters to the given ``path``.
+    def save_params(self, path, include_local=False):
+        """Save network parameters to the given ``path``.
 
         Parameters
         ----------
         path : str
             filepath of parameter output file
+        include_local : bool, optional
+            if True, also save local (non-trainable) network variables
         """
         if self.closed:
             raise SimulationError("Simulation has been closed, cannot save "
                                   "parameters")
 
-        path = tf.train.Saver().save(self.sess, path)
+        with self.tensor_graph.graph.as_default():
+            vars = tf.global_variables()
+            if include_local:
+                vars.extend(tf.local_variables())
+
+            path = tf.train.Saver(vars).save(self.sess, path)
+
         logger.info("Model parameters saved to %s", path)
 
-    def load_params(self, path):
-        """Load trainable network parameters from the given ``path``.
+    def load_params(self, path, include_local=False):
+        """Load network parameters from the given ``path``.
 
         Parameters
         ----------
         path : str
             filepath of parameter input file
+        include_local : bool, optional
+            if True, also load local (non-trainable) network variables
         """
         if self.closed:
             raise SimulationError("Simulation has been closed, cannot load "
                                   "parameters")
 
-        tf.train.Saver().restore(self.sess, path)
+        with self.tensor_graph.graph.as_default():
+            vars = tf.global_variables()
+            if include_local:
+                vars.extend(tf.local_variables())
+
+            tf.train.Saver(vars).restore(self.sess, path)
+
+        logger.info("Model parameters loaded from %s", path)
 
     def print_params(self, msg=None):
         """Print current values of trainable network parameters.
@@ -797,7 +776,8 @@ class Simulator(object):
 
         Parameters
         ----------
-        outputs : ``tf.Tensor`` or list of ``tf.Tensor``
+        outputs : ``tf.Tensor`` or list of ``tf.Tensor`` or \
+                  list of :class:`~nengo:nengo.Probe`
             compute gradients wrt this output (if None, computes wrt each
             output probe)
         atol : float, optional
@@ -812,12 +792,12 @@ class Simulator(object):
         """
 
         delta = 1e-3
+        n_steps = self.unroll * 2
 
         feed = self._fill_feed(
-            self.step_blocks, {n: np.zeros((self.minibatch_size,
-                                            self.step_blocks, n.size_out))
-                               for n in self.tensor_graph.invariant_inputs},
-            {p: np.zeros((self.minibatch_size, self.step_blocks, p.size_in))
+            n_steps, {n: np.zeros((self.minibatch_size, n_steps, n.size_out))
+                      for n in self.tensor_graph.invariant_inputs},
+            {p: np.zeros((self.minibatch_size, n_steps, p.size_in))
              for p in self.tensor_graph.target_phs})
 
         if outputs is None:
@@ -826,15 +806,21 @@ class Simulator(object):
             outputs = [x + 0 for x in self.tensor_graph.probe_arrays]
         elif isinstance(outputs, tf.Tensor):
             outputs = [outputs]
+        else:
+            outputs = [
+                self.tensor_graph.probe_arrays[self.model.probes.index(p)] + 0
+                for p in outputs]
 
         # check gradient wrt inp
         for node, inp in self.tensor_graph.invariant_ph.items():
             inp_shape = inp.get_shape().as_list()
+            inp_shape = [n_steps if x is None else x for x in inp_shape]
             inp_tens = self.tensor_graph.invariant_ph[node]
             feed[inp_tens] = np.ascontiguousarray(feed[inp_tens])
             inp_val = np.ravel(feed[inp_tens])
             for out in outputs:
                 out_shape = out.get_shape().as_list()
+                out_shape = [n_steps if x is None else x for x in out_shape]
 
                 # we need to compute the numeric jacobian manually, to
                 # correctly handle variables (tensorflow doesn't expect
@@ -861,9 +847,10 @@ class Simulator(object):
                 dx, dy = gradient_checker._compute_dx_and_dy(
                     inp, out, out_shape)
 
-                analytic = gradient_checker._compute_theoretical_jacobian(
-                    inp, inp_shape, np.zeros(inp_shape), dy, out_shape, dx,
-                    extra_feed_dict=feed)
+                with self.sess.as_default():
+                    analytic = gradient_checker._compute_theoretical_jacobian(
+                        inp, inp_shape, np.zeros(inp_shape), dy, out_shape, dx,
+                        extra_feed_dict=feed)
 
                 if np.any(np.isnan(analytic)) or np.any(np.isnan(numeric)):
                     raise SimulationError("NaNs detected in gradient")
@@ -892,12 +879,14 @@ class Simulator(object):
         check_mini : bool, optional
             if True, also validate minibatch_size
         n_steps : int, optional
-            number of simulation steps (if None, will use sim.step_blocks)
+            number of simulation steps (if None, will use sim.unroll)
         """
+
+        # TODO: error if object not in invariant_inputs or model.probes
 
         for n, x in data.items():
             shape = (self.minibatch_size if check_mini else None,
-                     self.step_blocks if n_steps is None else n_steps,
+                     self.unroll if n_steps is None else n_steps,
                      n.size_out if mode == "out" else n.size_in)
 
             if any(x is not None and x != y for x, y in zip(shape, x.shape)):
@@ -906,7 +895,7 @@ class Simulator(object):
                     "(%s, %s, %s.size_%s) -> %s" %
                     (x.shape,
                      "sim.minibatch_size" if check_mini else "_",
-                     "sim.step_blocks" if n_steps is None else "n_steps",
+                     "sim.unroll" if n_steps is None else "n_steps",
                      n, mode, shape))
 
 
@@ -924,7 +913,7 @@ class ProbeDict(Mapping):
     raw : dict of {:class:`~nengo:nengo.Probe`: \
                    list of :class:`~numpy:numpy.ndarray`}
         the raw probe output from the simulator (a list of arrays containing
-        the output from each ``step_blocks`` execution segment)
+        the output from each ``run_steps`` execution segment)
     minibatches : dict of {:class:`~nengo:nengo.Probe`: int or None}
         the minibatch size for each probe in the dictionary (or -1 if the
         probed signal does not have a minibatch dimension)
@@ -938,28 +927,27 @@ class ProbeDict(Mapping):
     def __init__(self, raw, minibatches):
         self.raw = raw
         self.minibatches = minibatches
-        self._cache = {}
+
+        # TODO: add cache back in?
 
     def __getitem__(self, key):
-        cache_miss = (key not in self._cache or
-                      len(self._cache[key]) != len(self.raw[key]))
-        if cache_miss:
-            rval = self.raw[key]
-            if isinstance(rval, list):
-                # combine data from _run_steps iterations
-                rval = np.concatenate(rval, axis=0)
+        rval = self.raw[key]
 
-                if self.minibatches[key] != -1:
-                    if self.minibatches[key] is None:
-                        # get rid of batch dimension
-                        rval = rval[..., 0]
-                    else:
-                        # move batch dimension to front
-                        rval = np.moveaxis(rval, -1, 0)
+        if isinstance(rval, list):
+            # combine data from run_steps iterations
+            rval = np.concatenate(rval, axis=0)
 
-                rval.setflags(write=False)
-            self._cache[key] = rval
-        return self._cache[key]
+            if self.minibatches[key] != -1:
+                if self.minibatches[key] is None:
+                    # get rid of batch dimension
+                    rval = rval[..., 0]
+                else:
+                    # move batch dimension to front
+                    rval = np.moveaxis(rval, -1, 0)
+
+            rval.setflags(write=False)
+
+        return rval
 
     def __iter__(self):
         return iter(self.raw)

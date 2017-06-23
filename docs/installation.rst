@@ -6,7 +6,7 @@ Requirements
 - ``python 2.7`` or ``python >= 3.4``
 - ``numpy >= 1.11.0``
 - ``nengo >= 2.3.1``
-- ``tensorflow >= 1.0.0``
+- ``tensorflow >= 1.2.0``
 
 Installing NengoDL
 ------------------
@@ -31,11 +31,7 @@ perform a developer installation:
 .. code-block:: bash
 
   git clone https://github.com/nengo/nengo_dl.git
-  cd nengo_dl
-  python setup.py develop --user
-
-If you are in a virtual environment (recommended), you can omit the ``--user``
-flag.
+  pip install -e ./nengo_dl
 
 Installing TensorFlow
 ---------------------

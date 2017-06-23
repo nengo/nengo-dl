@@ -13,8 +13,7 @@ env:
     - MODE="test"
     - PYTHON_VERSION="3.5"
     - NENGO_DL_TEST_PRECISION="32"
-    - NENGO_DL_TEST_UNROLL="False"
-    - NENGO_DL_TEST_STEP_BLOCKS="None"
+    - NENGO_DL_TEST_UNROLL="1"
     - NUMPY_VERSION="numpy"
     - TF_VERSION="tensorflow"
     - NENGO_VERSION="nengo"
@@ -22,20 +21,31 @@ env:
   matrix:
     - MODE="pep8"
     - MODE="docs"
-    - MODE="coverage"
     - # default build
+    - MODE="coverage"
+    - MODE="coverage"
+      PYTHON_VERSION="2.7"
+      NENGO_VERSION="git+https://github.com/nengo/nengo.git"
+    - MODE="examples"
     - NENGO_DL_TEST_PRECISION="64"
-    - NENGO_DL_TEST_UNROLL="True"
-      NENGO_DL_TEST_STEP_BLOCKS="10"
+    - NENGO_DL_TEST_UNROLL="5"
     - PYTHON_VERSION="2.7"
     - PYTHON_VERSION="3.4"
     - PYTHON_VERSION="3.6"
     - NUMPY_VERSION="numpy==1.11.0"
-    - TF_VERSION="tensorflow==1.0.0"
+      TF_VERSION="tensorflow==1.2.0"
+      NENGO_VERSION="nengo==2.3.1"
     - NENGO_VERSION="git+https://github.com/nengo/nengo.git"
-    - NENGO_VERSION="nengo==2.3.1"
 
-# Setup Miniconda
+# setup xvfb so we can test examples with matplotlib
+before_script:
+  - if [[ "$MODE" == "examples" || "$MODE" == "coverage" ]]; then
+      export DISPLAY=:99.0;
+      sh -e /etc/init.d/xvfb start;
+      sleep 3;
+    fi
+
+# setup miniconda
 before_install:
   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
@@ -46,32 +56,37 @@ before_install:
   - conda create -q -n test python=$PYTHON_VERSION pip $NUMPY_VERSION
   - source activate test
 
-# install requirements that weren't installed via conda
+# install python requirements
 install:
   - pip install $TF_VERSION
   - pip install $NENGO_VERSION
-  - pip install -r requirements.txt
   - pip install -r requirements-test.txt
-  - if [[ "$MODE" == "docs" ]]; then pip install -r requirements-docs.txt; fi
+  - if [[ "$MODE" == "docs" || "$MODE" == "examples" ]]; then
+      pip install -r requirements-docs.txt;
+      conda install pandoc;
+    fi
+  - pip install -e .
   - conda list -e
   - pip freeze
 
-# run pytest/flake8
+# run the main script
 script:
   - if [[ "$MODE" == "pep8" ]]; then
       flake8;
     elif [[ "$MODE" == "docs" ]]; then
-      python setup.py build_sphinx;
+      export LATEST_TAG="$(git describe --abbrev=0 --tags)";
+      sphinx-versioning build -r $TRAVIS_BRANCH -w $TRAVIS_BRANCH -W $LATEST_TAG docs docs/_build/html;
     elif [[ "$MODE" == "coverage" ]]; then
-      python setup.py develop;
       coverage run -m py.test --pyargs nengo;
-      coverage run -a -m py.test;
+      coverage run -a -m py.test nengo_dl;
       coverage report;
+    elif [[ "$MODE" == "examples" ]]; then
+      py.test -v --durations 20 --nbval-lax docs/examples;
     else
-      python setup.py develop;
-      py.test -v --pyargs nengo && py.test -v --durations 20;
+      py.test -v -n 2 --pyargs nengo && py.test -v -n 2 --durations 20 nengo_dl;
     fi
 
+# upload results
 after_success:
   - if [[ "$MODE" == "docs" && "$TRAVIS_BRANCH" == "master" ]]; then
       export DATE=$(date '+%Y-%m-%d %T');

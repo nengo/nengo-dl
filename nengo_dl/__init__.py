@@ -22,13 +22,13 @@ if not any(["gpu" in x.name for x in device_lib.list_local_devices()]):
 from nengo.version import version_info as nengo_version  # noqa: E402
 
 minimum_nengo_version = (2, 3, 1)
-latest_nengo_version = (2, 4, 0)
-if nengo_version < minimum_nengo_version:
+latest_nengo_version = (2, 4, 1)
+if nengo_version < minimum_nengo_version:  # pragma: no cover
     raise ValueError(
         "`nengo_dl` does not support `nengo` version %s. Upgrade "
         "with 'pip install --upgrade --no-deps nengo'." %
         nengo_version)
-elif nengo_version > latest_nengo_version:
+elif nengo_version > latest_nengo_version:  # pragma: no cover
     warnings.warn(
         "This version of `nengo_dl` has not been tested with your `nengo` "
         "version %s. The latest fully supported version is %s" %
@@ -40,7 +40,10 @@ from nengo_dl import (  # noqa: F401
 
 # import into top-level namespace
 from nengo_dl.simulator import Simulator  # noqa: F401
-from nengo_dl.tensor_node import TensorNode  # noqa: F401
+from nengo_dl.tensor_node import (  # noqa: F401
+    TensorNode, tensor_layer, reshaped)
+from nengo_dl.utils import configure_trainable  # noqa: F401
+from nengo_dl.neurons import SoftLIFRate  # noqa: F401
 
 # fix tensorflow bugs
 from nengo_dl import tensorflow_patch  # noqa: E402

@@ -1,14 +1,14 @@
 from collections import OrderedDict, defaultdict
-import copy
 import logging
 
 from nengo.synapses import Lowpass
-from nengo.builder.operator import SimPyFunc, ElementwiseInc, Reset
+from nengo.builder.operator import SimPyFunc, ElementwiseInc, DotInc, Reset
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 from nengo.exceptions import BuildError
 from nengo.utils.compat import iteritems
 from nengo.utils.graphs import toposort
+
 try:
     from nengo.utils.simulator import operator_dependency_graph
 except ImportError:
@@ -44,7 +44,7 @@ def mergeable(op, chosen_ops):
 
     # note: we only need to check against the first item in the list,
     # since we know the rest all match
-    c = chosen_ops[0]
+    c = next(iter(chosen_ops))
 
     # must share the same builder
     if builder.Builder.builders[type(op)] != builder.Builder.builders[type(c)]:
@@ -87,6 +87,15 @@ def mergeable(op, chosen_ops):
             shape1 = s1.shape[0] if s1.shape != () else 1
             if shape0 != shape1:
                 return False
+    elif isinstance(op, DotInc):
+        # if the matrix (A) is minibatched, then the first dimensions need
+        # to match up (to allow us to transpose the dimensions)
+        if op.A.minibatched:
+            for s0, s1 in zip(op.all_signals, c.all_signals):
+                shape0 = s0.shape[0] if s0.shape != () else 1
+                shape1 = s1.shape[0] if s1.shape != () else 1
+                if shape0 != shape1:
+                    return False
     elif isinstance(op, SimPyFunc):
         # for these we need to make a special check that the functions
         # all do/do not get time as input, otherwise we could end
@@ -117,6 +126,14 @@ def mergeable(op, chosen_ops):
         # point trying to execute all those functions at once, because they're
         # already integrated into the Tensorflow graph.
         return False
+    elif isinstance(op, (learning_rules.SimVoja, learning_rules.SimOja,
+                         learning_rules.SimBCM)):
+        # pre inputs must have the same dimensionality so that we can broadcast
+        # them when computing the outer product
+        attr = ("pre_decoded" if isinstance(op, learning_rules.SimVoja) else
+                "pre_filtered")
+        if getattr(op, attr).shape[0] != getattr(c, attr).shape[0]:
+            return False
 
     return True
 
@@ -200,17 +217,21 @@ def greedy_planner(operators):
     return plan
 
 
-def tree_planner(operators):
+def tree_planner(op_list, max_depth=3):
     """Create merged execution plan through exhaustive tree search.
 
-    Unlike :func:`.graph_optimizer.greedy_planner`, this is guaranteed to find
-    the shortest plan. However, depending on the structure of the operator
-    graph, it can take a long time to execute.
+    The ``max_depth`` parameter scales the planner between full tree search
+    and greedy search.  ``max_depth==1`` is equivalent to
+    :func:`.greedy_planner`, and ``max_depth==len(op_list)`` is full tree
+    search (guaranteed to find the optimal plan, but likely very slow).
 
     Parameters
     ----------
-    operators : list of :class:`~nengo:nengo.builder.Operator`
+    op_list : list of :class:`~nengo:nengo.builder.Operator`
         all the ``nengo`` operators in a model (unordered)
+    max_depth : int, optional
+        the planner will search this many steps ahead before selecting which
+        group to schedule next
 
     Returns
     -------
@@ -218,81 +239,136 @@ def tree_planner(operators):
         operators combined into mergeable groups and in execution order
     """
 
-    def shortest_plan(ops, successors_of, predecessors_of, cache):
-        logger.debug("shortest_plan")
-        logger.debug(ops)
+    def shortest_plan(selected, successors_of, predecessors_of, cache,
+                      max_depth, available):
+        """Recursively check what the shortest plan is after selecting each
+        available group."""
 
-        if len(ops) <= 1:
-            # normal termination
-            return [ops] if len(ops) == 1 else []
-        elif ops in cache:
-            # we've already found the shortest path for this set of ops
-            # (plans are markovian)
-            return cache[ops]
+        shortest = (None, len(successors_of) + 1)
+        nonempty_available = [x for x in enumerate(available) if len(x[1]) > 0]
+        n_remaining = len(successors_of) - len(selected)
+        for i, group in nonempty_available:
+            new_len = n_remaining - len(group)
 
-        # get the groups that could be scheduled next
-        free = [op for op in ops if len(predecessors_of[op]) == 0]
-
-        logger.debug("free %s", free)
-
-        available = []
-        for op in free:
-            for i, group in enumerate(available):
-                if mergeable(op, group):
-                    available[i] += (op,)
-                    break
+            if max_depth == 1 or new_len == 0:
+                # we've reached the end, so just return the number
+                # of remaining operators after selecting this group
+                result, length = [], new_len
             else:
-                available += [(op,)]
+                # update the selected ops after adding group
+                new_selected = selected | group
 
-        logger.debug("available")
-        logger.debug(available)
+                try:
+                    # check if we've already computed the shortest path
+                    # for the selected ops and depth
+                    result, length = cache[max_depth - 1][new_selected]
 
-        if len(available) == 0:
+                except KeyError:
+                    # update the list of available items after selecting
+                    # this group
+                    available[i] = set()
+                    successors = [x for op in group for x in successors_of[op]]
+                    for op in successors:
+                        predecessors_of[op] -= 1
+
+                        if predecessors_of[op] == 0:
+                            available[mergeable_cache[op]].add(op)
+
+                    # recursively find the best plan on the remaining
+                    # operators
+                    result, length = shortest_plan(
+                        new_selected, successors_of, predecessors_of, cache,
+                        max_depth - 1, available)
+
+                    # return the available list to its original state for
+                    # the next group (note: this is faster than copying
+                    # the list)
+                    for op in successors:
+                        predecessors_of[op] += 1
+
+                        if predecessors_of[op] == 1:
+                            available[mergeable_cache[op]].remove(op)
+                    available[i] = group
+
+            if length + 1 < shortest[1]:
+                # new shortest path found
+                shortest = ([tuple(group)] + result, length + 1)
+
+        if shortest[0] is None:
             raise BuildError("Cycle detected during graph optimization")
 
-        # check what the shortest plan is after selecting each available group
-        shortest = None
-        for group in available:
-            pred = {k: copy.copy(v) for k, v in predecessors_of.items()}
-            for op in group:
-                for op2 in successors_of[op]:
-                    pred[op2].remove(op)
-
-            logger.debug("selecting %s", group)
-
-            result = shortest_plan(
-                tuple(op for op in ops if op not in group),
-                successors_of, pred, cache)
-
-            if shortest is None or len(result) + 1 < len(shortest):
-                shortest = [group] + result
-
-                logger.debug("new shortest plan detected")
-                logger.debug(shortest)
-
-        cache[ops] = shortest
+        cache[max_depth][selected] = shortest
 
         return shortest
 
-    dependency_graph = operator_dependency_graph(operators)
+    # compute operator dependency graph
+    successors_of = operator_dependency_graph(op_list)
 
+    # convert operators to integer indices (to save memory and make
+    # lookup faster)
+    op_codes = {op: np.uint32(i) for i, op in enumerate(op_list)}
+    successors_of = {op_codes[k]: set(op_codes[x] for x in v)
+                     for k, v in successors_of.items()}
+
+    # track the number of incoming edges to each operator
     predecessors_of = {}
-    successors_of = {}
-    for op in operators:
-        predecessors_of[op] = set()
-        successors_of[op] = set()
-    for op in operators:
-        dests = dependency_graph[op]
+    for op in successors_of:
+        predecessors_of[op] = 0
+    for op, dests in successors_of.items():
         for op2 in dests:
-            predecessors_of[op2].add(op)
-        successors_of[op].update(dests)
+            predecessors_of[op2] += 1
 
-    tmp = shortest_plan(tuple(operators), successors_of, predecessors_of, {})
+    # precompute which operators are theoretically mergeable (this doesn't mean
+    # we can actually merge these ops, since they may be dependent on one
+    # another)
+    mergeable_cache = [None for _ in op_list]
+    groups = []
+    for j, op in enumerate(op_list):
+        for i, g in enumerate(groups):
+            if mergeable(op, g):
+                mergeable_cache[j] = i
+                g.append(op)
+                break
+        else:
+            mergeable_cache[j] = len(groups)
+            groups.append([op])
+    groups = [[op_codes[x] for x in g] for g in groups]
+
+    # find the ops that could be scheduled next in each merge group
+    available = [set(op for op in g if predecessors_of[op] == 0)
+                 for g in groups]
+
+    plan = []
+    while len(successors_of) > 0:
+        # find the best plan of the given depth
+        short_plan, _ = shortest_plan(
+            frozenset(), successors_of, predecessors_of,
+            [{} for _ in range(max_depth + 1)], max_depth, available)
+
+        # select the first item in that plan (i.e., the best group to select
+        # after looking ahead for max_depth steps)
+        selected = short_plan[0]
+        plan.append(selected)
+
+        # update the operator availability
+        available[mergeable_cache[next(iter(selected))]] = set()
+        for op in selected:
+            for op2 in successors_of[op]:
+                predecessors_of[op2] -= 1
+
+                if predecessors_of[op2] == 0:
+                    available[mergeable_cache[op2]].add(op2)
+
+            del predecessors_of[op]
+            del successors_of[op]
+
+    # convert indices back to operators
+    plan = [tuple(op_list[x] for x in g) for g in plan]
 
     logger.debug("TREE PLAN")
-    logger.debug("\n".join([str(x) for x in tmp]))
+    logger.debug("\n".join([str(x) for x in plan]))
 
-    return tmp
+    return plan
 
 
 def noop_planner(operators):
@@ -539,12 +615,12 @@ def order_signals(plan, n_passes=10):
     """
 
     # get all the unique base signals
-    all_signals = list(set([s.base for ops in plan for op in ops
-                            for s in op.all_signals]))
+    all_signals = sorted(set([s.base for ops in plan for op in ops
+                              for s in op.all_signals]), key=lambda s: s.name)
 
     # figure out all the read blocks in the plan (in theory we would like each
     # block to become a contiguous chunk in the base array)
-    read_blocks = {}
+    read_blocks = OrderedDict()
 
     # note: reads[op] contains all the signals that are inputs to op. this is
     # generally equivalent to op.reads, but there are some ops that also
@@ -586,8 +662,6 @@ def order_signals(plan, n_passes=10):
     # note: we multiply by the number of duplicates, since read blocks that
     # are read by multiple op groups will have a proportionally larger impact
     # on performance
-    # TODO: maybe we should just care about duplicates (how much does the size
-    # of the block affect gather/slice time?)
     sorted_blocks = sorted(
         sorted_blocks, key=lambda b: np.sum([s.size for s in b[0]]) * b[1])
     sorted_blocks = [sorted_blocks[i][0] for i in
@@ -763,21 +837,18 @@ def hamming_sort(blocks):
             next_blocks = unique_blocks
             active_block = None
 
-        logger.debug("active block %s", active_block)
-        logger.debug("next blocks")
-        logger.debug(next_blocks)
+        # find all the matching blocks (blocks which contain all the same
+        # elements as curr_blocks, plus something extra)
+        matching = [b for b in next_blocks if len(b | curr_blocks) == len(b)]
+        if len(matching) > 0:
+            next_blocks = matching
 
-        # then within all the blocks that are a potential continuation,
-        # pick the ones with the smallest hamming distance
-        # TODO: we should set this up so it prefers to add new blocks
-        # rather than discontinuing a block
+        # then within all the matching blocks, pick the ones with the smallest
+        # hamming distance
         next_dists = [len(curr_blocks ^ b) for b in next_blocks]
         min_dist = min(next_dists)
         next_blocks = [b for i, b in enumerate(next_blocks)
                        if next_dists[i] == min_dist]
-
-        logger.debug("hamming filter")
-        logger.debug(next_blocks)
 
         # within all the blocks that have the same hamming distance, pick the
         # next block that matches along the largest blocks
@@ -1048,9 +1119,9 @@ def create_signals(sigs, plan, float_type, minibatch_size):
                 curr_keys[k] = object()
 
         # convert to appropriate dtype
-        if sig.dtype in (np.float32, np.float64):
+        if np.issubdtype(sig.dtype, np.float):
             dtype = float_type
-        elif sig.dtype in (np.int32, np.int64):
+        elif np.issubdtype(sig.dtype, np.integer):
             dtype = np.int32
         else:
             raise NotImplementedError
@@ -1131,11 +1202,12 @@ def create_signals(sigs, plan, float_type, minibatch_size):
         initial_value = sig.initial_value
         if sig.minibatched:
             initial_value = initial_value[..., None]
+
         assert np.allclose(base_arrays[tensor_sig.key][0][tensor_sig.indices],
-                           initial_value)
+                           initial_value.astype(dtype))
 
     logger.debug("base arrays")
-    logger.debug("\n".join([str((k, v[0].dtype, v[0].shape, v[1]))
-                            for k, v in base_arrays.items()]))
+    logger.debug("\n".join([str((k, v.dtype, v.shape, trainable))
+                            for k, (v, trainable) in base_arrays.items()]))
 
     return base_arrays, sig_map

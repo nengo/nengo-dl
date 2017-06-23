@@ -18,12 +18,72 @@ Release History
    - Removed
    - Fixed
 
-0.3.1 (unreleased)
+0.4.1 (unreleased)
 ------------------
 
 **Added**
 
+- Added ``nengo_dl.tensor_layer`` to help with the construction of
+  layer-style TensorNodes (see the `TensorNode documentation
+  <https://nengo.github.io/nengo_dl/tensor_node.html>`_)
+- Added an example demonstrating `how to train a neural network
+  that can run in spiking neurons
+  <https://nengo.github.io/nengo_dl/examples/spiking_mnist.html>`_
+- Added some distributions for weight initialization to ``nengo_dl.dists``
+
+**Changed**
+
+- Increased minimum TensorFlow version to 1.2.0
+
+**Fixed**
+
+- Fixed bug related to changing the output of a Node after the model is
+  constructed (`#4 <https://github.com/nengo/nengo_dl/issues/4)>`_)
+- Order of variable creation is now deterministic (helps make saving/loading
+  parameters more reliable)
+- Configuring whether or not a model element is trainable does not affect
+  whether or not that element is minibatched
+- Correctly reuse variables created inside a TensorNode when
+  ``unroll_simulation`` > 1
+
+0.4.0 (June 8, 2017)
+--------------------
+
+**Added**
+
+- Added ability to manually specify which parts of a model are trainable
+  (see the `sim.train documentation
+  <https://nengo.github.io/nengo_dl/training.html>`_)
+- Added some code examples (see the ``docs/examples`` directory, or the
+  `pre-built examples in the documentation
+  <https://nengo.github.io/nengo_dl/examples.html>`_)
+- Added the SoftLIFRate neuron type for training LIF networks (based on
+  `this paper <https://arxiv.org/abs/1510.08829>`_)
+
+**Changed**
+
+- Updated TensorFuncParam to new Nengo Param syntax
+- The interface for Simulator ``step_blocks``/``unroll_simulation`` has been
+  changed.  Now ``unroll_simulation`` takes an integer as argument which is
+  equivalent to the old ``step_blocks`` value, and ``unroll_simulation=1`` is
+  equivalent to the old ``unroll_simulation=False``.  For example,
+  ``Simulator(..., unroll_simulation=True, step_blocks=10)`` is now equivalent
+  to ``Simulator(..., unroll_simulation=10)``.
+- Simulator.train/Simulator.loss no longer require ``step_blocks`` (or the new
+  ``unroll_simulation``) to be specified; the number of steps to train across
+  will now be inferred from the input data.
+
+
+0.3.1 (May 12, 2017)
+--------------------
+
+**Added**
+
 - Added more documentation on Simulator arguments
+
+**Changed**
+
+- Improved efficiency of tree_planner, made it the new default planner
 
 **Fixed**
 
@@ -31,6 +91,9 @@ Release History
 - Detect cycles in transitive planner
 - Fix bug in uneven step_blocks rounding
 - Fix bug in Simulator.print_params
+- Fix bug related to merging of learning rule with different dimensionality
+- Use tf.Session instead of tf.InteractiveSession, to avoid strange side
+  effects if the simulator isn't closed properly
 
 
 0.3.0 (April 25, 2017)

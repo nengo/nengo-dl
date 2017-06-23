@@ -19,9 +19,9 @@ try:
     if not any(["gpu" in x.name for x in device_lib.list_local_devices()]):
         raise ImportError()
 
-    tf_req = "tensorflow-gpu>=1.0"
+    tf_req = "tensorflow-gpu>=1.2.0"
 except ImportError:
-    tf_req = "tensorflow>=1.0"
+    tf_req = "tensorflow>=1.2.0"
 
 
 def read(*filenames, **kwargs):
@@ -62,5 +62,6 @@ setup(
                  'Programming Language :: Python :: 2.7',
                  'Programming Language :: Python :: 3.4',
                  'Programming Language :: Python :: 3.5',
+                 'Programming Language :: Python :: 3.6',
                  'Topic :: Scientific/Engineering'],
 )

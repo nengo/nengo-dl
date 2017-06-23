@@ -3,12 +3,11 @@ from nengo.exceptions import SimulationError
 import pytest
 import tensorflow as tf
 
-from nengo_dl import tensor_graph
+from nengo_dl import tensor_graph, utils
 
 
-@pytest.mark.parametrize("unroll", (True, False))
+@pytest.mark.parametrize("unroll", (1, 2))
 def test_gradients(Simulator, unroll, seed):
-    step_blocks = 10
     minibatch_size = 4
 
     with nengo.Network(seed=seed) as net:
@@ -43,7 +42,7 @@ def test_gradients(Simulator, unroll, seed):
         nengo.Probe(ens)
         nengo.Probe(ens2)
 
-    with Simulator(net, step_blocks=step_blocks, unroll_simulation=unroll,
+    with Simulator(net, unroll_simulation=unroll,
                    minibatch_size=minibatch_size) as sim:
         sim.check_gradients(atol=1e-4)
 
@@ -102,7 +101,8 @@ def test_mark_signals():
     model = nengo.builder.Model()
     model.build(net)
 
-    tensor_graph.mark_signals(model)
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
+    tg.mark_signals()
 
     assert model.sig[ens0]["encoders"].trainable
     assert model.sig[ens1]["encoders"].trainable
@@ -124,3 +124,90 @@ def test_mark_signals():
                 assert sig.trainable
             else:
                 assert not sig.trainable
+
+
+def test_mark_signals_config():
+    with nengo.Network() as net:
+        utils.configure_trainable(net)
+        net.config[nengo.Ensemble].trainable = False
+
+        with nengo.Network() as subnet:
+            utils.configure_trainable(subnet)
+
+            # check that object in subnetwork inherits config from parent
+            ens0 = nengo.Ensemble(10, 1, label="ens0")
+
+            # check that ens.neurons can be set independent of ens
+            subnet.config[ens0.neurons].trainable = True
+
+            with nengo.Network():
+                with nengo.Network() as subsubnet:
+                    utils.configure_trainable(subsubnet)
+
+                    # check that subnetworks can override parent configs
+                    subsubnet.config[nengo.Ensemble].trainable = True
+                    ens1 = nengo.Ensemble(10, 1, label="ens1")
+
+            # check that instances can be set independent of class
+            ens2 = nengo.Ensemble(10, 1, label="ens2")
+            subnet.config[ens2].trainable = True
+
+    model = nengo.builder.Model()
+    model.build(net)
+
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
+    tg.mark_signals()
+
+    assert not model.sig[ens0]["encoders"].trainable
+    assert model.sig[ens0.neurons]["bias"].trainable
+
+    assert model.sig[ens1]["encoders"].trainable
+
+    assert model.sig[ens2]["encoders"].trainable
+
+    # check that learning rule connections can be manually set to True
+    with nengo.Network() as net:
+        utils.configure_trainable(net)
+
+        a = nengo.Ensemble(10, 1)
+        b = nengo.Ensemble(10, 1)
+        conn0 = nengo.Connection(a, b, learning_rule_type=nengo.PES())
+        net.config[conn0].trainable = True
+
+    model = nengo.builder.Model()
+    model.build(net)
+
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
+    with pytest.warns(UserWarning):
+        tg.mark_signals()
+
+    assert model.sig[conn0]["weights"].trainable
+
+    with nengo.Network() as net:
+        utils.configure_trainable(net)
+
+        a = nengo.Node([0])
+        ens = nengo.Ensemble(10, 1)
+        nengo.Connection(a, ens, learning_rule_type=nengo.Voja())
+        net.config[nengo.Ensemble].trainable = True
+
+    model = nengo.builder.Model()
+    model.build(net)
+
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
+    with pytest.warns(UserWarning):
+        tg.mark_signals()
+
+    assert model.sig[ens]["encoders"].trainable
+
+    # check that models with no toplevel work
+    sig = nengo.builder.signal.Signal([0])
+    op = nengo.builder.operator.Reset(sig, 1)
+    model = nengo.builder.Model()
+    model.add_op(op)
+
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
+    with pytest.warns(UserWarning):
+        tg.mark_signals()
+
+    assert not sig.trainable

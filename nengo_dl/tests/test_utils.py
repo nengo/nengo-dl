@@ -1,4 +1,5 @@
-from nengo.exceptions import SimulationError
+from nengo import ensemble, config, Network, Connection, Ensemble
+from nengo.exceptions import SimulationError, ValidationError
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -102,11 +103,11 @@ def test_print_and_flush(capsys):
 
 
 def test_print_op(capsys):
-    x = tf.constant(0)
-    y = utils.print_op(x, "hello")
-    z = y + 0
-
     with tf.Session() as sess:
+        x = tf.constant(0)
+        y = utils.print_op(x, "hello")
+        z = y + 0
+
         sess.run(z)
 
     out, _ = capsys.readouterr()
@@ -127,3 +128,33 @@ def test_find_non_differentiable():
     z = y + 1
 
     utils.find_non_differentiable([x], [z])
+
+
+def test_configure_trainable():
+    conf = config.Config(Ensemble)
+    utils.configure_trainable(conf)
+
+    assert conf[Ensemble].trainable is None
+    assert conf[Connection].trainable is None
+    assert conf[ensemble.Neurons].trainable is None
+
+    conf[Ensemble].trainable = True
+
+    with pytest.raises(ValidationError):
+        conf[Ensemble].trainable = 5
+
+    assert conf[Ensemble].trainable is True
+
+    utils.configure_trainable(conf)
+
+    assert conf[Ensemble].trainable is None
+
+    net = Network()
+    utils.configure_trainable(net)
+
+    assert net.config[Ensemble].trainable is None
+
+    conf = config.Config(Ensemble)
+    utils.configure_trainable(conf, default=False)
+
+    assert conf[Ensemble].trainable is False

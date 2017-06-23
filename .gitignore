@@ -13,4 +13,6 @@ dist
 .idea
 data
 docs/mnist.pkl
-/nengo_dl/tmp.py
+docs/examples/*
+!docs/examples/*.ipynb
+tmp

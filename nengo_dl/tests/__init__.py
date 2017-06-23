@@ -41,21 +41,10 @@ class Simulator(simulator.Simulator):
                 kwargs.setdefault("dtype", tf.float64)
 
         if "NENGO_DL_TEST_UNROLL" in os.environ:
-            if os.environ["NENGO_DL_TEST_UNROLL"] == "True":
-                kwargs.setdefault("unroll_simulation", True)
-            else:
-                kwargs.setdefault("unroll_simulation", False)
+            kwargs.setdefault("unroll_simulation",
+                              int(os.environ["NENGO_DL_TEST_UNROLL"]))
         else:
-            kwargs.setdefault("unroll_simulation", False)
-
-        if "NENGO_DL_TEST_STEP_BLOCKS" in os.environ:
-            step_blocks = os.environ["NENGO_DL_TEST_STEP_BLOCKS"]
-            if step_blocks == "None":
-                kwargs.setdefault("step_blocks", None)
-            else:
-                kwargs.setdefault("step_blocks", int(step_blocks))
-        else:
-            kwargs.setdefault("step_blocks", None)
+            kwargs.setdefault("unroll_simulation", 1)
 
         if "NENGO_DL_TEST_DEVICE" in os.environ:
             device = os.environ["NENGO_DL_TEST_DEVICE"]

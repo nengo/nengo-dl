@@ -1,4 +1,6 @@
-flake8>=2.5.1
-matplotlib>=1.5.3
-pytest>=3.0.4
 coverage>=4.3.4
+flake8>=2.5.1
+matplotlib>=2.0.0
+nbval>=0.6
+pytest>=3.0.4
+pytest-xdist>=1.16.0

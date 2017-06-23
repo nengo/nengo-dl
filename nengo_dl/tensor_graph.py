@@ -7,12 +7,12 @@ import warnings
 from nengo import Connection, Process
 from nengo.builder.operator import TimeUpdate, SimPyFunc
 from nengo.builder.processes import SimProcess
+from nengo.config import Config, ConfigError
 from nengo.exceptions import SimulationError
 from nengo.neurons import Direct
 import tensorflow as tf
 
-from nengo_dl import (builder, graph_optimizer, signals, utils, tensor_node,
-                      nengo_version)
+from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node
 
 logger = logging.getLogger(__name__)
 
@@ -26,14 +26,9 @@ class TensorGraph(object):
         pre-built Nengo model describing the network to be simulated
     dt : float
         length of a simulator timestep, in seconds
-    step_blocks : int
-        controls how many simulation steps run each time the graph is
-        executed (affects memory usage and graph construction time)
-    unroll_simulation : bool
-        if True, unroll simulation loop by explicitly building each iteration
-        (up to ``step_blocks``) into the computation graph. if False, use a
-        symbolic loop, which is more general and produces a simpler graph, but
-        is likely to be slower to simulate
+    unroll_simulation : int
+        unroll simulation loop by explicitly building ``unroll_simulation``
+        iterations into the computation graph
     dtype : ``tf.DType``
         floating point precision to use for simulation
     minibatch_size : int
@@ -44,12 +39,11 @@ class TensorGraph(object):
         default device as determined by Tensorflow)
     """
 
-    def __init__(self, model, dt, step_blocks, unroll_simulation, dtype,
+    def __init__(self, model, dt, unroll_simulation, dtype,
                  minibatch_size, device):
         self.model = model
         self.dt = dt
-        self.step_blocks = step_blocks
-        self.unroll_simulation = unroll_simulation
+        self.unroll = unroll_simulation
         self.dtype = dtype
         self.minibatch_size = minibatch_size
         self.device = device
@@ -78,7 +72,7 @@ class TensorGraph(object):
                  op.process in node_processes))]
 
         # mark trainable signals
-        mark_signals(model)
+        self.mark_signals()
 
         logger.info("Initial plan length: %d", len(operators))
 
@@ -86,10 +80,11 @@ class TensorGraph(object):
         start = time.time()
 
         # group mergeable operators
-        if nengo_version < (2, 4, 0):
-            plan = graph_optimizer.greedy_planner(operators)
-        else:
-            plan = graph_optimizer.transitive_planner(operators)
+        plan = graph_optimizer.tree_planner(operators)
+
+        # TODO: we could also merge operators sequentially (e.g., combine
+        # a copy and dotinc into one op), as long as the intermediate signal
+        # is only written to by one op and read by one op
 
         # order signals/operators to promote contiguous reads
         sigs, self.plan = graph_optimizer.order_signals(plan, n_passes=10)
@@ -168,7 +163,7 @@ class TensorGraph(object):
             logger.debug([str(x) for x in self.base_vars])
 
             # set up invariant inputs
-            self.build_inputs(rng)
+            self.build_inputs()
 
             # pre-build stage
             for ops in self.plan:
@@ -265,35 +260,46 @@ class TensorGraph(object):
                 [(k, v) for k, v in zip(self.base_arrays_init.keys(),
                                         base_vars)])
 
-            # note: nengo step counter is incremented at the beginning of
-            # the timestep
-            step += 1
-            self.signals.step = step
+            for iter in range(self.unroll):
+                logger.debug("BUILDING ITERATION %d", iter)
+                with self.graph.name_scope("iteration_%d" % iter):
+                    # note: nengo step counter is incremented at the beginning
+                    # of the timestep
+                    step += 1
+                    self.signals.step = step
 
-            # fill in invariant input data
-            for n in self.invariant_ph:
-                self.signals.scatter(
-                    self.sig_map[self.model.sig[n]["out"]],
-                    self.invariant_ph[n][loop_i])
+                    # fill in invariant input data
+                    for n in self.invariant_ph:
+                        self.signals.scatter(
+                            self.sig_map[self.model.sig[n]["out"]],
+                            self.invariant_ph[n][loop_i])
 
-            # build the operators for a single step
-            # note: we tie things to the `loop_i` variable so that we can be
-            # sure the other things we're tying to the simulation step (side
-            # effects and probes) from the previous timestep are executed
-            # before the next step starts
-            with self.graph.control_dependencies([loop_i]):
-                probe_tensors, side_effects = self.build_step()
+                    # build the operators for a single step
+                    # note: we tie things to the `loop_i` variable so that we
+                    # can be sure the other things we're tying to the
+                    # simulation step (side effects and probes) from the
+                    # previous timestep are executed before the next step
+                    # starts
+                    with self.graph.control_dependencies([loop_i]):
+                        # note: we use the variable scope to make sure that we
+                        # aren't accidentally creating new variables for
+                        # unrolled iterations (this is really only a concern
+                        # with TensorNodes)
+                        with tf.variable_scope("", reuse=iter > 0):
+                            probe_tensors, side_effects = self.build_step()
 
-            # copy probe data to array
-            for i, p in enumerate(probe_tensors):
-                probe_arrays[i] = probe_arrays[i].write(loop_i, p)
+                    # copy probe data to array
+                    for i, p in enumerate(probe_tensors):
+                        probe_arrays[i] = probe_arrays[i].write(loop_i, p)
 
-            # need to make sure that any operators that could have side
-            # effects run each timestep, so we tie them to the loop increment.
-            # we also need to make sure that all the probe reads happen before
-            # those values get overwritten on the next timestep
-            with self.graph.control_dependencies(side_effects + probe_tensors):
-                loop_i += 1
+                    # need to make sure that any operators that could have side
+                    # effects run each timestep, so we tie them to the loop
+                    # increment. we also need to make sure that all the probe
+                    # reads happen before those values get overwritten on the
+                    # next timestep
+                    with self.graph.control_dependencies(side_effects +
+                                                         probe_tensors):
+                        loop_i += 1
 
             base_vars = tuple(self.signals.bases.values())
 
@@ -305,9 +311,8 @@ class TensorGraph(object):
 
         probe_arrays = [
             tf.TensorArray(
-                self.signals.dtype, clear_after_read=False,
-                size=0 if self.step_blocks is None else self.step_blocks,
-                dynamic_size=self.step_blocks is None)
+                self.signals.dtype, clear_after_read=True, size=0,
+                dynamic_size=True)
             for _ in self.model.probes]
 
         # build simulation loop
@@ -316,48 +321,24 @@ class TensorGraph(object):
             tuple(x._ref() if isinstance(x, tf.Variable) else x
                   for x in self.base_vars))
 
-        if self.unroll_simulation:
-            for n in range(self.step_blocks):
-                logger.debug("BUILDING ITERATION %d", n)
-                with self.graph.name_scope("iteration_%d" % n):
-                    loop_vars = loop_body(*loop_vars)
-        else:
-            # TODO: get parallel iterations working? nengo simulations are
-            # pretty serial though, so I'm not sure how much benefit we would
-            # get (and it seems non-trivial to get working correctly)
-            loop_vars = tf.while_loop(
-                loop_condition, loop_body, loop_vars=loop_vars,
-                parallel_iterations=1, back_prop=True)
+        # TODO: get parallel iterations working? nengo simulations are
+        # pretty serial though, so I'm not sure how much benefit we would
+        # get (and it seems non-trivial to get working correctly)
+        loop_vars = tf.while_loop(
+            loop_condition, loop_body, loop_vars=loop_vars,
+            parallel_iterations=1, back_prop=True)
 
-        self.end_base_arrays = loop_vars[4]
+        self.steps_run = loop_vars[2]
         self.probe_arrays = []
         for p in loop_vars[3]:
             x = p.stack()
-            if self.step_blocks is not None:
-                x.set_shape([self.step_blocks] +
-                            x.get_shape().as_list()[1:])
             self.probe_arrays += [x]
 
-        # note: we need to make sure the final base array updates get computed,
-        # even if they aren't being read by anything, because they may be
-        # being read on the next `_run_steps` call. the `tf.while_loop`
-        # enter/exit logic takes care of that on its own, so we only need to
-        # do this for the unrolled case
-        with tf.control_dependencies(self.end_base_arrays if
-                                     self.unroll_simulation else []):
-            self.steps_run = tf.identity(loop_vars[2])
-
-    def build_inputs(self, rng):
+    def build_inputs(self):
         """Sets up the inputs in the model (which will be computed outside of
         Tensorflow and fed in each simulation block).
-
-        Parameters
-        ----------
-        rng : :class:`~numpy:numpy.random.RandomState`
-            the Simulator's random number generator
         """
 
-        self.invariant_funcs = {}
         self.invariant_ph = {}
         for n in self.invariant_inputs:
             if self.model.sig[n]["out"] in self.sig_map:
@@ -368,20 +349,7 @@ class TensorGraph(object):
 
                 # set up a placeholder input for this node
                 self.invariant_ph[n] = tf.placeholder(
-                    self.dtype, (self.step_blocks, n.size_out,
-                                 self.minibatch_size))
-
-            # build the node functions, which will be called offline to
-            # generate the input values
-            if isinstance(n.output, Process):
-                self.invariant_funcs[n] = n.output.make_step(
-                    (n.size_in,), (n.size_out,), self.dt,
-                    n.output.get_rng(rng))
-            elif n.size_out > 0:
-                self.invariant_funcs[n] = utils.align_func(
-                    (n.size_out,), self.dtype)(n.output)
-            else:
-                self.invariant_funcs[n] = n.output
+                    self.dtype, (None, n.size_out, self.minibatch_size))
 
     def build_optimizer(self, optimizer, targets, objective):
         """Adds elements into the graph to execute the given optimizer.
@@ -453,8 +421,8 @@ class TensorGraph(object):
                 # create a placeholder for the target values
                 if p not in self.target_phs:
                     self.target_phs[p] = tf.placeholder(
-                        self.dtype, (self.step_blocks, p.size_in,
-                                     self.minibatch_size), name="targets")
+                        self.dtype, (None, p.size_in, self.minibatch_size),
+                        name="targets")
 
                 # compute loss
                 if objective == "mse":
@@ -468,106 +436,143 @@ class TensorGraph(object):
                 else:
                     raise NotImplementedError
 
-        # average loss across probes (note: this will also average across
-        # the output of `objective` if it doesn't return a scalar)
-        loss = tf.reduce_mean(loss)
+            # average loss across probes (note: this will also average across
+            # the output of `objective` if it doesn't return a scalar)
+            loss = tf.reduce_mean(loss)
 
         self.losses[(objective, targets)] = loss
 
         return loss
 
+    def mark_signals(self):
+        """Mark all the signals in ``self.model`` according to whether they
+        represent trainable parameters of the model (parameters that can be
+        optimized by deep learning methods).
 
-def mark_signals(model):
-    """Mark all the signals in ``model`` according to whether they represent
-    trainable parameters of the model (parameters that can be optimized by
-    deep learning methods).
+        Trainable parameters include connection weights, ensemble encoders, and
+        neuron biases.  Unless one of those signals is targeted by a Nengo
+        learning rule (otherwise the learning rule update conflicts with the
+        deep learning optimization).
 
-    Trainable parameters include connection weights, ensemble encoders, and
-    neuron biases.  Unless one of those signals is targeted by a Nengo learning
-    rule (otherwise the learning rule update conflicts with the deep learning
-    optimization).
+        Users can manually specify whether signals are trainable or not using
+        the config system (e.g.,
+        ``net.config[nengo.Ensemble].trainable = False``)
+        """
 
-    Parameters
-    ----------
-    model : class:`~nengo:nengo.builder.Model`
-        built Nengo model
-    """
+        def get_trainable(obj):
+            """Looks up the current value of ``obj.trainable`` in the config
+            stack."""
 
-    if model.toplevel is None:
-        warnings.warn("No top-level network in model")
-    else:
-        # encoders and biases are trainable
-        for ens in model.toplevel.all_ensembles:
-            model.sig[ens]["encoders"].trainable = True
-            model.sig[ens]["encoders"].minibatched = False
+            for config in reversed(Config.context):
+                try:
+                    params = config[obj]
+                    t = params.trainable
+                    if t is not None:
+                        return t
+                except (ConfigError, AttributeError):
+                    continue
 
-            if not isinstance(ens.neuron_type, Direct):
-                model.sig[ens.neurons]["bias"].trainable = True
-                model.sig[ens.neurons]["bias"].minibatched = False
+            # note: we return 1 rather than True so that we can determine
+            # whether something was explicitly set to trainable=True, or just
+            # defaulting
+            return 1
 
-        # connection weights are trainable
-        for conn in model.toplevel.all_connections:
-            # note: this doesn't include probe connections, since they aren't
-            # added to the network
-            # TODO: should we disable training on connections to learning
-            # rules?
-            model.sig[conn]["weights"].trainable = True
-            model.sig[conn]["weights"].minibatched = False
+        def mark_network(net):
+            """Recursively marks the signals for objects within each
+            subnetwork."""
 
-        # parameters can't be modified by an online Nengo learning rule
-        # and offline training at the same time. (it is possible in theory,
-        # but it complicates things a lot and is probably not a common
-        # use case). we also make those signals minibatched (they
-        # wouldn't be normally), because we want to be able to learn
-        # independently in each minibatch
-        for conn in model.toplevel.all_connections:
-            rule = conn.learning_rule
-            if rule is not None:
-                if isinstance(rule, dict):
-                    rule = list(rule.values())
-                elif not isinstance(rule, list):
-                    rule = [rule]
+            with net.config:
+                for subnet in net.networks:
+                    mark_network(subnet)
 
-                for r in rule:
-                    if r.modifies == "weights" or r.modifies == "decoders":
-                        model.sig[conn]["weights"].trainable = False
-                        model.sig[conn]["weights"].minibatched = True
-                    elif r.modifies == "encoders":
-                        model.sig[conn.post_obj]["encoders"].trainable = False
-                        model.sig[conn.post_obj]["encoders"].minibatched = True
-                    else:
-                        raise NotImplementedError
+                # encoders and biases are trainable
+                for ens in net.ensembles:
+                    ens_trainable = get_trainable(ens)
+                    self.model.sig[ens]["encoders"].trainable = ens_trainable
+                    self.model.sig[ens]["encoders"].minibatched = False
 
-        # the connections to connection probes are not trainable, but
-        # also not minibatched
-        probe_seeds = [model.seeds[p] for p in model.probes]
-        for obj, seed in model.seeds.items():
-            if isinstance(obj, Connection) and seed in probe_seeds:
-                model.sig[obj]["weights"].trainable = False
-                model.sig[obj]["weights"].minibatched = False
+                    if not isinstance(ens.neuron_type, Direct):
+                        neurons_trainable = get_trainable(ens.neurons)
+                        if neurons_trainable is 1:
+                            neurons_trainable = ens_trainable
 
-    # fill in defaults for all other signals
-    # signals are not trainable by default, and views take on the properties
-    # of their bases
-    for op in model.operators:
-        for sig in op.all_signals:
-            if not hasattr(sig.base, "trainable"):
-                sig.base.trainable = False
+                        self.model.sig[ens.neurons]["bias"].trainable = (
+                            neurons_trainable)
+                        self.model.sig[ens.neurons]["bias"].minibatched = False
 
-            if not hasattr(sig.base, "minibatched"):
-                sig.base.minibatched = not sig.base.trainable
+                # connection weights are trainable
+                for conn in net.connections:
+                    # note: this doesn't include probe connections, since they
+                    # aren't added to the network
+                    # TODO: should we disable training on connections to
+                    # learning rules?
+                    self.model.sig[conn]["weights"].trainable = get_trainable(
+                        conn)
+                    self.model.sig[conn]["weights"].minibatched = False
 
-            if not hasattr(sig, "trainable"):
-                sig.trainable = sig.base.trainable
+                # parameters can't be modified by an online Nengo learning rule
+                # and offline training at the same time. (it is possible in
+                # theory, but it complicates things a lot and is probably not a
+                # common use case). we also make those signals minibatched
+                # (they wouldn't be normally), because we want to be able to
+                # learn independently in each minibatch
+                for conn in net.connections:
+                    rule = conn.learning_rule
+                    if rule is not None:
+                        if isinstance(rule, dict):
+                            rule = list(rule.values())
+                        elif not isinstance(rule, list):
+                            rule = [rule]
 
-            if not hasattr(sig, "minibatched"):
-                sig.minibatched = sig.base.minibatched
+                        for r in rule:
+                            if r.modifies in ("weights", "decoders"):
+                                obj = conn
+                                attr = "weights"
+                            elif r.modifies == "encoders":
+                                obj = conn.post_obj
+                                attr = "encoders"
+                            else:
+                                raise NotImplementedError
 
-    # for p in model.probes:
-    #     sig = model.sig[p]["in"]
-    #
-    #     if not hasattr(sig, "trainable"):
-    #         sig.trainable = sig.base.trainable
-    #
-    #     if not hasattr(sig, "minibatched"):
-    #         sig.minibatched = sig.base.minibatched
+                            if get_trainable(obj) is True:
+                                warnings.warn(
+                                    "%s has a learning rule and is also set "
+                                    "to be trainable; this is likely to "
+                                    "produce strange training behaviour." %
+                                    obj)
+                            else:
+                                self.model.sig[obj][attr].trainable = False
+
+                            self.model.sig[obj][attr].minibatched = True
+
+        if self.model.toplevel is None:
+            warnings.warn(
+                "No top-level network in model; assuming no trainable "
+                "parameters", UserWarning)
+        else:
+            mark_network(self.model.toplevel)
+
+            # the connections to connection probes are not trainable, but
+            # also not minibatched
+            probe_seeds = [self.model.seeds[p] for p in self.model.probes]
+            for obj, seed in self.model.seeds.items():
+                if isinstance(obj, Connection) and seed in probe_seeds:
+                    self.model.sig[obj]["weights"].trainable = False
+                    self.model.sig[obj]["weights"].minibatched = False
+
+        # fill in defaults for all other signals
+        # signals are not trainable by default, and views take on the
+        # properties of their bases
+        for op in self.model.operators:
+            for sig in op.all_signals:
+                if not hasattr(sig.base, "trainable"):
+                    sig.base.trainable = False
+
+                if not hasattr(sig.base, "minibatched"):
+                    sig.base.minibatched = not sig.base.trainable
+
+                if not hasattr(sig, "trainable"):
+                    sig.trainable = sig.base.trainable
+
+                if not hasattr(sig, "minibatched"):
+                    sig.minibatched = sig.base.minibatched
