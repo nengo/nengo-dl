@@ -17,7 +17,7 @@ except ImportError:
         operator_depencency_graph as operator_dependency_graph)
 import numpy as np
 
-from nengo_dl import (signals, processes, builder, tensor_node, operators,
+from nengo_dl import (signals, processes, builder, tensor_node, op_builders,
                       learning_rules, neurons)
 
 logger = logging.getLogger(__name__)
@@ -427,24 +427,24 @@ def transitive_planner(op_list):
     # fail fast here if the op graph has cycles
     toposort(dg.forward)
 
-    op_builders = [builder.Builder.builders[type(op)] for op in op_list]
+    builder_types = [builder.Builder.builders[type(op)] for op in op_list]
 
     # sort operators by builder (we'll only be interested in one builder type
     # at a time, because we can't merge operators between builder types anyway)
     ops_by_type = defaultdict(set)
     for i, op in enumerate(op_list):
-        ops_by_type[op_builders[i]].add(np.uint32(i))
+        ops_by_type[builder_types[i]].add(np.uint32(i))
 
     # heuristic ordering for builder types (earlier items in the list will
     # have higher priority, meaning that we will choose to merge those ops
     # and potentially break lower-priority groups)
     order = [
-        operators.SparseDotIncBuilder, operators.ElementwiseIncBuilder,
+        op_builders.SparseDotIncBuilder, op_builders.ElementwiseIncBuilder,
         neurons.SimNeuronsBuilder, processes.SimProcessBuilder,
-        operators.SimPyFuncBuilder,
+        op_builders.SimPyFuncBuilder,
         learning_rules.SimOjaBuilder, learning_rules.SimVojaBuilder,
         learning_rules.SimBCMBuilder,
-        operators.CopyBuilder, operators.ResetBuilder,
+        op_builders.CopyBuilder, op_builders.ResetBuilder,
         tensor_node.SimTensorNodeBuilder]
 
     for builder_type in order:
@@ -457,7 +457,7 @@ def transitive_planner(op_list):
         # compute transitive closure
         trans = [None for _ in range(n_ele)]
         transitive_closure_recurse(dg.forward, ops, trans, builder_type,
-                                   op_builders, {})
+                                   builder_types, {})
 
         # reduce it to the elements we care about (ops of the current
         # builder type)
@@ -496,7 +496,7 @@ def transitive_planner(op_list):
 
         # trans_reverse = [None for _ in range(n_ele)]
         # transitive_closure_recurse(dg.backward, ops, trans_reverse,
-        #                            builder_type, op_builders, cache)
+        #                            builder_type, builder_types, cache)
         # trans_reverse = {i: v for i, v in
         #                  enumerate(trans_reverse[:len(op_list)]) if i in ops}
         # group = None
@@ -532,7 +532,7 @@ def transitive_planner(op_list):
     return plan
 
 
-def transitive_closure_recurse(dg, ops, trans, builder_type, op_builders,
+def transitive_closure_recurse(dg, ops, trans, builder_type, builder_types,
                                cache):
     """Computes the transitive closure for the given graph, restricted to the
     operators with the given builder type.
@@ -550,7 +550,7 @@ def transitive_closure_recurse(dg, ops, trans, builder_type, op_builders,
         one of the ``nengo_dl`` build classes (e.g.,
         :class:`~.operators.CopyBuilder`), specifying the type of operators
         to include in the transitive closure
-    op_builders : list of type
+    builder_types : list of type
         the build class for each operator
     cache : dict of {frozenset of int: set of int}
         stores base sets which ``trans`` will reference (to reduce memory
@@ -570,12 +570,12 @@ def transitive_closure_recurse(dg, ops, trans, builder_type, op_builders,
             continue
 
         todo = [x for x in dg[op] if trans[x] is None]
-        transitive_closure_recurse(dg, todo, trans, builder_type, op_builders,
-                                   cache)
+        transitive_closure_recurse(dg, todo, trans, builder_type,
+                                   builder_types, cache)
 
         merged = set(
-            x for x in dg[op] if x < len(op_builders) and
-            op_builders[x] == builder_type)
+            x for x in dg[op] if x < len(builder_types) and
+            builder_types[x] == builder_type)
 
         unique_posts = {id(trans[x]): trans[x] for x in dg[op]}
 
