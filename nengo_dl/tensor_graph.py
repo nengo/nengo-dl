@@ -79,6 +79,15 @@ class TensorGraph(object):
         utils.print_and_flush("Optimizing graph", end="")
         start = time.time()
 
+        # apply graph simplification functions
+        old_operators = []
+        while len(old_operators) != len(operators):
+            old_operators = operators
+            operators = graph_optimizer.remove_constant_copies(operators)
+            operators = graph_optimizer.remove_unmodified_resets(operators)
+            operators = graph_optimizer.remove_zero_incs(operators)
+            operators = graph_optimizer.remove_identity_muls(operators)
+
         # group mergeable operators
         plan = graph_optimizer.tree_planner(operators)
 

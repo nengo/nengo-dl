@@ -171,6 +171,9 @@ def compare_backends(raw=False):
                                 # with backend.Simulator(net, **kwargs) as sim:
                                 with backend.Simulator(None, model=model,
                                                        **kwargs) as sim:
+                                    # run once to eliminate startup overhead
+                                    sim.run(0.1)
+
                                     start = time.time()
                                     sim.run(5)
                                     # reps = 1 if backend == nengo_dl else 50
@@ -342,8 +345,8 @@ def profile_train(use_tensor_layer):
         # run a few times to try to eliminate startup overhead (only the data
         # from the last run will be kept)
         for _ in range(3):
-            sim.train(inputs, targets, opt, n_epochs=1, objective=obj,
-                      profile=True)
+            sim.train(inputs, targets, opt, n_epochs=1000, objective=obj,
+                      profile=False)
 
             # sim.run_steps(2, input_feeds=inputs, profile=True)
 

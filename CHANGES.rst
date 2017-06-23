@@ -32,6 +32,8 @@ Release History
 - Added some distributions for weight initialization to ``nengo_dl.dists``
 - Added ``sim.train(..., profile=True)` option to collect profiling information
   during training
+- Added new methods to simplify the Nengo operation graph, resulting in faster
+  simulation/training speed
 
 **Changed**
 

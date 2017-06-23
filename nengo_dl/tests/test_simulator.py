@@ -355,8 +355,10 @@ def test_generate_inputs(Simulator, seed):
 
 def test_save_load_params(Simulator, tmpdir):
     with nengo.Network(seed=0) as net:
+        inp = nengo.Node([0])
         out = nengo.Node(size_in=1)
         ens = nengo.Ensemble(10, 1)
+        nengo.Connection(inp, ens)
         nengo.Connection(ens, out)
 
         configure_trainable(net)
@@ -384,9 +386,10 @@ def test_save_load_params(Simulator, tmpdir):
         sim.print_params(None)
 
     with nengo.Network(seed=1) as net2:
-        configure_trainable(net2)
+        inp = nengo.Node([0])
         out = nengo.Node(size_in=1)
         ens = nengo.Ensemble(10, 1)
+        nengo.Connection(inp, ens)
         nengo.Connection(ens, out)
 
         configure_trainable(net2)

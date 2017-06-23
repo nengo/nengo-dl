@@ -10,10 +10,10 @@ def test_merged_learning(Simulator, rule, seed):
     # make sure that works OK
     dimensions = 2
     with nengo.Network(seed=seed) as net:
-        a = nengo.Ensemble(3, dimensions)
-        b = nengo.Ensemble(3, dimensions)
-        c = nengo.Ensemble(5, dimensions)
-        d = nengo.Ensemble(10, dimensions)
+        a = nengo.Ensemble(3, dimensions, label="a")
+        b = nengo.Ensemble(3, dimensions, label="b")
+        c = nengo.Ensemble(5, dimensions, label="c")
+        d = nengo.Ensemble(10, dimensions, label="d")
 
         conn0 = nengo.Connection(
             a, c, learning_rule_type=rule(),
