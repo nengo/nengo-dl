@@ -66,6 +66,8 @@ Release History
 - Correctly reuse variables created inside a TensorNode when
   ``unroll_simulation`` > 1
 - Correctly handle probes that aren't connected to any ops
+- Swapped ``fan_in``/``fan_out`` in ``dists.VarianceScaling`` to align with
+  the standard definitions
 
 0.4.0 (June 8, 2017)
 --------------------

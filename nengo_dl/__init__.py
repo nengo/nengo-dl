@@ -36,7 +36,7 @@ elif nengo_version > latest_nengo_version:  # pragma: no cover
 
 # need to explicitly import these to trigger the builder registration
 from nengo_dl import (  # noqa: F401
-    op_builders, neurons, processes, learning_rules)
+    op_builders, neurons, processes, learning_rules, dists)
 
 # import into top-level namespace
 from nengo_dl.simulator import Simulator  # noqa: F401
