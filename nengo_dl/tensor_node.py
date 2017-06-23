@@ -215,9 +215,7 @@ class SimTensorNodeBuilder(OpBuilder):
             output = self.func(signals.time, input)
 
         # move minibatch dimension back to end
-        output_dim = output.get_shape().ndims - 1
-        output = tf.transpose(
-            output, [output_dim] + [i for i in range(output_dim)])
+        output = tf.transpose(output, (1, 0))
 
         signals.scatter(self.dst_data, output)
 

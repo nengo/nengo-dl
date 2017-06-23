@@ -37,6 +37,8 @@ Release History
 
 - Increased minimum TensorFlow version to 1.2.0
 - Improved error checking for input/target data
+- Improved efficiency of stateful gradient operations, resulting in faster
+  training speed
 
 **Fixed**
 
