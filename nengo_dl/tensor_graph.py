@@ -9,6 +9,7 @@ from nengo.builder.operator import TimeUpdate, SimPyFunc
 from nengo.builder.processes import SimProcess
 from nengo.config import Config, ConfigError
 from nengo.neurons import Direct
+import numpy as np
 import tensorflow as tf
 
 from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node
@@ -121,7 +122,9 @@ class TensorGraph(object):
             # have been loaded if this signal is only accessed as part of a
             # larger block during the simulation)
             for p in self.model.probes:
-                self.sig_map[self.model.sig[p]["in"]].load_indices()
+                probe_sig = self.model.sig[p]["in"]
+                if probe_sig in self.sig_map:
+                    self.sig_map[probe_sig].load_indices()
 
             # create this constant once here so we don't end up creating a new
             # dt constant in each operator
@@ -218,23 +221,37 @@ class TensorGraph(object):
             if outputs is not None:
                 side_effects += outputs
 
-        # TODO: better solution to avoid the forced_copy
-        # we need to make sure that probe reads occur before the
-        # probe value is overwritten on the next timestep. however,
-        # just blocking on the sliced value (probe_tensor) doesn't
-        # work, because slices of variables don't perform a
-        # copy, so the slice can be "executed" and then the value
-        # overwritten before the tensorarray write occurs. what we
-        # really want to do is block until the probe_arrays.write
-        # happens, but you can't block on probe_arrays (and blocking on
-        # probe_array.flow doesn't work, although I think it should).
-        # so by adding the copy here and then blocking on the copy, we make
-        # sure that the probe value is read before it can be overwritten.
         logger.debug("collecting probe tensors")
-        probe_tensors = [
-            self.signals.gather(self.sig_map[self.model.sig[p]["in"]],
-                                force_copy=True)
-            for p in self.model.probes]
+        probe_tensors = []
+        for p in self.model.probes:
+            probe_sig = self.model.sig[p]["in"]
+            if probe_sig in self.sig_map:
+                # TODO: better solution to avoid the forced_copy
+                # we need to make sure that probe reads occur before the
+                # probe value is overwritten on the next timestep. however,
+                # just blocking on the sliced value (probe_tensor) doesn't
+                # work, because slices of variables don't perform a
+                # copy, so the slice can be "executed" and then the value
+                # overwritten before the tensorarray write occurs. what we
+                # really want to do is block until the probe_arrays.write
+                # happens, but you can't block on probe_arrays (and blocking on
+                # probe_array.flow doesn't work, although I think it should).
+                # so by adding the copy here and then blocking on the copy, we
+                # make sure that the probe value is read before it can be
+                # overwritten.
+                probe_tensors.append(self.signals.gather(
+                    self.sig_map[probe_sig], force_copy=True))
+            else:
+                # if a probe signal isn't in sig_map, that means that it isn't
+                # involved in any simulator ops.  so we know its value never
+                # changes, and we'll just return a constant containing the
+                # initial value.
+                if probe_sig.minibatched:
+                    init_val = np.tile(probe_sig.initial_value[..., None],
+                                       (1, self.minibatch_size))
+                else:
+                    init_val = probe_sig.initial_value
+                probe_tensors.append(tf.constant(init_val, dtype=self.dtype))
 
         logger.debug("=" * 30)
         logger.debug("build_step complete")

@@ -50,6 +50,7 @@ Release History
   whether or not that element is minibatched
 - Correctly reuse variables created inside a TensorNode when
   ``unroll_simulation`` > 1
+- Correctly handle probes that aren't connected to any ops
 
 0.4.0 (June 8, 2017)
 --------------------
