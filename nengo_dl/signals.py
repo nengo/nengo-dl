@@ -156,7 +156,7 @@ class TensorSignal(object):
             label=self.label + ".broadcast(%d, %d)" % (axis, length))
 
     def load_indices(self):
-        """Loads the indices for this signal into tensorflow, and if the
+        """Loads the indices for this signal into TensorFlow, and if the
         indices form a contiguous slice then also loads the start/stop/step of
         that slice."""
 
@@ -369,7 +369,7 @@ class SignalDict(object):
                        :class:`~nengo:nengo.builder.Signal`
             signals to be combined
         load_indices : bool, optional
-            if True, load the indices for the new signal into tensorflow right
+            if True, load the indices for the new signal into TensorFlow right
             away (otherwise they will need to be manually loaded later)
         label : str, optional
             name for combined signal (to help with debugging)
