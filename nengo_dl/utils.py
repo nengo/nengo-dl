@@ -30,7 +30,7 @@ else:
 
 
 def sanitize_name(name):
-    """Remove illegal Tensorflow name characters from string.
+    """Remove illegal TensorFlow name characters from string.
 
     Valid Tensorflow name characters are ``[A-Za-z0-9_.\\-/]``
 
@@ -64,7 +64,7 @@ def function_name(func, sanitize=True):
     func : callable
         callable object (e.g., function, callable class)
     sanitize : bool, optional
-        if True, remove any illegal Tensorflow name characters from name
+        if True, remove any illegal TensorFlow name characters from name
 
     Returns
     -------
@@ -83,9 +83,6 @@ def align_func(output_shape, output_dtype):
     """Decorator that ensures the output of ``func`` is an
     :class:`~numpy:numpy.ndarray` with the given shape and dtype.
 
-    Raises a ``SimulationError`` if the function returns ``None`` or a
-    non-finite value.
-
     Parameters
     ----------
     output_shape : tuple of int
@@ -93,6 +90,11 @@ def align_func(output_shape, output_dtype):
         function output)
     output_dtype : ``tf.DType`` or :class:`~numpy:numpy.dtype`
         desired dtype of function output
+
+    Raises
+    ------
+    :class:`~nengo:nengo.exceptions.SimulationError`
+        If the function returns ``None`` or a non-finite value.
     """
 
     if isinstance(output_dtype, tf.DType):
@@ -120,7 +122,7 @@ def align_func(output_shape, output_dtype):
 
 
 def print_op(input, message):
-    """Inserts a print statement into the tensorflow graph.
+    """Inserts a print statement into the TensorFlow graph.
 
     Parameters
     ----------
@@ -156,7 +158,7 @@ def cast_dtype(dtype, target):
     """Changes float dtypes to the target dtype, leaves others unchanged.
 
     Used to map all float values to a target precision.  Also casts numpy
-    dtypes to Tensorflow dtypes.
+    dtypes to TensorFlow dtypes.
 
     Parameters
     ----------
@@ -181,7 +183,7 @@ def cast_dtype(dtype, target):
 
 
 def find_non_differentiable(inputs, outputs):
-    """Searches through a Tensorflow graph to find non-differentiable elements
+    """Searches through a TensorFlow graph to find non-differentiable elements
     between ``inputs`` and ``outputs`` (elements that would prevent us from
     computing ``d_outputs / d_inputs``.
 
