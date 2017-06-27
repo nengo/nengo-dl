@@ -34,6 +34,8 @@ Release History
   during training
 - Added new methods to simplify the Nengo operation graph, resulting in faster
   simulation/training speed
+- The default graph planner can now be modified by setting the ``planner``
+  attribute on the top-level Network config
 
 **Changed**
 
