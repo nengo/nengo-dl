@@ -8,8 +8,8 @@ import time
 import warnings
 
 from nengo import Connection, Ensemble, Network, ensemble
-from nengo.exceptions import SimulationError, ConfigError
-from nengo.params import BoolParam
+from nengo.exceptions import SimulationError, ConfigError, NetworkContextError
+from nengo.params import BoolParam, Parameter
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework.ops import get_gradient_function
@@ -346,33 +346,58 @@ def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
                {p: targets[p][perm[i:i + minibatch_size]] for p in targets})
 
 
-def configure_trainable(config, default=None):
-    """Adds a configurable attribute called ``trainable`` to trainable objects.
+def configure_settings(**kwargs):
+    """Pass settings to ``nengo_dl`` by setting them as parameters on the
+    top-level Network config.
 
-    Used to manually configure whether or not those parts of the model can
-    be optimized by :meth:`.Simulator.train`.
+    The settings are passed as keyword arguments to ``configure_settings``;
+    e.g., to set ``trainable`` use ``configure_settings(trainable=True)``.
 
     Parameters
     ----------
-    config : :class:`~nengo:nengo.config.Config` or \
-             :class:`~nengo:nengo.Network`
-        the config object to be modified (or a Network to modify
-        ``net.config``)
-    default : bool, optional
-        the default value for ``trainable`` (``None`` means that the value
-        is deferred to the parent config, or ``True`` if this is the top-level
-        config)
+    trainable : bool or None
+        Adds a parameter to Nengo Ensembles/Connections/Networks that controls
+        whether or not they will be optimized by :meth:`.Simulator.train``.
+        Passing ``None`` will use the default ``nengo_dl`` trainable settings,
+        or True/False will override the default for all objects.  In either
+        case trainability can be further configured on a per-object basis (e.g.
+        ``net.config[my_ensemble].trainable = True``.  See `the documentation
+        <https://nengo.github.io/nengo_dl/training.html#choosing-which-elements-to-optimize>`_
+        for more details.
+    planner : graph planning algorithm
+        Pass one of the `graph planners
+        <https://nengo.github.io/nengo_dl/graph_optimizer.html>`_ to change the
+        default planner.
     """
 
-    if isinstance(config, Network):
-        config = config.config
+    # get the toplevel network
+    if len(Network.context) > 0:
+        config = Network.context[0].config
+    else:
+        raise NetworkContextError(
+            "``configure_settings`` must be called within a Network context "
+            "(``with nengo.Network(): ...``)")
 
-    for obj in (Ensemble, Connection, ensemble.Neurons):
-        try:
-            params = config[obj]
-        except ConfigError:
-            config.configures(obj)
-            params = config[obj]
+    try:
+        params = config[Network]
+    except ConfigError:
+        config.configures(Network)
+        params = config[Network]
 
-        params.set_param("trainable", BoolParam("trainable", default,
-                                                optional=True))
+    for attr, val in kwargs.items():
+        # TODO: we could prefix attr with "nengo_dl" or something if we're
+        # worried about conflicts (but since Networks aren't even configurable
+        # by default I'm not too concerned)
+
+        if attr == "trainable":
+            for obj in (Ensemble, Connection, ensemble.Neurons, Network):
+                try:
+                    obj_params = config[obj]
+                except ConfigError:
+                    config.configures(obj)
+                    obj_params = config[obj]
+
+                obj_params.set_param("trainable", BoolParam("trainable", val,
+                                                            optional=True))
+        else:
+            params.set_param(attr, Parameter(attr, val))

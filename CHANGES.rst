@@ -18,7 +18,7 @@ Release History
    - Removed
    - Fixed
 
-0.4.1 (unreleased)
+0.5.0 (unreleased)
 ------------------
 
 **Added**
@@ -43,6 +43,17 @@ Release History
 - Improved error checking for input/target data
 - Improved efficiency of stateful gradient operations, resulting in faster
   training speed
+- The functionality for ``nengo_dl.configure_trainable`` has been subsumed into
+  the more general ``nengo_dl.configure_settings(trainable=x)``.  This has
+  resulted in some small changes to how trainability is controlled within
+  subnetworks; see the `updated documentation
+  <https://nengo.github.io/nengo_dl/training.html#choosing-which-elements-to-optimize>`_
+  for details.
+
+**Deprecated**
+
+- The old ``step_blocks``/``unroll_simulation`` syntax has been fully
+  deprecated, and will result in errors if used
 
 **Fixed**
 
