@@ -2,7 +2,7 @@ import nengo
 import pytest
 import tensorflow as tf
 
-from nengo_dl import tensor_graph, utils
+from nengo_dl import tensor_graph, utils, graph_optimizer
 
 
 @pytest.mark.parametrize("unroll", (1, 2))
@@ -210,3 +210,26 @@ def test_mark_signals_config():
         tg.mark_signals()
 
     assert not sig.trainable
+
+
+@pytest.mark.parametrize("config_planner", (True, False, None))
+def test_planner_config(config_planner):
+    with nengo.Network() as net:
+        if config_planner is not None:
+            net.config.configures(nengo.Network)
+            if config_planner:
+                net.config[nengo.Network].set_param(
+                    "planner", nengo.params.Parameter(
+                        "planner", graph_optimizer.noop_planner))
+
+    model = nengo.builder.Model()
+    model.build(net)
+    sig = nengo.builder.signal.Signal([1])
+    sig2 = nengo.builder.signal.Signal([1])
+    sig3 = nengo.builder.signal.Signal([1])
+    model.add_op(nengo.builder.operator.DotInc(sig, sig2, sig3))
+    model.add_op(nengo.builder.operator.DotInc(sig, sig2, sig3))
+
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
+
+    assert len(tg.plan) == (2 if config_planner else 1)

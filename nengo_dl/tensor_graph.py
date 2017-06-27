@@ -89,7 +89,11 @@ class TensorGraph(object):
             operators = graph_optimizer.remove_identity_muls(operators)
 
         # group mergeable operators
-        plan = graph_optimizer.tree_planner(operators)
+        try:
+            planner = model.toplevel.config[model.toplevel].planner
+        except (ConfigError, AttributeError):
+            planner = graph_optimizer.tree_planner
+        plan = planner(operators)
 
         # TODO: we could also merge operators sequentially (e.g., combine
         # a copy and dotinc into one op), as long as the intermediate signal
