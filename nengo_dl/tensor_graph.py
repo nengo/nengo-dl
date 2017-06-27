@@ -7,7 +7,7 @@ import warnings
 from nengo import Connection, Process
 from nengo.builder.operator import TimeUpdate, SimPyFunc
 from nengo.builder.processes import SimProcess
-from nengo.config import Config, ConfigError
+from nengo.config import ConfigError
 from nengo.neurons import Direct
 import numpy as np
 import tensorflow as tf
@@ -483,98 +483,106 @@ class TensorGraph(object):
         ``net.config[nengo.Ensemble].trainable = False``)
         """
 
-        def get_trainable(obj):
-            """Looks up the current value of ``obj.trainable`` in the config
-            stack."""
+        def get_trainable(config, obj, network_trainable):
+            """Looks up the current value of ``obj.trainable``."""
 
-            for config in reversed(Config.context):
-                try:
-                    params = config[obj]
-                    t = params.trainable
-                    if t is not None:
-                        return t
-                except (ConfigError, AttributeError):
-                    continue
+            try:
+                if obj in config.params:
+                    # priority #1: instance config
+                    trainable = config[obj].trainable
+                elif network_trainable is not 1:
+                    # priority #2: network setting
+                    trainable = network_trainable
+                else:
+                    # priority #3: class config
+                    trainable = config[obj].trainable
+            except (ConfigError, AttributeError):
+                trainable = network_trainable
 
-            # note: we return 1 rather than True so that we can determine
-            # whether something was explicitly set to trainable=True, or just
-            # defaulting
-            return 1
+            # we return 1 if trainable isn't configured, since the default is
+            # for everything to be trainable but we want to be able to
+            # distinguish whether something was specifically set to be
+            # trainable (True) or just defaulting to trainable (1)
+            return 1 if trainable is None else trainable
 
-        def mark_network(net):
+        def mark_network(config, net, network_trainable):
             """Recursively marks the signals for objects within each
             subnetwork."""
 
-            with net.config:
-                for subnet in net.networks:
-                    mark_network(subnet)
+            for subnet in net.networks:
+                mark_network(config, subnet,
+                             get_trainable(config, subnet, network_trainable))
 
-                # encoders and biases are trainable
-                for ens in net.ensembles:
-                    ens_trainable = get_trainable(ens)
-                    self.model.sig[ens]["encoders"].trainable = ens_trainable
-                    self.model.sig[ens]["encoders"].minibatched = False
+            # encoders and biases are trainable
+            for ens in net.ensembles:
+                ens_trainable = get_trainable(config, ens, network_trainable)
 
-                    if not isinstance(ens.neuron_type, Direct):
-                        neurons_trainable = get_trainable(ens.neurons)
-                        if neurons_trainable is 1:
-                            neurons_trainable = ens_trainable
+                self.model.sig[ens]["encoders"].trainable = ens_trainable
+                self.model.sig[ens]["encoders"].minibatched = False
 
-                        self.model.sig[ens.neurons]["bias"].trainable = (
-                            neurons_trainable)
-                        self.model.sig[ens.neurons]["bias"].minibatched = False
+                if not isinstance(ens.neuron_type, Direct):
+                    neurons_trainable = get_trainable(config, ens.neurons,
+                                                      network_trainable)
+                    if neurons_trainable is 1:
+                        neurons_trainable = ens_trainable
 
-                # connection weights are trainable
-                for conn in net.connections:
-                    # note: this doesn't include probe connections, since they
-                    # aren't added to the network
-                    # TODO: should we disable training on connections to
-                    # learning rules?
-                    self.model.sig[conn]["weights"].trainable = get_trainable(
-                        conn)
-                    self.model.sig[conn]["weights"].minibatched = False
+                    self.model.sig[ens.neurons]["bias"].trainable = (
+                        neurons_trainable)
+                    self.model.sig[ens.neurons]["bias"].minibatched = False
 
-                # parameters can't be modified by an online Nengo learning rule
-                # and offline training at the same time. (it is possible in
-                # theory, but it complicates things a lot and is probably not a
-                # common use case). we also make those signals minibatched
-                # (they wouldn't be normally), because we want to be able to
-                # learn independently in each minibatch
-                for conn in net.connections:
-                    rule = conn.learning_rule
-                    if rule is not None:
-                        if isinstance(rule, dict):
-                            rule = list(rule.values())
-                        elif not isinstance(rule, list):
-                            rule = [rule]
+            # connection weights are trainable
+            for conn in net.connections:
+                # note: this doesn't include probe connections, since they
+                # aren't added to the network
+                # TODO: should we disable training on connections to
+                # learning rules?
+                self.model.sig[conn]["weights"].trainable = get_trainable(
+                    config, conn, network_trainable)
+                self.model.sig[conn]["weights"].minibatched = False
 
-                        for r in rule:
-                            if r.modifies in ("weights", "decoders"):
-                                obj = conn
-                                attr = "weights"
-                            elif r.modifies == "encoders":
-                                obj = conn.post_obj
-                                attr = "encoders"
-                            else:
-                                raise NotImplementedError
+            # parameters can't be modified by an online Nengo learning rule
+            # and offline training at the same time. (it is possible in
+            # theory, but it complicates things a lot and is probably not a
+            # common use case). we also make those signals minibatched
+            # (they wouldn't be normally), because we want to be able to
+            # learn independently in each minibatch
+            for conn in net.connections:
+                rule = conn.learning_rule
+                if rule is not None:
+                    if isinstance(rule, dict):
+                        rule = list(rule.values())
+                    elif not isinstance(rule, list):
+                        rule = [rule]
 
-                            if get_trainable(obj) is True:
-                                warnings.warn(
-                                    "%s has a learning rule and is also set "
-                                    "to be trainable; this is likely to "
-                                    "produce strange training behaviour." %
-                                    obj)
-                            else:
-                                self.model.sig[obj][attr].trainable = False
+                    for r in rule:
+                        if r.modifies in ("weights", "decoders"):
+                            obj = conn
+                            attr = "weights"
+                        elif r.modifies == "encoders":
+                            obj = conn.post_obj
+                            attr = "encoders"
+                        else:
+                            raise NotImplementedError
 
-                            self.model.sig[obj][attr].minibatched = True
+                        if self.model.sig[obj][attr].trainable is True:
+                            warnings.warn(
+                                "%s has a learning rule and is also set "
+                                "to be trainable; this is likely to "
+                                "produce strange training behaviour." %
+                                obj)
+                        else:
+                            self.model.sig[obj][attr].trainable = False
+
+                        self.model.sig[obj][attr].minibatched = True
 
         if self.model.toplevel is None:
             warnings.warn(
                 "No top-level network in model; assuming no trainable "
                 "parameters", UserWarning)
         else:
-            mark_network(self.model.toplevel)
+            config = self.model.toplevel.config
+            mark_network(config, self.model.toplevel,
+                         get_trainable(config, self.model.toplevel, 1))
 
             # the connections to connection probes are not trainable, but
             # also not minibatched

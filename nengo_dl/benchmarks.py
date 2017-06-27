@@ -280,7 +280,7 @@ def profile_train(use_tensor_layer):
         return x
 
     with nengo.Network() as net:
-        nengo_dl.configure_trainable(net, default=False)
+        nengo_dl.configure_settings(trainable=False)
 
         # create node to feed in images
         inp = nengo.Node(np.ones(28 * 28))

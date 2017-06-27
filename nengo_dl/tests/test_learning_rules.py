@@ -1,7 +1,11 @@
+from functools import partial
+
 import nengo
 from nengo.builder.learning_rules import SimVoja, SimOja, SimBCM
 import numpy as np
 import pytest
+
+from nengo_dl import configure_settings, graph_optimizer
 
 
 @pytest.mark.parametrize("rule", (nengo.Voja, nengo.Oja, nengo.BCM))
@@ -10,6 +14,9 @@ def test_merged_learning(Simulator, rule, seed):
     # make sure that works OK
     dimensions = 2
     with nengo.Network(seed=seed) as net:
+        configure_settings(
+            planner=partial(graph_optimizer.tree_planner, max_depth=10))
+
         a = nengo.Ensemble(3, dimensions, label="a")
         b = nengo.Ensemble(3, dimensions, label="b")
         c = nengo.Ensemble(5, dimensions, label="c")

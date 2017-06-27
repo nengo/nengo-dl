@@ -127,29 +127,31 @@ def test_mark_signals():
 
 def test_mark_signals_config():
     with nengo.Network() as net:
-        utils.configure_trainable(net)
+        utils.configure_settings(trainable=None)
         net.config[nengo.Ensemble].trainable = False
 
-        with nengo.Network() as subnet:
-            utils.configure_trainable(subnet)
-
+        with nengo.Network():
             # check that object in subnetwork inherits config from parent
             ens0 = nengo.Ensemble(10, 1, label="ens0")
 
             # check that ens.neurons can be set independent of ens
-            subnet.config[ens0.neurons].trainable = True
+            net.config[ens0.neurons].trainable = True
 
             with nengo.Network():
-                with nengo.Network() as subsubnet:
-                    utils.configure_trainable(subsubnet)
-
+                with nengo.Network() as subnet:
                     # check that subnetworks can override parent configs
-                    subsubnet.config[nengo.Ensemble].trainable = True
+                    # net.config[nengo.Ensemble].trainable = True
+                    net.config[subnet].trainable = True
                     ens1 = nengo.Ensemble(10, 1, label="ens1")
+
+                    with nengo.Network():
+                        # check that subnetworks inherit the trainable settings
+                        # from parent networks
+                        ens3 = nengo.Ensemble(10, 1, label="ens3")
 
             # check that instances can be set independent of class
             ens2 = nengo.Ensemble(10, 1, label="ens2")
-            subnet.config[ens2].trainable = True
+            net.config[ens2].trainable = True
 
     model = nengo.builder.Model()
     model.build(net)
@@ -164,9 +166,11 @@ def test_mark_signals_config():
 
     assert model.sig[ens2]["encoders"].trainable
 
+    assert model.sig[ens3]["encoders"].trainable
+
     # check that learning rule connections can be manually set to True
     with nengo.Network() as net:
-        utils.configure_trainable(net)
+        utils.configure_settings(trainable=None)
 
         a = nengo.Ensemble(10, 1)
         b = nengo.Ensemble(10, 1)
@@ -183,7 +187,7 @@ def test_mark_signals_config():
     assert model.sig[conn0]["weights"].trainable
 
     with nengo.Network() as net:
-        utils.configure_trainable(net)
+        utils.configure_settings(trainable=None)
 
         a = nengo.Node([0])
         ens = nengo.Ensemble(10, 1)

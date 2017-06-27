@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import configure_trainable, tensor_layer, dists, DATA_DIR
+from nengo_dl import configure_settings, tensor_layer, dists, DATA_DIR
 from nengo_dl.simulator import ProbeDict
 
 
@@ -361,7 +361,7 @@ def test_save_load_params(Simulator, tmpdir):
         nengo.Connection(inp, ens)
         nengo.Connection(ens, out)
 
-        configure_trainable(net)
+        configure_settings(trainable=None)
         net.config[ens].trainable = False
 
     with Simulator(net) as sim:
@@ -392,7 +392,7 @@ def test_save_load_params(Simulator, tmpdir):
         nengo.Connection(inp, ens)
         nengo.Connection(ens, out)
 
-        configure_trainable(net2)
+        configure_settings(trainable=None)
         net2.config[ens].trainable = False
 
     with Simulator(net2) as sim:
@@ -565,14 +565,6 @@ def test_probe_dict():
     assert len(a) == 2
     for x, y in zip(a, (0, 1)):
         assert x == y
-
-
-def test_deprecation(Simulator):
-    with pytest.warns(DeprecationWarning):
-        Simulator(None, step_blocks=1)
-
-    with pytest.warns(DeprecationWarning):
-        Simulator(None, unroll_simulation=True)
 
 
 @pytest.mark.parametrize(

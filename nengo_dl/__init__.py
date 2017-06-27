@@ -42,7 +42,7 @@ from nengo_dl import (  # noqa: F401
 from nengo_dl.simulator import Simulator  # noqa: F401
 from nengo_dl.tensor_node import (  # noqa: F401
     TensorNode, tensor_layer, reshaped)
-from nengo_dl.utils import configure_trainable  # noqa: F401
+from nengo_dl.utils import configure_settings  # noqa: F401
 from nengo_dl.neurons import SoftLIFRate  # noqa: F401
 
 # fix tensorflow bugs

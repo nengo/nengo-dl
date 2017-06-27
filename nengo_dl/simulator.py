@@ -84,21 +84,12 @@ class Simulator(object):
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
                  dtype=tf.float32, device=None, unroll_simulation=1,
-                 minibatch_size=None, tensorboard=False,
-                 step_blocks="deprecated"):
+                 minibatch_size=None, tensorboard=False):
         self.closed = None
         self.sess = None
         self.tensorboard = tensorboard
         self.unroll = unroll_simulation
         self.minibatch_size = 1 if minibatch_size is None else minibatch_size
-
-        if step_blocks != "deprecated" or isinstance(unroll_simulation, bool):
-            # TODO: remove this in 0.5
-            warnings.warn(
-                "`step_blocks` has been deprecated and will be ignored; "
-                "`Simulator(..., unroll_simulation=n)` is now equivalent to "
-                "`Simulator(..., unroll_simulation=True, step_blocks=n).",
-                DeprecationWarning)
 
         # TODO: allow the simulator to be called flexibly with/without
         # minibatching

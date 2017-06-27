@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import TensorNode, configure_trainable, reshaped, tensor_layer
+from nengo_dl import TensorNode, configure_settings, reshaped, tensor_layer
 
 
 def test_validation():
@@ -139,7 +139,7 @@ def test_reuse_vars(Simulator):
         return x * tf.cast(w, x.dtype)
 
     with nengo.Network() as net:
-        configure_trainable(net, default=False)
+        configure_settings(trainable=False)
 
         inp = nengo.Node([1])
         node = TensorNode(my_func, size_in=1)
