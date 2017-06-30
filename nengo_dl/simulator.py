@@ -731,14 +731,24 @@ class Simulator(object):
         """
 
         if not self.closed:
+            # TODO: this is a temporary fix until the permanent fix is
+            # released in tensorflow (see
+            # https://github.com/tensorflow/tensorflow/pull/11276)
+            from tensorflow.python.layers import base
+            try:
+                del base.PER_GRAPH_LAYER_NAME_UIDS[self.tensor_graph.graph]
+            except KeyError:
+                pass
+
             self.sess.close()
-            self.closed = True
             self.sess = None
 
             # note: we use getattr in case it crashes before the summary
             # object is created
             if getattr(self, "summary", None) is not None:
                 self.summary.close()
+
+            self.closed = True
 
     def __enter__(self):
         return self

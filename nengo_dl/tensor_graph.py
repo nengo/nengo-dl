@@ -181,10 +181,12 @@ class TensorGraph(object):
             self.build_inputs()
 
             # pre-build stage
+            self.op_builds = {}
             for ops in self.plan:
                 with self.graph.name_scope(utils.sanitize_name(
                         builder.Builder.builders[type(ops[0])].__name__)):
-                    builder.Builder.pre_build(ops, self.signals, rng)
+                    builder.Builder.pre_build(ops, self.signals, rng,
+                                              self.op_builds)
 
             # build stage
             self.build_loop()
@@ -229,7 +231,8 @@ class TensorGraph(object):
         for ops in self.plan:
             with self.graph.name_scope(utils.sanitize_name(
                     builder.Builder.builders[type(ops[0])].__name__)):
-                outputs = builder.Builder.build(ops, self.signals)
+                outputs = builder.Builder.build(ops, self.signals,
+                                                self.op_builds)
 
             if outputs is not None:
                 side_effects += outputs

@@ -12,10 +12,9 @@ class Builder(object):
     build process."""
 
     builders = {}
-    op_builds = {}
 
     @classmethod
-    def pre_build(cls, ops, signals, rng):
+    def pre_build(cls, ops, signals, rng, op_builds):
         """Setup step for build classes, in which they compute any of the
         values that are constant across simulation timesteps.
 
@@ -28,6 +27,10 @@ class Builder(object):
             ``tf.Tensor`` (updated by operations)
         rng : :class:`~numpy:numpy.random.RandomState`
             random number generator instance
+        op_builds : dict of {tuple of :class:`~nengo.builder.Operator`, \
+                             :class:~`.op_builders.OpBuilder`}
+            ``pre_build`` will populate this dictionary with the OpBuilder
+            objects (which execute the pre-build step in their ``__init__``)
         """
 
         logger.debug("===================")
@@ -47,10 +50,10 @@ class Builder(object):
         if BuildClass.pass_rng:
             kwargs["rng"] = rng
 
-        cls.op_builds[ops] = BuildClass(ops, signals, **kwargs)
+        op_builds[ops] = BuildClass(ops, signals, **kwargs)
 
     @classmethod
-    def build(cls, ops, signals):
+    def build(cls, ops, signals, op_builds):
         """Build the computations implementing a single simulator timestep.
 
         Parameters
@@ -60,16 +63,19 @@ class Builder(object):
         signals : :class:`.signals.SignalDict`
             mapping from :class:`~nengo:nengo.builder.Signal` to
             ``tf.Tensor`` (updated by operations)
+        op_builds : dict of {tuple of :class:`~nengo.builder.Operator`, \
+                             :class:~`.op_builders.OpBuilder`}
+            mapping from operator groups to the pre-built builder objects
         """
 
         logger.debug("===================")
         logger.debug("BUILD %s", ops)
 
-        if ops not in cls.op_builds:
+        if ops not in op_builds:
             raise BuildError("Operators build has not been initialized "
                              "(missed pre-build step)")
 
-        output = cls.op_builds[ops].build_step(signals)
+        output = op_builds[ops].build_step(signals)
 
         if isinstance(output, (tf.Tensor, tf.Variable)):
             output = [output]

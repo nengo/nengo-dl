@@ -68,6 +68,8 @@ Release History
 - Correctly handle probes that aren't connected to any ops
 - Swapped ``fan_in``/``fan_out`` in ``dists.VarianceScaling`` to align with
   the standard definitions
+- Temporary patch to fix memory leak in TensorFlow (see 
+  `#11273 <https://github.com/tensorflow/tensorflow/issues/11273>`_)
 
 0.4.0 (June 8, 2017)
 --------------------
