@@ -740,11 +740,12 @@ class Simulator(object):
             except KeyError:
                 pass
 
-            self.sess.close()
+            # note: we use getattr in case it crashes before the object is
+            # created
+            if getattr(self, "sess", None) is not None:
+                self.sess.close()
             self.sess = None
 
-            # note: we use getattr in case it crashes before the summary
-            # object is created
             if getattr(self, "summary", None) is not None:
                 self.summary.close()
 
