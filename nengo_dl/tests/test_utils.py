@@ -1,5 +1,6 @@
-from nengo import ensemble, config, Network, Connection, Ensemble
-from nengo.exceptions import SimulationError, ValidationError
+from nengo import ensemble, Network, Connection, Ensemble
+from nengo.exceptions import (SimulationError, ValidationError,
+                              NetworkContextError)
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -131,30 +132,35 @@ def test_find_non_differentiable():
 
 
 def test_configure_trainable():
-    conf = config.Config(Ensemble)
-    utils.configure_trainable(conf)
+    with Network() as net:
+        conf = net.config
+        utils.configure_settings(trainable=None)
 
     assert conf[Ensemble].trainable is None
     assert conf[Connection].trainable is None
     assert conf[ensemble.Neurons].trainable is None
 
+    # check that we can set trainable after it is set up for configuration
     conf[Ensemble].trainable = True
 
+    # check that boolean value is enforced
     with pytest.raises(ValidationError):
         conf[Ensemble].trainable = 5
 
     assert conf[Ensemble].trainable is True
 
-    utils.configure_trainable(conf)
+    # check that calling configure again overrides previous changes
+    with net:
+        utils.configure_settings(trainable=None)
 
     assert conf[Ensemble].trainable is None
 
-    net = Network()
-    utils.configure_trainable(net)
-
-    assert net.config[Ensemble].trainable is None
-
-    conf = config.Config(Ensemble)
-    utils.configure_trainable(conf, default=False)
+    # check that non-None defaults work
+    with net:
+        utils.configure_settings(trainable=False)
 
     assert conf[Ensemble].trainable is False
+
+    # check that calling configure outside network context is an error
+    with pytest.raises(NetworkContextError):
+        utils.configure_settings(trainable=None)

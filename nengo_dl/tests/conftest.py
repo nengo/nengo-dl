@@ -21,3 +21,7 @@ def pytest_runtest_setup(item):
 def pytest_addoption(parser):
     parser.addoption("--gpu", action="store_true", default=False,
                      help="run GPU tests")
+
+
+# TODO: add a --simulator-only flag to only run tests with a simulator (when
+# we're varying simulator params)

@@ -2,7 +2,8 @@ from collections import OrderedDict, defaultdict
 import logging
 
 from nengo.synapses import Lowpass
-from nengo.builder.operator import SimPyFunc, ElementwiseInc, DotInc, Reset
+from nengo.builder.operator import (SimPyFunc, ElementwiseInc, DotInc, Reset,
+                                    Copy)
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 from nengo.exceptions import BuildError
@@ -17,7 +18,7 @@ except ImportError:
         operator_depencency_graph as operator_dependency_graph)
 import numpy as np
 
-from nengo_dl import (signals, processes, builder, tensor_node, operators,
+from nengo_dl import (signals, processes, builder, tensor_node, op_builders,
                       learning_rules, neurons)
 
 logger = logging.getLogger(__name__)
@@ -427,24 +428,24 @@ def transitive_planner(op_list):
     # fail fast here if the op graph has cycles
     toposort(dg.forward)
 
-    op_builders = [builder.Builder.builders[type(op)] for op in op_list]
+    builder_types = [builder.Builder.builders[type(op)] for op in op_list]
 
     # sort operators by builder (we'll only be interested in one builder type
     # at a time, because we can't merge operators between builder types anyway)
     ops_by_type = defaultdict(set)
     for i, op in enumerate(op_list):
-        ops_by_type[op_builders[i]].add(np.uint32(i))
+        ops_by_type[builder_types[i]].add(np.uint32(i))
 
     # heuristic ordering for builder types (earlier items in the list will
     # have higher priority, meaning that we will choose to merge those ops
     # and potentially break lower-priority groups)
     order = [
-        operators.SparseDotIncBuilder, operators.ElementwiseIncBuilder,
+        op_builders.SparseDotIncBuilder, op_builders.ElementwiseIncBuilder,
         neurons.SimNeuronsBuilder, processes.SimProcessBuilder,
-        operators.SimPyFuncBuilder,
+        op_builders.SimPyFuncBuilder,
         learning_rules.SimOjaBuilder, learning_rules.SimVojaBuilder,
         learning_rules.SimBCMBuilder,
-        operators.CopyBuilder, operators.ResetBuilder,
+        op_builders.CopyBuilder, op_builders.ResetBuilder,
         tensor_node.SimTensorNodeBuilder]
 
     for builder_type in order:
@@ -457,7 +458,7 @@ def transitive_planner(op_list):
         # compute transitive closure
         trans = [None for _ in range(n_ele)]
         transitive_closure_recurse(dg.forward, ops, trans, builder_type,
-                                   op_builders, {})
+                                   builder_types, {})
 
         # reduce it to the elements we care about (ops of the current
         # builder type)
@@ -496,7 +497,7 @@ def transitive_planner(op_list):
 
         # trans_reverse = [None for _ in range(n_ele)]
         # transitive_closure_recurse(dg.backward, ops, trans_reverse,
-        #                            builder_type, op_builders, cache)
+        #                            builder_type, builder_types, cache)
         # trans_reverse = {i: v for i, v in
         #                  enumerate(trans_reverse[:len(op_list)]) if i in ops}
         # group = None
@@ -532,7 +533,7 @@ def transitive_planner(op_list):
     return plan
 
 
-def transitive_closure_recurse(dg, ops, trans, builder_type, op_builders,
+def transitive_closure_recurse(dg, ops, trans, builder_type, builder_types,
                                cache):
     """Computes the transitive closure for the given graph, restricted to the
     operators with the given builder type.
@@ -550,7 +551,7 @@ def transitive_closure_recurse(dg, ops, trans, builder_type, op_builders,
         one of the ``nengo_dl`` build classes (e.g.,
         :class:`~.operators.CopyBuilder`), specifying the type of operators
         to include in the transitive closure
-    op_builders : list of type
+    builder_types : list of type
         the build class for each operator
     cache : dict of {frozenset of int: set of int}
         stores base sets which ``trans`` will reference (to reduce memory
@@ -570,12 +571,12 @@ def transitive_closure_recurse(dg, ops, trans, builder_type, op_builders,
             continue
 
         todo = [x for x in dg[op] if trans[x] is None]
-        transitive_closure_recurse(dg, todo, trans, builder_type, op_builders,
-                                   cache)
+        transitive_closure_recurse(dg, todo, trans, builder_type,
+                                   builder_types, cache)
 
         merged = set(
-            x for x in dg[op] if x < len(op_builders) and
-            op_builders[x] == builder_type)
+            x for x in dg[op] if x < len(builder_types) and
+            builder_types[x] == builder_type)
 
         unique_posts = {id(trans[x]): trans[x] for x in dg[op]}
 
@@ -1211,3 +1212,296 @@ def create_signals(sigs, plan, float_type, minibatch_size):
                             for k, (v, trainable) in base_arrays.items()]))
 
     return base_arrays, sig_map
+
+
+def remove_unmodified_resets(operators):
+    """Remove any Reset operators that are targeting a signal that is
+    never modified.
+
+    If a signal is reset, but never inced/updated after that, we can just set
+    the default signal value to the reset value and remove the reset. Note:
+    this wouldn't normally happen, but it can happen if we removed
+    some of the incs (e.g. in remove_zero_incs).
+
+    Parameters
+    ----------
+    operators : list of :class:`~nengo:nengo.builder.Operator`
+        operators in the model
+
+    Returns
+    -------
+    list of :class:`~nengo:nengo.builder.Operator`
+        modified list of operators
+    """
+
+    _, incs, _, updates = signal_io_dicts(operators)
+
+    new_operators = []
+    for op in operators:
+        if type(op) == Reset:
+            target = op.dst
+            if len(incs[target.base]) + len(updates[target.base]) == 0:
+                target.initial_value.setflags(write=True)
+                target.initial_value[...] = op.value
+                target.initial_value.setflags(write=False)
+            else:
+                new_operators.append(op)
+        else:
+            new_operators.append(op)
+
+    return new_operators
+
+
+def remove_zero_incs(operators):
+    """Remove any operators where we know the input (and therefore output) is
+    zero.
+
+    If the input to a DotInc/ElementwiseInc/Copy is zero then we know
+    that the output of the op will be zero, so we can just get rid of it.
+
+    Parameters
+    ----------
+    operators : list of :class:`~nengo:nengo.builder.Operator`
+        operators in the model
+
+    Returns
+    -------
+    list of :class:`~nengo:nengo.builder.Operator`
+        modified list of operators
+    """
+
+    sets, incs, _, updates = signal_io_dicts(operators)
+
+    new_operators = []
+    for op in operators:
+        if isinstance(op, (DotInc, ElementwiseInc, Copy)):
+            # TODO: we could check A as well for ElementwiseInc
+            src = op.X if isinstance(op, (DotInc, ElementwiseInc)) else op.src
+
+            # check if the input is the output of a Node (in which case the
+            # value might change, so we should never get rid of this op).
+            # checking the name of the signal seems a bit fragile, but I can't
+            # think of a better solution
+            if src.name.startswith("<Node") and src.name.endswith(".out"):
+                new_operators.append(op)
+                continue
+
+            # find any ops that modify src
+            pred = sets[src.base] + incs[src.base]
+
+            # the input (and therefore output) will be zero if the only input
+            # is a Reset(0) op, or the only input is a constant signal (not
+            # set/inc/updated) that is all zero
+            zero_input = (
+                (len(pred) == 1 and type(pred[0]) == Reset and
+                 np.all(pred[0].value == 0)) or
+                (len(pred) == 0 and np.all(src.initial_value == 0) and
+                 len(updates[src.base]) == 0) and not src.trainable)
+            if zero_input:
+                if len(op.sets) > 0:
+                    new_operators.append(Reset(op.sets[0]))
+            else:
+                new_operators.append(op)
+        else:
+            new_operators.append(op)
+
+    return new_operators
+
+
+# def remove_reset_incs(operators):
+#     """Replace ``y=Reset(0) + x`` with ``y=x``.
+#
+#     If a signal is Reset and Inc'd, we can change that to a Set that combines
+#     the two ops (note: any other incs of that signal can proceed as normal)
+#
+#     Parameters
+#     ----------
+#     operators : list of :class:`~nengo:nengo.builder.Operator`
+#         operators in the model
+#
+#     Returns
+#     -------
+#     list of :class:`~nengo:nengo.builder.Operator`
+#         modified list of operators
+#
+#     Notes
+#     -----
+#     In practice, this modification seems to hurt more than it helps.  Inc
+#     operators are cheaper to compute the gradient for, and changing Incs to
+#     Incs and Sets splits up the Inc merge groups.
+#     """
+#
+#     dg = operator_dependency_graph(operators)
+#
+#     for op in operators:
+#         if type(op) == Reset and np.all(op.value == 0):
+#             incers = [succ for succ in dg[op] if op.dst in succ.incs]
+#             if len(incers) > 0:
+#                 del dg[op]
+#                 incer = incers[0]
+#                 incer.sets.extend(incer.incs)
+#                 incer.incs = []
+#                 if isinstance(incer, ElementwiseInc):
+#                     incer.__class__ = op_builders.ElementwiseSet
+#                 elif isinstance(incer, DotInc):
+#                     incer.__class__ = op_builders.DotSet
+#                 else:
+#                     incer.inc = False
+#
+#     return list(dg.keys())
+
+
+def remove_constant_copies(operators):
+    """Change Copies with constant input to Resets.
+
+    If a Copy has no dependencies, or just one Reset() dependency, then
+    we can change it to an op that just directly sets the output signal to
+    the Copy input value.
+
+    Parameters
+    ----------
+    operators : list of :class:`~nengo:nengo.builder.Operator`
+        operators in the model
+
+    Returns
+    -------
+    list of :class:`~nengo:nengo.builder.Operator`
+        modified list of operators
+    """
+
+    sets, incs, _, updates = signal_io_dicts(operators)
+
+    new_operators = []
+    for op in operators:
+        if isinstance(op, Copy):
+            src = op.src
+
+            # check if the input is the output of a Node (in which case the
+            # value might change, so we should never get rid of this op).
+            # checking the name of the signal seems a bit fragile, but I can't
+            # think of a better solution
+            if src.name.startswith("<Node") and src.name.endswith(".out"):
+                new_operators.append(op)
+                continue
+
+            pred = sets[src.base] + incs[src.base]
+            if (len(pred) == 0 and not op.src.trainable and
+                    len(updates[src.base]) == 0):
+                # no predecessors means that the src is constant. but we also
+                # need to keep the bias signal if it is trainable (since
+                # changing it to a reset op would make it not trainable).
+                # we also need to check if anything is updating src (which
+                # wouldn't be in the predecessors).
+                val = op.src.initial_value[op.src_slice]
+            elif len(pred) == 1 and type(pred[0]) == Reset:
+                # if the only predecessor is a Reset, we can just use that
+                # set value
+                val = pred[0].value
+                try:
+                    new_operators.remove(pred[0])
+                except ValueError:
+                    operators.remove(pred[0])
+            else:
+                new_operators.append(op)
+                continue
+
+            new_op = Reset(op.dst if op.dst_slice is None else
+                           op.dst[op.dst_slice])
+            # note: we need to set the value separately to bypass the float()
+            # casting in Reset
+            new_op.value = val
+
+            if op.inc:
+                new_op.incs.extend(new_op.sets)
+                new_op.sets = []
+                new_op.__class__ = op_builders.ResetInc
+
+            new_operators.append(new_op)
+        else:
+            new_operators.append(op)
+
+    return new_operators
+
+
+def remove_identity_muls(operators):
+    """Change y=x*1 ops to y=x Copy ops.
+
+    If one of the inputs to a DotInc/ElementwiseInc is 1 then we can skip
+    the multiplication and change it to a Copy op.
+
+    Parameters
+    ----------
+    operators : list of :class:`~nengo:nengo.builder.Operator`
+        operators in the model
+
+    Returns
+    -------
+    list of :class:`~nengo:nengo.builder.Operator`
+        modified list of operators
+    """
+
+    sets, incs, _, updates = signal_io_dicts(operators)
+
+    def is_identity(x, op):
+        if isinstance(x, float) or x.shape == ():
+            return x == 1
+
+        d = x.shape[0]
+        if isinstance(op, ElementwiseInc):
+            return np.array_equal(x, np.ones(d))
+        else:
+            return np.array_equal(x, np.diag(np.ones(d)))
+
+    new_operators = []
+    for op in operators:
+        if isinstance(op, (DotInc, ElementwiseInc)):
+            src = op.A
+
+            # check if the input is the output of a Node (in which case the
+            # value might change, so we should never get rid of this op).
+            # checking the name of the signal seems a bit fragile, but I can't
+            # think of a better solution
+            if src.name.startswith("<Node") and src.name.endswith(".out"):
+                new_operators.append(op)
+                continue
+
+            # find any ops that modify src
+            pred = sets[src.base] + incs[src.base]
+
+            # the input will be one if the only input is a Reset(1) op, or the
+            # only input is a constant signal (not set/inc/updated) that is one
+            identity_input = (
+                (len(pred) == 1 and type(pred[0]) == Reset and
+                 is_identity(pred[0].value, op)) or
+                (len(pred) == 0 and is_identity(src.initial_value, op) and
+                 len(updates[src.base]) == 0) and not src.trainable)
+            if identity_input:
+                new_operators.append(Copy(op.X, op.Y, inc=len(op.incs) > 0))
+            else:
+                new_operators.append(op)
+        else:
+            new_operators.append(op)
+
+    return new_operators
+
+
+def signal_io_dicts(operators):
+    # note: we manually initialize the arrays because we want there to be
+    # an entry for all the signal bases, but get an error if we try to
+    # access any non-base signals
+    sets = {s.base: [] for op in operators for s in op.all_signals}
+    incs = {s.base: [] for op in operators for s in op.all_signals}
+    reads = {s.base: [] for op in operators for s in op.all_signals}
+    updates = {s.base: [] for op in operators for s in op.all_signals}
+
+    for op in operators:
+        for s in op.sets:
+            sets[s.base].append(op)
+        for s in op.incs:
+            incs[s.base].append(op)
+        for s in op.reads:
+            reads[s.base].append(op)
+        for s in op.updates:
+            updates[s.base].append(op)
+
+    return sets, incs, reads, updates

@@ -50,8 +50,8 @@ class VarianceScaling(Distribution):
             dimension enumerates the dimensions of the process.
         """
 
-        fan_in = n
-        fan_out = 1 if d is None else d
+        fan_out = n
+        fan_in = 1 if d is None else d
         scale = self.scale
         if self.mode == "fan_in":
             scale /= fan_in

@@ -1,9 +1,8 @@
 import nengo
-from nengo.exceptions import SimulationError
 import pytest
 import tensorflow as tf
 
-from nengo_dl import tensor_graph, utils
+from nengo_dl import tensor_graph, utils, graph_optimizer
 
 
 @pytest.mark.parametrize("unroll", (1, 2))
@@ -84,7 +83,7 @@ def test_build_optimizer(Simulator):
         p = nengo.Probe(inp)
 
     with Simulator(net) as sim:
-        with pytest.raises(SimulationError):
+        with pytest.raises(ValueError):
             sim.tensor_graph.build_optimizer(opt, (p,), "mse")
 
 
@@ -128,29 +127,31 @@ def test_mark_signals():
 
 def test_mark_signals_config():
     with nengo.Network() as net:
-        utils.configure_trainable(net)
+        utils.configure_settings(trainable=None)
         net.config[nengo.Ensemble].trainable = False
 
-        with nengo.Network() as subnet:
-            utils.configure_trainable(subnet)
-
+        with nengo.Network():
             # check that object in subnetwork inherits config from parent
             ens0 = nengo.Ensemble(10, 1, label="ens0")
 
             # check that ens.neurons can be set independent of ens
-            subnet.config[ens0.neurons].trainable = True
+            net.config[ens0.neurons].trainable = True
 
             with nengo.Network():
-                with nengo.Network() as subsubnet:
-                    utils.configure_trainable(subsubnet)
-
+                with nengo.Network() as subnet:
                     # check that subnetworks can override parent configs
-                    subsubnet.config[nengo.Ensemble].trainable = True
+                    # net.config[nengo.Ensemble].trainable = True
+                    net.config[subnet].trainable = True
                     ens1 = nengo.Ensemble(10, 1, label="ens1")
+
+                    with nengo.Network():
+                        # check that subnetworks inherit the trainable settings
+                        # from parent networks
+                        ens3 = nengo.Ensemble(10, 1, label="ens3")
 
             # check that instances can be set independent of class
             ens2 = nengo.Ensemble(10, 1, label="ens2")
-            subnet.config[ens2].trainable = True
+            net.config[ens2].trainable = True
 
     model = nengo.builder.Model()
     model.build(net)
@@ -165,9 +166,11 @@ def test_mark_signals_config():
 
     assert model.sig[ens2]["encoders"].trainable
 
+    assert model.sig[ens3]["encoders"].trainable
+
     # check that learning rule connections can be manually set to True
     with nengo.Network() as net:
-        utils.configure_trainable(net)
+        utils.configure_settings(trainable=None)
 
         a = nengo.Ensemble(10, 1)
         b = nengo.Ensemble(10, 1)
@@ -184,7 +187,7 @@ def test_mark_signals_config():
     assert model.sig[conn0]["weights"].trainable
 
     with nengo.Network() as net:
-        utils.configure_trainable(net)
+        utils.configure_settings(trainable=None)
 
         a = nengo.Node([0])
         ens = nengo.Ensemble(10, 1)
@@ -211,3 +214,26 @@ def test_mark_signals_config():
         tg.mark_signals()
 
     assert not sig.trainable
+
+
+@pytest.mark.parametrize("config_planner", (True, False, None))
+def test_planner_config(config_planner):
+    with nengo.Network() as net:
+        if config_planner is not None:
+            net.config.configures(nengo.Network)
+            if config_planner:
+                net.config[nengo.Network].set_param(
+                    "planner", nengo.params.Parameter(
+                        "planner", graph_optimizer.noop_planner))
+
+    model = nengo.builder.Model()
+    model.build(net)
+    sig = nengo.builder.signal.Signal([1])
+    sig2 = nengo.builder.signal.Signal([1])
+    sig3 = nengo.builder.signal.Signal([1])
+    model.add_op(nengo.builder.operator.DotInc(sig, sig2, sig3))
+    model.add_op(nengo.builder.operator.DotInc(sig, sig2, sig3))
+
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
+
+    assert len(tg.plan) == (2 if config_planner else 1)

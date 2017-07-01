@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import TensorNode, configure_trainable, reshaped, tensor_layer
+from nengo_dl import TensorNode, configure_settings, reshaped, tensor_layer
 
 
 def test_validation():
@@ -98,23 +98,37 @@ def test_tensor_layer(Simulator):
     with nengo.Network() as net:
         inp = nengo.Node(np.arange(12))
 
+        # check that connection arguments work
         layer0 = tensor_layer(inp, tf.identity, transform=2)
 
         assert isinstance(layer0, TensorNode)
         p0 = nengo.Probe(layer0)
 
+        # check that arguments are passed to layer function
         layer1 = tensor_layer(
             layer0, lambda x, axis: tf.reduce_sum(x, axis=axis), axis=1,
             shape_in=(2, 6))
         assert layer1.size_out == 6
         p1 = nengo.Probe(layer1)
 
+        # check that ensemble layers work
         layer2 = tensor_layer(layer1, nengo.RectifiedLinear(), gain=[1] * 6,
                               bias=[-20] * 6)
         assert isinstance(layer2, nengo.ensemble.Neurons)
         assert np.allclose(layer2.ensemble.gain, 1)
         assert np.allclose(layer2.ensemble.bias, -20)
         p2 = nengo.Probe(layer2)
+
+        # check that size_in can be inferred from transform
+        layer3 = tensor_layer(layer2, lambda x: x,
+                              transform=np.ones((1, 6)))
+        assert layer3.size_in == 1
+
+        # check that size_in can be inferred from shape_in
+        layer4 = tensor_layer(
+            layer3, lambda x: x, transform=nengo.dists.Uniform(-1, 1),
+            shape_in=(2,))
+        assert layer4.size_in == 2
 
     with Simulator(net, minibatch_size=2) as sim:
         sim.step()
@@ -139,7 +153,7 @@ def test_reuse_vars(Simulator):
         return x * tf.cast(w, x.dtype)
 
     with nengo.Network() as net:
-        configure_trainable(net, default=False)
+        configure_settings(trainable=False)
 
         inp = nengo.Node([1])
         node = TensorNode(my_func, size_in=1)

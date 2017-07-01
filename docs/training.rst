@@ -180,6 +180,8 @@ Other parameters
 - ``n_epochs`` (int): run training for this many passes through the input data
 - ``shuffle`` (bool): if ``True`` (default), randomly assign data to different
   minibatches each epoch
+- ``profile`` (bool or str): collect profiling information
+  (`:ref:`as in Simulator.run <sim-profile>`)
 
 Choosing which elements to optimize
 -----------------------------------
@@ -202,21 +204,20 @@ Any of these default behaviours can be overriden using `Nengo's config system
 ``trainable`` config attribute for an object will control whether or not it
 will be optimized.
 
-:func:`.configure_trainable` is a utility function that will add a configurable
-``trainable`` attribute to the objects in a network.  It can also
-set the initial value of ``trainable`` on all those objects at the same time,
-for convenience.
+:func:`.configure_settings` is a utility function that can be used to add a
+configurable ``trainable`` attribute to the objects in a network.  Setting
+``trainable=None`` will use the defaults described above, or True/False can
+be passed to override the default for all objects in a model.
 
-For example, suppose we only want to optimize one
-connection in our network, while leaving everything else unchanged.  This
-could be achieved via
+For example, suppose we only want to optimize one connection in our network,
+while leaving everything else unchanged.  This could be achieved via
 
 .. code-block:: python
 
     with nengo.Network() as net:
         # this adds the `trainable` attribute to all the trainable objects
         # in the network, and initializes it to `False`
-        nengo_dl.configure_trainable(net, default=False)
+        nengo_dl.configure_settings(trainable=False)
 
         a = nengo.Node([0])
         b = nengo.Ensemble(10, 1)
@@ -228,17 +229,15 @@ could be achieved via
         conn = nengo.Connection(b, c)
         net.config[conn].trainable = True
 
-Or if we wanted to disable training on the overall network, but enable it for
-Connections within some subnetwork:
+Or if we wanted to disable training for some subnetwork:
 
 .. code-block:: python
 
     with nengo.Network() as net:
-        nengo_dl.configure_trainable(net, default=False)
+        nengo_dl.configure_settings(trainable=None)
         ...
         with nengo.Network() as subnet:
-            nengo_dl.configure_trainable(subnet)
-            subnet.config[nengo.Connection].trainable = True
+            net.config[subnet].trainable = False
             ...
 
 Note that ``config[nengo.Ensemble].trainable`` controls both encoders and
@@ -271,14 +270,22 @@ which differ from the standard config behaviour:
            ...
 
 
-2. ``trainable`` cannot be set on manually created
-   :class:`~nengo:nengo.Config` objects, only ``net.config``.  For
-   example, the following would have no effect:
+2. ``trainable`` can only be set on the config of the top-level network.  For
+   example,
 
    .. code-block:: python
 
-       with nengo.Config(nengo.Ensemble) as conf:
-           conf[nengo.Ensemble].trainable = False
+       with nengo.Network() as net:
+           nengo_dl.configure_settings(trainable=None)
+
+           with nengo.Network() as subnet:
+               my_ens = nengo.Ensemble(...)
+
+               # incorrect
+               subnet.config[my_ens].trainable = False
+
+               # correct
+               net.config[my_ens].trainable = False
 
 
 Examples

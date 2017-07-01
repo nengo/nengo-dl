@@ -43,8 +43,6 @@ class Simulator(simulator.Simulator):
         if "NENGO_DL_TEST_UNROLL" in os.environ:
             kwargs.setdefault("unroll_simulation",
                               int(os.environ["NENGO_DL_TEST_UNROLL"]))
-        else:
-            kwargs.setdefault("unroll_simulation", 1)
 
         if "NENGO_DL_TEST_DEVICE" in os.environ:
             device = os.environ["NENGO_DL_TEST_DEVICE"]
@@ -52,7 +50,5 @@ class Simulator(simulator.Simulator):
                 kwargs.setdefault("device", None)
             else:
                 kwargs.setdefault("device", os.environ["NENGO_DL_TEST_DEVICE"])
-        else:
-            kwargs.setdefault("device", "/cpu:0")
 
         super(Simulator, self).__init__(*args, **kwargs)

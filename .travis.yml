@@ -39,7 +39,7 @@ env:
 
 # setup xvfb so we can test examples with matplotlib
 before_script:
-  - if [[ "$MODE" == "examples" || "$MODE" == "coverage" ]]; then
+  - if [[ "$MODE" == "examples" ]]; then
       export DISPLAY=:99.0;
       sh -e /etc/init.d/xvfb start;
       sleep 3;
@@ -83,7 +83,7 @@ script:
     elif [[ "$MODE" == "examples" ]]; then
       py.test -v --durations 20 --nbval-lax docs/examples;
     else
-      py.test -v -n 2 --pyargs nengo && py.test -v -n 2 --durations 20 nengo_dl;
+      py.test -n 2 --pyargs nengo && py.test -n 2 --durations 20 nengo_dl;
     fi
 
 # upload results

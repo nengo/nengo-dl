@@ -2,7 +2,8 @@ import copy
 import traceback
 
 from tensorflow.python.framework import dtypes, ops
-from tensorflow.python.ops import math_ops, array_ops, data_flow_ops
+from tensorflow.python.ops import (math_ops, array_ops, data_flow_ops,
+                                   state_ops, gen_state_ops)
 
 saved_registry = copy.copy(ops._gradient_registry._registry)
 
@@ -53,13 +54,33 @@ def patch_state_grads():
     scatter_add/update).  This adds them in."""
 
     def ScatterUpdateGrads(op, grad):
-        _, indices, updates = op.inputs
-
-        grad_range = math_ops.range(array_ops.shape(grad)[0])
-        var_grad = data_flow_ops.dynamic_stitch(
-            [grad_range, indices], [grad, array_ops.zeros_like(updates)])
+        var, indices, updates = op.inputs
 
         updates_grad = array_ops.gather(grad, indices)
+
+        # TODO: the dynamic_stitch approach might be faster if there were
+        # a GPU dynamic_stitch implementation
+        # grad_range = math_ops.range(grad.get_shape()[0].value)
+        # var_grad = data_flow_ops.dynamic_stitch(
+        #     [grad_range, indices],
+        #     [grad, array_ops.zeros(updates.get_shape())])
+
+        if isinstance(grad, ops.IndexedSlices):
+            # note: we could use this approach for everything, but the
+            # temporary variable approach seems to be slightly faster (but we
+            # can't use that on indexedslices)
+            var_grad = grad + array_ops.scatter_nd(
+                array_ops.expand_dims(indices, 1), -updates_grad,
+                var.get_shape())
+        else:
+            var_grad = gen_state_ops._temporary_variable(
+                grad.get_shape(), grad.dtype)
+            var_name = var_grad.op.name
+            var_grad = state_ops.assign(var_grad, grad)
+            var_grad = state_ops.scatter_update(
+                var_grad, indices, array_ops.zeros_like(updates))
+            var_grad = gen_state_ops._destroy_temporary_variable(var_grad,
+                                                                 var_name)
 
         return var_grad, None, updates_grad
 
@@ -69,22 +90,6 @@ def patch_state_grads():
         updates_grad = array_ops.gather(grad, indices)
 
         return grad, None, updates_grad
-
-    # note: the scattermul grad doesn't work, because the value of var might
-    # have changed (we don't have a snapshot of values at the time the
-    # scattermul was applied)
-    # def ScatterMulGrad(op, grad):
-    #     var, indices, updates = op.inputs
-    #     indices_grad = None
-    #
-    #     grad_range = math_ops.range(array_ops.shape(grad)[0])
-    #     grad_sub = array_ops.gather(grad, indices)
-    #     var_grad = data_flow_ops.dynamic_stitch(
-    #         [grad_range, indices], [grad, updates * grad_sub])
-    #
-    #     updates_grad = grad_sub * array_ops.gather(var, indices)
-    #
-    #     return var_grad, indices_grad, updates_grad
 
     def AssignGrads(op, grad):
         return array_ops.zeros_like(grad), grad
@@ -96,8 +101,6 @@ def patch_state_grads():
         "type": ScatterUpdateGrads, "location": traceback.extract_stack()}
     ops._gradient_registry._registry["ScatterAdd"] = {
         "type": ScatterAddGrads, "location": traceback.extract_stack()}
-    # ops._gradient_registry._registry["ScatterMul"] = {
-    #     "type": ScatterMulGrad, "location": traceback.extract_stack()}
     ops._gradient_registry._registry["Assign"] = {
         "type": AssignGrads, "location": traceback.extract_stack()}
     ops._gradient_registry._registry["AssignAdd"] = {
