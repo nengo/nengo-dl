@@ -124,8 +124,8 @@ class GenericProcessBuilder(object):
 
 
 class LowpassBuilder(object):
-    """Build a group of :class:`~nengo:nengo.LinearFilter`
-    neuron operators."""
+    """Build a group of :class:`~nengo:nengo.Lowpass` synapse operators."""
+
     def __init__(self, ops, signals):
         # TODO: implement general linear filter (using queues?)
 

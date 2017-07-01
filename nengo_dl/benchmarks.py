@@ -171,6 +171,9 @@ def compare_backends(raw=False):
                                 # with backend.Simulator(net, **kwargs) as sim:
                                 with backend.Simulator(None, model=model,
                                                        **kwargs) as sim:
+                                    # run once to eliminate startup overhead
+                                    sim.run(0.1)
+
                                     start = time.time()
                                     sim.run(5)
                                     # reps = 1 if backend == nengo_dl else 50
@@ -221,7 +224,7 @@ def compare_backends(raw=False):
     plt.show()
 
 
-def profiling():
+def profile_run():
     """Run profiler on one of the benchmarks."""
 
     # note: in order for GPU profiling to work, you have to manually add
@@ -229,9 +232,126 @@ def profiling():
     net, p = pes(128, 32, nengo.RectifiedLinear())
     with nengo_dl.Simulator(net, tensorboard=False, unroll_simulation=50,
                             device="/gpu:0") as sim:
-        sim.run_steps(150, profile=True)
+        # run a few times to try to eliminate startup overhead (only the data
+        # from the last run will be kept)
+        for _ in range(3):
+            sim.run_steps(150, profile=True)
+
+
+def profile_train(use_tensor_layer):
+    nl = tf.nn.relu
+
+    # nl = functools.partial(softlif_layer, sigma=0.002, tau_rc=0.022,
+    #                        tau_ref=0.002, amplitude=0.063)
+    # nl = tf.nn.sigmoid
+
+    def softlif_layer(x, sigma=1, tau_ref=0.002, tau_rc=0.02, amplitude=1):
+        # x -= 1
+        z = tf.nn.softplus(x / sigma) * sigma
+        z += 1e-10
+        rates = amplitude / (tau_ref + tau_rc * tf.log1p(1 / z))
+        return rates
+
+    @nengo_dl.reshaped((28, 28, 1))
+    def mnist_node(_, x):
+        # init = init_ops.variance_scaling_initializer(scale=1, mode="fan_avg",
+        #                                              distribution="uniform")
+        # bias_init = init_ops.zeros_initializer()
+
+        x = tf.layers.conv2d(x, filters=32, kernel_size=3,
+                             activation=nl,
+                             # kernel_initializer=init,
+                             # bias_initializer=bias_init,
+                             )
+        x = tf.layers.conv2d(x, filters=32, kernel_size=3,
+                             activation=nl,
+                             # kernel_initializer=init,
+                             # bias_initializer=bias_init,
+                             )
+        x = tf.layers.average_pooling2d(x, pool_size=2, strides=2)
+        x = tf.contrib.layers.flatten(x)
+        x = tf.layers.dense(x, 128, activation=nl,
+                            # kernel_initializer=init,
+                            # bias_initializer=bias_init,
+                            )
+        x = tf.layers.dropout(x, rate=0.4)
+        x = tf.layers.dense(x, 10)
+
+        return x
+
+    with nengo.Network() as net:
+        nengo_dl.configure_settings(trainable=False)
+
+        # create node to feed in images
+        inp = nengo.Node(np.ones(28 * 28))
+
+        if use_tensor_layer:
+            ensemble_params = dict(max_rates=nengo.dists.Choice([100]),
+                                   intercepts=nengo.dists.Choice([0]))
+            amplitude = 1
+            synapse = None
+
+            x = nengo_dl.tensor_layer(
+                inp, tf.layers.conv2d, shape_in=(28, 28, 1), filters=32,
+                kernel_size=3,
+                # activation=nl
+            )
+            x = nengo_dl.tensor_layer(x, nengo.RectifiedLinear(),
+                                      **ensemble_params)
+
+            x = nengo_dl.tensor_layer(
+                x, tf.layers.conv2d, shape_in=(26, 26, 32),
+                transform=amplitude, filters=32, kernel_size=3,
+                # activation=nl
+            )
+            x = nengo_dl.tensor_layer(x, nengo.RectifiedLinear(),
+                                      **ensemble_params)
+
+            x = nengo_dl.tensor_layer(
+                x, tf.layers.average_pooling2d, shape_in=(24, 24, 32),
+                synapse=synapse, transform=amplitude, pool_size=2, strides=2)
+
+            x = nengo_dl.tensor_layer(
+                x, tf.layers.dense, units=128,
+                # activation=nl
+            )
+            x = nengo_dl.tensor_layer(x, nengo.RectifiedLinear(),
+                                      **ensemble_params)
+
+            x = nengo_dl.tensor_layer(x, tf.layers.dropout, rate=0.4,
+                                      transform=amplitude)
+
+            x = nengo_dl.tensor_layer(x, tf.layers.dense, units=10)
+        else:
+            node = nengo_dl.TensorNode(mnist_node, size_in=28 * 28,
+                                       size_out=10)
+            x = node
+            nengo.Connection(inp, node, synapse=None)
+
+        out_p = nengo.Probe(x)
+
+    with nengo_dl.Simulator(net, minibatch_size=128, dtype=tf.float32,
+                            device="/gpu:0") as sim:
+        inputs = {inp: np.ones((128, 2, 28 * 28))}
+        targets = {
+            out_p: np.zeros((128, 2, 10)) + [1, 0, 0, 0, 0, 0, 0, 0, 0, 0]}
+
+        def obj(x, y):
+            return tf.nn.softmax_cross_entropy_with_logits(
+                logits=x, labels=y)
+
+        opt = tf.train.AdadeltaOptimizer(learning_rate=1)
+
+        # run a few times to try to eliminate startup overhead (only the data
+        # from the last run will be kept)
+        for _ in range(3):
+            sim.train(inputs, targets, opt, n_epochs=1000, objective=obj,
+                      profile=False)
+
+            # sim.run_steps(2, input_feeds=inputs, profile=True)
 
 
 if __name__ == "__main__":
     # compare_backends(raw=True)
-    profiling()
+    # profile_run()
+    profile_train(use_tensor_layer=True)

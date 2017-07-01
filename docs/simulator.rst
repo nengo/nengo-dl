@@ -213,6 +213,8 @@ simulation. In a simple network such as this, minibatching will not make much
 difference. But for larger models it will be much more efficient to process
 multiple inputs in parallel rather than one at a time.
 
+.. _sim-profile:
+
 profile
 ^^^^^^^
 
@@ -224,6 +226,8 @@ in order to help identify simulation bottlenecks.
 Profiling data will be saved to ``<nengo_dl>/data/nengo_dl_profile.json``.  It
 can be viewed by opening a Chrome browser, navigating to
 `<chrome://tracing>`_ and loading the ``nengo_dl_profile.json`` file.
+Alternatively, a filename can be passed to ``profile`` to specify an output
+location for the profiling data.
 
 .. _sim-doc:
 

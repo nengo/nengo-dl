@@ -6,13 +6,16 @@ from nengo.builder.neurons import SimNeurons
 from nengo.builder.operator import (SimPyFunc, DotInc, Copy, Reset,
                                     ElementwiseInc)
 from nengo.builder.processes import SimProcess
+from nengo.builder.signal import Signal
 import numpy as np
 import pytest
 
-from nengo_dl import builder, nengo_version
+from nengo_dl import builder, nengo_version, op_builders
 from nengo_dl.graph_optimizer import (
     mergeable, greedy_planner, tree_planner, transitive_planner, noop_planner,
-    order_signals, noop_order_signals, create_signals)
+    order_signals, noop_order_signals, create_signals,
+    remove_unmodified_resets, remove_zero_incs, remove_constant_copies,
+    remove_identity_muls)
 from nengo_dl.tensor_node import SimTensorNode
 
 
@@ -704,3 +707,260 @@ def test_create_signals_partition():
     plan = [tuple(Reset(x) for x in sigs)]
     bases, sig_map = create_signals(sigs, plan, np.float32, 10)
     assert len(bases) == 4
+
+
+def test_remove_unmodified_resets():
+    a = Signal([1])
+
+    # check that unmodified reset gets removed
+    operators = [Reset(a, 2)]
+    new_ops = remove_unmodified_resets(operators)
+    assert new_ops == []
+    assert np.all(a.initial_value == 2)
+
+    # check that reset + inc doesn't get removed
+    operators = [Reset(a, 2), DummyOp(incs=[a])]
+    new_ops = remove_unmodified_resets(operators)
+    assert new_ops == operators
+
+    # check that reset + update doesn't get removed
+    operators = [Reset(a, 2), DummyOp(updates=[a])]
+    new_ops = remove_unmodified_resets(operators)
+    assert new_ops == operators
+
+    # check that reset + read does get removed
+    operators = [Reset(a, 3), DummyOp(reads=[a])]
+    new_ops = remove_unmodified_resets(operators)
+    assert new_ops == operators[1:]
+    assert np.all(a.initial_value == 3)
+
+
+def test_remove_zero_incs():
+    # check that zero inputs get removed
+    operators = [DotInc(DummySignal(), DummySignal(), DummySignal())]
+    new_operators = remove_zero_incs(operators)
+    assert new_operators == []
+
+    # check that zero inputs (copy) get removed
+    operators = [Copy(DummySignal(), DummySignal(), DummySignal(), inc=True)]
+    new_operators = remove_zero_incs(operators)
+    assert new_operators == []
+
+    # check that node inputs don't get removed
+    x = DummySignal(label="<Node lorem ipsum.out")
+    operators = [DotInc(DummySignal(), x, DummySignal())]
+    new_operators = remove_zero_incs(operators)
+    assert new_operators == operators
+
+    # check that zero inputs + trainable don't get removed
+    x = DummySignal()
+    x.trainable = True
+    operators = [DotInc(DummySignal(), x, DummySignal())]
+    new_operators = remove_zero_incs(operators)
+    assert new_operators == operators
+
+    # check that updated input doesn't get removed
+    x = DummySignal()
+    operators = [DotInc(DummySignal(), x, DummySignal()), DummyOp(updates=[x])]
+    new_operators = remove_zero_incs(operators)
+    assert new_operators == operators
+
+    # check that inc'd input doesn't get removed
+    x = DummySignal()
+    operators = [DotInc(DummySignal(), x, DummySignal()), DummyOp(incs=[x])]
+    new_operators = remove_zero_incs(operators)
+    assert new_operators == operators
+
+    # check that set'd input doesn't get removed
+    x = DummySignal()
+    operators = [DotInc(DummySignal(), x, DummySignal()), DummyOp(sets=[x])]
+    new_operators = remove_zero_incs(operators)
+    assert new_operators == operators
+
+    # check that Reset(0) input does get removed
+    x = DummySignal()
+    operators = [DotInc(DummySignal(), x, DummySignal()), Reset(x)]
+    new_operators = remove_zero_incs(operators)
+    assert new_operators == operators[1:]
+
+    # check that Reset(1) input does not get removed
+    x = DummySignal()
+    operators = [DotInc(DummySignal(), x, DummySignal()), Reset(x, 1)]
+    new_operators = remove_zero_incs(operators)
+    assert new_operators == operators
+
+    # check that set's get turned into a reset
+    x = DummySignal()
+    operators = [Copy(DummySignal(), x)]
+    new_operators = remove_zero_incs(operators)
+    assert len(new_operators) == 1
+    assert isinstance(new_operators[0], Reset)
+    assert new_operators[0].dst is x
+    assert new_operators[0].value == 0
+
+
+def test_remove_constant_copies():
+    # check that Copy with no inputs gets turned into Reset
+    x = DummySignal()
+    operators = [Copy(DummySignal(), x)]
+    new_operators = remove_constant_copies(operators)
+    assert len(new_operators) == 1
+    assert isinstance(new_operators[0], Reset)
+    assert new_operators[0].dst is x
+    assert new_operators[0].value == 0
+
+    # check that Copy with Node input doesn't get changed
+    x = DummySignal(label="<Node lorem ipsum.out")
+    operators = [Copy(x, DummySignal())]
+    new_operators = remove_constant_copies(operators)
+    assert new_operators == operators
+
+    # check that Copy with trainable input doesn't get changed
+    x = DummySignal()
+    x.trainable = True
+    operators = [Copy(x, DummySignal())]
+    new_operators = remove_constant_copies(operators)
+    assert new_operators == operators
+
+    # check Copy with updated input doesn't get changed
+    x = DummySignal()
+    operators = [Copy(x, DummySignal()), DummyOp(updates=[x])]
+    new_operators = remove_constant_copies(operators)
+    assert new_operators == operators
+
+    # check Copy with inc'd input doesn't get changed
+    x = DummySignal()
+    operators = [Copy(x, DummySignal()), DummyOp(incs=[x])]
+    new_operators = remove_constant_copies(operators)
+    assert new_operators == operators
+
+    # check Copy with set input doesn't get changed
+    x = DummySignal()
+    operators = [Copy(x, DummySignal()), DummyOp(sets=[x])]
+    new_operators = remove_constant_copies(operators)
+    assert new_operators == operators
+
+    # check Copy with read input/output does get changed
+    x = DummySignal()
+    y = DummySignal()
+    operators = [Copy(x, y), DummyOp(reads=[x]),
+                 DummyOp(reads=[y])]
+    new_operators = remove_constant_copies(operators)
+    assert len(new_operators) == 3
+    assert new_operators[1:] == operators[1:]
+    assert isinstance(new_operators[0], Reset)
+    assert new_operators[0].dst is y
+    assert new_operators[0].value == 0
+
+    # check Copy with Reset input does get changed
+    x = DummySignal()
+    y = DummySignal()
+    operators = [Copy(x, y), Reset(x, 2)]
+    new_operators = remove_constant_copies(operators)
+    assert len(new_operators) == 1
+    assert isinstance(new_operators[0], Reset)
+    assert new_operators[0].dst is y
+    assert new_operators[0].value == 2
+
+    # check that slicing is respected
+    x = DummySignal()
+    y = Signal(initial_value=[0, 0])
+    operators = [Copy(x, y, dst_slice=slice(1, 2)), Reset(x, 2)]
+    new_operators = remove_constant_copies(operators)
+    assert len(new_operators) == 1
+    assert isinstance(new_operators[0], Reset)
+    assert new_operators[0].dst.shape == (1,)
+    assert new_operators[0].dst.is_view
+    assert new_operators[0].dst.elemoffset == 1
+    assert new_operators[0].dst.base is y
+    assert new_operators[0].value == 2
+
+    # check that CopyInc gets turned into ResetInc
+    x = DummySignal()
+    y = DummySignal()
+    operators = [Copy(x, y, inc=True), Reset(x, 2)]
+    new_operators = remove_constant_copies(operators)
+    assert len(new_operators) == 1
+    assert isinstance(new_operators[0], op_builders.ResetInc)
+    assert new_operators[0].dst is y
+    assert new_operators[0].value == 2
+    assert len(new_operators[0].incs) == 1
+    assert len(new_operators[0].sets) == 0
+
+
+@pytest.mark.parametrize("Op", [DotInc, ElementwiseInc])
+def test_remove_identity_muls(Op):
+    # check that identity input signals get removed
+    As = [1.0, np.diag(np.ones(3)) if Op == DotInc else np.ones(3)]
+    for A in As:
+        x = DummySignal(shape=(1,) if isinstance(A, float) else A.shape[:1])
+        y = DummySignal(shape=(1,) if isinstance(A, float) else A.shape[:1])
+        a = Signal(A)
+        a.trainable = False
+        operators = [Op(a, x, y)]
+        new_operators = remove_identity_muls(operators)
+        assert len(new_operators) == 1
+        new_op = new_operators[0]
+        assert isinstance(new_op, Copy)
+        assert new_op.src is x
+        assert new_op.dst is y
+        assert new_op.inc
+
+    # check that reset inputs get removed
+    for A in As:
+        x = DummySignal()
+        y = DummySignal()
+        a = DummySignal()
+        r = Reset(a)
+        r.value = A
+        operators = [Op(a, x, y), r]
+        new_operators = remove_identity_muls(operators)
+        assert len(new_operators) == 2
+        assert new_operators[1:] == operators[1:]
+        new_op = new_operators[0]
+        assert isinstance(new_op, Copy)
+        assert new_op.src is x
+        assert new_op.dst is y
+        assert new_op.inc
+
+    # check that non-identity inputs don't get removed
+    a = Signal(np.ones((3, 3)))
+    a.trainable = False
+    operators = [Op(a, DummySignal(shape=(3,)),
+                    DummySignal(shape=(3,)))]
+    new_operators = remove_identity_muls(operators)
+    assert new_operators == operators
+
+    # check that node inputs don't get removed
+    x = DummySignal(label="<Node lorem ipsum.out")
+    operators = [Op(x, DummySignal(), DummySignal())]
+    new_operators = remove_identity_muls(operators)
+    assert new_operators == operators
+
+    # check that identity inputs + trainable don't get removed
+    x = Signal(1.0)
+    x.trainable = True
+    operators = [Op(x, DummySignal(), DummySignal())]
+    new_operators = remove_identity_muls(operators)
+    assert new_operators == operators
+
+    # check that updated input doesn't get removed
+    x = DummySignal()
+    operators = [Op(x, DummySignal(), DummySignal()),
+                 DummyOp(updates=[x])]
+    new_operators = remove_identity_muls(operators)
+    assert new_operators == operators
+
+    # check that inc'd input doesn't get removed
+    x = DummySignal()
+    operators = [Op(x, DummySignal(), DummySignal()),
+                 DummyOp(incs=[x])]
+    new_operators = remove_identity_muls(operators)
+    assert new_operators == operators
+
+    # check that set'd input doesn't get removed
+    x = DummySignal()
+    operators = [Op(x, DummySignal(), DummySignal()),
+                 DummyOp(sets=[x])]
+    new_operators = remove_identity_muls(operators)
+    assert new_operators == operators

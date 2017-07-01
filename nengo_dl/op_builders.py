@@ -13,7 +13,14 @@ from nengo_dl.builder import Builder, OpBuilder
 logger = logging.getLogger(__name__)
 
 
+class ResetInc(Reset):
+    @property
+    def dst(self):
+        return self.incs[0]
+
+
 @Builder.register(Reset)
+@Builder.register(ResetInc)
 class ResetBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.operator.Reset`
     operators."""
@@ -23,6 +30,8 @@ class ResetBuilder(OpBuilder):
         logger.debug([str(x) for x in ops])
         logger.debug("val %s", [op.value for op in ops])
         logger.debug("dst %s", [op.dst for op in ops])
+
+        self.mode = "inc" if type(ops[0]) == ResetInc else "update"
 
         dtype = utils.cast_dtype(np.asarray(ops[0].value).dtype,
                                  signals.dtype).as_numpy_dtype
@@ -48,7 +57,7 @@ class ResetBuilder(OpBuilder):
 
     def build_step(self, signals):
         for data, val in self.scatters:
-            signals.scatter(data, val)
+            signals.scatter(data, val, mode=self.mode)
 
 
 @Builder.register(Copy)
@@ -89,7 +98,14 @@ class CopyBuilder(OpBuilder):
                         mode=self.mode)
 
 
+# class ElementwiseSet(ElementwiseInc):
+#     @property
+#     def Y(self):
+#         return self.sets[0]
+
+
 @Builder.register(ElementwiseInc)
+# @Builder.register(ElementwiseSet)
 class ElementwiseIncBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.operator.ElementwiseInc`
     operators."""
@@ -100,6 +116,8 @@ class ElementwiseIncBuilder(OpBuilder):
         logger.debug("dst %s", [op.Y for op in ops])
         logger.debug("A %s", [op.A for op in ops])
         logger.debug("X %s", [op.X for op in ops])
+
+        self.mode = "inc" if type(ops[0]) == ElementwiseInc else "update"
 
         self.Y_data = signals.combine([op.Y for op in ops])
 
@@ -128,7 +146,13 @@ class ElementwiseIncBuilder(OpBuilder):
 
         result = tf.multiply(A, X)
 
-        signals.scatter(self.Y_data, result, mode="inc")
+        signals.scatter(self.Y_data, result, mode=self.mode)
+
+
+# class DotSet(DotInc):
+#     @property
+#     def Y(self):
+#         return self.sets[0]
 
 
 # @Builder.register(DotInc)
@@ -142,6 +166,8 @@ class DotIncBuilder(OpBuilder):
         logger.debug("dst %s", [op.Y for op in ops])
         logger.debug("A %s", [op.A for op in ops])
         logger.debug("X %s", [op.X for op in ops])
+
+        self.mode = "inc" if type(ops[0]) == DotInc else "update"
 
         self.Y_data = signals.combine([op.Y for op in ops])
 
@@ -215,10 +241,11 @@ class DotIncBuilder(OpBuilder):
                                 self.X_data.minibatched)
             dot = tf.reduce_sum(dot, axis=reduce_axis)
 
-        signals.scatter(self.Y_data, dot, mode="inc")
+        signals.scatter(self.Y_data, dot, mode=self.mode)
 
 
 @Builder.register(DotInc)
+# @Builder.register(DotSet)
 class SparseDotIncBuilder(DotIncBuilder):
     """Build a group of :class:`~nengo:nengo.builder.operator.DotInc`
     operators."""
@@ -229,6 +256,8 @@ class SparseDotIncBuilder(DotIncBuilder):
         logger.debug("dst %s", [op.Y for op in ops])
         logger.debug("A %s", [op.A for op in ops])
         logger.debug("X %s", [op.X for op in ops])
+
+        self.mode = "inc" if type(ops[0]) == DotInc else "update"
 
         self.len_match = True
         for i, s0 in enumerate(ops[0].all_signals):
@@ -295,7 +324,7 @@ class SparseDotIncBuilder(DotIncBuilder):
 
         dot.set_shape(self.Y_data.shape + (signals.minibatch_size,))
 
-        signals.scatter(self.Y_data, dot, mode="inc")
+        signals.scatter(self.Y_data, dot, mode=self.mode)
 
 
 @Builder.register(SimPyFunc)

@@ -136,9 +136,9 @@ class GenericNeuronBuilder(object):
     Notes
     -----
     These will be executed as native Python functions, requiring execution to
-    move in and out of Tensorflow.  This can significantly slow down the
+    move in and out of TensorFlow.  This can significantly slow down the
     simulation, so any performance-critical neuron models should consider
-    adding a custom Tensorflow implementation for their neuron type instead.
+    adding a custom TensorFlow implementation for their neuron type instead.
     """
 
     def __init__(self, ops, signals):
@@ -230,8 +230,7 @@ class RectifiedLinearBuilder(object):
 
 
 class SigmoidBuilder(object):
-    """Build a group of :class:`~nengo:nengo.Sigmoid`
-    neuron operators."""
+    """Build a group of :class:`~nengo:nengo.Sigmoid` neuron operators."""
 
     def __init__(self, ops, signals):
         self.J_data = signals.combine([op.J for op in ops])
@@ -246,8 +245,7 @@ class SigmoidBuilder(object):
 
 
 class LIFRateBuilder(object):
-    """Build a group of :class:`~nengo:nengo.LIFRate`
-    neuron operators."""
+    """Build a group of :class:`~nengo:nengo.LIFRate` neuron operators."""
 
     def __init__(self, ops, signals):
         self.tau_ref = tf.constant(
@@ -282,8 +280,7 @@ class LIFRateBuilder(object):
 
 
 class LIFBuilder(object):
-    """Build a group of :class:`~nengo:nengo.LIF`
-    neuron operators."""
+    """Build a group of :class:`~nengo:nengo.LIF` neuron operators."""
 
     def __init__(self, ops, signals):
         self.tau_ref = tf.constant(
@@ -346,6 +343,8 @@ class LIFBuilder(object):
 
 
 class SoftLIFRateBuilder(LIFRateBuilder):
+    """Build a group of :class:`.SoftLIFRate` neuron operators."""
+
     def __init__(self, ops, signals):
         super(SoftLIFRateBuilder, self).__init__(ops, signals)
 

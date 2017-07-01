@@ -215,9 +215,7 @@ class SimTensorNodeBuilder(OpBuilder):
             output = self.func(signals.time, input)
 
         # move minibatch dimension back to end
-        output_dim = output.get_shape().ndims - 1
-        output = tf.transpose(
-            output, [output_dim] + [i for i in range(output_dim)])
+        output = tf.transpose(output, (1, 0))
 
         signals.scatter(self.dst_data, output)
 
@@ -253,7 +251,7 @@ def reshaped(shape_in):
 
 
 def tensor_layer(input, layer_func, shape_in=None, synapse=None,
-                 transform=1, **layer_args):
+                 transform=1, return_conn=False, **layer_args):
     """A utility function to construct TensorNodes that apply some function
     to their input (analogous to the ``tf.layers`` syntax).
 
@@ -271,6 +269,8 @@ def tensor_layer(input, layer_func, shape_in=None, synapse=None,
         synapse to apply on connection from ``input`` to this layer
     transform : :class:`~numpy:numpy.ndarray`, optional
         transform matrix to apply on connection from ``input`` to this layer
+    return_conn : bool, optional
+        if True, also return the connection linking this layer to ``input``
     layer_args : dict, optional
         these arguments will be passed to ``layer_func`` if it is callable, or
         :class:`~nengo:nengo.Ensemble` if ``layer_func`` is a
@@ -284,8 +284,15 @@ def tensor_layer(input, layer_func, shape_in=None, synapse=None,
         neuron type, connected to ``input``
     """
 
+    if isinstance(transform, np.ndarray) and transform.ndim == 2:
+        size_in = transform.shape[0]
+    elif shape_in is not None:
+        size_in = np.prod(shape_in)
+    else:
+        size_in = input.size_out
+
     if isinstance(layer_func, NeuronType):
-        node = Ensemble(input.size_out, 1, neuron_type=layer_func,
+        node = Ensemble(size_in, 1, neuron_type=layer_func,
                         **layer_args).neurons
     else:
         # add (ignored) time input and pass kwargs
@@ -296,8 +303,8 @@ def tensor_layer(input, layer_func, shape_in=None, synapse=None,
         if shape_in is not None:
             node_func = reshaped(shape_in)(node_func)
 
-        node = TensorNode(node_func, size_in=input.size_out)
+        node = TensorNode(node_func, size_in=size_in)
 
-    Connection(input, node, synapse=synapse, transform=transform)
+    conn = Connection(input, node, synapse=synapse, transform=transform)
 
-    return node
+    return (node, conn) if return_conn else node

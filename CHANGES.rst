@@ -18,7 +18,7 @@ Release History
    - Removed
    - Fixed
 
-0.4.1 (unreleased)
+0.5.0 (unreleased)
 ------------------
 
 **Added**
@@ -30,10 +30,30 @@ Release History
   that can run in spiking neurons
   <https://nengo.github.io/nengo_dl/examples/spiking_mnist.html>`_
 - Added some distributions for weight initialization to ``nengo_dl.dists``
+- Added ``sim.train(..., profile=True)` option to collect profiling information
+  during training
+- Added new methods to simplify the Nengo operation graph, resulting in faster
+  simulation/training speed
+- The default graph planner can now be modified by setting the ``planner``
+  attribute on the top-level Network config
 
 **Changed**
 
 - Increased minimum TensorFlow version to 1.2.0
+- Improved error checking for input/target data
+- Improved efficiency of stateful gradient operations, resulting in faster
+  training speed
+- The functionality for ``nengo_dl.configure_trainable`` has been subsumed into
+  the more general ``nengo_dl.configure_settings(trainable=x)``.  This has
+  resulted in some small changes to how trainability is controlled within
+  subnetworks; see the `updated documentation
+  <https://nengo.github.io/nengo_dl/training.html#choosing-which-elements-to-optimize>`_
+  for details.
+
+**Deprecated**
+
+- The old ``step_blocks``/``unroll_simulation`` syntax has been fully
+  deprecated, and will result in errors if used
 
 **Fixed**
 
@@ -45,6 +65,9 @@ Release History
   whether or not that element is minibatched
 - Correctly reuse variables created inside a TensorNode when
   ``unroll_simulation`` > 1
+- Correctly handle probes that aren't connected to any ops
+- Swapped ``fan_in``/``fan_out`` in ``dists.VarianceScaling`` to align with
+  the standard definitions
 
 0.4.0 (June 8, 2017)
 --------------------
