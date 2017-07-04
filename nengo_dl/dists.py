@@ -29,7 +29,7 @@ class TruncatedNormal(Distribution):
         self.stddev = stddev
         self.limit = 2 * stddev if limit is None else limit
 
-    def sample(self, n, d=None, rng=np.random):
+    def sample(self, n, d=None, rng=None):
         """Samples the distribution.
 
         Parameters
@@ -40,8 +40,9 @@ class TruncatedNormal(Distribution):
             The number of dimensions to return. If this is an int, the return
             value will be of shape ``(n, d)``. If None, the return
             value will be of shape ``(n,)``.
-        rng : `numpy.random.RandomState`, optional
-            Random number generator state.
+        rng : :class:`numpy:numpy.random.RandomState`, optional
+            Random number generator state (if None, will use the default
+            numpy random number generator).
 
         Returns
         -------
@@ -50,6 +51,8 @@ class TruncatedNormal(Distribution):
             dimension enumerates the dimensions of the process.
         """
 
+        if rng is None:
+            rng = np.random
         sample_shape = (n,) if d is None else (n, d)
         samples = rng.normal(loc=self.mean, scale=self.stddev,
                              size=sample_shape)
@@ -66,7 +69,7 @@ class TruncatedNormal(Distribution):
 
 class VarianceScaling(Distribution):
     """Variance scaling distribution for weight initialization (analogous to
-    TensorFlow ``init_ops.VarianceScaling`).
+    TensorFlow ``init_ops.VarianceScaling``).
 
     Parameters
     ----------
@@ -88,7 +91,7 @@ class VarianceScaling(Distribution):
         self.mode = mode
         self.distribution = distribution
 
-    def sample(self, n, d=None, rng=np.random):
+    def sample(self, n, d=None, rng=None):
         """Samples the distribution.
 
         Parameters
@@ -99,8 +102,9 @@ class VarianceScaling(Distribution):
             The number of dimensions to return. If this is an int, the return
             value will be of shape ``(n, d)``. If None, the return
             value will be of shape ``(n,)``.
-        rng : `numpy.random.RandomState`, optional
-            Random number generator state.
+        rng : :class:`numpy:numpy.random.RandomState`, optional
+            Random number generator state (if None, will use the default
+            numpy random number generator).
 
         Returns
         -------
@@ -109,6 +113,8 @@ class VarianceScaling(Distribution):
             dimension enumerates the dimensions of the process.
         """
 
+        if rng is None:
+            rng = np.random
         fan_out = n
         fan_in = 1 if d is None else d
         scale = self.scale
@@ -129,9 +135,8 @@ class VarianceScaling(Distribution):
 
 
 class Glorot(VarianceScaling):
-    """Weight initialization method from Glorot and Bengio (2010).
-
-    http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf
+    """Weight initialization method from [1]_ (also knows as Xavier
+    initialization).
 
     Parameters
     ----------
@@ -140,6 +145,13 @@ class Glorot(VarianceScaling):
         be sqrt(2), otherwise usually 1
     distribution: "uniform" or "normal", optional
         whether to use a uniform or normal distribution for weights
+
+    References
+    ----------
+    .. [1] Xavier Glorot and Yoshua Bengio (2010): Understanding the difficulty
+       of training deep feedforward neural networks. International conference
+       on artificial intelligence and statistics.
+       http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf.
     """
 
     def __init__(self, scale=1, distribution="uniform"):
@@ -148,9 +160,7 @@ class Glorot(VarianceScaling):
 
 
 class He(VarianceScaling):
-    """Weight initialization method from He et al. (2015).
-
-    https://arxiv.org/abs/1502.01852
+    """Weight initialization method from [1]_.
 
     Parameters
     ----------
@@ -159,6 +169,12 @@ class He(VarianceScaling):
         be sqrt(2), otherwise usually 1
     distribution: "uniform" or "normal", optional
         whether to use a uniform or normal distribution for weights
+
+    References
+    ----------
+    .. [1] Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. (2015):
+       Delving deep into rectifiers: Surpassing human-level performance on
+       ImageNet classification. https://arxiv.org/abs/1502.01852.
     """
 
     def __init__(self, scale=1, distribution="normal"):
