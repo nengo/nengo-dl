@@ -1,4 +1,11 @@
 import os
+import sys
+
+# we prepend the current directory to the path so that when
+# sphinxcontrib-versioning copies branches to different subdirectories we
+# import the copied version of nengo_dl (the version associated with the docs
+# being built)
+sys.path = [os.path.join(os.path.dirname(__file__), "..")] + sys.path
 
 import nengo_dl
 import sphinx_rtd_theme
