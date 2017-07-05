@@ -2,6 +2,7 @@ from collections import OrderedDict, defaultdict
 import logging
 
 from nengo.synapses import Lowpass
+from nengo.builder.learning_rules import SimVoja, SimOja, SimBCM
 from nengo.builder.operator import (SimPyFunc, ElementwiseInc, DotInc, Reset,
                                     Copy)
 from nengo.builder.neurons import SimNeurons
@@ -18,8 +19,8 @@ except ImportError:
         operator_depencency_graph as operator_dependency_graph)
 import numpy as np
 
-from nengo_dl import (signals, processes, builder, tensor_node, op_builders,
-                      learning_rules, neurons)
+from nengo_dl import (signals, process_builders, builder, tensor_node,
+                      op_builders, learning_rule_builders, neuron_builders)
 
 logger = logging.getLogger(__name__)
 
@@ -111,11 +112,11 @@ def mergeable(op, chosen_ops):
     elif isinstance(op, SimProcess):
         # we can merge ops if they have a custom implementation, or merge
         # generic processes, but can't mix the two
-
-        if type(c.process) in processes.SimProcessBuilder.TF_PROCESS_IMPL:
+        custom_impl = process_builders.SimProcessBuilder.TF_PROCESS_IMPL
+        if type(c.process) in custom_impl:
             if type(c.process) != type(op.process):
                 return False
-        elif type(op.process) in processes.SimProcessBuilder.TF_PROCESS_IMPL:
+        elif type(op.process) in custom_impl:
             return False
 
         # processes must also have the same mode
@@ -127,11 +128,10 @@ def mergeable(op, chosen_ops):
         # point trying to execute all those functions at once, because they're
         # already integrated into the Tensorflow graph.
         return False
-    elif isinstance(op, (learning_rules.SimVoja, learning_rules.SimOja,
-                         learning_rules.SimBCM)):
+    elif isinstance(op, (SimVoja, SimOja, SimBCM)):
         # pre inputs must have the same dimensionality so that we can broadcast
         # them when computing the outer product
-        attr = ("pre_decoded" if isinstance(op, learning_rules.SimVoja) else
+        attr = ("pre_decoded" if isinstance(op, SimVoja) else
                 "pre_filtered")
         if getattr(op, attr).shape[0] != getattr(c, attr).shape[0]:
             return False
@@ -441,12 +441,11 @@ def transitive_planner(op_list):
     # and potentially break lower-priority groups)
     order = [
         op_builders.SparseDotIncBuilder, op_builders.ElementwiseIncBuilder,
-        neurons.SimNeuronsBuilder, processes.SimProcessBuilder,
-        op_builders.SimPyFuncBuilder,
-        learning_rules.SimOjaBuilder, learning_rules.SimVojaBuilder,
-        learning_rules.SimBCMBuilder,
-        op_builders.CopyBuilder, op_builders.ResetBuilder,
-        tensor_node.SimTensorNodeBuilder]
+        neuron_builders.SimNeuronsBuilder, process_builders.SimProcessBuilder,
+        op_builders.SimPyFuncBuilder, learning_rule_builders.SimOjaBuilder,
+        learning_rule_builders.SimVojaBuilder,
+        learning_rule_builders.SimBCMBuilder, op_builders.CopyBuilder,
+        op_builders.ResetBuilder, tensor_node.SimTensorNodeBuilder]
 
     for builder_type in order:
         if builder_type not in ops_by_type:
