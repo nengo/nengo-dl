@@ -292,6 +292,11 @@ def test_train_errors(Simulator):
     with pytest.raises(SimulatorClosed):
         sim.train({None: np.zeros((1, 1))}, None, None)
 
+    with Simulator(net, unroll_simulation=2) as sim:
+        with pytest.raises(ValidationError):
+            sim.train({a: np.ones((1, 1, 1))},
+                      {p: np.ones((1, 1, 1))}, None)
+
 
 def test_loss(Simulator):
     with nengo.Network() as net:
@@ -332,6 +337,11 @@ def test_loss(Simulator):
 
     with pytest.raises(SimulatorClosed):
         sim.loss({None: np.zeros((1, 1))}, None, None)
+
+    with Simulator(net, unroll_simulation=2) as sim:
+        with pytest.raises(ValidationError):
+            sim.loss({inp: np.ones((1, 1, 1))},
+                     {p: np.ones((1, 1, 1))}, None)
 
 
 def test_generate_inputs(Simulator, seed):
@@ -719,3 +729,26 @@ def test_probe_no_data(Simulator):
         pass
 
     assert sim.data[p] == []
+
+
+def test_train_state_save(Simulator):
+    with nengo.Network() as net:
+        u = nengo.Node([1])
+        o = nengo.Node(size_in=1)
+        nengo.Connection(u, o)
+        p = nengo.Probe(u, synapse=0.1)
+
+    with Simulator(net) as sim:
+        sim.run_steps(20)
+
+    with Simulator(net) as sim2:
+        sim2.run_steps(10)
+
+        sim2.train({u: np.ones((4, 10, 1))}, {p: np.ones((4, 10, 1))},
+                   optimizer=tf.train.GradientDescentOptimizer(0))
+
+        sim2.loss({u: np.ones((4, 10, 1))}, {p: np.ones((4, 10, 1))}, "mse")
+
+        sim2.run_steps(10)
+
+    assert np.allclose(sim.data[p], sim2.data[p])

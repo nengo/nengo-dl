@@ -52,7 +52,6 @@ class SimProcessBuilder(OpBuilder):
                 self.built_process = LowpassBuilder(ops, signals)
             elif isinstance(ops[0].process, LinearFilter):
                 self.built_process = LinearFilterBuilder(ops, signals)
-                # self.built_process = GenericProcessBuilder(ops, signals, rng)
         else:
             self.built_process = GenericProcessBuilder(ops, signals, rng)
 

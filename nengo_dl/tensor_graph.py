@@ -353,9 +353,6 @@ class TensorGraph(object):
             tuple(x._ref() if isinstance(x, tf.Variable) else x
                   for x in self.base_vars))
 
-        # TODO: get parallel iterations working? nengo simulations are
-        # pretty serial though, so I'm not sure how much benefit we would
-        # get (and it seems non-trivial to get working correctly)
         loop_vars = tf.while_loop(
             loop_condition, loop_body, loop_vars=loop_vars,
             parallel_iterations=1, back_prop=True)
@@ -537,8 +534,6 @@ class TensorGraph(object):
             for conn in net.connections:
                 # note: this doesn't include probe connections, since they
                 # aren't added to the network
-                # TODO: should we disable training on connections to
-                # learning rules?
                 self.model.sig[conn]["weights"].trainable = get_trainable(
                     config, conn, network_trainable)
                 self.model.sig[conn]["weights"].minibatched = False

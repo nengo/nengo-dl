@@ -37,6 +37,7 @@ Release History
 - The default graph planner can now be modified by setting the ``planner``
   attribute on the top-level Network config
 - Added TensorFlow implementation for general linear synapses
+- Added ``backports.tempfile`` requirement for Python 2.7 systems
 
 **Changed**
 
@@ -50,6 +51,9 @@ Release History
   subnetworks; see the `updated documentation
   <https://nengo.github.io/nengo_dl/training.html#choosing-which-elements-to-optimize>`_
   for details.
+- Calling ``Simulator.train``/``Simulator.loss`` no longer resets the internal
+  state of the simulation (so they can be safely intermixed with calls to
+  ``Simulator.run``)
 
 **Deprecated**
 

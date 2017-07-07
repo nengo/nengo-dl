@@ -31,7 +31,7 @@ def tnorm_var(scale, limit):
 
 
 def _test_variance_scaling(dist, scale, mode, seed):
-    shape = (1000, 500)
+    shape = (1000, 2000)
     rng = np.random.RandomState(seed)
 
     if mode == "fan_in":

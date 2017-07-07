@@ -4,6 +4,8 @@ from collections import Mapping
 import datetime
 import logging
 import os
+import sys
+import tempfile
 import time
 import warnings
 
@@ -21,6 +23,9 @@ from nengo_dl.tensor_graph import TensorGraph
 from nengo_dl.utils import print_and_flush
 
 logger = logging.getLogger(__name__)
+
+if sys.version_info < (3, 4):
+    import backports.tempfile as tempfile  # noqa: F811
 
 
 class Simulator(object):
@@ -95,8 +100,6 @@ class Simulator(object):
         self.unroll = unroll_simulation
         self.minibatch_size = 1 if minibatch_size is None else minibatch_size
 
-        # TODO: allow the simulator to be called flexibly with/without
-        # minibatching
         # TODO: multi-GPU support
 
         # build model (uses default nengo builder)
@@ -150,14 +153,11 @@ class Simulator(object):
             self.seed = seed
 
         self.rng = np.random.RandomState(self.seed)
-        # TODO: why is setting the tensorflow seed necessary to make
-        # gradient descent training deterministic?
         tf.set_random_seed(self.seed)
 
         self.input_funcs = {}
 
         # (re)build graph
-        # TODO: do we need to rebuild the graph?
         print_and_flush("Constructing graph", end="")
         start = time.time()
         self.tensor_graph.build(self.rng)
@@ -385,10 +385,6 @@ class Simulator(object):
         :class:`.neurons.SimNeuronsBuilder`)
         """
 
-        # TODO: we could save the internal state of the simulator before
-        # training and then restore it afterwards, so that calling train
-        # doesn't reset a run
-
         batch_size, n_steps = next(iter(inputs.values())).shape[:2]
 
         # error checking
@@ -398,6 +394,9 @@ class Simulator(object):
         self._check_data(inputs, mode="input")
         self._check_data(targets, mode="target", n_steps=n_steps,
                          n_batch=batch_size)
+        if n_steps < self.unroll:
+            raise ValidationError("The number of timesteps in training data "
+                                  "must be >= unroll_simulation", "inputs")
 
         # check for non-differentiable elements in graph
         # utils.find_non_differentiable(
@@ -408,6 +407,11 @@ class Simulator(object):
         # build optimizer op
         opt_op, opt_slots_init = self.tensor_graph.build_optimizer(
             optimizer, tuple(targets.keys()), objective)
+
+        # save the internal state of the simulator
+        tmpdir = tempfile.TemporaryDirectory()
+        self.save_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
+                         include_global=False)
 
         # initialize any variables that were created by the optimizer
         self.sess.run(opt_slots_init)
@@ -435,7 +439,10 @@ class Simulator(object):
 
                 progress.step()
 
-        self.soft_reset()
+        # restore internal state of simulator
+        self.load_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
+                         include_global=False)
+        tmpdir.cleanup()
 
         if profile:
             if isinstance(profile, str):
@@ -467,11 +474,6 @@ class Simulator(object):
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
             that Probe (loss will be averaged across Probes)
-
-        Notes
-        -----
-        Calling this function will reset all values in the network, so it
-        should not be intermixed with calls to :meth:`.Simulator.run`.
         """
 
         batch_size, n_steps = next(iter(inputs.values())).shape[:2]
@@ -483,9 +485,17 @@ class Simulator(object):
         self._check_data(inputs, mode="input")
         self._check_data(targets, mode="target", n_steps=n_steps,
                          n_batch=batch_size)
+        if n_steps < self.unroll:
+            raise ValidationError("The number of timesteps in loss data "
+                                  "must be >= unroll_simulation", "inputs")
 
         # get loss op
         loss = self.tensor_graph.build_loss(objective, tuple(targets.keys()))
+
+        # save the internal state of the simulator
+        tmpdir = tempfile.TemporaryDirectory()
+        self.save_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
+                         include_global=False)
 
         # compute loss on data
         loss_val = 0
@@ -494,8 +504,12 @@ class Simulator(object):
             self.soft_reset()
             loss_val += self.sess.run(
                 loss, feed_dict=self._fill_feed(n_steps, inp, tar))
-        self.soft_reset()
         loss_val /= i + 1
+
+        # restore internal state of simulator
+        self.load_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
+                         include_global=False)
+        tmpdir.cleanup()
 
         return loss_val
 
@@ -655,22 +669,27 @@ class Simulator(object):
             # update stored probe data
             self.model.params[p] += [probe_data[i]]
 
-    def save_params(self, path, include_local=False):
+    def save_params(self, path, include_global=True, include_local=False):
         """Save network parameters to the given ``path``.
 
         Parameters
         ----------
         path : str
             filepath of parameter output file
+        include_global : bool, optional
+            if True (default True), save global (trainable) network variables
         include_local : bool, optional
-            if True, also save local (non-trainable) network variables
+            if True (default False), save local (non-trainable) network
+            variables
         """
         if self.closed:
             raise SimulationError("Simulation has been closed, cannot save "
                                   "parameters")
 
         with self.tensor_graph.graph.as_default():
-            vars = tf.global_variables()
+            vars = []
+            if include_global:
+                vars.extend(tf.global_variables())
             if include_local:
                 vars.extend(tf.local_variables())
 
@@ -678,22 +697,27 @@ class Simulator(object):
 
         logger.info("Model parameters saved to %s", path)
 
-    def load_params(self, path, include_local=False):
+    def load_params(self, path, include_global=True, include_local=False):
         """Load network parameters from the given ``path``.
 
         Parameters
         ----------
         path : str
             filepath of parameter input file
+        include_global : bool, optional
+            if True (default True), load global (trainable) network variables
         include_local : bool, optional
-            if True, also load local (non-trainable) network variables
+            if True (default False), load local (non-trainable) network
+            variables
         """
         if self.closed:
             raise SimulationError("Simulation has been closed, cannot load "
                                   "parameters")
 
         with self.tensor_graph.graph.as_default():
-            vars = tf.global_variables()
+            vars = []
+            if include_global:
+                vars.extend(tf.global_variables())
             if include_local:
                 vars.extend(tf.local_variables())
 
@@ -994,8 +1018,6 @@ class ProbeDict(Mapping):
         self.raw = raw
         self.minibatches = minibatches
 
-        # TODO: add cache back in?
-
     def __getitem__(self, key):
         rval = self.raw[key]
 
@@ -1003,7 +1025,7 @@ class ProbeDict(Mapping):
             if len(rval) == 0:
                 return []
 
-            # combine data from run_steps iterations
+            # combine data from run_steps calls
             rval = np.concatenate(rval, axis=0)
 
             if self.minibatches[key] != -1:

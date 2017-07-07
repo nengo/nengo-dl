@@ -385,10 +385,6 @@ def configure_settings(**kwargs):
         params = config[Network]
 
     for attr, val in kwargs.items():
-        # TODO: we could prefix attr with "nengo_dl" or something if we're
-        # worried about conflicts (but since Networks aren't even configurable
-        # by default I'm not too concerned)
-
         if attr == "trainable":
             for obj in (Ensemble, Connection, ensemble.Neurons, Network):
                 try:
