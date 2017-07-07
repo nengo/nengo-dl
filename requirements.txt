@@ -1,4 +1,5 @@
 numpy>=1.11.0
 nengo>=2.3.1
 tensorflow>=1.2.0
-backports.tempfile;python_version<"3.4"
+backports.tempfile;python_version<'3.4'
+backports.print_function;python_version<'3.4'

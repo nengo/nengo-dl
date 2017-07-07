@@ -16,17 +16,8 @@ from tensorflow.python.framework.ops import get_gradient_function
 
 logger = logging.getLogger(__name__)
 
-if sys.version_info[:2] < (3, 3):
-
-    def print_and_flush(*args, **kwargs):
-        print(*args, **kwargs)
-        file = kwargs.get('file', sys.stdout)
-        file.flush()
-
-else:
-
-    def print_and_flush(*args, **kwargs):
-        print(*args, flush=True, **kwargs)
+if sys.version_info < (3, 4):
+    from backports.print_function import print_ as print
 
 
 def sanitize_name(name):
@@ -240,7 +231,7 @@ class ProgressBar(object):
         self.start_time = time.time()
         self.progress = -1
 
-        print_and_flush("[%s] ETA: unknown" % (" " * self.width), end="")
+        print("[%s] ETA: unknown" % (" " * self.width), end="", flush=True)
 
     def stop(self):
         """Stop the progress tracker.
@@ -283,7 +274,7 @@ class ProgressBar(object):
         if msg is not None or self.label is not None:
             line += " (%s)" % self.label if msg is None else msg
 
-        print_and_flush(line, end="")
+        print(line, end="", flush=True)
 
         if self.curr_step == self.max_steps:
             self.stop()

@@ -51,7 +51,8 @@ setup(
     description="Deep learning integration for Nengo",
     long_description=read('README.rst', 'CHANGES.rst'),
     install_requires=["nengo>=2.3.1", "numpy>=1.11", tf_req,
-                      "backports.tempfile;python_version<'3.4'"],
+                      "backports.tempfile;python_version<'3.4'",
+                      "backports.print_function;python_version<'3.4'"],
     entry_points={"nengo.backends":
                   ["dl = nengo_dl:Simulator"]},
     classifiers=['Development Status :: 4 - Beta',

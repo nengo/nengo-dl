@@ -37,7 +37,8 @@ Release History
 - The default graph planner can now be modified by setting the ``planner``
   attribute on the top-level Network config
 - Added TensorFlow implementation for general linear synapses
-- Added ``backports.tempfile`` requirement for Python 2.7 systems
+- Added ``backports.tempfile`` and ``backports.print_function`` requirement for
+  Python 2.7 systems
 
 **Changed**
 

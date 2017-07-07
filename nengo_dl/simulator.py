@@ -20,12 +20,12 @@ from tensorflow.python.ops import gradient_checker
 
 from nengo_dl import utils, DATA_DIR
 from nengo_dl.tensor_graph import TensorGraph
-from nengo_dl.utils import print_and_flush
 
 logger = logging.getLogger(__name__)
 
 if sys.version_info < (3, 4):
     import backports.tempfile as tempfile  # noqa: F811
+    from backports.print_function import print_ as print
 
 
 class Simulator(object):
@@ -112,7 +112,7 @@ class Simulator(object):
             self.model = model
 
         if network is not None:
-            print_and_flush("Building network", end="")
+            print("Building network", end="", flush=True)
             start = time.time()
             self.model.build(network, progress_bar=False)
             print("\rBuilding completed in %s " %
@@ -158,7 +158,7 @@ class Simulator(object):
         self.input_funcs = {}
 
         # (re)build graph
-        print_and_flush("Constructing graph", end="")
+        print("Constructing graph", end="", flush=True)
         start = time.time()
         self.tensor_graph.build(self.rng)
         print("\rConstruction completed in %s " %
@@ -289,7 +289,7 @@ class Simulator(object):
             self._check_data(input_feeds, mode="input",
                              n_batch=self.minibatch_size, n_steps=n_steps)
 
-        print_and_flush("Simulation started", end="")
+        print("Simulation started", end="", flush=True)
         start = time.time()
 
         if profile:

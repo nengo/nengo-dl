@@ -1,6 +1,9 @@
+from __future__ import print_function
+
 from collections import OrderedDict
 import datetime
 import logging
+import sys
 import time
 import warnings
 
@@ -15,6 +18,9 @@ import tensorflow as tf
 from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node
 
 logger = logging.getLogger(__name__)
+
+if sys.version_info < (3, 4):
+    from backports.print_function import print_ as print
 
 
 class TensorGraph(object):
@@ -76,7 +82,7 @@ class TensorGraph(object):
 
         logger.info("Initial plan length: %d", len(operators))
 
-        utils.print_and_flush("Optimizing graph", end="")
+        print("Optimizing graph", end="", flush=True)
         start = time.time()
 
         # apply graph simplification functions
