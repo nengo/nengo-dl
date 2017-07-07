@@ -1286,31 +1286,29 @@ def remove_zero_incs(operators):
     new_operators = []
     for op in operators:
         if isinstance(op, (DotInc, ElementwiseInc, Copy)):
-            # TODO: we could check A as well for ElementwiseInc
-            src = op.X if isinstance(op, (DotInc, ElementwiseInc)) else op.src
+            for src in op.reads:
+                # check if the input is the output of a Node (in which case the
+                # value might change, so we should never get rid of this op).
+                # checking the name of the signal seems a bit fragile, but I
+                # can't think of a better solution
+                if src.name.startswith("<Node") and src.name.endswith(".out"):
+                    continue
 
-            # check if the input is the output of a Node (in which case the
-            # value might change, so we should never get rid of this op).
-            # checking the name of the signal seems a bit fragile, but I can't
-            # think of a better solution
-            if src.name.startswith("<Node") and src.name.endswith(".out"):
-                new_operators.append(op)
-                continue
+                # find any ops that modify src
+                pred = sets[src.base] + incs[src.base]
 
-            # find any ops that modify src
-            pred = sets[src.base] + incs[src.base]
-
-            # the input (and therefore output) will be zero if the only input
-            # is a Reset(0) op, or the only input is a constant signal (not
-            # set/inc/updated) that is all zero
-            zero_input = (
-                (len(pred) == 1 and type(pred[0]) == Reset and
-                 np.all(pred[0].value == 0)) or
-                (len(pred) == 0 and np.all(src.initial_value == 0) and
-                 len(updates[src.base]) == 0) and not src.trainable)
-            if zero_input:
-                if len(op.sets) > 0:
-                    new_operators.append(Reset(op.sets[0]))
+                # the input (and therefore output) will be zero if the only
+                # input is a Reset(0) op, or the only input is a constant
+                # signal (not set/inc/updated) that is all zero
+                zero_input = (
+                    (len(pred) == 1 and type(pred[0]) == Reset and
+                     np.all(pred[0].value == 0)) or
+                    (len(pred) == 0 and np.all(src.initial_value == 0) and
+                     len(updates[src.base]) == 0) and not src.trainable)
+                if zero_input:
+                    if len(op.sets) > 0:
+                        new_operators.append(Reset(op.sets[0]))
+                    break
             else:
                 new_operators.append(op)
         else:
@@ -1453,12 +1451,12 @@ def remove_identity_muls(operators):
 
     sets, incs, _, updates = signal_io_dicts(operators)
 
-    def is_identity(x, op):
+    def is_identity(x, sig):
         if isinstance(x, float) or x.shape == ():
             return x == 1
 
         d = x.shape[0]
-        if isinstance(op, ElementwiseInc):
+        if sig.ndim == 1:
             return np.array_equal(x, np.ones(d))
         else:
             return np.array_equal(x, np.diag(np.ones(d)))
@@ -1466,28 +1464,35 @@ def remove_identity_muls(operators):
     new_operators = []
     for op in operators:
         if isinstance(op, (DotInc, ElementwiseInc)):
-            src = op.A
+            # we can check A or X for elementwise inc, since either being 1
+            # means that this is a noop. but if X is 1 on a dotinc this is
+            # still a useful op, and we shouldn't remove it
+            srcs = op.reads if isinstance(op, ElementwiseInc) else [op.A]
+            for src in srcs:
+                # check if the input is the output of a Node (in which case the
+                # value might change, so we should never get rid of this op).
+                # checking the name of the signal seems a bit fragile, but I
+                # can't think of a better solution
+                if src.name.startswith("<Node") and src.name.endswith(".out"):
+                    continue
 
-            # check if the input is the output of a Node (in which case the
-            # value might change, so we should never get rid of this op).
-            # checking the name of the signal seems a bit fragile, but I can't
-            # think of a better solution
-            if src.name.startswith("<Node") and src.name.endswith(".out"):
-                new_operators.append(op)
-                continue
+                # find any ops that modify src
+                pred = sets[src.base] + incs[src.base]
 
-            # find any ops that modify src
-            pred = sets[src.base] + incs[src.base]
+                # the input will be one if the only input is a Reset(1) op, or
+                # the only input is a constant signal (not set/inc/updated)
+                # that is an identity value
+                identity_input = (
+                    (len(pred) == 1 and type(pred[0]) == Reset and
+                     is_identity(pred[0].value, src)) or
+                    (len(pred) == 0 and is_identity(src.initial_value, src) and
+                     len(updates[src.base]) == 0) and not src.trainable)
 
-            # the input will be one if the only input is a Reset(1) op, or the
-            # only input is a constant signal (not set/inc/updated) that is one
-            identity_input = (
-                (len(pred) == 1 and type(pred[0]) == Reset and
-                 is_identity(pred[0].value, op)) or
-                (len(pred) == 0 and is_identity(src.initial_value, op) and
-                 len(updates[src.base]) == 0) and not src.trainable)
-            if identity_input:
-                new_operators.append(Copy(op.X, op.Y, inc=len(op.incs) > 0))
+                if identity_input:
+                    other_src = [x for x in op.reads if x is not src][0]
+                    new_operators.append(Copy(other_src, op.Y,
+                                              inc=len(op.incs) > 0))
+                    break
             else:
                 new_operators.append(op)
         else:
