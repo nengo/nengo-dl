@@ -699,3 +699,14 @@ def test_matching_node_out(Simulator):
         assert sim.data[p_b].shape == (10, 2)
         assert not np.allclose(sim.data[p_a], sim.data[p_b])
         assert sim.data[p_c].shape == (10, 3)
+
+
+def test_probe_no_data(Simulator):
+    with nengo.Network() as net:
+        u = nengo.Node([0])
+        p = nengo.Probe(u)
+
+    with Simulator(net) as sim:
+        pass
+
+    assert sim.data[p] == []

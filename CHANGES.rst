@@ -73,6 +73,7 @@ Release History
   `#11273 <https://github.com/tensorflow/tensorflow/issues/11273>`_)
 - Fixed bug related to nodes that had matching output functions but different
   size_out
+- Fixed bug related to probes that do not contain any data yet
 
 0.4.0 (June 8, 2017)
 --------------------

@@ -1000,6 +1000,9 @@ class ProbeDict(Mapping):
         rval = self.raw[key]
 
         if isinstance(rval, list):
+            if len(rval) == 0:
+                return []
+
             # combine data from run_steps iterations
             rval = np.concatenate(rval, axis=0)
 
