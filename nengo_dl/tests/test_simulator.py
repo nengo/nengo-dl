@@ -677,3 +677,25 @@ def test_check_data(Simulator):
             sim._check_data({inpa: zeros1})
         with pytest.raises(ValidationError):
             sim._check_data({pa: zeros1}, mode="target")
+
+
+def test_matching_node_out(Simulator):
+    # make sure that nodes with identical outputs are handled correctly (the
+    # outputs will have the same hash, so that can cause some errors)
+
+    with nengo.Network() as net:
+        a = nengo.Node(output=nengo.processes.WhiteSignal(1, 10), size_out=2)
+        b = nengo.Node(output=nengo.processes.WhiteSignal(1, 10), size_out=2)
+        c = nengo.Node(output=nengo.processes.WhiteSignal(1, 10), size_out=3)
+
+        p_a = nengo.Probe(a)
+        p_b = nengo.Probe(b)
+        p_c = nengo.Probe(c)
+
+    with Simulator(net) as sim:
+        sim.run_steps(10)
+
+        assert sim.data[p_a].shape == (10, 2)
+        assert sim.data[p_b].shape == (10, 2)
+        assert not np.allclose(sim.data[p_a], sim.data[p_b])
+        assert sim.data[p_c].shape == (10, 3)

@@ -71,6 +71,8 @@ Release History
   the standard definitions
 - Temporary patch to fix memory leak in TensorFlow (see 
   `#11273 <https://github.com/tensorflow/tensorflow/issues/11273>`_)
+- Fixed bug related to nodes that had matching output functions but different
+  size_out
 
 0.4.0 (June 8, 2017)
 --------------------

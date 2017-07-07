@@ -577,16 +577,21 @@ class Simulator(object):
                 n.size_out > 0)
 
             if (not isinstance(n.output, np.ndarray) and
-                    n.output not in self.input_funcs):
+                    (n, n.output) not in self.input_funcs):
+                # note: we include n.output in the input_funcs hash to handle
+                # the case where the node output is changed after the model
+                # is constructed.  this isn't technically supported behaviour
+                # in nengo, but the gui does it.
+
                 if isinstance(n.output, Process):
-                    self.input_funcs[n.output] = n.output.make_step(
+                    self.input_funcs[(n, n.output)] = n.output.make_step(
                         (n.size_in,), (n.size_out,), self.dt,
                         n.output.get_rng(self.rng))
                 elif n.size_out > 0:
-                    self.input_funcs[n.output] = utils.align_func(
+                    self.input_funcs[(n, n.output)] = utils.align_func(
                         (n.size_out,), self.tensor_graph.dtype)(n.output)
                 else:
-                    self.input_funcs[n.output] = n.output
+                    self.input_funcs[(n, n.output)] = n.output
 
             if using_output:
                 if n in input_feeds:
@@ -596,7 +601,7 @@ class Simulator(object):
                     feed_val = np.tile(n.output[None, :, None],
                                        (n_steps, 1, self.minibatch_size))
                 else:
-                    func = self.input_funcs[n.output]
+                    func = self.input_funcs[(n, n.output)]
 
                     feed_val = []
                     for i in range(self.n_steps + 1,
@@ -613,7 +618,7 @@ class Simulator(object):
             elif not isinstance(n.output, np.ndarray):
                 # note: we still call the function even if the output
                 # is not being used, because it may have side-effects
-                func = self.input_funcs[n.output]
+                func = self.input_funcs[(n, n.output)]
                 for i in range(self.n_steps + 1, self.n_steps + n_steps + 1):
                     func(i * self.dt)
 
