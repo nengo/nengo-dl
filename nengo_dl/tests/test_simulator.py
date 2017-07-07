@@ -125,9 +125,14 @@ def test_train_ff(Simulator, neurons, seed):
         net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
         net.config[nengo.Connection].synapse = None
 
-        # TODO: separate this into two different inputs to test that
-        # functionality
-        inp = nengo.Node([0, 0])
+        # note: we have these weird input setup just so that we can test
+        # training with two distinct inputs
+        inp_a = nengo.Node([0])
+        inp_b = nengo.Node([0])
+        inp = nengo.Node(size_in=2)
+        nengo.Connection(inp_a, inp[0])
+        nengo.Connection(inp_b, inp[1])
+
         ens = nengo.Ensemble(n_hidden + 1, n_hidden,
                              neuron_type=nengo.Sigmoid(tau_ref=1))
         out = nengo.Ensemble(1, 1, neuron_type=nengo.Sigmoid(tau_ref=1))
@@ -137,7 +142,6 @@ def test_train_ff(Simulator, neurons, seed):
             ens.neurons if neurons else ens, out.neurons,
             transform=dists.Glorot())
 
-        # TODO: why does training fail if we probe out instead of out.neurons?
         p = nengo.Probe(out.neurons)
 
     with Simulator(net, minibatch_size=minibatch_size, unroll_simulation=1,
@@ -145,12 +149,12 @@ def test_train_ff(Simulator, neurons, seed):
         x = np.asarray([[[0, 0]], [[0, 1]], [[1, 0]], [[1, 1]]])
         y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
 
-        sim.train({inp: x}, {p: y}, tf.train.MomentumOptimizer(1, 0.9),
-                  n_epochs=500)
+        sim.train({inp_a: x[..., [0]], inp_b: x[..., [1]]}, {p: y},
+                  tf.train.MomentumOptimizer(1, 0.9), n_epochs=500)
 
         sim.check_gradients(atol=5e-5)
 
-        sim.step(input_feeds={inp: x})
+        sim.step(input_feeds={inp_a: x[..., [0]], inp_b: x[..., [1]]})
 
         assert np.allclose(sim.data[p], y, atol=1e-3)
 
@@ -196,31 +200,36 @@ def test_train_objective(Simulator, unroll, seed):
     n_hidden = 20
     n_steps = 10
 
-    # TODO: make this have multiple outputs to test that functionality
-
     with nengo.Network(seed=seed) as net:
         inp = nengo.Node([1])
+
         ens = nengo.Ensemble(n_hidden, 1, neuron_type=nengo.RectifiedLinear())
         nengo.Connection(inp, ens, synapse=0.01)
         p = nengo.Probe(ens)
+
+        ens2 = nengo.Ensemble(n_hidden, 1, neuron_type=nengo.RectifiedLinear())
+        nengo.Connection(inp, ens2, synapse=0.01)
+        p2 = nengo.Probe(ens2)
 
     with Simulator(net, minibatch_size=minibatch_size,
                    unroll_simulation=unroll, seed=seed) as sim:
         x = np.ones((minibatch_size, n_steps, 1))
         y = np.zeros((minibatch_size, n_steps, 1))
+        z = np.zeros((minibatch_size, n_steps, 1)) + 0.1
 
         def obj(output, target):
             return tf.reduce_mean((output[:, -1] - 0.5 - target[:, -1]) ** 2)
 
-        sim.train({inp: x}, {p: y}, tf.train.MomentumOptimizer(1e-2, 0.9),
-                  n_epochs=100, objective=obj)
+        sim.train({inp: x}, {p: y, p2: z},
+                  tf.train.MomentumOptimizer(1e-2, 0.9),
+                  n_epochs=200, objective=obj)
 
-        sim.check_gradients([p])
+        sim.check_gradients([p, p2])
 
         sim.run_steps(n_steps, input_feeds={inp: x})
 
-        assert np.allclose(sim.data[p][:, -1], y[:, -1] + 0.5,
-                           atol=1e-3)
+        assert np.allclose(sim.data[p][:, -1], y[:, -1] + 0.5, atol=1e-3)
+        assert np.allclose(sim.data[p2][:, -1], z[:, -1] + 0.5, atol=1e-3)
 
 
 def test_train_sparse(Simulator, seed):
