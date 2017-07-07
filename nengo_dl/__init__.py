@@ -4,8 +4,7 @@ import os
 import warnings
 
 __copyright__ = "2015, Applied Brain Research"
-__license__ = ("Free for non-commercial use; see "
-               "https://pythonhosted.org/nengo/license.html")
+__license__ = "Free for non-commercial use; see LICENSE.rst"
 from .version import version as __version__
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")

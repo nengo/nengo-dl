@@ -1,5 +1,5 @@
-User API
-========
+User documentation
+==================
 
 There are two classes that users may need to interact with in order
 to access the features of NengoDL: :class:`~.simulator.Simulator` and

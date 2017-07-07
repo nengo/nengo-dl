@@ -1,7 +1,7 @@
 Extra Nengo objects
 ===================
 
-Nengo DL adds some new Nengo objects that can be used during model construction.
+NengoDL adds some new Nengo objects that can be used during model construction.
 These could be used with any Simulator, not just ``nengo_dl``, but they tend to
 be useful for deep learning applications.
 

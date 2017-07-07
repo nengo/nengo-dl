@@ -59,6 +59,7 @@ exclude_patterns = ['_build', '**.ipynb_checkpoints']
 source_suffix = '.rst'
 source_encoding = 'utf-8'
 master_doc = 'index'
+suppress_warnings = ['image.nonlocal_uri']
 
 # Need to include https Mathjax path for sphinx < v1.3
 mathjax_path = ("https://cdn.mathjax.org/mathjax/latest/MathJax.js"

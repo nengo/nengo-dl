@@ -30,7 +30,7 @@ Release History
   that can run in spiking neurons
   <https://nengo.github.io/nengo_dl/examples/spiking_mnist.html>`_
 - Added some distributions for weight initialization to ``nengo_dl.dists``
-- Added ``sim.train(..., profile=True)` option to collect profiling information
+- Added ``sim.train(..., profile=True)`` option to collect profiling information
   during training
 - Added new methods to simplify the Nengo operation graph, resulting in faster
   simulation/training speed
@@ -64,7 +64,7 @@ Release History
 **Fixed**
 
 - Fixed bug related to changing the output of a Node after the model is
-  constructed (`#4 <https://github.com/nengo/nengo_dl/issues/4)>`_)
+  constructed (`#4 <https://github.com/nengo/nengo_dl/issues/4>`_)
 - Order of variable creation is now deterministic (helps make saving/loading
   parameters more reliable)
 - Configuring whether or not a model element is trainable does not affect
