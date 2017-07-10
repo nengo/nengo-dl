@@ -775,8 +775,8 @@ def order_signals(plan, n_passes=10):
     assert len(new_plan) == len(plan)
     for ops, new_ops in new_plan.items():
         assert len(ops) == len(new_ops)
-        # for op in ops:
-        #     assert op in new_ops
+        for op in ops:
+            assert op in new_ops
 
     logger.debug("final sorted signals")
     logger.debug(sorted_signals)

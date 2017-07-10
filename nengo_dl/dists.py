@@ -135,7 +135,7 @@ class VarianceScaling(Distribution):
 
 
 class Glorot(VarianceScaling):
-    """Weight initialization method from [1]_ (also knows as Xavier
+    """Weight initialization method from [1]_ (also known as Xavier
     initialization).
 
     Parameters
