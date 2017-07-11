@@ -6,6 +6,10 @@
   :target: https://travis-ci.org/nengo/nengo_dl
   :alt: Travis-CI build status
 
+.. image:: https://img.shields.io/appveyor/ci/nengo/nengo-dl/master.svg
+  :target: https://ci.appveyor.com/project/nengo/nengo-dl
+  :alt: AppVeyor build status
+
 .. image:: https://img.shields.io/codecov/c/github/nengo/nengo_dl/master.svg
   :target: https://codecov.io/gh/nengo/nengo_dl/branch/master
   :alt: Test coverage
