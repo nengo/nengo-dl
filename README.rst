@@ -57,10 +57,10 @@ adds a number of unique features, such as:
   convolutional neural networks) directly into a Nengo model
 
 More details can be found in the `NengoDL documentation
-<https://nengo.github.io/nengo_dl/>`_.
+<http://www.nengo.ai/nengo_dl/>`_.
 
 Installation
 ============
 
 Installation instructions can be found `here
-<https://nengo.github.io/nengo_dl/installation.html>`_.
+<http://www.nengo.ai/nengo_dl/installation.html>`_.

@@ -25,10 +25,10 @@ Release History
 
 - Added ``nengo_dl.tensor_layer`` to help with the construction of
   layer-style TensorNodes (see the `TensorNode documentation
-  <https://nengo.github.io/nengo_dl/tensor_node.html>`_)
+  <http://www.nengo.ai/nengo_dl/tensor_node.html>`_)
 - Added an example demonstrating `how to train a neural network
   that can run in spiking neurons
-  <https://nengo.github.io/nengo_dl/examples/spiking_mnist.html>`_
+  <http://www.nengo.ai/nengo_dl/examples/spiking_mnist.html>`_
 - Added some distributions for weight initialization to ``nengo_dl.dists``
 - Added ``sim.train(..., profile=True)`` option to collect profiling information
   during training
@@ -50,7 +50,7 @@ Release History
   the more general ``nengo_dl.configure_settings(trainable=x)``.  This has
   resulted in some small changes to how trainability is controlled within
   subnetworks; see the `updated documentation
-  <https://nengo.github.io/nengo_dl/training.html#choosing-which-elements-to-optimize>`_
+  <http://www.nengo.ai/nengo_dl/training.html#choosing-which-elements-to-optimize>`_
   for details.
 - Calling ``Simulator.train``/``Simulator.loss`` no longer resets the internal
   state of the simulation (so they can be safely intermixed with calls to
@@ -87,10 +87,10 @@ Release History
 
 - Added ability to manually specify which parts of a model are trainable
   (see the `sim.train documentation
-  <https://nengo.github.io/nengo_dl/training.html>`_)
+  <http://www.nengo.ai/nengo_dl/training.html>`_)
 - Added some code examples (see the ``docs/examples`` directory, or the
   `pre-built examples in the documentation
-  <https://nengo.github.io/nengo_dl/examples.html>`_)
+  <http://www.nengo.ai/nengo_dl/examples.html>`_)
 - Added the SoftLIFRate neuron type for training LIF networks (based on
   `this paper <https://arxiv.org/abs/1510.08829>`_)
 

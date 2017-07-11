@@ -359,6 +359,9 @@ class TensorGraph(object):
             tuple(x._ref() if isinstance(x, tf.Variable) else x
                   for x in self.base_vars))
 
+        # TODO: add option to disable backprop through loop, for when users
+        # want to train a network running over time, but optimize on a
+        # timestep-by-timestep basis
         loop_vars = tf.while_loop(
             loop_condition, loop_body, loop_vars=loop_vars,
             parallel_iterations=1, back_prop=True)
