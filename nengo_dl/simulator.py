@@ -1,6 +1,5 @@
 from __future__ import print_function, division
 
-from collections import Mapping
 import datetime
 import logging
 import os
@@ -9,8 +8,10 @@ import tempfile
 import time
 import warnings
 
-from nengo import Process
+from nengo import Process, Ensemble, Connection, Probe
 from nengo.builder import Model
+from nengo.builder.connection import BuiltConnection
+from nengo.builder.ensemble import BuiltEnsemble
 from nengo.exceptions import (ReadonlyError, SimulatorClosed, NengoWarning,
                               SimulationError, ValidationError)
 import numpy as np
@@ -89,6 +90,10 @@ class Simulator(object):
         ("nengo/tests/test_synapses.py:test_alpha",
          "need to set looser tolerances due to float32 implementation (see "
          "tests/test_processes.py:test_alpha"),
+
+        ("nengo/tests/test_ensemble.py:test_gain_bias",
+         "use allclose instead of array_equal (see "
+         "tests/test_simulator.py:test_gain_bias")
     ]
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
@@ -123,10 +128,7 @@ class Simulator(object):
             self.model, self.dt, unroll_simulation, dtype, self.minibatch_size,
             device)
 
-        self.data = ProbeDict(
-            self.model.params,
-            {p: (minibatch_size if self.model.sig[p]["in"].minibatched
-                 else -1) for p in self.model.probes})
+        self.data = SimulationData(self, minibatch_size is not None)
 
         if seed is None:
             seed = np.random.randint(np.iinfo(np.int32).max)
@@ -667,7 +669,7 @@ class Simulator(object):
                 probe_data[i] = probe_data[i][(steps + 1) % period < 1]
 
             # update stored probe data
-            self.model.params[p] += [probe_data[i]]
+            self.model.params[p].append(probe_data[i])
 
     def save_params(self, path, include_global=True, include_local=False):
         """Save network parameters to the given ``path``.
@@ -724,34 +726,6 @@ class Simulator(object):
             tf.train.Saver(vars).restore(self.sess, path)
 
         logger.info("Model parameters loaded from %s", path)
-
-    def print_params(self, msg=None):
-        """Print current values of trainable network parameters.
-
-        Parameters
-        ----------
-        msg : str, optional
-            title for print output, useful to differentiate multiple print
-            calls
-        """
-
-        if self.closed:
-            raise SimulationError("Simulation has been closed, cannot print "
-                                  "parameters")
-
-        param_sigs = {k: v for k, v in self.tensor_graph.sig_map.items()
-                      if k.trainable}
-        keys = list(self.tensor_graph.signals.bases.keys())
-        params = {v.key: self.tensor_graph.base_vars[keys.index(v.key)]
-                  for v in param_sigs.values()}
-
-        param_vals = self.sess.run(params)
-
-        print("%s:" % "Parameters" if msg is None else msg)
-        for sig, tens in param_sigs.items():
-            print("-" * 10)
-            print(sig)
-            print(param_vals[tens.key][tens.indices])
 
     def close(self):
         """Close the simulation, freeing resources.
@@ -989,59 +963,175 @@ class Simulator(object):
                     "%s data" % mode)
 
 
-class ProbeDict(Mapping):
-    """Map from :class:`~nengo:nengo.Probe` -> :class:`~numpy:numpy.ndarray`,
-    used to access output of the model after simulation.
+class SimulationData(object):
+    """Data structure used to access simulation data from the model.
 
-    This is more like a view on the dict that the simulator manipulates.
-    However, for speed reasons, the simulator uses Python lists,
-    and we want to return NumPy arrays. Additionally, this mapping
-    is readonly, which is more appropriate for its purpose.
+    The main use case for this is to access Probe data; for example,
+    ``probe_data = sim.data[my_probe]``.  However, it is also
+    used to access the parameters of objects in the model; for example, after
+    the model has been optimized via :meth:`.Simulator.train`, the updated
+    encoder values for an ensemble can be accessed via
+    ``trained_encoders = sim.data[my_ens].encoders``.
 
     Parameters
     ----------
-    raw : dict of {:class:`~nengo:nengo.Probe`: \
-                   list of :class:`~numpy:numpy.ndarray`}
-        the raw probe output from the simulator (a list of arrays containing
-        the output from each ``run_steps`` execution segment)
-    minibatches : dict of {:class:`~nengo:nengo.Probe`: int or None}
-        the minibatch size for each probe in the dictionary (or -1 if the
-        probed signal does not have a minibatch dimension)
+    sim : :class:`.Simulator`
+        the simulator from which data will be drawn
+    minibatched : bool
+        if False, discard the minibatch dimension on probe data
 
     Notes
     -----
-    ProbeDict should never be created/accessed directly by the user, but rather
-    via ``sim.data`` (which is an instance of ProbeDict).
+    SimulationData shouldn't be created/accessed directly by the user, but
+    rather via ``sim.data`` (which is an instance of SimulationData).
     """
 
-    def __init__(self, raw, minibatches):
-        self.raw = raw
-        self.minibatches = minibatches
+    def __init__(self, sim, minibatched):
+        self.sim = sim
+        self.minibatched = minibatched
 
-    def __getitem__(self, key):
-        rval = self.raw[key]
+    def __getitem__(self, obj):
+        """Return the data associated with ``obj``.
 
-        if isinstance(rval, list):
-            if len(rval) == 0:
+        Parameters
+        ----------
+        obj : :class:`~nengo:nengo.Probe` or :class:`~nengo:nengo.Ensemble` \
+              or :class:`~nengo:nengo.Connection`
+            object whose simulation data is being accessed
+
+        Returns
+        -------
+        :class:`~numpy:numpy.ndarray` or \
+                :class:`~nengo:nengo.builder.ensemble.BuiltEnsemble` or \
+                :class:`~nengo:nengo.builder.connection.BuiltConnection`
+            array containing probed data if ``obj`` is a
+            :class:`~nengo:nengo.Probe`, otherwise the corresponding
+            parameter object
+        """
+
+        if obj not in self.sim.model.params:
+            raise ValidationError("Object is not in parameters of model %s" %
+                                  self.sim.model, str(obj))
+
+        data = self.sim.model.params[obj]
+
+        if isinstance(obj, Probe):
+            if len(data) == 0:
                 return []
 
-            # combine data from run_steps calls
-            rval = np.concatenate(rval, axis=0)
-
-            if self.minibatches[key] != -1:
-                if self.minibatches[key] is None:
-                    # get rid of batch dimension
-                    rval = rval[..., 0]
-                else:
+            data = np.concatenate(data, axis=0)
+            if self.sim.model.sig[obj]["in"].minibatched:
+                if self.minibatched:
                     # move batch dimension to front
-                    rval = np.moveaxis(rval, -1, 0)
+                    data = np.moveaxis(data, -1, 0)
+                else:
+                    # get rid of batch dimension
+                    data = data[..., 0]
 
-            rval.setflags(write=False)
+            data.setflags(write=False)
+        elif isinstance(obj, Ensemble):
+            # get the live simulation values
+            scaled_encoders = self.get_param(obj, "scaled_encoders")
+            bias = self.get_param(obj, "bias")
 
-        return rval
+            # infer the related values (rolled into scaled_encoders)
+            gain = (obj.radius * np.linalg.norm(scaled_encoders, axis=1) /
+                    np.linalg.norm(data.encoders, axis=1))
+            encoders = obj.radius * scaled_encoders / gain[:, None]
 
-    def __iter__(self):
-        return iter(self.raw)
+            # figure out max_rates/intercepts from neuron model
+            max_rates, intercepts = (
+                obj.neuron_type.max_rates_intercepts(gain, bias))
 
-    def __len__(self):
-        return len(self.raw)
+            data = BuiltEnsemble(data.eval_points, encoders, intercepts,
+                                 max_rates, scaled_encoders, gain, bias)
+        elif isinstance(obj, Connection):
+            # get the live simulation values
+            weights = self.get_param(obj, "weights")
+
+            # impossible to recover transform
+            transform = None
+
+            data = BuiltConnection(data.eval_points, data.solver_info, weights,
+                                   transform)
+
+        return data
+
+    def get_param(self, obj, attr):
+        """Returns the current parameter value for the given object.
+
+        Parameters
+        ----------
+        obj : ``NengoObject``
+            the nengo object for which we want to know the parameters
+        attr : str
+            the parameter of ``obj`` to be returned
+
+        Returns
+        -------
+        :class:`~numpy:numpy.ndarray`
+            current value of the parameters associated with the given object
+
+        Notes
+        -----
+        Parameter values should be accessed through ``sim.data``
+        (which will call this function if necessary), rather than directly
+        through this function.
+        """
+
+        if self.sim.closed:
+            warnings.warn("Checking %s.%s after simulator is closed; cannot "
+                          "fetch live value, so the initial value will be "
+                          "returned." % (obj, attr))
+
+            return getattr(self.sim.model.params[obj], attr)
+
+        sig_obj, sig_attr = self.attr_map(obj, attr)
+
+        try:
+            sig = self.sim.model.sig[sig_obj][sig_attr]
+        except KeyError:
+            # sig_attr doesn't exist for this attribute
+            return None
+
+        try:
+            tensor_sig = self.sim.tensor_graph.sig_map[sig]
+        except KeyError:
+            # if sig isn't in sig_map then that means it isn't used anywhere
+            # in the simulation (and therefore never changes), so we can
+            # safely return the static build value
+            return getattr(self.sim.model.params[obj], attr)
+
+        keys = list(self.sim.tensor_graph.signals.bases.keys())
+        param = self.sim.tensor_graph.base_vars[keys.index(tensor_sig.key)]
+
+        val = self.sim.sess.run(param)
+
+        return val[tensor_sig.indices]
+
+    def attr_map(self, obj, attr):
+        """Maps from ``sim.data[obj].attr`` to the equivalent
+        ``model.sig[obj][attr]``.
+
+        Parameters
+        ----------
+        obj : ``NengoObject``
+            the nengo object for which we want to know the parameters
+        attr : str
+            the parameter of ``obj`` to be returned
+
+        Returns
+        -------
+        obj : ``NengoObject``
+            the nengo object to key into model.sig
+        attr : str
+            the name of the signal corresponding to input attr
+
+        """
+
+        if isinstance(obj, Ensemble) and attr == "bias":
+            return obj.neurons, attr
+        elif isinstance(obj, Ensemble) and attr == "scaled_encoders":
+            return obj, "encoders"
+
+        return obj, attr

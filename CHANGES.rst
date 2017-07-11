@@ -21,6 +21,13 @@ Release History
 0.5.1 (unreleased)
 ------------------
 
+**Changed**
+
+- ``sim.data[obj]`` will now return live parameter values from the simulation,
+  rather than initial values from the build process.  That means that it can
+  be used to get the values of object parameters after training, e.g.
+  ``sim.data[my_conn].weights``.
+
 
 0.5.0 (July 11, 2017)
 ---------------------

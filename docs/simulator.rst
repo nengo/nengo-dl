@@ -236,3 +236,7 @@ Documentation
 
 .. autoclass:: nengo_dl.simulator.Simulator
     :exclude-members: unsupported, dt
+
+.. autoclass:: nengo_dl.simulator.SimulationData
+    :special-members:
+    :exclude-members: __weakref__

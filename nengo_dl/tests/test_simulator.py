@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import itertools
 import os
 
@@ -10,7 +10,7 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import configure_settings, tensor_layer, dists, DATA_DIR
-from nengo_dl.simulator import ProbeDict
+from nengo_dl.simulator import SimulationData
 
 
 def test_persistent_state(Simulator, seed):
@@ -394,15 +394,10 @@ def test_save_load_params(Simulator, tmpdir):
         sim.save_params(os.path.join(str(tmpdir), "local"),
                         include_local=True)
 
-        # just check that this doesn't produce an error
-        sim.print_params()
-
     with pytest.raises(SimulationError):
         sim.save_params(None)
     with pytest.raises(SimulationError):
         sim.load_params(None)
-    with pytest.raises(SimulationError):
-        sim.print_params(None)
 
     with nengo.Network(seed=1) as net2:
         inp = nengo.Node([0])
@@ -569,21 +564,34 @@ def test_dt_readonly(Simulator):
             sim.dt = 1
 
 
-def test_probe_dict():
-    a = ProbeDict(OrderedDict({0: [np.zeros((1, 3, 5)), np.ones((1, 3, 5))],
-                               1: [np.ones((1, 3, 1)), np.zeros((1, 3, 1))]}),
-                  {0: 5, 1: None})
-    assert a[0].shape == (5, 2, 3)
-    assert np.all(a[0][:, 0] == 0)
-    assert np.all(a[0][:, 1] == 1)
+def test_probe_data():
+    class DummySignal(object):
+        minibatched = True
 
-    assert a[1].shape == (2, 3)
-    assert np.all(a[1][1] == 0)
-    assert np.all(a[1][0] == 1)
+    class DummySimulator(object):
+        model = nengo.builder.Model()
+        model.sig = defaultdict(lambda: defaultdict(lambda: DummySignal()))
 
-    assert len(a) == 2
-    for x, y in zip(a, (0, 1)):
-        assert x == y
+    class DummyProbe(nengo.Probe):
+        def __init__(self):
+            pass
+
+    sim = DummySimulator()
+    a = DummyProbe(add_to_container=False)
+    b = DummyProbe(add_to_container=False)
+    sim.model.params = OrderedDict(
+        {a: [np.zeros((1, 3, 5)), np.ones((1, 3, 5))],
+         b: [np.ones((1, 3, 1)), np.zeros((1, 3, 1))]})
+    sim.model.probes = (a, b)
+    data = SimulationData(sim, True)
+    assert data[a].shape == (5, 2, 3)
+    assert np.all(data[a][:, 0] == 0)
+    assert np.all(data[a][:, 1] == 1)
+
+    data.minibatched = False
+    assert data[b].shape == (2, 3)
+    assert np.all(data[b][1] == 0)
+    assert np.all(data[b][0] == 1)
 
 
 @pytest.mark.parametrize(
@@ -752,3 +760,89 @@ def test_train_state_save(Simulator):
         sim2.run_steps(10)
 
     assert np.allclose(sim.data[p], sim2.data[p])
+
+
+def test_gain_bias(Simulator):
+    N = 17
+    D = 2
+
+    gain = np.random.uniform(low=0.2, high=5, size=N)
+    bias = np.random.uniform(low=0.2, high=1, size=N)
+
+    model = nengo.Network()
+    with model:
+        a = nengo.Ensemble(N, D)
+        a.gain = gain
+        a.bias = bias
+
+    with Simulator(model) as sim:
+        assert np.allclose(gain, sim.data[a].gain)
+        assert np.allclose(bias, sim.data[a].bias)
+
+
+def test_simulation_data(Simulator, seed):
+    rng = np.random.RandomState(seed)
+    N = 17
+    d = 2
+
+    gain = rng.uniform(low=0.2, high=5, size=N)
+    bias = rng.uniform(low=0.2, high=1, size=N)
+    enc = rng.uniform(-1, 1, size=(N, d))
+    enc /= np.linalg.norm(enc, axis=1)[:, None]
+
+    model = nengo.Network()
+    with model:
+        u = nengo.Node([0] * d)
+        a = nengo.Ensemble(N, d, gain=gain, bias=bias, encoders=enc, radius=3)
+        b = nengo.Ensemble(N, d, gain=gain, bias=bias, encoders=enc * 2,
+                           radius=3)
+        b.normalize_encoders = False
+        nengo.Connection(u, a)
+        conn = nengo.Connection(
+            a.neurons, b, transform=rng.uniform(-1, 1, size=(d, N)))
+
+    with Simulator(model) as sim:
+        # check gain/bias
+        assert np.allclose(gain, sim.data[a].gain)
+        assert np.allclose(bias, sim.data[a].bias)
+
+        # check max_rates/intercepts
+        max_rates, intercepts = a.neuron_type.max_rates_intercepts(gain, bias)
+        assert np.allclose(max_rates, sim.data[a].max_rates)
+        assert np.allclose(intercepts, sim.data[a].intercepts)
+
+        # check encoders/scaled_encoders
+        assert np.allclose(enc, sim.data[a].encoders)
+        assert np.allclose(enc * gain[:, None] / a.radius,
+                           sim.data[a].scaled_encoders)
+
+        # make sure that the inferences still work with non-normalized encoders
+        if nengo.version.version_info >= (2, 4, 0):
+            assert np.allclose(enc * 2, sim.data[b].encoders)
+            assert np.allclose(gain, sim.data[b].gain)
+            assert np.allclose(bias, sim.data[b].bias)
+            assert np.allclose(enc * 2 * gain[:, None] / b.radius,
+                               sim.data[b].scaled_encoders)
+
+        # check connection weights
+        assert np.allclose(conn.transform, sim.data[conn].weights)
+
+        # check that values can be updated live
+        sig = sim.model.sig[a]['encoders']
+        tensor_sig = sim.tensor_graph.sig_map[sig]
+        base = sim.tensor_graph.base_vars[
+            list(sim.tensor_graph.base_arrays_init.keys()).index(
+                tensor_sig.key)]
+        op = tf.assign(base, tf.ones_like(base))
+        sim.sess.run(op)
+
+        assert np.allclose(sim.data[a].scaled_encoders, 1)
+        assert np.allclose(sim.data[a].gain, np.sqrt(2) * a.radius)
+        assert np.allclose(sim.data[a].encoders, 1 / np.sqrt(2))
+
+    # reverts back to init after simulator close, and warns
+    with pytest.warns(UserWarning):
+        assert np.allclose(sim.data[a].encoders, enc)
+
+    with pytest.raises(ValidationError):
+        sim.data[nengo.Ensemble(10, 1, add_to_container=False)]
