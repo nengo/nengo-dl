@@ -1040,8 +1040,12 @@ class SimulationData(object):
             encoders = obj.radius * scaled_encoders / gain[:, None]
 
             # figure out max_rates/intercepts from neuron model
-            max_rates, intercepts = (
-                obj.neuron_type.max_rates_intercepts(gain, bias))
+            # TODO: temporarily disabled until we have a nengo release with
+            # this feature (https://github.com/nengo/nengo/pull/1334)
+            # max_rates, intercepts = (
+            #     obj.neuron_type.max_rates_intercepts(gain, bias))
+            max_rates = data.max_rates
+            intercepts = data.intercepts
 
             data = BuiltEnsemble(data.eval_points, encoders, intercepts,
                                  max_rates, scaled_encoders, gain, bias)

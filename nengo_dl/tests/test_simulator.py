@@ -807,9 +807,10 @@ def test_simulation_data(Simulator, seed):
         assert np.allclose(bias, sim.data[a].bias)
 
         # check max_rates/intercepts
-        max_rates, intercepts = a.neuron_type.max_rates_intercepts(gain, bias)
-        assert np.allclose(max_rates, sim.data[a].max_rates)
-        assert np.allclose(intercepts, sim.data[a].intercepts)
+        # max_rates, intercepts = a.neuron_type.max_rates_intercepts(
+        #     gain, bias)
+        # assert np.allclose(max_rates, sim.data[a].max_rates)
+        # assert np.allclose(intercepts, sim.data[a].intercepts)
 
         # check encoders/scaled_encoders
         assert np.allclose(enc, sim.data[a].encoders)
