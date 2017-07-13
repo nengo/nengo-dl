@@ -383,8 +383,8 @@ class Simulator(object):
         non-differentiable elements include :class:`~nengo:nengo.LIF`,
         :class:`~nengo:nengo.Direct`, or processes/neurons that don't have a
         custom TensorFlow implementation (see
-        :class:`.processes.SimProcessBuilder`/
-        :class:`.neurons.SimNeuronsBuilder`)
+        :class:`.process_builders.SimProcessBuilder`/
+        :class:`.neuron_builders.SimNeuronsBuilder`)
         """
 
         batch_size, n_steps = next(iter(inputs.values())).shape[:2]
@@ -1090,7 +1090,7 @@ class SimulationData(object):
 
             return getattr(self.sim.model.params[obj], attr)
 
-        sig_obj, sig_attr = self.attr_map(obj, attr)
+        sig_obj, sig_attr = self._attr_map(obj, attr)
 
         try:
             sig = self.sim.model.sig[sig_obj][sig_attr]
@@ -1113,7 +1113,7 @@ class SimulationData(object):
 
         return val[tensor_sig.indices]
 
-    def attr_map(self, obj, attr):
+    def _attr_map(self, obj, attr):
         """Maps from ``sim.data[obj].attr`` to the equivalent
         ``model.sig[obj][attr]``.
 

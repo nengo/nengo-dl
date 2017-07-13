@@ -17,8 +17,8 @@ Examples
     examples/pretrained_model
     examples/spiking_mnist
 
-Documentation
--------------
+API
+---
 
 .. autoclass:: nengo_dl.tensor_node.TensorNode
 

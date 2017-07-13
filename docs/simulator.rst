@@ -231,8 +231,8 @@ location for the profiling data.
 
 .. _sim-doc:
 
-Documentation
--------------
+API
+---
 
 .. autoclass:: nengo_dl.simulator.Simulator
     :exclude-members: unsupported, dt

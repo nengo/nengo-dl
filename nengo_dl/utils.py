@@ -348,7 +348,7 @@ def configure_settings(**kwargs):
     ----------
     trainable : bool or None
         Adds a parameter to Nengo Ensembles/Connections/Networks that controls
-        whether or not they will be optimized by :meth:`.Simulator.train``.
+        whether or not they will be optimized by :meth:`.Simulator.train`.
         Passing ``None`` will use the default ``nengo_dl`` trainable settings,
         or True/False will override the default for all objects.  In either
         case trainability can be further configured on a per-object basis (e.g.
@@ -366,8 +366,8 @@ def configure_settings(**kwargs):
         config = Network.context[0].config
     else:
         raise NetworkContextError(
-            "``configure_settings`` must be called within a Network context "
-            "(``with nengo.Network(): ...``)")
+            "`configure_settings` must be called within a Network context "
+            "(`with nengo.Network(): ...`)")
 
     try:
         params = config[Network]
