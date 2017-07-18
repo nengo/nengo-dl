@@ -1,5 +1,5 @@
-Developer API
-=============
+Developer documentation
+=======================
 
 These objects are not relevant to front-end users, only NengoDL developers.
 

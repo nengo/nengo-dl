@@ -1,6 +1,6 @@
 from nengo.exceptions import BuildError
 from nengo.neurons import LIF, LIFRate, Izhikevich, AdaptiveLIF
-from nengo.synapses import Lowpass, Triangle, Alpha
+from nengo.synapses import Lowpass, Triangle, Alpha, LinearFilter
 from nengo.builder.learning_rules import SimBCM
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.operator import (SimPyFunc, DotInc, Copy, Reset,
@@ -20,15 +20,15 @@ from nengo_dl.tensor_node import SimTensorNode
 
 
 @pytest.fixture(
-    params=[greedy_planner, tree_planner] +
-    ([transitive_planner] if nengo_version >= (2, 4, 0) else []))
+    params=[greedy_planner, tree_planner] + (
+        [transitive_planner] if nengo_version >= (2, 4, 0) else []))
 def planner(request):
     return request.param
 
 
 class DummySignal(object):
     def __init__(self, shape=None, dtype=None, base_shape=None, offset=0,
-                 trainable=False, label=""):
+                 trainable=False, label="", initial_value=0):
         self.shape = (1,) if shape is None else shape
         self.dtype = np.float32 if dtype is None else dtype
         self.base = (self if base_shape is None else
@@ -41,10 +41,11 @@ class DummySignal(object):
         self.size = np.prod(self.shape)
         self.trainable = trainable
         self.minibatched = not trainable
+        self.init = initial_value
 
     @property
     def initial_value(self):
-        return np.zeros(self.base.shape, self.dtype)
+        return np.full(self.base.shape, self.init, dtype=self.dtype)
 
     def may_share_memory(self, other):
         return False
@@ -175,19 +176,27 @@ def test_mergeable():
         SimProcess(Lowpass(0), None, None, DummySignal(), mode="inc"),
         [SimProcess(Lowpass(0), None, None, DummySignal(), mode="set")])
 
-    # check matching TF_PROCESS_IMPL
-    # note: we only have one item in TF_PROCESS_IMPL at the moment, so no
-    # such thing as a mismatch
+    # check that lowpass match
     assert mergeable(SimProcess(Lowpass(0), None, None, DummySignal()),
                      [SimProcess(Lowpass(0), None, None, DummySignal())])
 
-    # check custom vs non custom
+    # check that lowpass and linear don't match
     assert not mergeable(SimProcess(Lowpass(0), None, None, DummySignal()),
+                         [SimProcess(Alpha(0), None, None, DummySignal())])
+
+    # check that two linear do match
+    assert mergeable(
+        SimProcess(Alpha(0.1), DummySignal(), None, DummySignal()),
+        [SimProcess(LinearFilter([1], [1, 1, 1]), DummySignal(), None,
+                    DummySignal())])
+
+    # check custom and non-custom don't match
+    assert not mergeable(SimProcess(Triangle(0), None, None, DummySignal()),
                          [SimProcess(Alpha(0), None, None, DummySignal())])
 
     # check non-custom matching
     assert mergeable(SimProcess(Triangle(0), None, None, DummySignal()),
-                     [SimProcess(Alpha(0), None, None, DummySignal())])
+                     [SimProcess(Triangle(0), None, None, DummySignal())])
 
     # simtensornode
     a = SimTensorNode(None, DummySignal(), None, DummySignal())
@@ -736,8 +745,14 @@ def test_remove_unmodified_resets():
 
 
 def test_remove_zero_incs():
-    # check that zero inputs get removed
-    operators = [DotInc(DummySignal(), DummySignal(), DummySignal())]
+    # check that zero inputs get removed (for A or X)
+    operators = [DotInc(DummySignal(), DummySignal(initial_value=1),
+                        DummySignal())]
+    new_operators = remove_zero_incs(operators)
+    assert new_operators == []
+
+    operators = [DotInc(DummySignal(initial_value=1), DummySignal(),
+                        DummySignal())]
     new_operators = remove_zero_incs(operators)
     assert new_operators == []
 
@@ -748,44 +763,49 @@ def test_remove_zero_incs():
 
     # check that node inputs don't get removed
     x = DummySignal(label="<Node lorem ipsum.out")
-    operators = [DotInc(DummySignal(), x, DummySignal())]
+    operators = [DotInc(DummySignal(initial_value=1), x, DummySignal())]
     new_operators = remove_zero_incs(operators)
     assert new_operators == operators
 
     # check that zero inputs + trainable don't get removed
     x = DummySignal()
     x.trainable = True
-    operators = [DotInc(DummySignal(), x, DummySignal())]
+    operators = [DotInc(DummySignal(initial_value=1), x, DummySignal())]
     new_operators = remove_zero_incs(operators)
     assert new_operators == operators
 
     # check that updated input doesn't get removed
     x = DummySignal()
-    operators = [DotInc(DummySignal(), x, DummySignal()), DummyOp(updates=[x])]
+    operators = [DotInc(DummySignal(initial_value=1), x, DummySignal()),
+                 DummyOp(updates=[x])]
     new_operators = remove_zero_incs(operators)
     assert new_operators == operators
 
     # check that inc'd input doesn't get removed
     x = DummySignal()
-    operators = [DotInc(DummySignal(), x, DummySignal()), DummyOp(incs=[x])]
+    operators = [DotInc(DummySignal(initial_value=1), x, DummySignal()),
+                 DummyOp(incs=[x])]
     new_operators = remove_zero_incs(operators)
     assert new_operators == operators
 
     # check that set'd input doesn't get removed
     x = DummySignal()
-    operators = [DotInc(DummySignal(), x, DummySignal()), DummyOp(sets=[x])]
+    operators = [DotInc(DummySignal(initial_value=1), x, DummySignal()),
+                 DummyOp(sets=[x])]
     new_operators = remove_zero_incs(operators)
     assert new_operators == operators
 
     # check that Reset(0) input does get removed
     x = DummySignal()
-    operators = [DotInc(DummySignal(), x, DummySignal()), Reset(x)]
+    operators = [DotInc(DummySignal(initial_value=1), x, DummySignal()),
+                 Reset(x)]
     new_operators = remove_zero_incs(operators)
     assert new_operators == operators[1:]
 
     # check that Reset(1) input does not get removed
     x = DummySignal()
-    operators = [DotInc(DummySignal(), x, DummySignal()), Reset(x, 1)]
+    operators = [DotInc(DummySignal(initial_value=1), x, DummySignal()),
+                 Reset(x, 1)]
     new_operators = remove_zero_incs(operators)
     assert new_operators == operators
 
@@ -906,11 +926,25 @@ def test_remove_identity_muls(Op):
         assert new_op.dst is y
         assert new_op.inc
 
+    # check that identity x gets removed for elementwiseinc
+    if Op == ElementwiseInc:
+        a = DummySignal()
+        x = DummySignal(initial_value=1)
+        y = DummySignal()
+        operators = [Op(a, x, y)]
+        new_operators = remove_identity_muls(operators)
+        assert len(operators) == 1
+        new_op = new_operators[0]
+        assert isinstance(new_op, Copy)
+        assert new_op.src is a
+        assert new_op.dst is y
+        assert new_op.inc
+
     # check that reset inputs get removed
     for A in As:
-        x = DummySignal()
-        y = DummySignal()
-        a = DummySignal()
+        x = DummySignal(shape=(1,) if isinstance(A, float) else A.shape[:1])
+        y = DummySignal(shape=(1,) if isinstance(A, float) else A.shape[:1])
+        a = DummySignal(shape=(1,) if isinstance(A, float) else A.shape)
         r = Reset(a)
         r.value = A
         operators = [Op(a, x, y), r]

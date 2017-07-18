@@ -96,13 +96,6 @@ def test_minibatch_generator(shuffle):
         assert np.allclose(y_all, np.arange(96) + 1)
 
 
-def test_print_and_flush(capsys):
-    utils.print_and_flush("hello", end="")
-    utils.print_and_flush("world")
-    out, _ = capsys.readouterr()
-    assert out == "helloworld\n"
-
-
 def test_print_op(capsys):
     with tf.Session() as sess:
         x = tf.constant(0)

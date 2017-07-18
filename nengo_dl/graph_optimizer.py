@@ -1,7 +1,8 @@
 from collections import OrderedDict, defaultdict
 import logging
 
-from nengo.synapses import Lowpass
+from nengo.synapses import Lowpass, LinearFilter
+from nengo.builder.learning_rules import SimVoja, SimOja, SimBCM
 from nengo.builder.operator import (SimPyFunc, ElementwiseInc, DotInc, Reset,
                                     Copy)
 from nengo.builder.neurons import SimNeurons
@@ -18,8 +19,8 @@ except ImportError:
         operator_depencency_graph as operator_dependency_graph)
 import numpy as np
 
-from nengo_dl import (signals, processes, builder, tensor_node, op_builders,
-                      learning_rules, neurons)
+from nengo_dl import (signals, process_builders, builder, tensor_node,
+                      op_builders, learning_rule_builders, neuron_builders)
 
 logger = logging.getLogger(__name__)
 
@@ -111,11 +112,23 @@ def mergeable(op, chosen_ops):
     elif isinstance(op, SimProcess):
         # we can merge ops if they have a custom implementation, or merge
         # generic processes, but can't mix the two
-
-        if type(c.process) in processes.SimProcessBuilder.TF_PROCESS_IMPL:
-            if type(c.process) != type(op.process):
-                return False
-        elif type(op.process) in processes.SimProcessBuilder.TF_PROCESS_IMPL:
+        custom_impl = process_builders.SimProcessBuilder.TF_PROCESS_IMPL
+        if isinstance(op.process, custom_impl):
+            if type(op.process) == Lowpass:
+                # lowpass ops can only be merged with other lowpass ops, since
+                # they have a custom implementation
+                if type(c.process) != Lowpass:
+                    return False
+            elif isinstance(op.process, LinearFilter):
+                # we can only merge linearfilters that have the same state
+                # dimensionality and the same signal dimensionality
+                if (not isinstance(c.process, LinearFilter) or
+                        len(c.process.den) != len(op.process.den) or
+                        op.input.shape[0] != c.input.shape[0]):
+                    return False
+            else:
+                raise NotImplementedError
+        elif isinstance(c.process, custom_impl):
             return False
 
         # processes must also have the same mode
@@ -127,11 +140,10 @@ def mergeable(op, chosen_ops):
         # point trying to execute all those functions at once, because they're
         # already integrated into the Tensorflow graph.
         return False
-    elif isinstance(op, (learning_rules.SimVoja, learning_rules.SimOja,
-                         learning_rules.SimBCM)):
+    elif isinstance(op, (SimVoja, SimOja, SimBCM)):
         # pre inputs must have the same dimensionality so that we can broadcast
         # them when computing the outer product
-        attr = ("pre_decoded" if isinstance(op, learning_rules.SimVoja) else
+        attr = ("pre_decoded" if isinstance(op, SimVoja) else
                 "pre_filtered")
         if getattr(op, attr).shape[0] != getattr(c, attr).shape[0]:
             return False
@@ -441,12 +453,11 @@ def transitive_planner(op_list):
     # and potentially break lower-priority groups)
     order = [
         op_builders.SparseDotIncBuilder, op_builders.ElementwiseIncBuilder,
-        neurons.SimNeuronsBuilder, processes.SimProcessBuilder,
-        op_builders.SimPyFuncBuilder,
-        learning_rules.SimOjaBuilder, learning_rules.SimVojaBuilder,
-        learning_rules.SimBCMBuilder,
-        op_builders.CopyBuilder, op_builders.ResetBuilder,
-        tensor_node.SimTensorNodeBuilder]
+        neuron_builders.SimNeuronsBuilder, process_builders.SimProcessBuilder,
+        op_builders.SimPyFuncBuilder, learning_rule_builders.SimOjaBuilder,
+        learning_rule_builders.SimVojaBuilder,
+        learning_rule_builders.SimBCMBuilder, op_builders.CopyBuilder,
+        op_builders.ResetBuilder, tensor_node.SimTensorNodeBuilder]
 
     for builder_type in order:
         if builder_type not in ops_by_type:
@@ -764,8 +775,8 @@ def order_signals(plan, n_passes=10):
     assert len(new_plan) == len(plan)
     for ops, new_ops in new_plan.items():
         assert len(ops) == len(new_ops)
-        # for op in ops:
-        #     assert op in new_ops
+        for op in ops:
+            assert op in new_ops
 
     logger.debug("final sorted signals")
     logger.debug(sorted_signals)
@@ -1275,31 +1286,29 @@ def remove_zero_incs(operators):
     new_operators = []
     for op in operators:
         if isinstance(op, (DotInc, ElementwiseInc, Copy)):
-            # TODO: we could check A as well for ElementwiseInc
-            src = op.X if isinstance(op, (DotInc, ElementwiseInc)) else op.src
+            for src in op.reads:
+                # check if the input is the output of a Node (in which case the
+                # value might change, so we should never get rid of this op).
+                # checking the name of the signal seems a bit fragile, but I
+                # can't think of a better solution
+                if src.name.startswith("<Node") and src.name.endswith(".out"):
+                    continue
 
-            # check if the input is the output of a Node (in which case the
-            # value might change, so we should never get rid of this op).
-            # checking the name of the signal seems a bit fragile, but I can't
-            # think of a better solution
-            if src.name.startswith("<Node") and src.name.endswith(".out"):
-                new_operators.append(op)
-                continue
+                # find any ops that modify src
+                pred = sets[src.base] + incs[src.base]
 
-            # find any ops that modify src
-            pred = sets[src.base] + incs[src.base]
-
-            # the input (and therefore output) will be zero if the only input
-            # is a Reset(0) op, or the only input is a constant signal (not
-            # set/inc/updated) that is all zero
-            zero_input = (
-                (len(pred) == 1 and type(pred[0]) == Reset and
-                 np.all(pred[0].value == 0)) or
-                (len(pred) == 0 and np.all(src.initial_value == 0) and
-                 len(updates[src.base]) == 0) and not src.trainable)
-            if zero_input:
-                if len(op.sets) > 0:
-                    new_operators.append(Reset(op.sets[0]))
+                # the input (and therefore output) will be zero if the only
+                # input is a Reset(0) op, or the only input is a constant
+                # signal (not set/inc/updated) that is all zero
+                zero_input = (
+                    (len(pred) == 1 and type(pred[0]) == Reset and
+                     np.all(pred[0].value == 0)) or
+                    (len(pred) == 0 and np.all(src.initial_value == 0) and
+                     len(updates[src.base]) == 0) and not src.trainable)
+                if zero_input:
+                    if len(op.sets) > 0:
+                        new_operators.append(Reset(op.sets[0]))
+                    break
             else:
                 new_operators.append(op)
         else:
@@ -1442,12 +1451,12 @@ def remove_identity_muls(operators):
 
     sets, incs, _, updates = signal_io_dicts(operators)
 
-    def is_identity(x, op):
+    def is_identity(x, sig):
         if isinstance(x, float) or x.shape == ():
             return x == 1
 
         d = x.shape[0]
-        if isinstance(op, ElementwiseInc):
+        if sig.ndim == 1:
             return np.array_equal(x, np.ones(d))
         else:
             return np.array_equal(x, np.diag(np.ones(d)))
@@ -1455,28 +1464,35 @@ def remove_identity_muls(operators):
     new_operators = []
     for op in operators:
         if isinstance(op, (DotInc, ElementwiseInc)):
-            src = op.A
+            # we can check A or X for elementwise inc, since either being 1
+            # means that this is a noop. but if X is 1 on a dotinc this is
+            # still a useful op, and we shouldn't remove it
+            srcs = op.reads if isinstance(op, ElementwiseInc) else [op.A]
+            for src in srcs:
+                # check if the input is the output of a Node (in which case the
+                # value might change, so we should never get rid of this op).
+                # checking the name of the signal seems a bit fragile, but I
+                # can't think of a better solution
+                if src.name.startswith("<Node") and src.name.endswith(".out"):
+                    continue
 
-            # check if the input is the output of a Node (in which case the
-            # value might change, so we should never get rid of this op).
-            # checking the name of the signal seems a bit fragile, but I can't
-            # think of a better solution
-            if src.name.startswith("<Node") and src.name.endswith(".out"):
-                new_operators.append(op)
-                continue
+                # find any ops that modify src
+                pred = sets[src.base] + incs[src.base]
 
-            # find any ops that modify src
-            pred = sets[src.base] + incs[src.base]
+                # the input will be one if the only input is a Reset(1) op, or
+                # the only input is a constant signal (not set/inc/updated)
+                # that is an identity value
+                identity_input = (
+                    (len(pred) == 1 and type(pred[0]) == Reset and
+                     is_identity(pred[0].value, src)) or
+                    (len(pred) == 0 and is_identity(src.initial_value, src) and
+                     len(updates[src.base]) == 0) and not src.trainable)
 
-            # the input will be one if the only input is a Reset(1) op, or the
-            # only input is a constant signal (not set/inc/updated) that is one
-            identity_input = (
-                (len(pred) == 1 and type(pred[0]) == Reset and
-                 is_identity(pred[0].value, op)) or
-                (len(pred) == 0 and is_identity(src.initial_value, op) and
-                 len(updates[src.base]) == 0) and not src.trainable)
-            if identity_input:
-                new_operators.append(Copy(op.X, op.Y, inc=len(op.incs) > 0))
+                if identity_input:
+                    other_src = [x for x in op.reads if x is not src][0]
+                    new_operators.append(Copy(other_src, op.Y,
+                                              inc=len(op.incs) > 0))
+                    break
             else:
                 new_operators.append(op)
         else:

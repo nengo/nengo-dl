@@ -6,6 +6,10 @@
   :target: https://travis-ci.org/nengo/nengo_dl
   :alt: Travis-CI build status
 
+.. image:: https://img.shields.io/appveyor/ci/nengo/nengo-dl/master.svg
+  :target: https://ci.appveyor.com/project/nengo/nengo-dl
+  :alt: AppVeyor build status
+
 .. image:: https://img.shields.io/codecov/c/github/nengo/nengo_dl/master.svg
   :target: https://codecov.io/gh/nengo/nengo_dl/branch/master
   :alt: Test coverage
@@ -53,10 +57,10 @@ adds a number of unique features, such as:
   convolutional neural networks) directly into a Nengo model
 
 More details can be found in the `NengoDL documentation
-<https://nengo.github.io/nengo_dl/>`_.
+<http://www.nengo.ai/nengo_dl/>`_.
 
 Installation
 ============
 
 Installation instructions can be found `here
-<https://nengo.github.io/nengo_dl/installation.html>`_.
+<http://www.nengo.ai/nengo_dl/installation.html>`_.
