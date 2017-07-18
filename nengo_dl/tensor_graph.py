@@ -1,6 +1,9 @@
+from __future__ import print_function
+
 from collections import OrderedDict
 import datetime
 import logging
+import sys
 import time
 import warnings
 
@@ -15,6 +18,9 @@ import tensorflow as tf
 from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node
 
 logger = logging.getLogger(__name__)
+
+if sys.version_info < (3, 4):
+    from backports.print_function import print_ as print
 
 
 class TensorGraph(object):
@@ -76,7 +82,7 @@ class TensorGraph(object):
 
         logger.info("Initial plan length: %d", len(operators))
 
-        utils.print_and_flush("Optimizing graph", end="")
+        print("Optimizing graph", end="", flush=True)
         start = time.time()
 
         # apply graph simplification functions
@@ -181,10 +187,12 @@ class TensorGraph(object):
             self.build_inputs()
 
             # pre-build stage
+            self.op_builds = {}
             for ops in self.plan:
                 with self.graph.name_scope(utils.sanitize_name(
                         builder.Builder.builders[type(ops[0])].__name__)):
-                    builder.Builder.pre_build(ops, self.signals, rng)
+                    builder.Builder.pre_build(ops, self.signals, rng,
+                                              self.op_builds)
 
             # build stage
             self.build_loop()
@@ -229,7 +237,8 @@ class TensorGraph(object):
         for ops in self.plan:
             with self.graph.name_scope(utils.sanitize_name(
                     builder.Builder.builders[type(ops[0])].__name__)):
-                outputs = builder.Builder.build(ops, self.signals)
+                outputs = builder.Builder.build(ops, self.signals,
+                                                self.op_builds)
 
             if outputs is not None:
                 side_effects += outputs
@@ -350,9 +359,9 @@ class TensorGraph(object):
             tuple(x._ref() if isinstance(x, tf.Variable) else x
                   for x in self.base_vars))
 
-        # TODO: get parallel iterations working? nengo simulations are
-        # pretty serial though, so I'm not sure how much benefit we would
-        # get (and it seems non-trivial to get working correctly)
+        # TODO: add option to disable backprop through loop, for when users
+        # want to train a network running over time, but optimize on a
+        # timestep-by-timestep basis
         loop_vars = tf.while_loop(
             loop_condition, loop_body, loop_vars=loop_vars,
             parallel_iterations=1, back_prop=True)
@@ -534,8 +543,11 @@ class TensorGraph(object):
             for conn in net.connections:
                 # note: this doesn't include probe connections, since they
                 # aren't added to the network
+<<<<<<< HEAD
                 # TODO: should we disable training on connections to
                 # learning rules?
+=======
+>>>>>>> master
                 self.model.sig[conn]["weights"].trainable = get_trainable(
                     config, conn, network_trainable)
                 self.model.sig[conn]["weights"].minibatched = False

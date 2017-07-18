@@ -75,7 +75,11 @@ script:
       flake8;
     elif [[ "$MODE" == "docs" ]]; then
       export LATEST_TAG="$(git describe --abbrev=0 --tags)";
+<<<<<<< HEAD
       sphinx-versioning build -r $TRAVIS_BRANCH -w $TRAVIS_BRANCH -W $LATEST_TAG docs docs/_build/html;
+=======
+      sphinx-build -b linkcheck docs docs/_build -W -D nbsphinx_execute=never && sphinx-versioning build -r $TRAVIS_BRANCH -w $TRAVIS_BRANCH -W $LATEST_TAG docs docs/_build/html -- -W;
+>>>>>>> master
     elif [[ "$MODE" == "coverage" ]]; then
       coverage run -m py.test --pyargs nengo;
       coverage run -a -m py.test nengo_dl;

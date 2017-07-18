@@ -1,14 +1,17 @@
 from __future__ import print_function, division
 
-from collections import Mapping
 import datetime
 import logging
 import os
+import sys
+import tempfile
 import time
 import warnings
 
-from nengo import Process
+from nengo import Process, Ensemble, Connection, Probe
 from nengo.builder import Model
+from nengo.builder.connection import BuiltConnection
+from nengo.builder.ensemble import BuiltEnsemble
 from nengo.exceptions import (ReadonlyError, SimulatorClosed, NengoWarning,
                               SimulationError, ValidationError)
 import numpy as np
@@ -18,9 +21,12 @@ from tensorflow.python.ops import gradient_checker
 
 from nengo_dl import utils, DATA_DIR
 from nengo_dl.tensor_graph import TensorGraph
-from nengo_dl.utils import print_and_flush
 
 logger = logging.getLogger(__name__)
+
+if sys.version_info < (3, 4):
+    import backports.tempfile as tempfile  # noqa: F811
+    from backports.print_function import print_ as print
 
 
 class Simulator(object):
@@ -80,6 +86,14 @@ class Simulator(object):
         # TODO: put this test back in when we bump nengo version
         ("nengo/utils/tests/test_ensemble.py:test_tuning_curves[*",
          "this test is not compatible with numpy>=1.13"),
+
+        ("nengo/tests/test_synapses.py:test_alpha",
+         "need to set looser tolerances due to float32 implementation (see "
+         "tests/test_processes.py:test_alpha"),
+
+        ("nengo/tests/test_ensemble.py:test_gain_bias",
+         "use allclose instead of array_equal (see "
+         "tests/test_simulator.py:test_gain_bias")
     ]
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
@@ -91,8 +105,11 @@ class Simulator(object):
         self.unroll = unroll_simulation
         self.minibatch_size = 1 if minibatch_size is None else minibatch_size
 
+<<<<<<< HEAD
         # TODO: allow the simulator to be called flexibly with/without
         # minibatching
+=======
+>>>>>>> master
         # TODO: multi-GPU support
 
         # build model (uses default nengo builder)
@@ -105,7 +122,7 @@ class Simulator(object):
             self.model = model
 
         if network is not None:
-            print_and_flush("Building network", end="")
+            print("Building network", end="", flush=True)
             start = time.time()
             self.model.build(network, progress_bar=False)
             print("\rBuilding completed in %s " %
@@ -116,10 +133,7 @@ class Simulator(object):
             self.model, self.dt, unroll_simulation, dtype, self.minibatch_size,
             device)
 
-        self.data = ProbeDict(
-            self.model.params,
-            {p: (minibatch_size if self.model.sig[p]["in"].minibatched
-                 else -1) for p in self.model.probes})
+        self.data = SimulationData(self, minibatch_size is not None)
 
         if seed is None:
             seed = np.random.randint(np.iinfo(np.int32).max)
@@ -146,15 +160,12 @@ class Simulator(object):
             self.seed = seed
 
         self.rng = np.random.RandomState(self.seed)
-        # TODO: why is setting the tensorflow seed necessary to make
-        # gradient descent training deterministic?
         tf.set_random_seed(self.seed)
 
         self.input_funcs = {}
 
         # (re)build graph
-        # TODO: do we need to rebuild the graph?
-        print_and_flush("Constructing graph", end="")
+        print("Constructing graph", end="", flush=True)
         start = time.time()
         self.tensor_graph.build(self.rng)
         print("\rConstruction completed in %s " %
@@ -285,7 +296,7 @@ class Simulator(object):
             self._check_data(input_feeds, mode="input",
                              n_batch=self.minibatch_size, n_steps=n_steps)
 
-        print_and_flush("Simulation started", end="")
+        print("Simulation started", end="", flush=True)
         start = time.time()
 
         if profile:
@@ -377,13 +388,9 @@ class Simulator(object):
         non-differentiable elements include :class:`~nengo:nengo.LIF`,
         :class:`~nengo:nengo.Direct`, or processes/neurons that don't have a
         custom TensorFlow implementation (see
-        :class:`.processes.SimProcessBuilder`/
-        :class:`.neurons.SimNeuronsBuilder`)
+        :class:`.process_builders.SimProcessBuilder`/
+        :class:`.neuron_builders.SimNeuronsBuilder`)
         """
-
-        # TODO: we could save the internal state of the simulator before
-        # training and then restore it afterwards, so that calling train
-        # doesn't reset a run
 
         batch_size, n_steps = next(iter(inputs.values())).shape[:2]
 
@@ -394,6 +401,9 @@ class Simulator(object):
         self._check_data(inputs, mode="input")
         self._check_data(targets, mode="target", n_steps=n_steps,
                          n_batch=batch_size)
+        if n_steps < self.unroll:
+            raise ValidationError("The number of timesteps in training data "
+                                  "must be >= unroll_simulation", "inputs")
 
         # check for non-differentiable elements in graph
         # utils.find_non_differentiable(
@@ -404,6 +414,11 @@ class Simulator(object):
         # build optimizer op
         opt_op, opt_slots_init = self.tensor_graph.build_optimizer(
             optimizer, tuple(targets.keys()), objective)
+
+        # save the internal state of the simulator
+        tmpdir = tempfile.TemporaryDirectory()
+        self.save_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
+                         include_global=False)
 
         # initialize any variables that were created by the optimizer
         self.sess.run(opt_slots_init)
@@ -431,7 +446,10 @@ class Simulator(object):
 
                 progress.step()
 
-        self.soft_reset()
+        # restore internal state of simulator
+        self.load_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
+                         include_global=False)
+        tmpdir.cleanup()
 
         if profile:
             if isinstance(profile, str):
@@ -463,11 +481,6 @@ class Simulator(object):
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
             that Probe (loss will be averaged across Probes)
-
-        Notes
-        -----
-        Calling this function will reset all values in the network, so it
-        should not be intermixed with calls to :meth:`.Simulator.run`.
         """
 
         batch_size, n_steps = next(iter(inputs.values())).shape[:2]
@@ -479,9 +492,17 @@ class Simulator(object):
         self._check_data(inputs, mode="input")
         self._check_data(targets, mode="target", n_steps=n_steps,
                          n_batch=batch_size)
+        if n_steps < self.unroll:
+            raise ValidationError("The number of timesteps in loss data "
+                                  "must be >= unroll_simulation", "inputs")
 
         # get loss op
         loss = self.tensor_graph.build_loss(objective, tuple(targets.keys()))
+
+        # save the internal state of the simulator
+        tmpdir = tempfile.TemporaryDirectory()
+        self.save_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
+                         include_global=False)
 
         # compute loss on data
         loss_val = 0
@@ -490,8 +511,12 @@ class Simulator(object):
             self.soft_reset()
             loss_val += self.sess.run(
                 loss, feed_dict=self._fill_feed(n_steps, inp, tar))
-        self.soft_reset()
         loss_val /= i + 1
+
+        # restore internal state of simulator
+        self.load_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
+                         include_global=False)
+        tmpdir.cleanup()
 
         return loss_val
 
@@ -573,16 +598,21 @@ class Simulator(object):
                 n.size_out > 0)
 
             if (not isinstance(n.output, np.ndarray) and
-                    n.output not in self.input_funcs):
+                    (n, n.output) not in self.input_funcs):
+                # note: we include n.output in the input_funcs hash to handle
+                # the case where the node output is changed after the model
+                # is constructed.  this isn't technically supported behaviour
+                # in nengo, but the gui does it.
+
                 if isinstance(n.output, Process):
-                    self.input_funcs[n.output] = n.output.make_step(
+                    self.input_funcs[(n, n.output)] = n.output.make_step(
                         (n.size_in,), (n.size_out,), self.dt,
                         n.output.get_rng(self.rng))
                 elif n.size_out > 0:
-                    self.input_funcs[n.output] = utils.align_func(
+                    self.input_funcs[(n, n.output)] = utils.align_func(
                         (n.size_out,), self.tensor_graph.dtype)(n.output)
                 else:
-                    self.input_funcs[n.output] = n.output
+                    self.input_funcs[(n, n.output)] = n.output
 
             if using_output:
                 if n in input_feeds:
@@ -592,7 +622,7 @@ class Simulator(object):
                     feed_val = np.tile(n.output[None, :, None],
                                        (n_steps, 1, self.minibatch_size))
                 else:
-                    func = self.input_funcs[n.output]
+                    func = self.input_funcs[(n, n.output)]
 
                     feed_val = []
                     for i in range(self.n_steps + 1,
@@ -609,7 +639,7 @@ class Simulator(object):
             elif not isinstance(n.output, np.ndarray):
                 # note: we still call the function even if the output
                 # is not being used, because it may have side-effects
-                func = self.input_funcs[n.output]
+                func = self.input_funcs[(n, n.output)]
                 for i in range(self.n_steps + 1, self.n_steps + n_steps + 1):
                     func(i * self.dt)
 
@@ -644,24 +674,29 @@ class Simulator(object):
                 probe_data[i] = probe_data[i][(steps + 1) % period < 1]
 
             # update stored probe data
-            self.model.params[p] += [probe_data[i]]
+            self.model.params[p].append(probe_data[i])
 
-    def save_params(self, path, include_local=False):
+    def save_params(self, path, include_global=True, include_local=False):
         """Save network parameters to the given ``path``.
 
         Parameters
         ----------
         path : str
             filepath of parameter output file
+        include_global : bool, optional
+            if True (default True), save global (trainable) network variables
         include_local : bool, optional
-            if True, also save local (non-trainable) network variables
+            if True (default False), save local (non-trainable) network
+            variables
         """
         if self.closed:
             raise SimulationError("Simulation has been closed, cannot save "
                                   "parameters")
 
         with self.tensor_graph.graph.as_default():
-            vars = tf.global_variables()
+            vars = []
+            if include_global:
+                vars.extend(tf.global_variables())
             if include_local:
                 vars.extend(tf.local_variables())
 
@@ -669,56 +704,33 @@ class Simulator(object):
 
         logger.info("Model parameters saved to %s", path)
 
-    def load_params(self, path, include_local=False):
+    def load_params(self, path, include_global=True, include_local=False):
         """Load network parameters from the given ``path``.
 
         Parameters
         ----------
         path : str
             filepath of parameter input file
+        include_global : bool, optional
+            if True (default True), load global (trainable) network variables
         include_local : bool, optional
-            if True, also load local (non-trainable) network variables
+            if True (default False), load local (non-trainable) network
+            variables
         """
         if self.closed:
             raise SimulationError("Simulation has been closed, cannot load "
                                   "parameters")
 
         with self.tensor_graph.graph.as_default():
-            vars = tf.global_variables()
+            vars = []
+            if include_global:
+                vars.extend(tf.global_variables())
             if include_local:
                 vars.extend(tf.local_variables())
 
             tf.train.Saver(vars).restore(self.sess, path)
 
         logger.info("Model parameters loaded from %s", path)
-
-    def print_params(self, msg=None):
-        """Print current values of trainable network parameters.
-
-        Parameters
-        ----------
-        msg : str, optional
-            title for print output, useful to differentiate multiple print
-            calls
-        """
-
-        if self.closed:
-            raise SimulationError("Simulation has been closed, cannot print "
-                                  "parameters")
-
-        param_sigs = {k: v for k, v in self.tensor_graph.sig_map.items()
-                      if k.trainable}
-        keys = list(self.tensor_graph.signals.bases.keys())
-        params = {v.key: self.tensor_graph.base_vars[keys.index(v.key)]
-                  for v in param_sigs.values()}
-
-        param_vals = self.sess.run(params)
-
-        print("%s:" % "Parameters" if msg is None else msg)
-        for sig, tens in param_sigs.items():
-            print("-" * 10)
-            print(sig)
-            print(param_vals[tens.key][tens.indices])
 
     def close(self):
         """Close the simulation, freeing resources.
@@ -731,14 +743,25 @@ class Simulator(object):
         """
 
         if not self.closed:
-            self.sess.close()
-            self.closed = True
+            # TODO: this is a temporary fix until the permanent fix is
+            # released in tensorflow (see
+            # https://github.com/tensorflow/tensorflow/pull/11276)
+            from tensorflow.python.layers import base
+            try:
+                del base.PER_GRAPH_LAYER_NAME_UIDS[self.tensor_graph.graph]
+            except KeyError:
+                pass
+
+            # note: we use getattr in case it crashes before the object is
+            # created
+            if getattr(self, "sess", None) is not None:
+                self.sess.close()
             self.sess = None
 
-            # note: we use getattr in case it crashes before the summary
-            # object is created
             if getattr(self, "summary", None) is not None:
                 self.summary.close()
+
+            self.closed = True
 
     def __enter__(self):
         return self
@@ -945,58 +968,179 @@ class Simulator(object):
                     "%s data" % mode)
 
 
-class ProbeDict(Mapping):
-    """Map from :class:`~nengo:nengo.Probe` -> :class:`~numpy:numpy.ndarray`,
-    used to access output of the model after simulation.
+class SimulationData(object):
+    """Data structure used to access simulation data from the model.
 
-    This is more like a view on the dict that the simulator manipulates.
-    However, for speed reasons, the simulator uses Python lists,
-    and we want to return NumPy arrays. Additionally, this mapping
-    is readonly, which is more appropriate for its purpose.
+    The main use case for this is to access Probe data; for example,
+    ``probe_data = sim.data[my_probe]``.  However, it is also
+    used to access the parameters of objects in the model; for example, after
+    the model has been optimized via :meth:`.Simulator.train`, the updated
+    encoder values for an ensemble can be accessed via
+    ``trained_encoders = sim.data[my_ens].encoders``.
 
     Parameters
     ----------
-    raw : dict of {:class:`~nengo:nengo.Probe`: \
-                   list of :class:`~numpy:numpy.ndarray`}
-        the raw probe output from the simulator (a list of arrays containing
-        the output from each ``run_steps`` execution segment)
-    minibatches : dict of {:class:`~nengo:nengo.Probe`: int or None}
-        the minibatch size for each probe in the dictionary (or -1 if the
-        probed signal does not have a minibatch dimension)
+    sim : :class:`.Simulator`
+        the simulator from which data will be drawn
+    minibatched : bool
+        if False, discard the minibatch dimension on probe data
 
     Notes
     -----
-    ProbeDict should never be created/accessed directly by the user, but rather
-    via ``sim.data`` (which is an instance of ProbeDict).
+    SimulationData shouldn't be created/accessed directly by the user, but
+    rather via ``sim.data`` (which is an instance of SimulationData).
     """
 
-    def __init__(self, raw, minibatches):
-        self.raw = raw
-        self.minibatches = minibatches
+    def __init__(self, sim, minibatched):
+        self.sim = sim
+        self.minibatched = minibatched
 
-        # TODO: add cache back in?
+    def __getitem__(self, obj):
+        """Return the data associated with ``obj``.
 
-    def __getitem__(self, key):
-        rval = self.raw[key]
+        Parameters
+        ----------
+        obj : :class:`~nengo:nengo.Probe` or :class:`~nengo:nengo.Ensemble` \
+              or :class:`~nengo:nengo.Connection`
+            object whose simulation data is being accessed
 
-        if isinstance(rval, list):
-            # combine data from run_steps iterations
-            rval = np.concatenate(rval, axis=0)
+        Returns
+        -------
+        :class:`~numpy:numpy.ndarray` or \
+                :class:`~nengo:nengo.builder.ensemble.BuiltEnsemble` or \
+                :class:`~nengo:nengo.builder.connection.BuiltConnection`
+            array containing probed data if ``obj`` is a
+            :class:`~nengo:nengo.Probe`, otherwise the corresponding
+            parameter object
+        """
 
-            if self.minibatches[key] != -1:
-                if self.minibatches[key] is None:
-                    # get rid of batch dimension
-                    rval = rval[..., 0]
-                else:
+        if obj not in self.sim.model.params:
+            raise ValidationError("Object is not in parameters of model %s" %
+                                  self.sim.model, str(obj))
+
+        data = self.sim.model.params[obj]
+
+        if isinstance(obj, Probe):
+            if len(data) == 0:
+                return []
+
+            data = np.concatenate(data, axis=0)
+            if self.sim.model.sig[obj]["in"].minibatched:
+                if self.minibatched:
                     # move batch dimension to front
-                    rval = np.moveaxis(rval, -1, 0)
+                    data = np.moveaxis(data, -1, 0)
+                else:
+                    # get rid of batch dimension
+                    data = data[..., 0]
 
-            rval.setflags(write=False)
+            data.setflags(write=False)
+        elif isinstance(obj, Ensemble):
+            # get the live simulation values
+            scaled_encoders = self.get_param(obj, "scaled_encoders")
+            bias = self.get_param(obj, "bias")
 
-        return rval
+            # infer the related values (rolled into scaled_encoders)
+            gain = (obj.radius * np.linalg.norm(scaled_encoders, axis=1) /
+                    np.linalg.norm(data.encoders, axis=1))
+            encoders = obj.radius * scaled_encoders / gain[:, None]
 
-    def __iter__(self):
-        return iter(self.raw)
+            # figure out max_rates/intercepts from neuron model
+            # TODO: temporarily disabled until we have a nengo release with
+            # this feature (https://github.com/nengo/nengo/pull/1334)
+            # max_rates, intercepts = (
+            #     obj.neuron_type.max_rates_intercepts(gain, bias))
+            max_rates = data.max_rates
+            intercepts = data.intercepts
 
-    def __len__(self):
-        return len(self.raw)
+            data = BuiltEnsemble(data.eval_points, encoders, intercepts,
+                                 max_rates, scaled_encoders, gain, bias)
+        elif isinstance(obj, Connection):
+            # get the live simulation values
+            weights = self.get_param(obj, "weights")
+
+            # impossible to recover transform
+            transform = None
+
+            data = BuiltConnection(data.eval_points, data.solver_info, weights,
+                                   transform)
+
+        return data
+
+    def get_param(self, obj, attr):
+        """Returns the current parameter value for the given object.
+
+        Parameters
+        ----------
+        obj : ``NengoObject``
+            the nengo object for which we want to know the parameters
+        attr : str
+            the parameter of ``obj`` to be returned
+
+        Returns
+        -------
+        :class:`~numpy:numpy.ndarray`
+            current value of the parameters associated with the given object
+
+        Notes
+        -----
+        Parameter values should be accessed through ``sim.data``
+        (which will call this function if necessary), rather than directly
+        through this function.
+        """
+
+        if self.sim.closed:
+            warnings.warn("Checking %s.%s after simulator is closed; cannot "
+                          "fetch live value, so the initial value will be "
+                          "returned." % (obj, attr))
+
+            return getattr(self.sim.model.params[obj], attr)
+
+        sig_obj, sig_attr = self._attr_map(obj, attr)
+
+        try:
+            sig = self.sim.model.sig[sig_obj][sig_attr]
+        except KeyError:
+            # sig_attr doesn't exist for this attribute
+            return None
+
+        try:
+            tensor_sig = self.sim.tensor_graph.sig_map[sig]
+        except KeyError:
+            # if sig isn't in sig_map then that means it isn't used anywhere
+            # in the simulation (and therefore never changes), so we can
+            # safely return the static build value
+            return getattr(self.sim.model.params[obj], attr)
+
+        keys = list(self.sim.tensor_graph.signals.bases.keys())
+        param = self.sim.tensor_graph.base_vars[keys.index(tensor_sig.key)]
+
+        val = self.sim.sess.run(param)
+
+        return val[tensor_sig.indices]
+
+    def _attr_map(self, obj, attr):
+        """Maps from ``sim.data[obj].attr`` to the equivalent
+        ``model.sig[obj][attr]``.
+
+        Parameters
+        ----------
+        obj : ``NengoObject``
+            the nengo object for which we want to know the parameters
+        attr : str
+            the parameter of ``obj`` to be returned
+
+        Returns
+        -------
+        obj : ``NengoObject``
+            the nengo object to key into model.sig
+        attr : str
+            the name of the signal corresponding to input attr
+
+        """
+
+        if isinstance(obj, Ensemble) and attr == "bias":
+            return obj.neurons, attr
+        elif isinstance(obj, Ensemble) and attr == "scaled_encoders":
+            return obj, "encoders"
+
+        return obj, attr

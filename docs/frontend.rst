@@ -1,5 +1,5 @@
-User API
-========
+User documentation
+==================
 
 There are two classes that users may need to interact with in order
 to access the features of NengoDL: :class:`~.simulator.Simulator` and
@@ -14,4 +14,5 @@ inserting TensorFlow code into a Nengo model.
     simulator
     tensor_node
     training
+    extra_objects
 

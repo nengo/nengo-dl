@@ -51,18 +51,19 @@ def test_signal_init_values(Simulator):
     zeroarray = Signal([[0.0], [0.0], [0.0]])
     array = Signal([1.0, 2.0, 3.0])
 
-    class DummyProbe():
+    class DummyProbe(nengo.Probe):
         def __init__(self, target):
-            self.target = target
-            self.sample_every = None
-            self.size_in = target.size
+            # bypass target validation
+            nengo.Probe.target.data[self] = target
 
     m = nengo.builder.Model(dt=0)
     m.operators += [ElementwiseInc(zero, zero, five),
                     DotInc(zeroarray, one, array)]
 
-    probes = [DummyProbe(zero), DummyProbe(one), DummyProbe(five),
-              DummyProbe(array)]
+    probes = [DummyProbe(zero, add_to_container=False),
+              DummyProbe(one, add_to_container=False),
+              DummyProbe(five, add_to_container=False),
+              DummyProbe(array, add_to_container=False)]
     m.probes += probes
     for p in probes:
         m.sig[p]['in'] = p.target

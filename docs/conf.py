@@ -1,8 +1,15 @@
 import os
-import subprocess
+import sys
 
-import nengo_dl
 import sphinx_rtd_theme
+
+# we prepend the current directory to the path so that when
+# sphinxcontrib-versioning copies branches to different subdirectories we
+# import the copied version of nengo_dl (the version associated with the docs
+# being built)
+sys.path = [os.path.join(os.path.dirname(__file__), "..")] + sys.path
+
+import nengo_dl  # noqa: E402
 
 extensions = [
     'sphinx.ext.autodoc',
@@ -36,11 +43,11 @@ numpydoc_show_class_members = False
 
 # -- sphinx-versioning
 if "TRAVIS_BRANCH" in os.environ:
-    curr_branch = os.environ["TRAVIS_BRANCH"]
+    scv_whitelist_branches = ('master', os.environ["TRAVIS_BRANCH"])
 else:
-    curr_branch = str(subprocess.check_output(
-        "git rev-parse --abbrev-ref HEAD"), "utf-8").strip()
-scv_whitelist_branches = ('master', curr_branch)
+    # when building locally whitelisting can be manually specified from the
+    # command line via -w
+    scv_whitelist_branches = ('master',)
 scv_show_banner = True
 scv_banner_recent_tag = True
 
@@ -52,6 +59,7 @@ exclude_patterns = ['_build', '**.ipynb_checkpoints']
 source_suffix = '.rst'
 source_encoding = 'utf-8'
 master_doc = 'index'
+suppress_warnings = ['image.nonlocal_uri']
 
 # Need to include https Mathjax path for sphinx < v1.3
 mathjax_path = ("https://cdn.mathjax.org/mathjax/latest/MathJax.js"
