@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import itertools
 import os
 
@@ -10,7 +10,11 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import configure_settings, tensor_layer, dists, DATA_DIR
+<<<<<<< HEAD
 from nengo_dl.simulator import ProbeDict
+=======
+from nengo_dl.simulator import SimulationData
+>>>>>>> master
 
 
 def test_persistent_state(Simulator, seed):
@@ -125,9 +129,14 @@ def test_train_ff(Simulator, neurons, seed):
         net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
         net.config[nengo.Connection].synapse = None
 
-        # TODO: separate this into two different inputs to test that
-        # functionality
-        inp = nengo.Node([0, 0])
+        # note: we have these weird input setup just so that we can test
+        # training with two distinct inputs
+        inp_a = nengo.Node([0])
+        inp_b = nengo.Node([0])
+        inp = nengo.Node(size_in=2)
+        nengo.Connection(inp_a, inp[0])
+        nengo.Connection(inp_b, inp[1])
+
         ens = nengo.Ensemble(n_hidden + 1, n_hidden,
                              neuron_type=nengo.Sigmoid(tau_ref=1))
         out = nengo.Ensemble(1, 1, neuron_type=nengo.Sigmoid(tau_ref=1))
@@ -137,7 +146,6 @@ def test_train_ff(Simulator, neurons, seed):
             ens.neurons if neurons else ens, out.neurons,
             transform=dists.Glorot())
 
-        # TODO: why does training fail if we probe out instead of out.neurons?
         p = nengo.Probe(out.neurons)
 
     with Simulator(net, minibatch_size=minibatch_size, unroll_simulation=1,
@@ -145,12 +153,12 @@ def test_train_ff(Simulator, neurons, seed):
         x = np.asarray([[[0, 0]], [[0, 1]], [[1, 0]], [[1, 1]]])
         y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
 
-        sim.train({inp: x}, {p: y}, tf.train.MomentumOptimizer(1, 0.9),
-                  n_epochs=500)
+        sim.train({inp_a: x[..., [0]], inp_b: x[..., [1]]}, {p: y},
+                  tf.train.MomentumOptimizer(1, 0.9), n_epochs=500)
 
         sim.check_gradients(atol=5e-5)
 
-        sim.step(input_feeds={inp: x})
+        sim.step(input_feeds={inp_a: x[..., [0]], inp_b: x[..., [1]]})
 
         assert np.allclose(sim.data[p], y, atol=1e-3)
 
@@ -196,31 +204,36 @@ def test_train_objective(Simulator, unroll, seed):
     n_hidden = 20
     n_steps = 10
 
-    # TODO: make this have multiple outputs to test that functionality
-
     with nengo.Network(seed=seed) as net:
         inp = nengo.Node([1])
+
         ens = nengo.Ensemble(n_hidden, 1, neuron_type=nengo.RectifiedLinear())
         nengo.Connection(inp, ens, synapse=0.01)
         p = nengo.Probe(ens)
+
+        ens2 = nengo.Ensemble(n_hidden, 1, neuron_type=nengo.RectifiedLinear())
+        nengo.Connection(inp, ens2, synapse=0.01)
+        p2 = nengo.Probe(ens2)
 
     with Simulator(net, minibatch_size=minibatch_size,
                    unroll_simulation=unroll, seed=seed) as sim:
         x = np.ones((minibatch_size, n_steps, 1))
         y = np.zeros((minibatch_size, n_steps, 1))
+        z = np.zeros((minibatch_size, n_steps, 1)) + 0.1
 
         def obj(output, target):
             return tf.reduce_mean((output[:, -1] - 0.5 - target[:, -1]) ** 2)
 
-        sim.train({inp: x}, {p: y}, tf.train.MomentumOptimizer(1e-2, 0.9),
-                  n_epochs=100, objective=obj)
+        sim.train({inp: x}, {p: y, p2: z},
+                  tf.train.MomentumOptimizer(1e-2, 0.9),
+                  n_epochs=200, objective=obj)
 
-        sim.check_gradients([p])
+        sim.check_gradients([p, p2])
 
         sim.run_steps(n_steps, input_feeds={inp: x})
 
-        assert np.allclose(sim.data[p][:, -1], y[:, -1] + 0.5,
-                           atol=1e-3)
+        assert np.allclose(sim.data[p][:, -1], y[:, -1] + 0.5, atol=1e-3)
+        assert np.allclose(sim.data[p2][:, -1], z[:, -1] + 0.5, atol=1e-3)
 
 
 def test_train_sparse(Simulator, seed):
@@ -283,6 +296,11 @@ def test_train_errors(Simulator):
     with pytest.raises(SimulatorClosed):
         sim.train({None: np.zeros((1, 1))}, None, None)
 
+    with Simulator(net, unroll_simulation=2) as sim:
+        with pytest.raises(ValidationError):
+            sim.train({a: np.ones((1, 1, 1))},
+                      {p: np.ones((1, 1, 1))}, None)
+
 
 def test_loss(Simulator):
     with nengo.Network() as net:
@@ -323,6 +341,11 @@ def test_loss(Simulator):
 
     with pytest.raises(SimulatorClosed):
         sim.loss({None: np.zeros((1, 1))}, None, None)
+
+    with Simulator(net, unroll_simulation=2) as sim:
+        with pytest.raises(ValidationError):
+            sim.loss({inp: np.ones((1, 1, 1))},
+                     {p: np.ones((1, 1, 1))}, None)
 
 
 def test_generate_inputs(Simulator, seed):
@@ -375,15 +398,10 @@ def test_save_load_params(Simulator, tmpdir):
         sim.save_params(os.path.join(str(tmpdir), "local"),
                         include_local=True)
 
-        # just check that this doesn't produce an error
-        sim.print_params()
-
     with pytest.raises(SimulationError):
         sim.save_params(None)
     with pytest.raises(SimulationError):
         sim.load_params(None)
-    with pytest.raises(SimulationError):
-        sim.print_params(None)
 
     with nengo.Network(seed=1) as net2:
         inp = nengo.Node([0])
@@ -550,23 +568,39 @@ def test_dt_readonly(Simulator):
             sim.dt = 1
 
 
-def test_probe_dict():
-    a = ProbeDict(OrderedDict({0: [np.zeros((1, 3, 5)), np.ones((1, 3, 5))],
-                               1: [np.ones((1, 3, 1)), np.zeros((1, 3, 1))]}),
-                  {0: 5, 1: None})
-    assert a[0].shape == (5, 2, 3)
-    assert np.all(a[0][:, 0] == 0)
-    assert np.all(a[0][:, 1] == 1)
+def test_probe_data():
+    class DummySignal(object):
+        minibatched = True
 
-    assert a[1].shape == (2, 3)
-    assert np.all(a[1][1] == 0)
-    assert np.all(a[1][0] == 1)
+    class DummySimulator(object):
+        model = nengo.builder.Model()
+        model.sig = defaultdict(lambda: defaultdict(lambda: DummySignal()))
 
-    assert len(a) == 2
-    for x, y in zip(a, (0, 1)):
-        assert x == y
+    class DummyProbe(nengo.Probe):
+        def __init__(self):
+            pass
+
+    sim = DummySimulator()
+    a = DummyProbe(add_to_container=False)
+    b = DummyProbe(add_to_container=False)
+    sim.model.params = OrderedDict(
+        {a: [np.zeros((1, 3, 5)), np.ones((1, 3, 5))],
+         b: [np.ones((1, 3, 1)), np.zeros((1, 3, 1))]})
+    sim.model.probes = (a, b)
+    data = SimulationData(sim, True)
+    assert data[a].shape == (5, 2, 3)
+    assert np.all(data[a][:, 0] == 0)
+    assert np.all(data[a][:, 1] == 1)
+
+<<<<<<< HEAD
+=======
+    data.minibatched = False
+    assert data[b].shape == (2, 3)
+    assert np.all(data[b][1] == 0)
+    assert np.all(data[b][0] == 1)
 
 
+>>>>>>> master
 @pytest.mark.parametrize(
     "pre_val, post_val", itertools.product(
         [0, lambda t: 0, nengo.processes.WhiteNoise(seed=0)],
@@ -608,10 +642,10 @@ def test_check_gradients_error(Simulator):
             sim.check_gradients()
 
     # check_gradients detects errors in gradient (in this case caused by the
-    # fact that nengo.Alpha doesn't have a TensorFlow implementation)
+    # fact that nengo.Triangle doesn't have a TensorFlow implementation)
     with nengo.Network() as net:
         x = nengo.Node([0])
-        nengo.Probe(x, synapse=nengo.Alpha(0.1))
+        nengo.Probe(x, synapse=nengo.Triangle(0.1))
 
     with Simulator(net) as sim:
         with pytest.raises(SimulationError):
@@ -677,3 +711,146 @@ def test_check_data(Simulator):
             sim._check_data({inpa: zeros1})
         with pytest.raises(ValidationError):
             sim._check_data({pa: zeros1}, mode="target")
+
+
+def test_matching_node_out(Simulator):
+    # make sure that nodes with identical outputs are handled correctly (the
+    # outputs will have the same hash, so that can cause some errors)
+
+    with nengo.Network() as net:
+        a = nengo.Node(output=nengo.processes.WhiteSignal(1, 10), size_out=2)
+        b = nengo.Node(output=nengo.processes.WhiteSignal(1, 10), size_out=2)
+        c = nengo.Node(output=nengo.processes.WhiteSignal(1, 10), size_out=3)
+
+        p_a = nengo.Probe(a)
+        p_b = nengo.Probe(b)
+        p_c = nengo.Probe(c)
+
+    with Simulator(net) as sim:
+        sim.run_steps(10)
+
+        assert sim.data[p_a].shape == (10, 2)
+        assert sim.data[p_b].shape == (10, 2)
+        assert not np.allclose(sim.data[p_a], sim.data[p_b])
+        assert sim.data[p_c].shape == (10, 3)
+
+
+def test_probe_no_data(Simulator):
+    with nengo.Network() as net:
+        u = nengo.Node([0])
+        p = nengo.Probe(u)
+
+    with Simulator(net) as sim:
+        pass
+
+    assert sim.data[p] == []
+
+
+def test_train_state_save(Simulator):
+    with nengo.Network() as net:
+        u = nengo.Node([1])
+        o = nengo.Node(size_in=1)
+        nengo.Connection(u, o)
+        p = nengo.Probe(u, synapse=0.1)
+
+    with Simulator(net) as sim:
+        sim.run_steps(20)
+
+    with Simulator(net) as sim2:
+        sim2.run_steps(10)
+
+        sim2.train({u: np.ones((4, 10, 1))}, {p: np.ones((4, 10, 1))},
+                   optimizer=tf.train.GradientDescentOptimizer(0))
+
+        sim2.loss({u: np.ones((4, 10, 1))}, {p: np.ones((4, 10, 1))}, "mse")
+
+        sim2.run_steps(10)
+
+    assert np.allclose(sim.data[p], sim2.data[p])
+
+
+def test_gain_bias(Simulator):
+    N = 17
+    D = 2
+
+    gain = np.random.uniform(low=0.2, high=5, size=N)
+    bias = np.random.uniform(low=0.2, high=1, size=N)
+
+    model = nengo.Network()
+    with model:
+        a = nengo.Ensemble(N, D)
+        a.gain = gain
+        a.bias = bias
+
+    with Simulator(model) as sim:
+        assert np.allclose(gain, sim.data[a].gain)
+        assert np.allclose(bias, sim.data[a].bias)
+
+
+def test_simulation_data(Simulator, seed):
+    rng = np.random.RandomState(seed)
+    N = 17
+    d = 2
+
+    gain = rng.uniform(low=0.2, high=5, size=N)
+    bias = rng.uniform(low=0.2, high=1, size=N)
+    enc = rng.uniform(-1, 1, size=(N, d))
+    enc /= np.linalg.norm(enc, axis=1)[:, None]
+
+    model = nengo.Network()
+    with model:
+        u = nengo.Node([0] * d)
+        a = nengo.Ensemble(N, d, gain=gain, bias=bias, encoders=enc, radius=3)
+        b = nengo.Ensemble(N, d, gain=gain, bias=bias, encoders=enc * 2,
+                           radius=3)
+        b.normalize_encoders = False
+        nengo.Connection(u, a)
+        conn = nengo.Connection(
+            a.neurons, b, transform=rng.uniform(-1, 1, size=(d, N)))
+
+    with Simulator(model) as sim:
+        # check gain/bias
+        assert np.allclose(gain, sim.data[a].gain)
+        assert np.allclose(bias, sim.data[a].bias)
+
+        # check max_rates/intercepts
+        # max_rates, intercepts = a.neuron_type.max_rates_intercepts(
+        #     gain, bias)
+        # assert np.allclose(max_rates, sim.data[a].max_rates)
+        # assert np.allclose(intercepts, sim.data[a].intercepts)
+
+        # check encoders/scaled_encoders
+        assert np.allclose(enc, sim.data[a].encoders)
+        assert np.allclose(enc * gain[:, None] / a.radius,
+                           sim.data[a].scaled_encoders)
+
+        # make sure that the inferences still work with non-normalized encoders
+        if nengo.version.version_info >= (2, 4, 0):
+            assert np.allclose(enc * 2, sim.data[b].encoders)
+            assert np.allclose(gain, sim.data[b].gain)
+            assert np.allclose(bias, sim.data[b].bias)
+            assert np.allclose(enc * 2 * gain[:, None] / b.radius,
+                               sim.data[b].scaled_encoders)
+
+        # check connection weights
+        assert np.allclose(conn.transform, sim.data[conn].weights)
+
+        # check that values can be updated live
+        sig = sim.model.sig[a]['encoders']
+        tensor_sig = sim.tensor_graph.sig_map[sig]
+        base = sim.tensor_graph.base_vars[
+            list(sim.tensor_graph.base_arrays_init.keys()).index(
+                tensor_sig.key)]
+        op = tf.assign(base, tf.ones_like(base))
+        sim.sess.run(op)
+
+        assert np.allclose(sim.data[a].scaled_encoders, 1)
+        assert np.allclose(sim.data[a].gain, np.sqrt(2) * a.radius)
+        assert np.allclose(sim.data[a].encoders, 1 / np.sqrt(2))
+
+    # reverts back to init after simulator close, and warns
+    with pytest.warns(UserWarning):
+        assert np.allclose(sim.data[a].encoders, enc)
+
+    with pytest.raises(ValidationError):
+        sim.data[nengo.Ensemble(10, 1, add_to_container=False)]

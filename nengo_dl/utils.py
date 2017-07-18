@@ -16,17 +16,8 @@ from tensorflow.python.framework.ops import get_gradient_function
 
 logger = logging.getLogger(__name__)
 
-if sys.version_info[:2] < (3, 3):
-
-    def print_and_flush(*args, **kwargs):
-        print(*args, **kwargs)
-        file = kwargs.get('file', sys.stdout)
-        file.flush()
-
-else:
-
-    def print_and_flush(*args, **kwargs):
-        print(*args, flush=True, **kwargs)
+if sys.version_info < (3, 4):
+    from backports.print_function import print_ as print
 
 
 def sanitize_name(name):
@@ -240,7 +231,7 @@ class ProgressBar(object):
         self.start_time = time.time()
         self.progress = -1
 
-        print_and_flush("[%s] ETA: unknown" % (" " * self.width), end="")
+        print("[%s] ETA: unknown" % (" " * self.width), end="", flush=True)
 
     def stop(self):
         """Stop the progress tracker.
@@ -283,7 +274,7 @@ class ProgressBar(object):
         if msg is not None or self.label is not None:
             line += " (%s)" % self.label if msg is None else msg
 
-        print_and_flush(line, end="")
+        print(line, end="", flush=True)
 
         if self.curr_step == self.max_steps:
             self.stop()
@@ -357,16 +348,28 @@ def configure_settings(**kwargs):
     ----------
     trainable : bool or None
         Adds a parameter to Nengo Ensembles/Connections/Networks that controls
+<<<<<<< HEAD
         whether or not they will be optimized by :meth:`.Simulator.train``.
+=======
+        whether or not they will be optimized by :meth:`.Simulator.train`.
+>>>>>>> master
         Passing ``None`` will use the default ``nengo_dl`` trainable settings,
         or True/False will override the default for all objects.  In either
         case trainability can be further configured on a per-object basis (e.g.
         ``net.config[my_ensemble].trainable = True``.  See `the documentation
+<<<<<<< HEAD
         <https://nengo.github.io/nengo_dl/training.html#choosing-which-elements-to-optimize>`_
         for more details.
     planner : graph planning algorithm
         Pass one of the `graph planners
         <https://nengo.github.io/nengo_dl/graph_optimizer.html>`_ to change the
+=======
+        <http://www.nengo.ai/nengo_dl/training.html#choosing-which-elements-to-optimize>`_
+        for more details.
+    planner : graph planning algorithm
+        Pass one of the `graph planners
+        <http://www.nengo.ai/nengo_dl/graph_optimizer.html>`_ to change the
+>>>>>>> master
         default planner.
     """
 
@@ -375,8 +378,13 @@ def configure_settings(**kwargs):
         config = Network.context[0].config
     else:
         raise NetworkContextError(
+<<<<<<< HEAD
             "``configure_settings`` must be called within a Network context "
             "(``with nengo.Network(): ...``)")
+=======
+            "`configure_settings` must be called within a Network context "
+            "(`with nengo.Network(): ...`)")
+>>>>>>> master
 
     try:
         params = config[Network]
@@ -385,10 +393,13 @@ def configure_settings(**kwargs):
         params = config[Network]
 
     for attr, val in kwargs.items():
+<<<<<<< HEAD
         # TODO: we could prefix attr with "nengo_dl" or something if we're
         # worried about conflicts (but since Networks aren't even configurable
         # by default I'm not too concerned)
 
+=======
+>>>>>>> master
         if attr == "trainable":
             for obj in (Ensemble, Connection, ensemble.Neurons, Network):
                 try:

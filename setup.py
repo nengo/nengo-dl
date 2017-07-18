@@ -2,6 +2,7 @@
 import io
 import runpy
 import os
+import sys
 
 try:
     from setuptools import find_packages, setup
@@ -11,17 +12,23 @@ except ImportError:
         "follow the instructions at "
         "https://pip.pypa.io/en/stable/installing/#installing-with-get-pip-py")
 
-# check if tensorflow-gpu is installed (so that we don't force tensorflow to
-# be installed if tensorflow-gpu is already there)
-try:
-    from tensorflow.python.client import device_lib  # noqa: E402
+if "bdist_wheel" in sys.argv:
+    # when building wheels we have to pick a requirement ahead of time (can't
+    # check it at install time). so we'll go with tensorflow (non-gpu), since
+    # that is the safer option
+    tf_req = "tensorflow"
+else:
+    # check if tensorflow-gpu is installed (so that we don't force tensorflow
+    # to be installed if tensorflow-gpu is already there)
+    try:
+        from tensorflow.python.client import device_lib  # noqa: E402
 
-    if not any(["gpu" in x.name for x in device_lib.list_local_devices()]):
-        raise ImportError()
+        if not any(["gpu" in x.name for x in device_lib.list_local_devices()]):
+            raise ImportError()
 
-    tf_req = "tensorflow-gpu>=1.2.0"
-except ImportError:
-    tf_req = "tensorflow>=1.2.0"
+        tf_req = "tensorflow-gpu"
+    except ImportError:
+        tf_req = "tensorflow"
 
 
 def read(*filenames, **kwargs):
@@ -50,7 +57,9 @@ setup(
     license="Free for non-commercial use",
     description="Deep learning integration for Nengo",
     long_description=read('README.rst', 'CHANGES.rst'),
-    install_requires=["nengo>=2.3.1", "numpy>=1.11", tf_req],
+    install_requires=["nengo>=2.3.1", "numpy>=1.11", "%s>=1.2.0" % tf_req,
+                      "backports.tempfile;python_version<'3.4'",
+                      "backports.print_function;python_version<'3.4'"],
     entry_points={"nengo.backends":
                   ["dl = nengo_dl:Simulator"]},
     classifiers=['Development Status :: 4 - Beta',

@@ -13,17 +13,21 @@ def test_custom_builder():
 
     ops = (TestOp(),)
 
+    # error if no builder registered
     with pytest.raises(BuildError):
-        Builder.pre_build(ops, None, None)
+        Builder.pre_build(ops, None, None, None)
 
+    # error if no pre-built object
     with pytest.raises(BuildError):
-        Builder.build(ops, None)
+        Builder.build(ops, None, {})
 
+    # warning if builder doesn't subclass OpBuilder
     with pytest.warns(UserWarning):
         @Builder.register(TestOp)
         class TestOpBuilder0:
             pass
 
+    # warning when overwriting a registered builder
     with pytest.warns(UserWarning):
         @Builder.register(TestOp)
         class TestOpBuilder(OpBuilder):
@@ -39,9 +43,10 @@ def test_custom_builder():
 
                 return 0, 1
 
-    Builder.pre_build(ops, None, True)
+    op_builds = {}
+    Builder.pre_build(ops, None, True, op_builds)
 
-    result = Builder.build(ops, None)
+    result = Builder.build(ops, None, op_builds)
 
     assert len(result) == 2
     assert result[0] == 0
