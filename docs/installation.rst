@@ -6,7 +6,7 @@ Requirements
 - ``python 2.7`` or ``python >= 3.4``
 - ``numpy >= 1.11.0``
 - ``nengo >= 2.5.0``
-- ``tensorflow >= 1.2.0``
+- ``tensorflow >= 1.3.0``
 
 Installing NengoDL
 ------------------

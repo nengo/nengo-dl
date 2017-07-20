@@ -28,6 +28,7 @@ Release History
   be used to get the values of object parameters after training, e.g.
   ``sim.data[my_conn].weights``.
 - Increased minimum Nengo version to 2.5.0.
+- Increased minimum TensorFlow version to 1.3.0.
 
 
 0.5.0 (July 11, 2017)

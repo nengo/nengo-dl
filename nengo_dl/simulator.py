@@ -178,10 +178,8 @@ class Simulator(object):
         # start session
         # note: we need to allow soft placement when using tf.while_loop,
         # because tensorflow pins loop variables to the CPU
-        # TODO: switch allow_soft_placement to False once tensorflow
-        # adds the RefExit GPU kernel
         config = tf.ConfigProto(
-            allow_soft_placement=True,
+            allow_soft_placement=False,
             log_device_placement=False,
         )
         # TODO: XLA compiling doesn't seem to provide any benefit at the
@@ -734,15 +732,6 @@ class Simulator(object):
         """
 
         if not self.closed:
-            # TODO: this is a temporary fix until the permanent fix is
-            # released in tensorflow (see
-            # https://github.com/tensorflow/tensorflow/pull/11276)
-            from tensorflow.python.layers import base
-            try:
-                del base.PER_GRAPH_LAYER_NAME_UIDS[self.tensor_graph.graph]
-            except KeyError:
-                pass
-
             # note: we use getattr in case it crashes before the object is
             # created
             if getattr(self, "sess", None) is not None:
