@@ -316,7 +316,7 @@ def test_loss(Simulator):
 
         assert np.allclose(sim.loss({inp: np.ones((4, n_steps, 1))},
                                     {p: np.zeros((4, n_steps, 1))},
-                                    objective=lambda x, y: tf.constant(2)),
+                                    objective=lambda x, y: tf.constant(2.0)),
                            2)
 
         with pytest.raises(ValidationError):
