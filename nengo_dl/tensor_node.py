@@ -26,15 +26,6 @@ class TensorFuncParam(Parameter):
 
         return output
 
-    def validate(self, node, func):
-        # TODO: this method is just here for compatibility with nengo<2.4.1,
-        # can be removed if we update requirements
-
-        super(TensorFuncParam, self).validate(node, func)
-
-        if node.size_out is None:
-            node.size_out = self.check_size_out(node, func)
-
     def check_size_out(self, node, func):
         if not callable(func):
             raise ValidationError("TensorNode output must be a function",

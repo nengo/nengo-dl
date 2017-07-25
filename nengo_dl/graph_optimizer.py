@@ -10,13 +10,7 @@ from nengo.builder.processes import SimProcess
 from nengo.exceptions import BuildError
 from nengo.utils.compat import iteritems
 from nengo.utils.graphs import toposort
-
-try:
-    from nengo.utils.simulator import operator_dependency_graph
-except ImportError:
-    # TODO: remove this and bump nengo version once there is a release
-    from nengo.utils.simulator import (
-        operator_depencency_graph as operator_dependency_graph)
+from nengo.utils.simulator import operator_dependency_graph
 import numpy as np
 
 from nengo_dl import (signals, process_builders, builder, tensor_node,

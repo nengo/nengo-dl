@@ -34,7 +34,7 @@ env:
     - PYTHON_VERSION="3.6"
     - NUMPY_VERSION="numpy==1.11.0"
       TF_VERSION="tensorflow==1.2.0"
-      NENGO_VERSION="nengo==2.3.1"
+      NENGO_VERSION="nengo==2.5.0"
     - NENGO_VERSION="git+https://github.com/nengo/nengo.git"
 
 # setup xvfb so we can test examples with matplotlib

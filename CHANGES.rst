@@ -27,6 +27,7 @@ Release History
   rather than initial values from the build process.  That means that it can
   be used to get the values of object parameters after training, e.g.
   ``sim.data[my_conn].weights``.
+- Increased minimum Nengo version to 2.5.0.
 
 
 0.5.0 (July 11, 2017)

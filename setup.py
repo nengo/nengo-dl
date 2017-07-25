@@ -57,7 +57,7 @@ setup(
     license="Free for non-commercial use",
     description="Deep learning integration for Nengo",
     long_description=read('README.rst', 'CHANGES.rst'),
-    install_requires=["nengo>=2.3.1", "numpy>=1.11", "%s>=1.2.0" % tf_req,
+    install_requires=["nengo>=2.5.0", "numpy>=1.11", "%s>=1.2.0" % tf_req,
                       "backports.tempfile;python_version<'3.4'",
                       "backports.print_function;python_version<'3.4'"],
     entry_points={"nengo.backends":

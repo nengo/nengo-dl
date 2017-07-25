@@ -83,10 +83,6 @@ class Simulator(object):
          "number of times (see "
          "tests/test_nengo_tests.py:test_unconnected_node"),
 
-        # TODO: put this test back in when we bump nengo version
-        ("nengo/utils/tests/test_ensemble.py:test_tuning_curves[*",
-         "this test is not compatible with numpy>=1.13"),
-
         ("nengo/tests/test_synapses.py:test_alpha",
          "need to set looser tolerances due to float32 implementation (see "
          "tests/test_processes.py:test_alpha"),
@@ -1040,12 +1036,8 @@ class SimulationData(object):
             encoders = obj.radius * scaled_encoders / gain[:, None]
 
             # figure out max_rates/intercepts from neuron model
-            # TODO: temporarily disabled until we have a nengo release with
-            # this feature (https://github.com/nengo/nengo/pull/1334)
-            # max_rates, intercepts = (
-            #     obj.neuron_type.max_rates_intercepts(gain, bias))
-            max_rates = data.max_rates
-            intercepts = data.intercepts
+            max_rates, intercepts = (
+                obj.neuron_type.max_rates_intercepts(gain, bias))
 
             data = BuiltEnsemble(data.eval_points, encoders, intercepts,
                                  max_rates, scaled_encoders, gain, bias)
