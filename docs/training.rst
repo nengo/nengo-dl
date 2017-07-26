@@ -17,7 +17,7 @@ important features of NengoDL.  This functionality is accessed via the
 When the ``Simulator`` is first constructed, all the parameters in the model
 (e.g., encoders, decoders, connection weights, biases) are initialized based
 on the functions/distributions specified during model construction (see the
-`Nengo documentation <https://pythonhosted.org/nengo/>`_ for more detail on
+`Nengo documentation <http://www.nengo.ai/nengo/>`_ for more detail on
 how that works).  What the :meth:`.Simulator.train` method does is then
 further optimize those parameters based on some inputs and desired
 outputs.  We'll go through each of those components in more detail
@@ -200,7 +200,7 @@ with each other, likely resulting in unintended effects.  So NengoDL will
 assume that those elements should not be optimized.
 
 Any of these default behaviours can be overriden using `Nengo's config system
-<https://pythonhosted.org/nengo/config.html>`_.  Specifically, setting the
+<http://www.nengo.ai/nengo/config.html>`_.  Specifically, setting the
 ``trainable`` config attribute for an object will control whether or not it
 will be optimized.
 

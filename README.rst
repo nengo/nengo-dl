@@ -18,7 +18,7 @@
 NengoDL: Deep learning integration for Nengo
 ********************************************
 
-NengoDL is a simulator for `Nengo <https://pythonhosted.org/nengo/>`_ models.
+NengoDL is a simulator for `Nengo <http://www.nengo.ai/nengo/>`_ models.
 That means it takes a Nengo network as input, and allows the user to simulate
 that network using some underlying computational framework (in this case,
 `TensorFlow <https://www.tensorflow.org/>`_).

@@ -19,7 +19,7 @@ To install NengoDL, we recommend using ``pip``:
 ``pip`` will do its best to install all of NengoDL's requirements when it
 installs NengoDL.  However, if anything goes wrong during this process you
 can install the requirements manually.  See the
-`Nengo documentation <https://pythonhosted.org/nengo/getting_started.html>`_
+`Nengo documentation <http://www.nengo.ai/download.html>`_
 for instructions on installing ``numpy`` and ``nengo``, and the ``tensorflow``
 installation instructions below.
 
