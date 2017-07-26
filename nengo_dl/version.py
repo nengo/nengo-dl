@@ -5,7 +5,11 @@ represents a release version. Commits for which the version doesn't have
 """
 
 name = "nengo_dl"
+<<<<<<< HEAD
+version_info = (0, 5, 0)  # (major, minor, patch)
+=======
 version_info = (0, 5, 1)  # (major, minor, patch)
+>>>>>>> master
 dev = True
 
 version = "{v}{dev}".format(v='.'.join(str(v) for v in version_info),

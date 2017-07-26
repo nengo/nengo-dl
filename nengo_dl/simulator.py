@@ -101,6 +101,11 @@ class Simulator(object):
         self.unroll = unroll_simulation
         self.minibatch_size = 1 if minibatch_size is None else minibatch_size
 
+<<<<<<< HEAD
+        # TODO: allow the simulator to be called flexibly with/without
+        # minibatching
+=======
+>>>>>>> master
         # TODO: multi-GPU support
 
         # build model (uses default nengo builder)

@@ -46,7 +46,11 @@ def _test_variance_scaling(dist, scale, mode, seed):
 
     std = np.sqrt(scale)
 
+<<<<<<< HEAD
+    samples = dist.sample(shape[1], shape[0])
+=======
     samples = dist.sample(shape[0], shape[1], rng=rng)
+>>>>>>> master
 
     assert samples.shape == shape
     assert np.allclose(np.mean(samples), 0.0, atol=5e-4)

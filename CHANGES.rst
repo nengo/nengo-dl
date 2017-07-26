@@ -18,7 +18,11 @@ Release History
    - Removed
    - Fixed
 
+<<<<<<< HEAD
+0.5.0 (unreleased)
+=======
 0.5.1 (unreleased)
+>>>>>>> master
 ------------------
 
 **Changed**
@@ -48,9 +52,12 @@ Release History
   simulation/training speed
 - The default graph planner can now be modified by setting the ``planner``
   attribute on the top-level Network config
+<<<<<<< HEAD
+=======
 - Added TensorFlow implementation for general linear synapses
 - Added ``backports.tempfile`` and ``backports.print_function`` requirement for
   Python 2.7 systems
+>>>>>>> master
 
 **Changed**
 
@@ -62,11 +69,16 @@ Release History
   the more general ``nengo_dl.configure_settings(trainable=x)``.  This has
   resulted in some small changes to how trainability is controlled within
   subnetworks; see the `updated documentation
+<<<<<<< HEAD
+  <https://nengo.github.io/nengo_dl/training.html#choosing-which-elements-to-optimize>`_
+  for details.
+=======
   <http://www.nengo.ai/nengo_dl/training.html#choosing-which-elements-to-optimize>`_
   for details.
 - Calling ``Simulator.train``/``Simulator.loss`` no longer resets the internal
   state of the simulation (so they can be safely intermixed with calls to
   ``Simulator.run``)
+>>>>>>> master
 
 **Deprecated**
 
@@ -86,11 +98,14 @@ Release History
 - Correctly handle probes that aren't connected to any ops
 - Swapped ``fan_in``/``fan_out`` in ``dists.VarianceScaling`` to align with
   the standard definitions
+<<<<<<< HEAD
+=======
 - Temporary patch to fix memory leak in TensorFlow (see 
   `#11273 <https://github.com/tensorflow/tensorflow/issues/11273>`_)
 - Fixed bug related to nodes that had matching output functions but different
   size_out
 - Fixed bug related to probes that do not contain any data yet
+>>>>>>> master
 
 0.4.0 (June 8, 2017)
 --------------------

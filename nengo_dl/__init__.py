@@ -36,16 +36,26 @@ elif nengo_version > latest_nengo_version:  # pragma: no cover
         (nengo_version, latest_nengo_version))
 
 # need to explicitly import these to trigger the builder registration
+<<<<<<< HEAD
+from nengo_dl import (  # noqa: F401
+    op_builders, neurons, processes, learning_rules, dists)
+=======
 from nengo_dl import (
     op_builders, neuron_builders, process_builders, learning_rule_builders)
+>>>>>>> master
 
 # import into top-level namespace
 from nengo_dl import dists
 from nengo_dl.simulator import Simulator
 from nengo_dl.tensor_node import (
     TensorNode, tensor_layer, reshaped)
+<<<<<<< HEAD
+from nengo_dl.utils import configure_settings  # noqa: F401
+from nengo_dl.neurons import SoftLIFRate  # noqa: F401
+=======
 from nengo_dl.utils import configure_settings
 from nengo_dl.neurons import SoftLIFRate
+>>>>>>> master
 
 # apply tensorflow monkey patches
 from nengo_dl import tensorflow_patch

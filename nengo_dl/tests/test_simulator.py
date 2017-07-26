@@ -10,7 +10,11 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import configure_settings, tensor_layer, dists, DATA_DIR
+<<<<<<< HEAD
+from nengo_dl.simulator import ProbeDict
+=======
 from nengo_dl.simulator import SimulationData
+>>>>>>> master
 
 
 def test_persistent_state(Simulator, seed):
@@ -588,12 +592,15 @@ def test_probe_data():
     assert np.all(data[a][:, 0] == 0)
     assert np.all(data[a][:, 1] == 1)
 
+<<<<<<< HEAD
+=======
     data.minibatched = False
     assert data[b].shape == (2, 3)
     assert np.all(data[b][1] == 0)
     assert np.all(data[b][0] == 1)
 
 
+>>>>>>> master
 @pytest.mark.parametrize(
     "pre_val, post_val", itertools.product(
         [0, lambda t: 0, nengo.processes.WhiteNoise(seed=0)],

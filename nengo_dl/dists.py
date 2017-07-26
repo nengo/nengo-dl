@@ -113,8 +113,11 @@ class VarianceScaling(Distribution):
             dimension enumerates the dimensions of the process.
         """
 
+<<<<<<< HEAD
+=======
         if rng is None:
             rng = np.random
+>>>>>>> master
         fan_out = n
         fan_in = 1 if d is None else d
         scale = self.scale

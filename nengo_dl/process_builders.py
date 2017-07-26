@@ -130,6 +130,12 @@ class GenericProcessBuilder(object):
 
 class LowpassBuilder(object):
     """Build a group of :class:`~nengo:nengo.Lowpass` synapse operators."""
+<<<<<<< HEAD:nengo_dl/processes.py
+
+    def __init__(self, ops, signals):
+        # TODO: implement general linear filter (using queues?)
+=======
+>>>>>>> master:nengo_dl/process_builders.py
 
     def __init__(self, ops, signals):
         self.input_data = signals.combine([op.input for op in ops])

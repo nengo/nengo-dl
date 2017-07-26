@@ -543,6 +543,11 @@ class TensorGraph(object):
             for conn in net.connections:
                 # note: this doesn't include probe connections, since they
                 # aren't added to the network
+<<<<<<< HEAD
+                # TODO: should we disable training on connections to
+                # learning rules?
+=======
+>>>>>>> master
                 self.model.sig[conn]["weights"].trainable = get_trainable(
                     config, conn, network_trainable)
                 self.model.sig[conn]["weights"].minibatched = False
