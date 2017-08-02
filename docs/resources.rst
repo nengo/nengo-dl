@@ -1,7 +1,7 @@
 Additional resources
 ====================
 
-- `Nengo documentation <http://www.nengo.ai/>`_: If you are new to
+- `Nengo documentation <https://www.nengo.ai/>`_: If you are new to
   Nengo, you should start here.
 
 - `Nengo forums <https://forum.nengo.ai/>`_: To get help or ask questions about
