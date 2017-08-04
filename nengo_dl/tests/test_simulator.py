@@ -432,10 +432,10 @@ def test_save_load_params(Simulator, tmpdir):
         assert np.allclose(enc0, enc3)
 
 
-def test_model_passing(Simulator):
+def test_model_passing(Simulator, seed):
     # make sure that passing a built model to the Simulator works properly
 
-    with nengo.Network() as net:
+    with nengo.Network(seed=seed) as net:
         inp = nengo.Node([1])
         ens = nengo.Ensemble(20, 1)
         nengo.Connection(inp, ens)
