@@ -17,7 +17,6 @@ extensions = [
     'sphinx.ext.githubpages',
     'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
-    'sphinx.ext.todo',
     'sphinx.ext.viewcode',
     'numpydoc',
     'nengo.utils.docutils',
@@ -36,8 +35,6 @@ intersphinx_mapping = {
     'nengo': ('https://www.nengo.ai/nengo/', None),
 }
 
-# -- sphinx.ext.todo
-todo_include_todos = True
 # -- numpydoc config
 numpydoc_show_class_members = False
 
@@ -61,10 +58,6 @@ source_encoding = 'utf-8'
 master_doc = 'index'
 suppress_warnings = ['image.nonlocal_uri']
 
-# Need to include https Mathjax path for sphinx < v1.3
-mathjax_path = ("https://cdn.mathjax.org/mathjax/latest/MathJax.js"
-                "?config=TeX-AMS-MML_HTMLorMML")
-
 project = u'NengoDL'
 authors = u'Applied Brain Research'
 copyright = nengo_dl.__copyright__
@@ -81,7 +74,6 @@ html_static_path = ['_static']
 html_context = {
     'css_files': [os.path.join('_static', 'custom.css')],
 }
-html_use_smartypants = True
 htmlhelp_basename = 'Nengodoc'
 html_last_updated_fmt = ''  # Suppress 'Last updated on:' timestamp
 html_show_sphinx = False
