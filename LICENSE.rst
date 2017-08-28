@@ -49,7 +49,7 @@ To build the documentation, NengoDL uses:
   `BSD license <https://github.com/numpy/numpydoc/blob/master/LICENSE.txt>`__
 * `Pillow <https://python-pillow.org/>`_ - Used under
   `PIL license <https://github.com/python-pillow/Pillow/blob/master/LICENSE>`__
-* `Sphinx <http://sphinx-doc.org/>`_ - Used under
+* `Sphinx <http://www.sphinx-doc.org/en/stable/>`_ - Used under
   `BSD license <https://github.com/sphinx-doc/sphinx/blob/master/LICENSE>`__
 * `sphinx_rtd_theme <https://github.com/rtfd/sphinx_rtd_theme>`_ - Used under
   `MIT license <https://github.com/rtfd/sphinx_rtd_theme/blob/master/LICENSE>`__
@@ -66,7 +66,7 @@ To run the unit tests, NengoDL uses:
   `modified PSF license <http://matplotlib.org/users/license.html>`__
 * `nbval <https://github.com/computationalmodelling/nbval>`_ - Used under
   `BSD license <https://github.com/computationalmodelling/nbval/blob/master/LICENSE>`__
-* `pytest <http://pytest.org/latest/>`_ - Used under
-  `MIT license <http://docs.pytest.org/en/latest/license.html>`__
+* `pytest <https://docs.pytest.org/en/latest/>`_ - Used under
+  `MIT license <https://docs.pytest.org/en/latest/license.html>`__
 * `pytest-xdist <https://github.com/pytest-dev/pytest-xdist>`_ - Used under
   `MIT license <https://github.com/pytest-dev/pytest-xdist/blob/master/LICENSE>`__
