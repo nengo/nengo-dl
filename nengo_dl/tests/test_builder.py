@@ -32,14 +32,19 @@ def test_custom_builder():
         @Builder.register(TestOp)
         class TestOpBuilder(OpBuilder):
             pre_built = False
+            post_built = False
 
             def __init__(self, ops, signals):
                 self.pre_built = True
 
             def build_step(self, signals):
                 assert self.pre_built
+                assert not self.post_built
 
                 return 0, 1
+
+            def build_post(self, ops, signals, sess, rng):
+                self.post_built = True
 
     op_builds = {}
     Builder.pre_build(ops, None, op_builds)
@@ -49,3 +54,6 @@ def test_custom_builder():
     assert len(result) == 2
     assert result[0] == 0
     assert result[1] == 1
+
+    op_builds[ops].build_post(None, None, None, None)
+    assert op_builds[ops].post_built

@@ -79,6 +79,33 @@ def test_pre_build(Simulator):
         assert np.allclose(sim.data[p], [[2, 2, 2]])
 
 
+def test_post_build(Simulator):
+    class TestFunc:
+        def pre_build(self, size_in, size_out):
+            self.weights = tf.Variable(tf.zeros((size_in[1], size_out[1])))
+
+        def post_build(self, sess, rng):
+            init_op = tf.assign(self.weights, tf.ones((2, 3)))
+            sess.run(init_op)
+
+        def __call__(self, t, x):
+            return tf.matmul(x, tf.cast(self.weights, x.dtype))
+
+    with nengo.Network() as net:
+        inp = nengo.Node([1, 1])
+        test = TensorNode(TestFunc(), size_in=2, size_out=3)
+        nengo.Connection(inp, test, synapse=None)
+        p = nengo.Probe(test)
+
+    with Simulator(net) as sim:
+        sim.step()
+        assert np.allclose(sim.data[p], [[2, 2, 2]])
+
+        sim.reset()
+        sim.step()
+        assert np.allclose(sim.data[p], [[2, 2, 2]])
+
+
 def test_reshaped():
     x = tf.zeros((5, 12))
 
