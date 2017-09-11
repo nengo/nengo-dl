@@ -21,6 +21,11 @@ Release History
 0.5.2 (unreleased)
 ------------------
 
+**Changed**
+
+- Resetting the simulator now only rebuilds the necessary components in the
+  graph (as opposed to rebuilding the whole graph)
+
 0.5.1 (August 28, 2017)
 -----------------------
 
@@ -32,7 +37,6 @@ Release History
   ``sim.data[my_conn].weights``.
 - Increased minimum Nengo version to 2.5.0.
 - Increased minimum TensorFlow version to 1.3.0.
-
 
 0.5.0 (July 11, 2017)
 ---------------------
@@ -46,8 +50,8 @@ Release History
   that can run in spiking neurons
   <https://www.nengo.ai/nengo_dl/examples/spiking_mnist.html>`_
 - Added some distributions for weight initialization to ``nengo_dl.dists``
-- Added ``sim.train(..., profile=True)`` option to collect profiling information
-  during training
+- Added ``sim.train(..., profile=True)`` option to collect profiling
+  information during training
 - Added new methods to simplify the Nengo operation graph, resulting in faster
   simulation/training speed
 - The default graph planner can now be modified by setting the ``planner``

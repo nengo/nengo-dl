@@ -15,7 +15,7 @@ def test_custom_builder():
 
     # error if no builder registered
     with pytest.raises(BuildError):
-        Builder.pre_build(ops, None, None, None)
+        Builder.pre_build(ops, None, None)
 
     # error if no pre-built object
     with pytest.raises(BuildError):
@@ -32,11 +32,9 @@ def test_custom_builder():
         @Builder.register(TestOp)
         class TestOpBuilder(OpBuilder):
             pre_built = False
-            pass_rng = True
 
-            def __init__(self, ops, signals, rng=None):
+            def __init__(self, ops, signals):
                 self.pre_built = True
-                assert rng is not None
 
             def build_step(self, signals):
                 assert self.pre_built
@@ -44,7 +42,7 @@ def test_custom_builder():
                 return 0, 1
 
     op_builds = {}
-    Builder.pre_build(ops, None, True, op_builds)
+    Builder.pre_build(ops, None, op_builds)
 
     result = Builder.build(ops, None, op_builds)
 

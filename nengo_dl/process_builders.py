@@ -29,9 +29,8 @@ class SimProcessBuilder(OpBuilder):
     """
 
     TF_PROCESS_IMPL = (Lowpass, LinearFilter)
-    pass_rng = True
 
-    def __init__(self, ops, signals, rng):
+    def __init__(self, ops, signals):
         logger.debug("sim_process")
         logger.debug([op for op in ops])
         logger.debug("process %s", [op.process for op in ops])
@@ -53,10 +52,14 @@ class SimProcessBuilder(OpBuilder):
             elif isinstance(ops[0].process, LinearFilter):
                 self.built_process = LinearFilterBuilder(ops, signals)
         else:
-            self.built_process = GenericProcessBuilder(ops, signals, rng)
+            self.built_process = GenericProcessBuilder(ops, signals)
 
     def build_step(self, signals):
         self.built_process.build_step(signals)
+
+    def build_rng(self, ops, signals, rng):
+        if isinstance(self.built_process, GenericProcessBuilder):
+            self.built_process.build_rng(ops, signals, rng)
 
 
 class GenericProcessBuilder(object):
@@ -71,7 +74,7 @@ class GenericProcessBuilder(object):
     adding a custom Tensorflow implementation for their type instead.
     """
 
-    def __init__(self, ops, signals, rng):
+    def __init__(self, ops, signals):
         self.input_data = (None if ops[0].input is None else
                            signals.combine([op.input for op in ops]))
         self.output_data = signals.combine([op.output for op in ops])
@@ -80,12 +83,8 @@ class GenericProcessBuilder(object):
         self.prev_result = []
 
         # build the step function for each process
-        step_fs = [
-            [op.process.make_step(
-                op.input.shape if op.input is not None else (0,),
-                op.output.shape, signals.dt_val,
-                op.process.get_rng(rng))
-             for _ in range(signals.minibatch_size)] for op in ops]
+        self.step_fs = [[None for _ in range(signals.minibatch_size)]
+                        for _ in ops]
 
         # `merged_func` calls the step function for each process and
         # combines the result
@@ -102,7 +101,7 @@ class GenericProcessBuilder(object):
                 mini_out = []
                 for j in range(signals.minibatch_size):
                     x = [] if op.input is None else [func_input[..., j]]
-                    mini_out += [step_fs[i][j](*([time] + x))]
+                    mini_out += [self.step_fs[i][j](*([time] + x))]
                 func_output += [np.stack(mini_out, axis=-1)]
 
             return np.concatenate(func_output, axis=0)
@@ -126,6 +125,13 @@ class GenericProcessBuilder(object):
         self.prev_result = [result]
 
         signals.scatter(self.output_data, result, mode=self.mode)
+
+    def build_rng(self, ops, signals, rng):
+        for i, op in enumerate(ops):
+            for j in range(signals.minibatch_size):
+                self.step_fs[i][j] = op.process.make_step(
+                    op.input.shape if op.input is not None else (0,),
+                    op.output.shape, signals.dt_val, op.process.get_rng(rng))
 
 
 class LowpassBuilder(object):

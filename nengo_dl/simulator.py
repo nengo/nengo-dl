@@ -95,11 +95,12 @@ class Simulator(object):
     def __init__(self, network, dt=0.001, seed=None, model=None,
                  dtype=tf.float32, device=None, unroll_simulation=1,
                  minibatch_size=None, tensorboard=False):
-        self.closed = None
-        self.sess = None
-        self.tensorboard = tensorboard
+        self.closed = False
         self.unroll = unroll_simulation
         self.minibatch_size = 1 if minibatch_size is None else minibatch_size
+        self.data = SimulationData(self, minibatch_size is not None)
+        self.seed = (np.random.randint(np.iinfo(np.int32).max) if seed is None
+                     else seed)
 
         # TODO: multi-GPU support
 
@@ -120,14 +121,47 @@ class Simulator(object):
                   datetime.timedelta(seconds=int(time.time() - start)))
 
         # set up tensorflow graph plan
+        print("Optimizing graph", end="", flush=True)
+        start = time.time()
         self.tensor_graph = TensorGraph(
             self.model, self.dt, unroll_simulation, dtype, self.minibatch_size,
             device)
+        print("\rOptimization completed in %s " %
+              datetime.timedelta(seconds=int(time.time() - start)))
 
-        self.data = SimulationData(self, minibatch_size is not None)
+        # start session
+        config = tf.ConfigProto(
+            allow_soft_placement=False,
+            log_device_placement=False,
+        )
+        # TODO: XLA compiling doesn't seem to provide any benefit at the
+        # moment, revisit later after tensorflow has developed it further
+        # config.graph_options.optimizer_options.global_jit_level = (
+        #     tf.OptimizerOptions.ON_1)
 
-        if seed is None:
-            seed = np.random.randint(np.iinfo(np.int32).max)
+        self.sess = tf.Session(graph=self.tensor_graph.graph,
+                               config=config)
+
+        # construct graph
+        print("Constructing graph", end="", flush=True)
+        start = time.time()
+        self.tensor_graph.build()
+        print("\rConstruction completed in %s " %
+              datetime.timedelta(seconds=int(time.time() - start)))
+
+        # output graph description to tensorboard summary
+        if tensorboard:
+            directory = "%s/%s" % (DATA_DIR, self.model.toplevel.label)
+            if os.path.isdir(directory):
+                run_number = max(
+                    [int(x[4:]) for x in os.listdir(directory)
+                     if x.startswith("run")]) + 1
+            else:
+                run_number = 0
+            self.summary = tf.summary.FileWriter(
+                "%s/run_%d" % (directory, run_number),
+                graph=self.tensor_graph.graph)
+
         self.reset(seed=seed)
 
     def reset(self, seed=None):
@@ -143,60 +177,21 @@ class Simulator(object):
         if self.closed:
             raise SimulatorClosed("Cannot reset closed Simulator.")
 
-        # close old session
-        if self.sess is not None:
-            self.close()
+        self.input_funcs = {}
+        self.n_steps = 0
+        self.time = 0.0
 
+        # build the rng-based components of the graph (we do this here because
+        # seed can change each call to reset)
         if seed is not None:
             self.seed = seed
-
         self.rng = np.random.RandomState(self.seed)
         tf.set_random_seed(self.seed)
 
-        self.input_funcs = {}
-
-        # (re)build graph
-        print("Constructing graph", end="", flush=True)
-        start = time.time()
-        self.tensor_graph.build(self.rng)
-        print("\rConstruction completed in %s " %
-              datetime.timedelta(seconds=int(time.time() - start)))
-
-        # output graph description to tensorboard summary
-        if self.tensorboard:
-            directory = "%s/%s" % (DATA_DIR, self.model.toplevel.label)
-            if os.path.isdir(directory):
-                run_number = max(
-                    [int(x[4:]) for x in os.listdir(directory)
-                     if x.startswith("run")]) + 1
-            else:
-                run_number = 0
-            self.summary = tf.summary.FileWriter(
-                "%s/run_%d" % (directory, run_number),
-                graph=self.tensor_graph.graph)
-
-        # start session
-        # note: we need to allow soft placement when using tf.while_loop,
-        # because tensorflow pins loop variables to the CPU
-        config = tf.ConfigProto(
-            allow_soft_placement=False,
-            log_device_placement=False,
-        )
-        # TODO: XLA compiling doesn't seem to provide any benefit at the
-        # moment, revisit later after tensorflow has developed it further
-        # config.graph_options.optimizer_options.global_jit_level = (
-        #     tf.OptimizerOptions.ON_1)
-
-        self.sess = tf.Session(graph=self.tensor_graph.graph, config=config)
-        self.closed = False
+        self.tensor_graph.build_rng(self.rng)
 
         # initialize variables
         self.soft_reset(include_trainable=True, include_probes=True)
-
-        self.n_steps = 0
-        self.time = 0.0
-        self.final_bases = [
-            x[0] for x in self.tensor_graph.base_arrays_init.values()]
 
     def soft_reset(self, include_trainable=False, include_probes=False):
         """Resets the internal state of the simulation, but doesn't
@@ -539,14 +534,6 @@ class Simulator(object):
             self.tensor_graph.step_var: start,
             self.tensor_graph.stop_var: start + n_steps
         }
-
-        # fill in values for base variables from previous run
-        # TODO: remove this if we're sure we're not going back to the tensor
-        # approach
-        feed_dict.update(
-            {k: v for k, v in zip(
-                self.tensor_graph.base_vars,
-                self.final_bases) if k.op.type == "Placeholder"})
 
         # fill in input values
         tmp = self._generate_inputs(inputs, n_steps)

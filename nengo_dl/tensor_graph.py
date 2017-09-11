@@ -1,10 +1,7 @@
 from __future__ import print_function
 
 from collections import OrderedDict
-import datetime
 import logging
-import sys
-import time
 import warnings
 
 from nengo import Connection, Process
@@ -18,9 +15,6 @@ import tensorflow as tf
 from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node
 
 logger = logging.getLogger(__name__)
-
-if sys.version_info < (3, 4):
-    from backports.print_function import print_ as print
 
 
 class TensorGraph(object):
@@ -53,6 +47,7 @@ class TensorGraph(object):
         self.dtype = dtype
         self.minibatch_size = minibatch_size
         self.device = device
+        self.graph = tf.Graph()
 
         # find invariant inputs (nodes that don't receive any input other
         # than the simulation time). we'll compute these outside the simulation
@@ -81,9 +76,6 @@ class TensorGraph(object):
         self.mark_signals()
 
         logger.info("Initial plan length: %d", len(operators))
-
-        print("Optimizing graph", end="", flush=True)
-        start = time.time()
 
         # apply graph simplification functions
         old_operators = []
@@ -114,22 +106,12 @@ class TensorGraph(object):
             sigs, self.plan, float_type=dtype.as_numpy_dtype,
             minibatch_size=self.minibatch_size)
 
-        print("\rOptimization completed in %s " %
-              datetime.timedelta(seconds=int(time.time() - start)))
-
         logger.info("Optimized plan length: %d", len(self.plan))
         logger.info("Number of base arrays: %d", len(self.base_arrays_init))
 
-    def build(self, rng):
-        """Constructs a new graph to simulate the model.
+    def build(self):
+        """Constructs a new graph to simulate the model."""
 
-        Parameters
-        ----------
-        rng : :class:`~numpy:numpy.random.RandomState`
-            the Simulator's random number generator
-        """
-
-        self.graph = tf.Graph()
         self.signals = signals.SignalDict(self.sig_map, self.dtype,
                                           self.minibatch_size)
         self.target_phs = {}
@@ -191,7 +173,7 @@ class TensorGraph(object):
             for ops in self.plan:
                 with self.graph.name_scope(utils.sanitize_name(
                         builder.Builder.builders[type(ops[0])].__name__)):
-                    builder.Builder.pre_build(ops, self.signals, rng,
+                    builder.Builder.pre_build(ops, self.signals,
                                               self.op_builds)
 
             # build stage
@@ -476,6 +458,19 @@ class TensorGraph(object):
         self.losses[(objective, targets)] = loss
 
         return loss
+
+    def build_rng(self, rng):
+        """Rebuild operators in-place with a different random number
+        generator.
+
+        Parameters
+        ----------
+        rng : :class:`~numpy:numpy.random.RandomState`
+            seeded random number generator
+        """
+
+        for ops, built_ops in self.op_builds.items():
+            built_ops.build_rng(ops, self.signals, rng)
 
     def mark_signals(self):
         """Mark all the signals in ``self.model`` according to whether they

@@ -190,6 +190,9 @@ class SimTensorNodeBuilder(OpBuilder):
         self.func = op.func
 
         if hasattr(self.func, "pre_build"):
+            # TODO: pass `sess` to pre_build (to make it easier to load
+            # parameters)
+
             self.func.pre_build(
                 (signals.minibatch_size,) + self.src_data.shape,
                 (signals.minibatch_size,) + self.dst_data.shape)

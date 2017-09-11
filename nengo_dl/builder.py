@@ -14,7 +14,7 @@ class Builder(object):
     builders = {}
 
     @classmethod
-    def pre_build(cls, ops, signals, rng, op_builds):
+    def pre_build(cls, ops, signals, op_builds):
         """Setup step for build classes, in which they compute any of the
         values that are constant across simulation timesteps.
 
@@ -25,8 +25,6 @@ class Builder(object):
         signals : :class:`.signals.SignalDict`
             mapping from :class:`~nengo:nengo.builder.Signal` to
             ``tf.Tensor`` (updated by operations)
-        rng : :class:`~numpy:numpy.random.RandomState`
-            random number generator instance
         op_builds : dict of {tuple of :class:`~nengo.builder.Operator`, \
                              :class:~`.op_builders.OpBuilder`}
             ``pre_build`` will populate this dictionary with the OpBuilder
@@ -46,11 +44,7 @@ class Builder(object):
 
         BuildClass = cls.builders[type(ops[0])]
 
-        kwargs = {}
-        if BuildClass.pass_rng:
-            kwargs["rng"] = rng
-
-        op_builds[ops] = BuildClass(ops, signals, **kwargs)
+        op_builds[ops] = BuildClass(ops, signals)
 
     @classmethod
     def build(cls, ops, signals, op_builds):
@@ -119,15 +113,7 @@ class OpBuilder(object):  # pragma: no cover
     signals : :class:`.signals.SignalDict`
         mapping from :class:`~nengo:nengo.builder.Signal` to
         ``tf.Tensor`` (updated by operations)
-
-    Attributes
-    ----------
-    pass_rng : bool
-        set to True if this build class requires the simulation
-        random number generator to be passed to the constructor
     """
-
-    pass_rng = False
 
     def __init__(self, ops, signals):
         pass
@@ -151,3 +137,21 @@ class OpBuilder(object):  # pragma: no cover
             used
         """
         raise BuildError("OpBuilders must implement a `build_step` function")
+
+    def build_rng(self, ops, signals, rng):
+        """This function build any random aspects of the operator.
+
+        Note that this function may be called multiple times with new seeds,
+        so it should modify the graph in-place.
+
+        Parameters
+        ----------
+        ops : list of :class:`~nengo:nengo.builder.Operator`
+            the operator group to build into the model
+        signals : :class:`.signals.SignalDict`
+            mapping from :class:`~nengo:nengo.builder.Signal` to
+            ``tf.Tensor`` (updated by operations)
+        rng : :class:`~numpy:numpy.random.RandomState`
+            seeded random number generator
+        """
+        pass
