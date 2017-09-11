@@ -71,6 +71,24 @@ class TensorNode(Node):
     constant values or set up variables -- things that don't need to
     execute every simulation timestep.
 
+    .. code-block:: python
+
+        def pre_build(shape_in, shape_out):
+            print(shape_in)  # (minibatch_size, node.size_in)
+            print(shape_out)  # (minibatch_size, node.size_out)
+
+    If ``tensor_func`` has a ``post_build`` attribute, that function will be
+    called after the simulator is created and whenever it is reset.  This can
+    be used to set any random elements in the TensorNode or perform any
+    post-initialization setup required by the node (e.g., loading pretrained
+    weights).
+
+    .. code-block:: python
+
+        def post_build(sess, rng):
+            print(sess)  # the TensorFlow simulation session object
+            print(rng)  # random number generator (np.random.RandomState)
+
     Parameters
     ----------
     tensor_func : callable
@@ -190,9 +208,6 @@ class SimTensorNodeBuilder(OpBuilder):
         self.func = op.func
 
         if hasattr(self.func, "pre_build"):
-            # TODO: pass `sess` to pre_build (to make it easier to load
-            # parameters)
-
             self.func.pre_build(
                 (signals.minibatch_size,) + self.src_data.shape,
                 (signals.minibatch_size,) + self.dst_data.shape)
@@ -212,6 +227,10 @@ class SimTensorNodeBuilder(OpBuilder):
         output = tf.transpose(output, (1, 0))
 
         signals.scatter(self.dst_data, output)
+
+    def build_post(self, ops, signals, sess, rng):
+        if hasattr(self.func, "post_build"):
+            self.func.post_build(sess, rng)
 
 
 def reshaped(shape_in):

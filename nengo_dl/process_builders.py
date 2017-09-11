@@ -57,9 +57,9 @@ class SimProcessBuilder(OpBuilder):
     def build_step(self, signals):
         self.built_process.build_step(signals)
 
-    def build_rng(self, ops, signals, rng):
+    def build_post(self, ops, signals, sess, rng):
         if isinstance(self.built_process, GenericProcessBuilder):
-            self.built_process.build_rng(ops, signals, rng)
+            self.built_process.build_post(ops, signals, sess, rng)
 
 
 class GenericProcessBuilder(object):
@@ -126,7 +126,7 @@ class GenericProcessBuilder(object):
 
         signals.scatter(self.output_data, result, mode=self.mode)
 
-    def build_rng(self, ops, signals, rng):
+    def build_post(self, ops, signals, sess, rng):
         for i, op in enumerate(ops):
             for j in range(signals.minibatch_size):
                 self.step_fs[i][j] = op.process.make_step(

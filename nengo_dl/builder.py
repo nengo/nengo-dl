@@ -138,11 +138,14 @@ class OpBuilder(object):  # pragma: no cover
         """
         raise BuildError("OpBuilders must implement a `build_step` function")
 
-    def build_rng(self, ops, signals, rng):
-        """This function build any random aspects of the operator.
+    def build_post(self, ops, signals, sess, rng):
+        """This function will be called after the graph has been built and
+        session/variables initialized.
 
-        Note that this function may be called multiple times with new seeds,
-        so it should modify the graph in-place.
+        This should be used to build any random aspects of the operator.
+
+        Note that this function may be called multiple times per session, so
+        it should modify the graph in-place.
 
         Parameters
         ----------
@@ -151,6 +154,8 @@ class OpBuilder(object):  # pragma: no cover
         signals : :class:`.signals.SignalDict`
             mapping from :class:`~nengo:nengo.builder.Signal` to
             ``tf.Tensor`` (updated by operations)
+        sess : ``tf.Session``
+            the initialized simulation session
         rng : :class:`~numpy:numpy.random.RandomState`
             seeded random number generator
         """

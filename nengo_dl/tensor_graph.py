@@ -459,18 +459,24 @@ class TensorGraph(object):
 
         return loss
 
-    def build_rng(self, rng):
-        """Rebuild operators in-place with a different random number
-        generator.
+    def build_post(self, sess, rng):
+        """Executes post-build processes for operators (after the graph has
+        been constructed and session/variables initialized).
+
+        Note that unlike other build functions, this is called every time
+        the simulator is reset.
 
         Parameters
         ----------
+        sess : ``tf.Session``
+            the TensorFlow session for the simulator
         rng : :class:`~numpy:numpy.random.RandomState`
             seeded random number generator
         """
 
-        for ops, built_ops in self.op_builds.items():
-            built_ops.build_rng(ops, self.signals, rng)
+        with self.graph.as_default(), tf.device(self.device):
+            for ops, built_ops in self.op_builds.items():
+                built_ops.build_post(ops, self.signals, sess, rng)
 
     def mark_signals(self):
         """Mark all the signals in ``self.model`` according to whether they

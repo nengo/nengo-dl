@@ -129,19 +129,6 @@ class Simulator(object):
         print("\rOptimization completed in %s " %
               datetime.timedelta(seconds=int(time.time() - start)))
 
-        # start session
-        config = tf.ConfigProto(
-            allow_soft_placement=False,
-            log_device_placement=False,
-        )
-        # TODO: XLA compiling doesn't seem to provide any benefit at the
-        # moment, revisit later after tensorflow has developed it further
-        # config.graph_options.optimizer_options.global_jit_level = (
-        #     tf.OptimizerOptions.ON_1)
-
-        self.sess = tf.Session(graph=self.tensor_graph.graph,
-                               config=config)
-
         # construct graph
         print("Constructing graph", end="", flush=True)
         start = time.time()
@@ -162,6 +149,19 @@ class Simulator(object):
                 "%s/run_%d" % (directory, run_number),
                 graph=self.tensor_graph.graph)
 
+        # start session
+        config = tf.ConfigProto(
+            allow_soft_placement=False,
+            log_device_placement=False,
+        )
+        # TODO: XLA compiling doesn't seem to provide any benefit at the
+        # moment, revisit later after tensorflow has developed it further
+        # config.graph_options.optimizer_options.global_jit_level = (
+        #     tf.OptimizerOptions.ON_1)
+
+        self.sess = tf.Session(graph=self.tensor_graph.graph,
+                               config=config)
+
         self.reset(seed=seed)
 
     def reset(self, seed=None):
@@ -181,17 +181,17 @@ class Simulator(object):
         self.n_steps = 0
         self.time = 0.0
 
-        # build the rng-based components of the graph (we do this here because
+        # initialize variables
+        self.soft_reset(include_trainable=True, include_probes=True)
+
+        # execute post-build processes (we do this here because
         # seed can change each call to reset)
         if seed is not None:
             self.seed = seed
         self.rng = np.random.RandomState(self.seed)
         tf.set_random_seed(self.seed)
 
-        self.tensor_graph.build_rng(self.rng)
-
-        # initialize variables
-        self.soft_reset(include_trainable=True, include_probes=True)
+        self.tensor_graph.build_post(self.sess, self.rng)
 
     def soft_reset(self, include_trainable=False, include_probes=False):
         """Resets the internal state of the simulation, but doesn't

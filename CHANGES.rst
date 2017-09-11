@@ -21,6 +21,13 @@ Release History
 0.5.2 (unreleased)
 ------------------
 
+**Added**
+
+- TensorNode outputs can now define a ``post_build`` function that will be
+  executed after the simulation is initialized (see the `TensorNode
+  documentation for details
+  <https://www.nengo.ai/nengo_dl/tensor_node.html>`_).
+
 **Changed**
 
 - Resetting the simulator now only rebuilds the necessary components in the
