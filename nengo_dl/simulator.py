@@ -1,5 +1,6 @@
 from __future__ import print_function, division
 
+import collections
 import datetime
 import logging
 import os
@@ -935,7 +936,7 @@ class Simulator(object):
                     "%s data" % mode)
 
 
-class SimulationData(object):
+class SimulationData(collections.Mapping):
     """Data structure used to access simulation data from the model.
 
     The main use case for this is to access Probe data; for example,
@@ -1107,3 +1108,9 @@ class SimulationData(object):
             return obj, "encoders"
 
         return obj, attr
+
+    def __len__(self):
+        return len(self.sim.model.params)
+
+    def __iter__(self):
+        return iter(self.sim.model.params)

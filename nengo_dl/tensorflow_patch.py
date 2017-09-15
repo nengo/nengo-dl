@@ -59,7 +59,7 @@ def patch_state_grads():
         updates_grad = array_ops.gather(grad, indices)
 
         # TODO: the dynamic_stitch approach might be faster if there were
-        # a GPU dynamic_stitch implementation
+        # a GPU dynamic_stitch implementation. should be available in tf 1.4
         # grad_range = math_ops.range(grad.get_shape()[0].value)
         # var_grad = data_flow_ops.dynamic_stitch(
         #     [grad_range, indices],

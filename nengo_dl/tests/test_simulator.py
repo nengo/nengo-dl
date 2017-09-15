@@ -790,18 +790,31 @@ def test_simulation_data(Simulator, seed):
     enc = rng.uniform(-1, 1, size=(N, d))
     enc /= np.linalg.norm(enc, axis=1)[:, None]
 
-    model = nengo.Network()
-    with model:
+    with nengo.Network() as net:
         u = nengo.Node([0] * d)
         a = nengo.Ensemble(N, d, gain=gain, bias=bias, encoders=enc, radius=3)
         b = nengo.Ensemble(N, d, gain=gain, bias=bias, encoders=enc * 2,
                            radius=3)
         b.normalize_encoders = False
-        nengo.Connection(u, a)
+        conn0 = nengo.Connection(u, a)
         conn = nengo.Connection(
             a.neurons, b, transform=rng.uniform(-1, 1, size=(d, N)))
 
-    with Simulator(model) as sim:
+        p = nengo.Probe(b)
+
+    with Simulator(net) as sim:
+        # check dict functions
+        assert u in sim.data
+        assert a in sim.data
+        assert b in sim.data
+        assert conn in sim.data
+        assert conn0 in sim.data
+        assert p in sim.data
+        assert net in sim.data
+        assert len(sim.data) == 8  # 7 objects + probe connection
+        for k, k2 in zip(sim.data, sim.data.keys()):
+            assert k is k2
+
         # check gain/bias
         assert np.allclose(gain, sim.data[a].gain)
         assert np.allclose(bias, sim.data[a].bias)

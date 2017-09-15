@@ -33,6 +33,10 @@ Release History
 - Resetting the simulator now only rebuilds the necessary components in the
   graph (as opposed to rebuilding the whole graph)
 
+**Fixed**
+
+- ``sim.data`` now implements the full ``collections.Mapping`` interface
+
 0.5.1 (August 28, 2017)
 -----------------------
 
