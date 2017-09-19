@@ -36,6 +36,9 @@ Release History
 **Fixed**
 
 - ``sim.data`` now implements the full ``collections.Mapping`` interface
+- Fixed bug where signal order was non-deterministic for Networks containing
+  objects with duplicate names
+  (`#9 <https://github.com/nengo/nengo_dl/issues/9>`_)
 
 0.5.1 (August 28, 2017)
 -----------------------

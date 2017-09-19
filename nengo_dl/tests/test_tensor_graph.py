@@ -1,4 +1,5 @@
 import nengo
+import numpy as np
 import pytest
 import tensorflow as tf
 
@@ -237,3 +238,21 @@ def test_planner_config(config_planner):
     tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
 
     assert len(tg.plan) == (2 if config_planner else 1)
+
+
+def test_signal_order_deterministic(Simulator, seed):
+    with nengo.Network(seed=seed) as net:
+        inp = nengo.Node([0])
+        ens0 = nengo.Ensemble(10, 1, label="ens")
+        ens1 = nengo.Ensemble(10, 1, label="ens")
+        nengo.Connection(inp, ens0, synapse=None)
+        nengo.Connection(inp, ens1, synapse=None)
+
+    with Simulator(net, seed=seed) as sim1:
+        pass
+
+    with Simulator(net, seed=seed) as sim2:
+        for (k, v), (k2, v2) in zip(
+                sim1.tensor_graph.base_arrays_init.items(),
+                sim2.tensor_graph.base_arrays_init.items()):
+            assert np.allclose(v[0], v2[0])
