@@ -394,16 +394,15 @@ class TensorGraph(object):
 
             key = (optimizer, targets, objective)
             if key not in self.optimizers:
-                # create optimizer operator
-                opt_op = optimizer.minimize(
-                    loss, var_list=tf.trainable_variables())
+                with tf.variable_scope(optimizer.get_name()) as scope:
+                    # create optimizer operator
+                    opt_op = optimizer.minimize(
+                        loss, var_list=tf.trainable_variables())
 
-                # get any new variables created by optimizer (so they can be
-                # initialized)
-                opt_slots_init = tf.variables_initializer(
-                    [optimizer.get_slot(v, name)
-                     for v in tf.trainable_variables()
-                     for name in optimizer.get_slot_names()])
+                    # get any new variables created by the optimizer (so they
+                    # can be initialized)
+                    opt_slots_init = tf.variables_initializer(
+                        scope.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
 
                 self.optimizers[key] = (opt_op, opt_slots_init)
 

@@ -150,7 +150,7 @@ def test_train_ff(Simulator, neurons, seed):
         y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
 
         sim.train({inp_a: x[..., [0]], inp_b: x[..., [1]]}, {p: y},
-                  tf.train.MomentumOptimizer(1, 0.9), n_epochs=500)
+                  tf.train.AdamOptimizer(0.01), n_epochs=500)
 
         sim.check_gradients(atol=5e-5)
 
