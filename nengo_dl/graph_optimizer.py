@@ -1187,9 +1187,9 @@ def create_signals(sigs, plan, float_type, minibatch_size):
             sig_map[sig] = sig_map[sig.base].reshape(sig.shape)
         else:
             if sig.shape[1:] != sig.base.shape[1:]:
+                # TODO: support this?
                 raise NotImplementedError(
-                    "Slicing and reshaping the same signal is not "
-                    "supported")
+                    "Slicing on axes > 0 is not supported")
 
             # slice view
             assert np.all([x == 1 for x in sig.elemstrides[1:]])

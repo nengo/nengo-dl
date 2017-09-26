@@ -1,4 +1,11 @@
-from nengo.builder.learning_rules import SimBCM, SimOja, SimVoja
+from nengo import Ensemble, Lowpass
+from nengo.builder import Signal
+from nengo.builder import Builder as NengoBuilder
+from nengo.builder.learning_rules import SimBCM, SimOja, SimVoja, get_post_ens
+from nengo.builder.operator import Reset, DotInc, ElementwiseInc, Copy
+from nengo.connection import Neurons
+from nengo.exceptions import BuildError
+from nengo.learning_rules import PES
 import numpy as np
 import tensorflow as tf
 
@@ -126,3 +133,83 @@ class SimVojaBuilder(OpBuilder):
         update = alpha * (self.scale * post * pre - post * scaled_encoders)
 
         signals.scatter(self.output_data, update)
+
+
+@NengoBuilder.register(PES)
+def build_pes(model, pes, rule):
+    """Builds a :class:`~nengo:nengo.PES` object into a model.
+
+    A re-implementation of the Nengo PES rule builder, so that we can avoid
+    slicing the encoders.
+
+    See :func:`~nengo:nengo.builder.learning_rules.build_pes:`.
+
+    Parameters
+    ----------
+    model : :class:`~nengo:nengo.builder.Model`
+        The model to build into.
+    pes : :class:`~nengo:nengo.PES`
+        Learning rule type to build.
+    rule : :class:`~nengo:nengo.connection.LearningRule`
+        The learning rule object corresponding to the neuron type.
+    """
+
+    conn = rule.connection
+
+    # Create input error signal
+    error = Signal(np.zeros(rule.size_in), name="PES:error")
+    model.add_op(Reset(error))
+    model.sig[rule]['in'] = error  # error connection will attach here
+
+    acts = model.build(Lowpass(pes.pre_tau), model.sig[conn.pre_obj]['out'])
+
+    # Compute the correction, i.e. the scaled negative error
+    correction = Signal(np.zeros(error.shape), name="PES:correction")
+    model.add_op(Reset(correction))
+
+    # correction = -learning_rate * (dt / n_neurons) * error
+    n_neurons = (conn.pre_obj.n_neurons if isinstance(conn.pre_obj, Ensemble)
+                 else conn.pre_obj.size_in)
+    lr_sig = Signal(-pes.learning_rate * model.dt / n_neurons,
+                    name="PES:learning_rate")
+    model.add_op(ElementwiseInc(lr_sig, error, correction, tag="PES:correct"))
+
+    if not conn.is_decoded:
+        # NOTE: only this `if` block is changed from the regular nengo PES
+        # builder
+
+        post = get_post_ens(conn)
+        weights = model.sig[conn]['weights']
+        encoders = model.sig[post]['encoders']
+
+        if conn.post_obj is not conn.post:
+            # in order to avoid slicing encoders, we pad `correction` out to
+            # the full base dimensionality and then do the dotinc with the full
+            # encoder matrix
+            padded_correction = Signal(np.zeros(encoders.shape[1]))
+            model.add_op(Copy(correction, padded_correction,
+                              dst_slice=conn.post_slice))
+        else:
+            padded_correction = correction
+
+        # error = dot(encoders, correction)
+        local_error = Signal(np.zeros(weights.shape[0]), name="PES:encoded")
+        model.add_op(Reset(local_error))
+        model.add_op(DotInc(encoders, padded_correction, local_error,
+                            tag="PES:encode"))
+    elif isinstance(conn.pre_obj, (Ensemble, Neurons)):
+        local_error = correction
+    else:  # pragma: no cover
+        raise BuildError("'pre' object '%s' not suitable for PES learning"
+                         % conn.pre_obj)
+
+    # delta = local_error * activities
+    model.add_op(Reset(model.sig[rule]['delta']))
+    model.add_op(ElementwiseInc(
+        local_error.column(), acts.row(), model.sig[rule]['delta'],
+        tag="PES:Inc Delta"))
+
+    # expose these for probes
+    model.sig[rule]['error'] = error
+    model.sig[rule]['correction'] = correction
+    model.sig[rule]['activities'] = acts

@@ -41,6 +41,8 @@ Release History
   (`#9 <https://github.com/nengo/nengo_dl/issues/9>`_)
 - Fixed bug where non-slot optimizer variables were not initialized
   (`#11 <https://github.com/nengo/nengo_dl/issues/11>`_)
+- Implemented a modified PES builder in order to avoid slicing encoders on
+  non-decoded PES connections
 
 0.5.1 (August 28, 2017)
 -----------------------
