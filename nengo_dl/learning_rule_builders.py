@@ -1,3 +1,5 @@
+import warnings
+
 from nengo import Ensemble, Lowpass
 from nengo.builder import Signal
 from nengo.builder import Builder as NengoBuilder
@@ -135,7 +137,6 @@ class SimVojaBuilder(OpBuilder):
         signals.scatter(self.output_data, update)
 
 
-@NengoBuilder.register(PES)
 def build_pes(model, pes, rule):
     """Builds a :class:`~nengo:nengo.PES` object into a model.
 
@@ -213,3 +214,8 @@ def build_pes(model, pes, rule):
     model.sig[rule]['error'] = error
     model.sig[rule]['correction'] = correction
     model.sig[rule]['activities'] = acts
+
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=UserWarning)
+    NengoBuilder.register(PES)(build_pes)
