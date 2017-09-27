@@ -8,6 +8,7 @@ the
 `Jupyter documentation <http://jupyter-notebook.readthedocs.io/en/latest/>`_.
 
 .. toctree::
+    :maxdepth: 1
 
     examples/nef_init
     examples/pretrained_model
