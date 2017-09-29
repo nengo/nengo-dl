@@ -1,9 +1,6 @@
-"""
-Helper functions borrowed from TensorFlow tutorial code availabe at
-https://github.com/tensorflow/models/tree/master/tutorials/rnn/ptb
-"""
 import collections
 import os
+import re
 
 import numpy as np
 import tensorflow as tf
@@ -89,3 +86,9 @@ def ptb_producer(raw_data, batch_size, num_steps, name=None):
         y.reshape((batch_size, num_steps))
 
         yield x, y
+
+
+def has_punc(word):
+    regex = re.compile(r"[0-9]|[^\w]")
+    if regex.findall(word):
+        return True

@@ -5,16 +5,15 @@ This is a work-in-progress LSTM language model implemented with TensorFlow.
 The Penn Treebank data required to use this model can be obtained as follows:
 $ wget http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz
 $ tar xvf simple-examples.tgz
-To subsequently run the model:
-$ python ptb_lm.py simple-examples/data
 """
-
 import os
+import nengo.spa as spa
+
 import numpy as np
 import tensorflow as tf
 
 from tensorflow.contrib.seq2seq import sequence_loss
-from helpers import ptb_producer, ptb_raw_data
+from helpers import ptb_producer, ptb_raw_data, has_punc
 
 
 class PTBModel(object):
@@ -27,25 +26,29 @@ class PTBModel(object):
     Parameters
     ----------
     path : str
-        The absolute path to a directory containing the PTB text final_states
+        The absolute path to a directory containing the PTB text
     dim : int
         The dimensionality of the LSTM state vectors.
     """
     def __init__(self, path, dim):
-        self.ptb_data = ptb_raw_data(path)
-        self.word_to_id = self.ptb_data['word_to_id']
-        self.id_to_word = self.ptb_data['id_to_word']
-        self.vocab = self.ptb_data['vocabulary']
+        self.ptb = ptb_raw_data(path)
+        self.word_to_id = self.ptb['word_to_id']
+        self.id_to_word = self.ptb['id_to_word']
+        self.vocab = self.ptb['vocabulary']
         self.dim = dim
         self.producer = ptb_producer
+        self.build_graph()
 
     def _start_session(self):
+        '''Creates a session object for executing a built computation graph'''
         if not hasattr(self, 'sess'):
             self.sess = tf.Session(graph=self.graph)
             self.sess.run(self.initializer)
 
     def build_graph(self, max_grad=5):
-        '''Build the computation graph to be executed during model training
+        '''Builds the computation graph to be executed during model training
+        and inference.
+
         Parameters
         ----------
         max_grad : int (optional)
@@ -63,7 +66,7 @@ class PTBModel(object):
             n_steps = tf.shape(self.xs)[1]
 
             e_matrix = tf.Variable(tf.random_uniform([self.vocab, self.dim],
-                                   -1.0, 1.0))
+                                   -1.0, 1.0), name='embedding_matrix')
 
             embeddings = tf.nn.embedding_lookup(e_matrix, self.xs)
 
@@ -76,9 +79,9 @@ class PTBModel(object):
 
             output = tf.reshape(tf.concat(outputs, 1), [-1, self.dim])
 
-            b_softmax = tf.Variable(tf.zeros(self.vocab))
+            b_softmax = tf.Variable(tf.zeros(self.vocab), name='b_softmax')
             W_softmax = tf.Variable(tf.random_uniform([self.dim, self.vocab],
-                                    -0.1, 0.1))
+                                    -0.1, 0.1), name='W_softmax')
 
             logits = tf.nn.xw_plus_b(output, W_softmax, b_softmax)
             logits = tf.reshape(logits, [b_size, n_steps, self.vocab])
@@ -95,17 +98,16 @@ class PTBModel(object):
             grads = tf.gradients(self.cost, tvars)
             grads, _ = tf.clip_by_global_norm(grads, max_grad)
 
-            optimizer = tf.train.GradientDescentOptimizer(1.0)
+            optimizer = tf.train.GradientDescentOptimizer(1)
 
             self.train_op = optimizer.apply_gradients(zip(grads, tvars))
             self.initializer = tf.global_variables_initializer()
 
-    def train(self, rate, epochs, b_size=20, n_steps=15, log_int=200):
+    def train(self, rate, epochs, b_size=20, n_steps=15):
         '''Trains the model for some number of epochs using the PTB dataset.
 
         Parameters
         ----------
-
         rate : float
             The learning rate to use for weight updates
         epochs : int
@@ -115,18 +117,15 @@ class PTBModel(object):
         n_steps : int (optional)
             The number of time steps to unroll the network during training,
             since we are doing truncated backpropogation through time.
-        log_int : int (optional)
-            The batch interval for printing out info for perf monitoring
         '''
         self.total_cost = 0
         self.iterations = 0
 
         self._start_session()
-        interval = log_int * n_steps
         zeros = np.zeros((2, b_size, self.dim))
 
         for epoch in range(epochs):
-            data = self.producer(self.ptb_data['train_data'], b_size, n_steps)
+            data = self.producer(self.ptb['train_data'], b_size, n_steps)
 
             for words, labels in data:
                 feed_dict = {self.xs: words, self.ys: labels, self.init: zeros}
@@ -135,19 +134,12 @@ class PTBModel(object):
                 self.total_cost += cost
                 self.iterations += n_steps
 
-                if self.iterations % interval == 0:
-                    perplexity = np.exp(self.total_cost / self.iterations)
-                    print('Epoch: ', epoch)
-                    print('Iters: ', self.iterations)
-                    print('Train PPL: ', perplexity)
-                    print('')
-
-                    prompt = 'Financial markets rose in'
-                    print(self.predict(prompt=prompt, n_steps=5))
-                    print('')
+            print('Epoch: ', epoch)
+            print('Train PPL: ', np.exp(self.total_cost / self.iterations))
+            print('')
 
     def predict(self, prompt, n_steps):
-        '''Predict a continuation for some linguistic prompt
+        '''Predict a continuation for some linguistic prompt.
 
         Parameters
         ----------
@@ -186,6 +178,65 @@ class PTBModel(object):
 
         return words, predictions
 
+    def perplexity_eval(self, data, b_size=20, n_steps=15):
+        '''Compute the average perplexity on a PTB-style dataset
+
+        Parameters
+        ----------
+        data : list of int
+            A list of word ids constituting a text file.
+        b_size : int (optional)
+            The batch size to use during training
+        n_steps : int (optional)
+            The number of time steps to unroll the network during training,
+            since we are doing truncated backpropogation through time.
+        '''
+
+        state = np.zeros((2, b_size, self.dim))
+
+        total_cost = 0
+        iterations = 0
+
+        feed = self.producer(data, b_size, n_steps)
+
+        for words, labels in feed:
+            feed_dict = {self.xs: words, self.ys: labels, self.init: state}
+            cost, state = self.sess.run([self.cost, self.last_state],
+                                        feed_dict)
+            total_cost += cost
+            iterations += n_steps
+            perplexity = np.exp(total_cost / iterations)
+
+        return perplexity
+
+    def save_variables(self, var_names, filename):
+        '''Save a list of named variables in the model to a checkpoint file,
+        specifically for use in a Nengo DL tensornode. The naming logic here
+        is a hack for this specific use case (Fix TBD.)
+
+        Parameters
+        ----------
+        var_names : list of str
+            A list of variable names included in self.graph (errors otherwise)
+        b_size : str
+            The name of a checkpoint file to save the variables to
+        '''
+        with self.graph.as_default():
+            tn_scope = 'SimTensorNodeBuilder/'
+            all_vars = tf.global_variables()
+
+            var_list = {}
+
+            for n in var_names:
+                if 'rnn' in n:
+                    var_list[n] = [v for v in all_vars if n in v.name].pop()
+                else:
+                    var_list[tn_scope + n] = [v for v in all_vars
+                                              if n in v.name].pop()
+
+            saver = tf.train.Saver(var_list=var_list)
+            saver.save(self.sess, filename)
+
     def save(self, filename):
         '''Save the model to a checkpoint file'''
         with self.graph.as_default():
@@ -199,18 +250,27 @@ class PTBModel(object):
             saver = tf.train.Saver()
             saver.restore(self.sess, filename)
 
+    def build_spa_vocab(self, dim):
+        '''Build a spa Vocabulary using the model vocabulary'''
+        vocab = spa.Vocabulary(dim, max_similarity=1.0)
 
-path = os.path.join(os.getcwd(), 'simple-examples/data')
+        for word, idx in self.word_to_id.items():
+            if not has_punc(word):
+                vocab.parse(word.upper())
 
-b_size = 20
-n_steps = 15
-dim = 300
-rate = 1.0
+        return vocab
 
-model = PTBModel(path, dim)
-model.build_graph()
-model.train(rate=rate, epochs=2, b_size=b_size, n_steps=n_steps)
 
-model.save('ptb_model.ckpt')
+if __name__ == '__main__':
+    path = os.path.join(os.getcwd(), 'simple-examples/data')
 
-print(model.predict('Trading stopped in the afternoon because', n_steps=6))
+    b_size = 20
+    n_steps = 15
+    dim = 300
+    rate = 1.0
+
+    model = PTBModel(path, dim)
+    model.build_graph()
+    model.train(rate=rate, epochs=5, b_size=b_size, n_steps=n_steps)
+
+    model.save('ptb_model.ckpt')
