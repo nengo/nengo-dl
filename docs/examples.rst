@@ -12,3 +12,4 @@ the
     examples/nef_init
     examples/pretrained_model
     examples/spiking_mnist
+    examples/lstm_language_model
