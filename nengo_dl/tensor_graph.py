@@ -17,6 +17,17 @@ from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node
 logger = logging.getLogger(__name__)
 
 
+def with_self(func):
+    """A decorator that can be used to ensure that any ops created within the
+    wrapped method will be added to the TensorGraph object's graph."""
+
+    def func_with_self(self, *args, **kwargs):
+        with self.graph.as_default(), tf.device(self.device):
+            return func(self, *args, **kwargs)
+
+    return func_with_self
+
+
 class TensorGraph(object):
     """Manages the construction of the TensorFlow symbolic computation graph.
 
@@ -109,6 +120,7 @@ class TensorGraph(object):
         logger.info("Optimized plan length: %d", len(self.plan))
         logger.info("Number of base arrays: %d", len(self.base_arrays_init))
 
+    @with_self
     def build(self):
         """Constructs a new graph to simulate the model."""
 
@@ -118,76 +130,75 @@ class TensorGraph(object):
         self.losses = {}
         self.optimizers = {}
 
-        with self.graph.as_default(), tf.device(self.device):
-            # make sure indices are loaded for all probe signals (they won't
-            # have been loaded if this signal is only accessed as part of a
-            # larger block during the simulation)
-            for p in self.model.probes:
-                probe_sig = self.model.sig[p]["in"]
-                if probe_sig in self.sig_map:
-                    self.sig_map[probe_sig].load_indices()
+        # make sure indices are loaded for all probe signals (they won't
+        # have been loaded if this signal is only accessed as part of a
+        # larger block during the simulation)
+        for p in self.model.probes:
+            probe_sig = self.model.sig[p]["in"]
+            if probe_sig in self.sig_map:
+                self.sig_map[probe_sig].load_indices()
 
-            # create this constant once here so we don't end up creating a new
-            # dt constant in each operator
-            self.signals.dt = tf.constant(self.dt, self.dtype)
-            self.signals.dt_val = self.dt  # store the actual value as well
+        # create this constant once here so we don't end up creating a new
+        # dt constant in each operator
+        self.signals.dt = tf.constant(self.dt, self.dtype)
+        self.signals.dt_val = self.dt  # store the actual value as well
 
-            # create base arrays
-            self.base_vars = []
-            for k, (v, trainable) in self.base_arrays_init.items():
-                unique_idx = 0
-                duplicate = True
-                while duplicate:
-                    name = "%s_%s_%s_%s" % (
-                        v.dtype, "_".join(str(x) for x in v.shape), trainable,
-                        unique_idx)
+        # create base arrays
+        self.base_vars = []
+        for k, (v, trainable) in self.base_arrays_init.items():
+            unique_idx = 0
+            duplicate = True
+            while duplicate:
+                name = "%s_%s_%s_%s" % (
+                    v.dtype, "_".join(str(x) for x in v.shape), trainable,
+                    unique_idx)
 
-                    if any([name in x.name for x in (
-                            tf.trainable_variables() if trainable else
-                            tf.local_variables())]):
-                        unique_idx += 1
-                    else:
-                        duplicate = False
-
-                if trainable:
-                    with tf.variable_scope("trainable_vars", reuse=False):
-                        var = tf.get_variable(
-                            name, initializer=tf.constant_initializer(v),
-                            dtype=v.dtype, shape=v.shape, trainable=True)
+                if any([name in x.name for x in (
+                        tf.trainable_variables() if trainable else
+                        tf.local_variables())]):
+                    unique_idx += 1
                 else:
-                    with tf.variable_scope("local_vars", reuse=False):
-                        var = tf.get_local_variable(
-                            name, initializer=tf.constant_initializer(v),
-                            dtype=v.dtype, shape=v.shape, trainable=False)
+                    duplicate = False
 
-                self.base_vars += [var]
+            if trainable:
+                with tf.variable_scope("trainable_vars", reuse=False):
+                    var = tf.get_variable(
+                        name, initializer=tf.constant_initializer(v),
+                        dtype=v.dtype, shape=v.shape, trainable=True)
+            else:
+                with tf.variable_scope("local_vars", reuse=False):
+                    var = tf.get_local_variable(
+                        name, initializer=tf.constant_initializer(v),
+                        dtype=v.dtype, shape=v.shape, trainable=False)
 
-            logger.debug("created base arrays")
-            logger.debug([str(x) for x in self.base_vars])
+            self.base_vars += [var]
 
-            # set up invariant inputs
-            self.build_inputs()
+        logger.debug("created base arrays")
+        logger.debug([str(x) for x in self.base_vars])
 
-            # pre-build stage
-            self.op_builds = {}
-            for ops in self.plan:
-                with self.graph.name_scope(utils.sanitize_name(
-                        builder.Builder.builders[type(ops[0])].__name__)):
-                    builder.Builder.pre_build(ops, self.signals,
-                                              self.op_builds)
+        # set up invariant inputs
+        self.build_inputs()
 
-            # build stage
-            self.build_loop()
+        # pre-build stage
+        self.op_builds = {}
+        for ops in self.plan:
+            with self.graph.name_scope(utils.sanitize_name(
+                    builder.Builder.builders[type(ops[0])].__name__)):
+                builder.Builder.pre_build(ops, self.signals,
+                                          self.op_builds)
 
-            # ops for initializing variables (will be called by simulator)
-            self.trainable_init_op = tf.variables_initializer(
-                tf.trainable_variables())
-            self.local_init_op = tf.local_variables_initializer()
-            # note: the only non-trainable global variables should be those
-            # created inside TensorNodes
-            self.global_init_op = tf.variables_initializer(
-                [v for v in tf.global_variables()
-                 if v not in tf.trainable_variables()])
+        # build stage
+        self.build_loop()
+
+        # ops for initializing variables (will be called by simulator)
+        self.trainable_init_op = tf.variables_initializer(
+            tf.trainable_variables())
+        self.local_init_op = tf.local_variables_initializer()
+        # note: the only non-trainable global variables should be those
+        # created inside TensorNodes
+        self.global_init_op = tf.variables_initializer(
+            [v for v in tf.global_variables()
+             if v not in tf.trainable_variables()])
 
     def build_step(self):
         """Build the operators that execute a single simulation timestep
@@ -371,6 +382,7 @@ class TensorGraph(object):
                 self.invariant_ph[n] = tf.placeholder(
                     self.dtype, (None, n.size_out, self.minibatch_size))
 
+    @with_self
     def build_optimizer(self, optimizer, targets, objective):
         """Adds elements into the graph to execute the given optimizer.
 
@@ -387,27 +399,32 @@ class TensorGraph(object):
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
             that Probe (loss will be averaged across Probes).
+
+        Returns
+        -------
+        ``tf.Tensor``
+            operator implementing the given optimizer update
         """
 
-        with self.graph.as_default(), tf.device(self.device):
-            loss = self.build_loss(objective, targets)
+        loss = self.build_loss(objective, targets)
 
-            key = (optimizer, targets, objective)
-            if key not in self.optimizers:
-                with tf.variable_scope(optimizer.get_name()) as scope:
-                    # create optimizer operator
-                    opt_op = optimizer.minimize(
-                        loss, var_list=tf.trainable_variables())
+        key = (optimizer, targets, objective)
+        if key not in self.optimizers:
+            with tf.variable_scope(optimizer.get_name()) as scope:
+                # create optimizer operator
+                opt_op = optimizer.minimize(
+                    loss, var_list=tf.trainable_variables())
 
-                    # get any new variables created by the optimizer (so they
-                    # can be initialized)
-                    opt_slots_init = tf.variables_initializer(
-                        scope.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
+                # get any new variables created by the optimizer (so they
+                # can be initialized)
+                opt_slots_init = tf.variables_initializer(
+                    scope.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
 
-                self.optimizers[key] = (opt_op, opt_slots_init)
+            self.optimizers[key] = (opt_op, opt_slots_init)
 
-            return self.optimizers[key]
+        return self.optimizers[key]
 
+    @with_self
     def build_loss(self, objective, targets):
         """Adds elements into the graph to compute the given objective.
 
@@ -422,42 +439,47 @@ class TensorGraph(object):
             that Probe (loss will be averaged across Probes).
         targets : tuple of :class:`~nengo:nengo.Probe`
             the Probes corresponding to target values in objective
+
+        Returns
+        -------
+        ``tf.Tensor``
+            tensor representing the given objective applied to target probes
         """
 
         if (objective, targets) in self.losses:
             return self.losses[(objective, targets)]
 
-        with self.graph.as_default(), tf.device(self.device):
-            loss = []
-            for p in targets:
-                probe_index = self.model.probes.index(p)
+        loss = []
+        for p in targets:
+            probe_index = self.model.probes.index(p)
 
-                # create a placeholder for the target values
-                if p not in self.target_phs:
-                    self.target_phs[p] = tf.placeholder(
-                        self.dtype, (None, p.size_in, self.minibatch_size),
-                        name="targets")
+            # create a placeholder for the target values
+            if p not in self.target_phs:
+                self.target_phs[p] = tf.placeholder(
+                    self.dtype, (None, p.size_in, self.minibatch_size),
+                    name="targets")
 
-                # compute loss
-                if objective == "mse":
-                    loss += [tf.reduce_mean(tf.square(
-                        self.target_phs[p] - self.probe_arrays[probe_index]))]
-                elif callable(objective):
-                    # move minibatch dimension back to the front
-                    x = tf.transpose(self.probe_arrays[probe_index], (2, 0, 1))
-                    t = tf.transpose(self.target_phs[p], (2, 0, 1))
-                    loss += [objective(x, t)]
-                else:
-                    raise NotImplementedError
+            # compute loss
+            if objective == "mse":
+                loss += [tf.reduce_mean(tf.square(
+                    self.target_phs[p] - self.probe_arrays[probe_index]))]
+            elif callable(objective):
+                # move minibatch dimension back to the front
+                x = tf.transpose(self.probe_arrays[probe_index], (2, 0, 1))
+                t = tf.transpose(self.target_phs[p], (2, 0, 1))
+                loss += [objective(x, t)]
+            else:
+                raise NotImplementedError
 
-            # average loss across probes (note: this will also average across
-            # the output of `objective` if it doesn't return a scalar)
-            loss = tf.reduce_mean(loss)
+        # average loss across probes (note: this will also average across
+        # the output of `objective` if it doesn't return a scalar)
+        loss = tf.reduce_mean(loss)
 
         self.losses[(objective, targets)] = loss
 
         return loss
 
+    @with_self
     def build_post(self, sess, rng):
         """Executes post-build processes for operators (after the graph has
         been constructed and session/variables initialized).
@@ -473,9 +495,8 @@ class TensorGraph(object):
             seeded random number generator
         """
 
-        with self.graph.as_default(), tf.device(self.device):
-            for ops, built_ops in self.op_builds.items():
-                built_ops.build_post(ops, self.signals, sess, rng)
+        for ops, built_ops in self.op_builds.items():
+            built_ops.build_post(ops, self.signals, sess, rng)
 
     def mark_signals(self):
         """Mark all the signals in ``self.model`` according to whether they
