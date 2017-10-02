@@ -505,6 +505,201 @@ class Simulator(object):
 
         return loss_val
 
+    def save_params(self, path, include_global=True, include_local=False):
+        """Save network parameters to the given ``path``.
+
+        Parameters
+        ----------
+        path : str
+            filepath of parameter output file
+        include_global : bool, optional
+            if True (default True), save global (trainable) network variables
+        include_local : bool, optional
+            if True (default False), save local (non-trainable) network
+            variables
+        """
+        if self.closed:
+            raise SimulationError("Simulation has been closed, cannot save "
+                                  "parameters")
+
+        with self.tensor_graph.graph.as_default():
+            vars = []
+            if include_global:
+                vars.extend(tf.global_variables())
+            if include_local:
+                vars.extend(tf.local_variables())
+
+            path = tf.train.Saver(vars).save(self.sess, path)
+
+        logger.info("Model parameters saved to %s", path)
+
+    def load_params(self, path, include_global=True, include_local=False):
+        """Load network parameters from the given ``path``.
+
+        Parameters
+        ----------
+        path : str
+            filepath of parameter input file
+        include_global : bool, optional
+            if True (default True), load global (trainable) network variables
+        include_local : bool, optional
+            if True (default False), load local (non-trainable) network
+            variables
+        """
+        if self.closed:
+            raise SimulationError("Simulation has been closed, cannot load "
+                                  "parameters")
+
+        with self.tensor_graph.graph.as_default():
+            vars = []
+            if include_global:
+                vars.extend(tf.global_variables())
+            if include_local:
+                vars.extend(tf.local_variables())
+
+            tf.train.Saver(vars).restore(self.sess, path)
+
+        logger.info("Model parameters loaded from %s", path)
+
+    def check_gradients(self, outputs=None, atol=1e-5, rtol=1e-3):
+        """Perform gradient checks for the network (used to verify that the
+        analytic gradients are correct).
+
+        Raises a simulation error if the difference between analytic and
+        numeric gradient is greater than ``atol + rtol * numeric_grad``
+        (elementwise).
+
+        Parameters
+        ----------
+        outputs : ``tf.Tensor`` or list of ``tf.Tensor`` or \
+                  list of :class:`~nengo:nengo.Probe`
+            compute gradients wrt this output (if None, computes wrt each
+            output probe)
+        atol : float, optional
+            absolute error tolerance
+        rtol : float, optional
+            relative (to numeric grad) error tolerance
+
+        Notes
+        -----
+        Calling this function will reset all values in the network, so it
+        should not be intermixed with calls to :meth:`.Simulator.run`.
+        """
+
+        delta = 1e-3
+        n_steps = self.unroll * 2
+
+        feed = self._fill_feed(
+            n_steps, {n: np.zeros((self.minibatch_size, n_steps, n.size_out))
+                      for n in self.tensor_graph.invariant_inputs},
+            {p: np.zeros((self.minibatch_size, n_steps, p.size_in))
+             for p in self.tensor_graph.target_phs})
+
+        if outputs is None:
+            # note: the x + 0 is necessary because `gradient_checker`
+            # doesn't work properly if the output variable is a tensorarray
+            outputs = [x + 0 for x in self.tensor_graph.probe_arrays]
+        elif isinstance(outputs, tf.Tensor):
+            outputs = [outputs]
+        else:
+            outputs = [
+                self.tensor_graph.probe_arrays[self.model.probes.index(p)] + 0
+                for p in outputs]
+
+        # check gradient wrt inp
+        for node, inp in self.tensor_graph.invariant_ph.items():
+            inp_shape = inp.get_shape().as_list()
+            inp_shape = [n_steps if x is None else x for x in inp_shape]
+            inp_tens = self.tensor_graph.invariant_ph[node]
+            feed[inp_tens] = np.ascontiguousarray(feed[inp_tens])
+            inp_val = np.ravel(feed[inp_tens])
+            for out in outputs:
+                out_shape = out.get_shape().as_list()
+                out_shape = [n_steps if x is None else x for x in out_shape]
+
+                # we need to compute the numeric jacobian manually, to
+                # correctly handle variables (tensorflow doesn't expect
+                # state ops in `compute_gradient`, because it doesn't define
+                # gradients for them)
+                numeric = np.zeros((np.prod(inp_shape, dtype=np.int32),
+                                    np.prod(out_shape, dtype=np.int32)))
+
+                for i in range(numeric.shape[0]):
+                    self.soft_reset()
+                    inp_val[i] = delta
+                    plus = self.sess.run(out, feed_dict=feed)
+
+                    self.soft_reset()
+                    inp_val[i] = -delta
+                    minus = self.sess.run(out, feed_dict=feed)
+
+                    numeric[i] = np.ravel((plus - minus) / (2 * delta))
+
+                    inp_val[i] = 0
+
+                self.soft_reset()
+
+                dx, dy = gradient_checker._compute_dx_and_dy(
+                    inp, out, out_shape)
+
+                with self.sess.as_default():
+                    analytic = gradient_checker._compute_theoretical_jacobian(
+                        inp, inp_shape, np.zeros(inp_shape), dy, out_shape, dx,
+                        extra_feed_dict=feed)
+
+                if np.any(np.isnan(analytic)) or np.any(np.isnan(numeric)):
+                    raise SimulationError("NaNs detected in gradient")
+                fail = abs(analytic - numeric) >= atol + rtol * abs(numeric)
+                if np.any(fail):
+                    raise SimulationError(
+                        "Gradient check failed for input %s and output %s\n"
+                        "numeric values:\n%s\n"
+                        "analytic values:\n%s\n" % (node, out, numeric[fail],
+                                                    analytic[fail]))
+
+        self.soft_reset()
+
+        logger.info("Gradient check passed")
+
+    def trange(self, dt=None):
+        """Create a vector of times matching probed data.
+
+        Note that the range does not start at 0 as one might expect, but at
+        the first timestep (i.e., ``dt``).
+
+        Parameters
+        ----------
+        dt : float, optional
+            the sampling period of the probe to create a range for;
+            if None, the simulator's ``dt`` will be used.
+        """
+
+        dt = self.dt if dt is None else dt
+        n_steps = int(self.n_steps * (self.dt / dt))
+        return dt * np.arange(1, n_steps + 1)
+
+    def close(self):
+        """Close the simulation, freeing resources.
+
+        Notes
+        -----
+        The simulation cannot be restarted after it is closed.  This is not a
+        technical limitation, just a design decision made for all Nengo
+        simulators.
+        """
+
+        if not self.closed:
+            # note: we use getattr in case it crashes before the object is
+            # created
+            if getattr(self, "sess", None) is not None:
+                self.sess.close()
+            self.sess = None
+
+            if getattr(self, "summary", None) is not None:
+                self.summary.close()
+
+            self.closed = True
+
     def _fill_feed(self, n_steps, inputs, targets=None, start=0):
         """Create a feed dictionary containing values for all the placeholder
         inputs in the network, which will be passed to ``tf.Session.run``.
@@ -653,227 +848,6 @@ class Simulator(object):
             # update stored probe data
             self.model.params[p].append(probe_data[i])
 
-    def save_params(self, path, include_global=True, include_local=False):
-        """Save network parameters to the given ``path``.
-
-        Parameters
-        ----------
-        path : str
-            filepath of parameter output file
-        include_global : bool, optional
-            if True (default True), save global (trainable) network variables
-        include_local : bool, optional
-            if True (default False), save local (non-trainable) network
-            variables
-        """
-        if self.closed:
-            raise SimulationError("Simulation has been closed, cannot save "
-                                  "parameters")
-
-        with self.tensor_graph.graph.as_default():
-            vars = []
-            if include_global:
-                vars.extend(tf.global_variables())
-            if include_local:
-                vars.extend(tf.local_variables())
-
-            path = tf.train.Saver(vars).save(self.sess, path)
-
-        logger.info("Model parameters saved to %s", path)
-
-    def load_params(self, path, include_global=True, include_local=False):
-        """Load network parameters from the given ``path``.
-
-        Parameters
-        ----------
-        path : str
-            filepath of parameter input file
-        include_global : bool, optional
-            if True (default True), load global (trainable) network variables
-        include_local : bool, optional
-            if True (default False), load local (non-trainable) network
-            variables
-        """
-        if self.closed:
-            raise SimulationError("Simulation has been closed, cannot load "
-                                  "parameters")
-
-        with self.tensor_graph.graph.as_default():
-            vars = []
-            if include_global:
-                vars.extend(tf.global_variables())
-            if include_local:
-                vars.extend(tf.local_variables())
-
-            tf.train.Saver(vars).restore(self.sess, path)
-
-        logger.info("Model parameters loaded from %s", path)
-
-    def close(self):
-        """Close the simulation, freeing resources.
-
-        Notes
-        -----
-        The simulation cannot be restarted after it is closed.  This is not a
-        technical limitation, just a design decision made for all Nengo
-        simulators.
-        """
-
-        if not self.closed:
-            # note: we use getattr in case it crashes before the object is
-            # created
-            if getattr(self, "sess", None) is not None:
-                self.sess.close()
-            self.sess = None
-
-            if getattr(self, "summary", None) is not None:
-                self.summary.close()
-
-            self.closed = True
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.close()
-
-    @property
-    def dt(self):
-        """(float) The time step of the simulator."""
-        return self.model.dt
-
-    @dt.setter
-    def dt(self, dummy):
-        raise ReadonlyError(attr='dt', obj=self)
-
-    def __del__(self):
-        """Raise a RuntimeWarning if the Simulator is deallocated while open.
-        """
-
-        if self.closed is not None and not self.closed:
-            warnings.warn(
-                "Simulator with model=%s was deallocated while open. "
-                "Simulators should be closed manually to ensure resources "
-                "are properly freed." % self.model, RuntimeWarning)
-            self.close()
-
-    def trange(self, dt=None):
-        """Create a vector of times matching probed data.
-
-        Note that the range does not start at 0 as one might expect, but at
-        the first timestep (i.e., ``dt``).
-
-        Parameters
-        ----------
-        dt : float, optional
-            the sampling period of the probe to create a range for;
-            if None, the simulator's ``dt`` will be used.
-        """
-
-        dt = self.dt if dt is None else dt
-        n_steps = int(self.n_steps * (self.dt / dt))
-        return dt * np.arange(1, n_steps + 1)
-
-    def check_gradients(self, outputs=None, atol=1e-5, rtol=1e-3):
-        """Perform gradient checks for the network (used to verify that the
-        analytic gradients are correct).
-
-        Raises a simulation error if the difference between analytic and
-        numeric gradient is greater than ``atol + rtol * numeric_grad``
-        (elementwise).
-
-        Parameters
-        ----------
-        outputs : ``tf.Tensor`` or list of ``tf.Tensor`` or \
-                  list of :class:`~nengo:nengo.Probe`
-            compute gradients wrt this output (if None, computes wrt each
-            output probe)
-        atol : float, optional
-            absolute error tolerance
-        rtol : float, optional
-            relative (to numeric grad) error tolerance
-
-        Notes
-        -----
-        Calling this function will reset all values in the network, so it
-        should not be intermixed with calls to :meth:`.Simulator.run`.
-        """
-
-        delta = 1e-3
-        n_steps = self.unroll * 2
-
-        feed = self._fill_feed(
-            n_steps, {n: np.zeros((self.minibatch_size, n_steps, n.size_out))
-                      for n in self.tensor_graph.invariant_inputs},
-            {p: np.zeros((self.minibatch_size, n_steps, p.size_in))
-             for p in self.tensor_graph.target_phs})
-
-        if outputs is None:
-            # note: the x + 0 is necessary because `gradient_checker`
-            # doesn't work properly if the output variable is a tensorarray
-            outputs = [x + 0 for x in self.tensor_graph.probe_arrays]
-        elif isinstance(outputs, tf.Tensor):
-            outputs = [outputs]
-        else:
-            outputs = [
-                self.tensor_graph.probe_arrays[self.model.probes.index(p)] + 0
-                for p in outputs]
-
-        # check gradient wrt inp
-        for node, inp in self.tensor_graph.invariant_ph.items():
-            inp_shape = inp.get_shape().as_list()
-            inp_shape = [n_steps if x is None else x for x in inp_shape]
-            inp_tens = self.tensor_graph.invariant_ph[node]
-            feed[inp_tens] = np.ascontiguousarray(feed[inp_tens])
-            inp_val = np.ravel(feed[inp_tens])
-            for out in outputs:
-                out_shape = out.get_shape().as_list()
-                out_shape = [n_steps if x is None else x for x in out_shape]
-
-                # we need to compute the numeric jacobian manually, to
-                # correctly handle variables (tensorflow doesn't expect
-                # state ops in `compute_gradient`, because it doesn't define
-                # gradients for them)
-                numeric = np.zeros((np.prod(inp_shape, dtype=np.int32),
-                                    np.prod(out_shape, dtype=np.int32)))
-
-                for i in range(numeric.shape[0]):
-                    self.soft_reset()
-                    inp_val[i] = delta
-                    plus = self.sess.run(out, feed_dict=feed)
-
-                    self.soft_reset()
-                    inp_val[i] = -delta
-                    minus = self.sess.run(out, feed_dict=feed)
-
-                    numeric[i] = np.ravel((plus - minus) / (2 * delta))
-
-                    inp_val[i] = 0
-
-                self.soft_reset()
-
-                dx, dy = gradient_checker._compute_dx_and_dy(
-                    inp, out, out_shape)
-
-                with self.sess.as_default():
-                    analytic = gradient_checker._compute_theoretical_jacobian(
-                        inp, inp_shape, np.zeros(inp_shape), dy, out_shape, dx,
-                        extra_feed_dict=feed)
-
-                if np.any(np.isnan(analytic)) or np.any(np.isnan(numeric)):
-                    raise SimulationError("NaNs detected in gradient")
-                fail = abs(analytic - numeric) >= atol + rtol * abs(numeric)
-                if np.any(fail):
-                    raise SimulationError(
-                        "Gradient check failed for input %s and output %s\n"
-                        "numeric values:\n%s\n"
-                        "analytic values:\n%s\n" % (node, out, numeric[fail],
-                                                    analytic[fail]))
-
-        self.soft_reset()
-
-        logger.info("Gradient check passed")
-
     def _check_data(self, data, mode="input", n_batch=None, n_steps=None):
         """Performs error checking on simulation data.
 
@@ -934,6 +908,32 @@ class Simulator(object):
                     "Dimensionality of data (%s) does not match "
                     "dimensionality of %s (%s)" % (x.shape[2], n, d),
                     "%s data" % mode)
+
+    @property
+    def dt(self):
+        """(float) The time step of the simulator."""
+        return self.model.dt
+
+    @dt.setter
+    def dt(self, dummy):
+        raise ReadonlyError(attr='dt', obj=self)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def __del__(self):
+        """Raise a RuntimeWarning if the Simulator is deallocated while open.
+        """
+
+        if self.closed is not None and not self.closed:
+            warnings.warn(
+                "Simulator with model=%s was deallocated while open. "
+                "Simulators should be closed manually to ensure resources "
+                "are properly freed." % self.model, RuntimeWarning)
+            self.close()
 
 
 class SimulationData(collections.Mapping):
