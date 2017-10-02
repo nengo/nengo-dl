@@ -229,7 +229,7 @@ class ProgressBar(object):
 
         self.curr_step = 0
         self.start_time = time.time()
-        self.progress = -1
+        self.last_time = -1
 
         print("[%s] ETA: unknown" % (" " * self.width), end="", flush=True)
 
@@ -259,20 +259,24 @@ class ProgressBar(object):
 
         self.curr_step += 1
 
-        tmp = int(self.width * self.curr_step / self.max_steps)
-        if tmp > self.progress:
-            self.progress = tmp
-        else:
-            return
+        curr_time = time.time()
 
-        eta = int((time.time() - self.start_time) *
+        # only update the progress bar once every second
+        if curr_time - self.last_time < 1:
+            return
+        else:
+            self.last_time = curr_time
+
+        progress = int(self.width * self.curr_step / self.max_steps)
+
+        eta = int((curr_time - self.start_time) *
                   (self.max_steps - self.curr_step) / self.curr_step)
 
-        line = "\r[%s%s] ETA: %s" % ("#" * self.progress,
-                                     " " * (self.width - self.progress),
+        line = "\r[%s%s] ETA: %s" % ("#" * progress,
+                                     " " * (self.width - progress),
                                      datetime.timedelta(seconds=eta))
         if msg is not None or self.label is not None:
-            line += " (%s)" % self.label if msg is None else msg
+            line += " (%s)" % (self.label if msg is None else msg)
 
         print(line, end="", flush=True)
 
