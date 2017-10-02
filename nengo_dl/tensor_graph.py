@@ -4,10 +4,12 @@ from collections import OrderedDict
 import logging
 import warnings
 
-from nengo import Connection, Process
+from nengo import Connection, Process, Ensemble
 from nengo.builder.operator import TimeUpdate, SimPyFunc
 from nengo.builder.processes import SimProcess
 from nengo.config import ConfigError
+from nengo.ensemble import Neurons
+from nengo.exceptions import SimulationError
 from nengo.neurons import Direct
 import numpy as np
 import tensorflow as tf
@@ -497,6 +499,72 @@ class TensorGraph(object):
 
         for ops, built_ops in self.op_builds.items():
             built_ops.build_post(ops, self.signals, sess, rng)
+
+    @with_self
+    def build_summaries(self, summaries):
+        """Adds ops to collect summary data for the given objects.
+
+        Parameters
+        ----------
+        summaries : dict of {str: tuple or \
+                                  :class:`~nengo:nengo.Connection` or \
+                                  :class:`~nengo:nengo.Ensemble` or \
+                                  :class:`~nengo:nengo.ensemble.Neurons`}
+            dictionary containing labels for the summary data and the object
+            for which we want to collect data.  Object can be a Connection (in
+            which case data on weights will be collected), Ensemble (encoders),
+            Neurons (biases), or a tuple of ``(objective, probes)`` that
+            indicates a loss function that will be tracked.
+
+        Returns
+        -------
+        ``tf.Tensor``
+            merged summary op for the given summaries
+        """
+
+        summary_ops = []
+        for name, obj in summaries.items():
+            if isinstance(obj, tuple):
+                loss = self.build_loss(*obj)
+                summary_ops.append(tf.summary.scalar(name, loss))
+            else:
+                if isinstance(obj, Ensemble):
+                    param = self.model.sig[obj]["encoders"]
+                elif isinstance(obj, Neurons):
+                    param = self.model.sig[obj]["bias"]
+                elif isinstance(obj, Connection):
+                    param = self.model.sig[obj]["weights"]
+                else:
+                    raise SimulationError("Unknown summary object: %s" % obj)
+
+                summary_ops.append(tf.summary.histogram(
+                    name, self.get_tensor(param)))
+
+        return tf.summary.merge(summary_ops)
+
+    @with_self
+    def get_tensor(self, sig):
+        """Returns a Tensor corresponding to the given Signal.
+
+        Parameters
+        ----------
+        sig : :class:`~nengo:nengo.builder.Signal`
+            a signal in the model
+
+        Returns
+        -------
+        ``tf.Tensor``
+            Tensor containing the value of the given Signal
+        """
+
+        tensor_sig = self.sig_map[sig]
+        keys = list(self.signals.bases.keys())
+
+        if tensor_sig.tf_indices is None:
+            tensor_sig.load_indices()
+
+        base = self.base_vars[keys.index(tensor_sig.key)]
+        return tf.gather(base, tensor_sig.tf_indices)
 
     def mark_signals(self):
         """Mark all the signals in ``self.model`` according to whether they

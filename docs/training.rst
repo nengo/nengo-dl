@@ -26,7 +26,7 @@ below.
 Simulator.train arguments
 -------------------------
 
-Inputs
+inputs
 ^^^^^^
 
 The first argument to the :meth:`.Simulator.train` function is the input data.
@@ -77,7 +77,7 @@ will take on the values specified during model construction.  Also note that
 inputs can only be defined for Nodes with no incoming connections (i.e., Nodes
 with ``size_in == 0``).
 
-Targets
+targets
 ^^^^^^^
 
 Returning to the network equation :math:`y = f(x, \theta)`, the goal in
@@ -115,7 +115,7 @@ In practice we would do something like ``targets={p: my_func(inputs)}``, where
 ``my_func`` is a function specifying what the ideal outputs are for the given
 inputs.
 
-Optimizer
+optimizer
 ^^^^^^^^^
 
 The optimizer is the algorithm that defines how to update the
@@ -136,7 +136,7 @@ arguments required by that optimizer), and that instance is then passed to
         sim.train(optimizer=tf.train.MomentumOptimizer(
             learning_rate=1e-2, momentum=0.9, use_nesterov=True), ...)
 
-Objective
+objective
 ^^^^^^^^^
 
 The goal in optimization is to minimize the error between the network's actual
@@ -173,6 +173,51 @@ error value.
 
 Note that :meth:`.Simulator.loss` can be used to check the loss
 (error) value for a given objective.
+
+.. _summaries:
+
+summaries
+^^^^^^^^^
+
+It is often useful to view information about how aspects of a model are
+changing over the course of training.  TensorFlow has created `TensorBoard
+<https://www.tensorflow.org/get_started/summaries_and_tensorboard>`_ to help
+visualize this kind of data, and the ``summaries`` argument can be used to
+specify the model data that you would like to export for TensorBoard.
+
+It is specified as a dictionary with the form ``{label: obj, ...}`` where each
+element defines a plot label as well as the object for which we want to collect
+data.  The data collected depends on the object: if it is a
+:class:`~nengo:nengo.Connection` then data will be collected about the
+distribution of the connection weights over the course of training; passing an
+:class:`~nengo:nengo.Ensemble` will collect data about the distribution of
+encoders, and :class:`~nengo:nengo.ensemble.Neurons` will collect data about
+the distribution of biases. Additionally, the string ``"loss"`` can be passed
+for ``obj``, in which case the training error for the given objective will be
+collected over the course of training.
+
+TensorBoard can be used to view the exported data via the command
+
+.. code-block:: bash
+
+    tensorboard --logdir <tensorboard_dir>
+
+where ``tensorboard_dir`` is the value specified on Simulator creation via
+``nengo_dl.Simulator(..., tensorboard=tensorboard_dir)``.  After TensorBoard is
+running you can view the data by opening a web browser and navigating to
+http://localhost:6006.
+
+For details on the usage of TensorBoard, consult the `TensorFlow documentation
+<https://www.tensorflow.org/get_started/summaries_and_tensorboard>`__.
+However, as a brief summary, you will find plots showing the loss values over
+the course of training in the ``Scalars`` tab at the top, and plots showing the
+distributions of weights/encoders/biases over time in the ``Distributions`` or
+``Histograms`` tabs.  If you call ``sim.train`` several times with the same
+summaries, each call will result in its own set of plots, with a suffix added
+to the label indicating the call number (e.g. ``label, label_1, label_2,
+...``). If you run your code multiple times with the same ``tensorboard_dir``,
+data will be organized according to run number; you can turn on/off the plots
+for different runs using the checkboxes in the bottom left.
 
 Other parameters
 ^^^^^^^^^^^^^^^^

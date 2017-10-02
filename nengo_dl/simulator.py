@@ -48,7 +48,7 @@ class Simulator(object):
         floating point precision to use for simulation
     device : None or ``"/cpu:0"`` or ``"/gpu:[0-n]"``, optional
         device on which to execute computations (if None then uses the
-        default device as determined by Tensorflow)
+        default device as determined by TensorFlow)
     unroll_simulation : int, optional
         unroll simulation loop by explicitly building the given number of
         iterations into the computation graph (improves simulation speed
@@ -56,9 +56,9 @@ class Simulator(object):
     minibatch_size : int, optional
         the number of simultaneous inputs that will be passed through the
         network
-    tensorboard : bool, optional
-        if True, save network output in the Tensorflow summary format,
-        which can be loaded into Tensorboard
+    tensorboard : str, optional
+        if not None, save network output in the TensorFlow summary format to
+        the given directory, which can be loaded into TensorBoard
     """
 
     # unsupported unit tests
@@ -137,18 +137,16 @@ class Simulator(object):
         print("\rConstruction completed in %s " %
               datetime.timedelta(seconds=int(time.time() - start)))
 
-        # output graph description to tensorboard summary
+        # output simulation data for viewing via TensorBoard
         if tensorboard:
-            directory = "%s/%s" % (DATA_DIR, self.model.toplevel.label)
-            if os.path.isdir(directory):
-                run_number = max(
-                    [int(x[4:]) for x in os.listdir(directory)
-                     if x.startswith("run")]) + 1
-            else:
-                run_number = 0
+            run_number = max(
+                [int(x[4:]) for x in os.listdir(tensorboard)
+                 if x.startswith("run")] or [-1]) + 1
             self.summary = tf.summary.FileWriter(
-                "%s/run_%d" % (directory, run_number),
+                os.path.join(tensorboard, "run_%d" % run_number),
                 graph=self.tensor_graph.graph)
+        else:
+            self.summary = None
 
         # start session
         config = tf.ConfigProto(
@@ -330,7 +328,7 @@ class Simulator(object):
                 f.write(timeline.generate_chrome_trace_format())
 
     def train(self, inputs, targets, optimizer, n_epochs=1, objective="mse",
-              shuffle=True, profile=False):
+              shuffle=True, summaries=None, profile=False):
         """Optimize the trainable parameters of the network using the given
         optimization method, minimizing the objective value over the given
         inputs and targets.
@@ -361,6 +359,17 @@ class Simulator(object):
             that Probe (loss will be averaged across Probes).
         shuffle : bool, optional
             if True, randomize the data into different minibatches each epoch
+        summaries : dict of {str: :class:`~nengo:nengo.Connection` or \
+                                  :class:`~nengo:nengo.Ensemble` or \
+                                  :class:`~nengo:nengo.ensemble.Neurons` or \
+                                  ``"loss"``}, optional
+            if not None, collect data during the training process using
+            TensorFlow's ``tf.summary`` format.  the dictionary should
+            consist of ``{label: obj}`` pairs, where ``obj`` is the object
+            for which we want to collect data.  the object can be a Connection
+            (in which case data on the corresponding weights will be
+            collected), Ensemble (encoders), Neurons (biases), or ``"loss"``
+            (the loss value for ``objective``).
         profile : bool, optional
             if True, collect TensorFlow profiling information while training
             (this will slow down the training)
@@ -399,6 +408,24 @@ class Simulator(object):
         # build optimizer op
         opt_op, opt_slots_init = self.tensor_graph.build_optimizer(
             optimizer, tuple(targets.keys()), objective)
+        fetches = [opt_op]
+
+        # get loss op
+        loss = self.tensor_graph.losses[(objective, tuple(targets.keys()))]
+        fetches.append(loss)
+
+        # add summaries
+        summary_op = None
+        if summaries is not None:
+            if self.summary is None:
+                warnings.warn("Simulator was created with tensorboard=False; "
+                              "ignoring requested summaries")
+            else:
+                for k, v in summaries.items():
+                    if isinstance(v, str) and v == "loss":
+                        summaries[k] = (objective, tuple(targets.keys()))
+                summary_op = self.tensor_graph.build_summaries(summaries)
+                fetches.append(summary_op)
 
         # save the internal state of the simulator
         tmpdir = tempfile.TemporaryDirectory()
@@ -418,6 +445,7 @@ class Simulator(object):
         progress = utils.ProgressBar(
             n_epochs * batch_size // self.minibatch_size, "Training")
 
+        step = 0
         for n in range(n_epochs):
             for inp, tar in utils.minibatch_generator(
                     inputs, targets, self.minibatch_size, rng=self.rng,
@@ -425,11 +453,15 @@ class Simulator(object):
                 # TODO: set up queue to feed in data more efficiently
                 self.soft_reset()
 
-                self.sess.run(
-                    [opt_op], feed_dict=self._fill_feed(n_steps, inp, tar),
+                outputs = self.sess.run(
+                    fetches, feed_dict=self._fill_feed(n_steps, inp, tar),
                     options=run_options, run_metadata=run_metadata)
 
-                progress.step()
+                if summary_op is not None:
+                    self.summary.add_summary(outputs[2], step)
+
+                progress.step("loss=%f" % outputs[1])
+                step += 1
 
         # restore internal state of simulator
         self.load_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
@@ -1067,20 +1099,14 @@ class SimulationData(collections.Mapping):
             # sig_attr doesn't exist for this attribute
             return None
 
-        try:
-            tensor_sig = self.sim.tensor_graph.sig_map[sig]
-        except KeyError:
+        if sig not in self.sim.tensor_graph.sig_map:
             # if sig isn't in sig_map then that means it isn't used anywhere
             # in the simulation (and therefore never changes), so we can
             # safely return the static build value
             return getattr(self.sim.model.params[obj], attr)
 
-        keys = list(self.sim.tensor_graph.signals.bases.keys())
-        param = self.sim.tensor_graph.base_vars[keys.index(tensor_sig.key)]
-
-        val = self.sim.sess.run(param)
-
-        return val[tensor_sig.indices]
+        param = self.sim.tensor_graph.get_tensor(sig)
+        return self.sim.sess.run(param)
 
     def _attr_map(self, obj, attr):
         """Maps from ``sim.data[obj].attr`` to the equivalent

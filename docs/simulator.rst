@@ -108,18 +108,27 @@ from the training data will be used for each optimization iteration.
 tensorboard
 ^^^^^^^^^^^
 
-If set to ``True``, ``nengo_dl`` will save the structure of the internal
-simulation graph so that it can be visualized in `TensorBoard
-<https://www.tensorflow.org/get_started/graph_viz>`_.  This is mainly useful
-to developers trying to debug the simulator.  This data is stored in the
-``<nengo_dl>/data`` folder, and can be loaded via
+This can be used to specify an output directory if you would like to export
+data from the simulation in a format that can be visualized in
+`TensorBoard <https://www.tensorflow.org/get_started/summaries_and_tensorboard>`_.
+
+To view the collected data, run the command
 
 .. code-block:: bash
 
-    tensorboard --logdir <path/to/nengo_dl>
+    tensorboard --logdir <tensorboard_dir>
 
-Data will be organized according to the :class:`~nengo:nengo.Network` label
-and run number.
+(where ``tensorboard_dir`` is the directory name passed to ``tensorboard``),
+then open a web browser and navigate to http://localhost:6006.
+
+By default the TensorBoard output will only contain a `visualization of the
+TensorFlow graph <https://www.tensorflow.org/get_started/graph_viz>`_
+constructed for this Simulator.  However, TensorBoard can also be used to track
+various aspects of the simulation throughout the training process; see
+:ref:`the documentation <summaries>` for details.
+
+Repeated Simulator calls with the same output directory will be organized into
+subfolders according to run number (e.g., ``<tensorboard_dir>/run_0``).
 
 .. _sim-run:
 

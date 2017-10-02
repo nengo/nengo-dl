@@ -27,6 +27,9 @@ Release History
   executed after the simulation is initialized (see the `TensorNode
   documentation for details
   <https://www.nengo.ai/nengo_dl/tensor_node.html>`_).
+- Added functionality for outputting summary data during the training process
+  that can be viewed in TensorBoard (see the `sim.train documentation
+  <https://www.nengo.ai/nengo_dl/training.html>`__).
 
 **Changed**
 

@@ -503,21 +503,61 @@ def test_side_effects(Simulator):
     assert func.x == 11
 
 
-def test_tensorboard(Simulator):
+def test_tensorboard(Simulator, tmpdir):
     with nengo.Network() as net:
         a = nengo.Node([0])
-        nengo.Probe(a)
+        b = nengo.Ensemble(10, 1)
+        c = nengo.Connection(a, b)
+        p = nengo.Probe(b)
 
-    with Simulator(net, tensorboard=True):
-        assert os.path.exists("%s/None/run_0" % DATA_DIR)
+    with Simulator(net, tensorboard=str(tmpdir)):
+        assert os.path.exists("%s/run_0" % tmpdir)
 
-    with Simulator(net, tensorboard=True):
-        assert os.path.exists("%s/None/run_1" % DATA_DIR)
+    # check that the run incrementing works properly
+    with Simulator(net, tensorboard=str(tmpdir)):
+        assert os.path.exists("%s/run_1" % tmpdir)
 
-    net.label = "test"
+    # check that training summaries are output properly
+    with Simulator(net, tensorboard=str(tmpdir)) as sim:
+        sim.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1))},
+                  tf.train.GradientDescentOptimizer(0.0),
+                  summaries={"loss": "loss", "encoders": b,
+                             "biases": b.neurons, "weights": c},
+                  n_epochs=3)
 
-    with Simulator(net, tensorboard=True):
-        assert os.path.exists("%s/test/run_0" % DATA_DIR)
+    event_file = os.path.join(
+        str(tmpdir), "run_2", os.listdir("%s/run_2" % tmpdir)[0])
+
+    assert os.path.exists(event_file)
+
+    for i, event in enumerate(tf.train.summary_iterator(event_file)):
+        if i < 3:
+            # metadata stuff
+            continue
+
+        assert event.step == i - 3
+        tags = [s.tag for s in event.summary.value]
+        assert len(tags) == 4
+        assert "loss" in tags
+        assert "encoders" in tags
+        assert "biases" in tags
+        assert "weights" in tags
+
+    assert i == 5
+
+    # check for warning if user requests summaries with tensorboard=None
+    with pytest.warns(UserWarning):
+        with Simulator(net, tensorboard=None) as sim:
+            sim.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1))},
+                      tf.train.GradientDescentOptimizer(0.0),
+                      summaries={"loss": "loss"})
+
+    # check for error on invalid object
+    with pytest.raises(SimulationError):
+        with Simulator(net, tensorboard=str(tmpdir)) as sim:
+            sim.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1))},
+                      tf.train.GradientDescentOptimizer(0.0),
+                      summaries={"a": a})
 
 
 @pytest.mark.parametrize("mode", ("run", "train"))
