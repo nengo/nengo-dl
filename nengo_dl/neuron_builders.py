@@ -22,7 +22,7 @@ class SimNeuronsBuilder(OpBuilder):
     Attributes
     ----------
     TF_NEURON_IMPL : list of :class:`~nengo:nengo.neurons.NeuronType`
-        the neuron types that have a custom implementation
+        The neuron types that have a custom implementation
     """
 
     TF_NEURON_IMPL = (RectifiedLinear, Sigmoid, LIF, LIFRate, SoftLIFRate)

@@ -25,7 +25,7 @@ class SimProcessBuilder(OpBuilder):
     Attributes
     ----------
     TF_PROCESS_IMPL : list of :class:`~nengo:nengo.Process`
-        the process types that have a custom implementation
+        The process types that have a custom implementation
     """
 
     TF_PROCESS_IMPL = (Lowpass, LinearFilter)

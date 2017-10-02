@@ -16,11 +16,11 @@ def cconv(dimensions, neurons_per_d, neuron_type):
     Parameters
     ----------
     dimensions : int
-        number of dimensions for vector values
+        Number of dimensions for vector values
     neurons_per_d : int
-        number of neurons to use per vector dimension
+        Number of neurons to use per vector dimension
     neuron_type : :class:`~nengo:nengo.neurons.NeuronType`
-        simulation neuron type
+        Simulation neuron type
 
     Returns
     -------
@@ -51,11 +51,11 @@ def integrator(dimensions, neurons_per_d, neuron_type):
     Parameters
     ----------
     dimensions : int
-        number of dimensions for vector values
+        Number of dimensions for vector values
     neurons_per_d : int
-        number of neurons to use per vector dimension
+        Number of neurons to use per vector dimension
     neuron_type : :class:`~nengo:nengo.neurons.NeuronType`
-        simulation neuron type
+        Simulation neuron type
 
     Returns
     -------
@@ -85,11 +85,11 @@ def pes(dimensions, neurons_per_d, neuron_type):
     Parameters
     ----------
     dimensions : int
-        number of dimensions for vector values
+        Number of dimensions for vector values
     neurons_per_d : int
-        number of neurons to use per vector dimension
+        Number of neurons to use per vector dimension
     neuron_type : :class:`~nengo:nengo.neurons.NeuronType`
-        simulation neuron type
+        Simulation neuron type
 
     Returns
     -------
@@ -125,7 +125,7 @@ def compare_backends(raw=False):
     Parameters
     ----------
     raw : bool
-        if True, run the benchmarks to collect data, otherwise load data from
+        If True, run the benchmarks to collect data, otherwise load data from
         file
     """
 

@@ -92,14 +92,14 @@ class TensorNode(Node):
     Parameters
     ----------
     tensor_func : callable
-        a function that maps node inputs to outputs
+        A function that maps node inputs to outputs
     size_in : int, optional (Default: 0)
-        the number of elements in the input vector
+        The number of elements in the input vector
     size_out : int, optional (Default: None)
-        the number of elements in the output vector (if None, value will be
+        The number of elements in the output vector (if None, value will be
         inferred by calling ``tensor_func``)
     label : str, optional (Default: None)
-        a name for the node, used for debugging and visualization
+        A name for the node, used for debugging and visualization
     """
 
     tensor_func = TensorFuncParam('tensor_func')
@@ -144,15 +144,15 @@ class SimTensorNode(builder.Operator):
     Parameters
     ----------
     func : callable
-        the TensorNode function (``tensor_func``)
+        The TensorNode function (``tensor_func``)
     time : :class:`~nengo:nengo.builder.Signal`
         Signal representing the current simulation time
     input : :class:`~nengo:nengo.builder.Signal` or None
-        input Signal for the TensorNode (or None if size_in==0)
+        Input Signal for the TensorNode (or None if size_in==0)
     output : :class:`~nengo:nengo.builder.Signal`
-        output Signal for the TensorNode
+        Output Signal for the TensorNode
     tag : str, optional
-        a label associated with the operator, for debugging
+        A label associated with the operator, for debugging
 
     Notes
     -----
@@ -241,13 +241,13 @@ def reshaped(shape_in):
     Parameters
     ----------
     shape_in : tuple of int
-        the desired shape for inputs to the function (not including the first
+        The desired shape for inputs to the function (not including the first
         dimension, which corresponds to the batch axis)
 
     Returns
     -------
     callable
-        the decorated function
+        The decorated function
     """
 
     def reshape_dec(func):
@@ -271,28 +271,28 @@ def tensor_layer(input, layer_func, shape_in=None, synapse=None,
     Parameters
     ----------
     input : :class:`~nengo:nengo.base.NengoObject`
-        object providing input to the layer
+        Object providing input to the layer
     layer_func : callable or :class:`~nengo:nengo.neurons.NeuronType`
-        a function that takes the value from ``input`` (represented as a
-        ``tf.Tensor``) and maps it to some output value. or a Nengo neuron
-        type, defining a nonlinearity that will be applied to ``input``
+        A function that takes the value from ``input`` (represented as a
+        ``tf.Tensor``) and maps it to some output value, or a Nengo neuron
+        type, defining a nonlinearity that will be applied to ``input``.
     shape_in : tuple of int, optional
-        if not None, reshape the input to the given shape
+        If not None, reshape the input to the given shape
     synapse : float or :class:`~nengo:nengo.synapses.Synapse`, optional
-        synapse to apply on connection from ``input`` to this layer
+        Synapse to apply on connection from ``input`` to this layer
     transform : :class:`~numpy:numpy.ndarray`, optional
-        transform matrix to apply on connection from ``input`` to this layer
+        Transform matrix to apply on connection from ``input`` to this layer
     return_conn : bool, optional
-        if True, also return the connection linking this layer to ``input``
+        If True, also return the connection linking this layer to ``input``
     layer_args : dict, optional
-        these arguments will be passed to ``layer_func`` if it is callable, or
+        These arguments will be passed to ``layer_func`` if it is callable, or
         :class:`~nengo:nengo.Ensemble` if ``layer_func`` is a
         :class:`~nengo:nengo.neurons.NeuronType`
 
     Returns
     -------
     :class:`.TensorNode` or :class:`~nengo:nengo.ensemble.Neurons`
-        a TensorNode that implements the given layer function (if
+        A TensorNode that implements the given layer function (if
         ``layer_func`` was a callable), or a Neuron object with the given
         neuron type, connected to ``input``
     """

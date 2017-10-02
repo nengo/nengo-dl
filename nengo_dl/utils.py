@@ -23,17 +23,17 @@ if sys.version_info < (3, 4):
 def sanitize_name(name):
     """Remove illegal TensorFlow name characters from string.
 
-    Valid Tensorflow name characters are ``[A-Za-z0-9_.\\-/]``
+    Valid TensorFlow name characters are ``[A-Za-z0-9_.\\-/]``
 
     Parameters
     ----------
     name : str
-        name to be sanitized
+        Name to be sanitized
 
     Returns
     -------
     str
-        sanitized name
+        Sanitized name
     """
 
     if not isinstance(name, str):
@@ -53,14 +53,14 @@ def function_name(func, sanitize=True):
     Parameters
     ----------
     func : callable
-        callable object (e.g., function, callable class)
+        Callable object (e.g., function, callable class)
     sanitize : bool, optional
-        if True, remove any illegal TensorFlow name characters from name
+        If True, remove any illegal TensorFlow name characters from name
 
     Returns
     -------
     str
-        (sanitized) name of ``func``
+        Name of ``func`` (optionally sanitized)
     """
 
     name = getattr(func, "__name__", func.__class__.__name__)
@@ -77,10 +77,10 @@ def align_func(output_shape, output_dtype):
     Parameters
     ----------
     output_shape : tuple of int
-        desired shape for function output (must have the same size as actual
+        Desired shape for function output (must have the same size as actual
         function output)
     output_dtype : ``tf.DType`` or :class:`~numpy:numpy.dtype`
-        desired dtype of function output
+        Desired dtype of function output
 
     Raises
     ------
@@ -118,15 +118,15 @@ def print_op(input, message):
     Parameters
     ----------
     input : ``tf.Tensor``
-        the value of this tensor will be printed whenever it is computed
+        The value of this tensor will be printed whenever it is computed
         in the graph
     message : str
-        string prepended to the value of ``input``, to help with logging
+        String prepended to the value of ``input``, to help with logging
 
     Returns
     -------
     ``tf.Tensor``
-        new tensor representing the print operation applied to ``input``
+        New tensor representing the print operation applied to ``input``
 
     Notes
     -----
@@ -154,14 +154,14 @@ def cast_dtype(dtype, target):
     Parameters
     ----------
     dtype : ``tf.DType`` or :class:`~numpy:numpy.dtype`
-        input dtype to be converted
+        Input dtype to be converted
     target : ``tf.DType``
-        floating point dtype to which all floating types should be converted
+        Floating point dtype to which all floating types should be converted
 
     Returns
     -------
     ``tf.DType``
-        input dtype, converted to ``target`` type if necessary
+        Input dtype, converted to ``target`` type if necessary
     """
 
     if not isinstance(dtype, tf.DType):
@@ -181,10 +181,11 @@ def find_non_differentiable(inputs, outputs):
     Parameters
     ----------
     inputs : list of ``tf.Tensor``
-        input tensors
+        Input tensors
     outputs : list of ``tf.Tensor``
-        output tensors
+        Output tensors
     """
+
     for o in outputs:
         if o in inputs:
             continue
@@ -212,9 +213,9 @@ class ProgressBar(object):
     Parameters
     ----------
     max_steps : int
-        number of steps required to complete the tracked process
+        Number of steps required to complete the tracked process
     label : str, optional
-        a description of what is being tracked
+        A description of what is being tracked
     """
 
     def __init__(self, max_steps, label=None):
@@ -254,7 +255,7 @@ class ProgressBar(object):
         Parameters
         ----------
         msg : str, optional
-            display the given string at the end of the progress bar
+            Display the given string at the end of the progress bar
         """
 
         self.curr_step += 1
@@ -293,28 +294,28 @@ def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
     ----------
     inputs : dict of {:class:`~nengo:nengo.Node`: \
                       :class:`~numpy:numpy.ndarray`}
-        input values for Nodes in the network
+        Input values for Nodes in the network
     targets : dict of {:class:`~nengo:nengo.Probe`: \
                        :class:`~numpy:numpy.ndarray`}
-        desired output value at Probes, corresponding to each value in
+        Desired output value at Probes, corresponding to each value in
         ``inputs``
     minibatch_size : int
-        the number of items in each minibatch
+        The number of items in each minibatch
     shuffle : bool, optional
-        if True, the division of items into minibatches will be randomized each
+        If True, the division of items into minibatches will be randomized each
         time the generator is created
     rng : :class:`~numpy:numpy.random.RandomState`, optional
-        random number generator
+        Seeded random number generator
 
     Yields
     ------
     inputs : dict of {:class:`~nengo:nengo.Node`: \
                       :class:`~numpy:numpy.ndarray`}
-        the same structure as ``inputs``, but with each array reduced to
+        The same structure as ``inputs``, but with each array reduced to
         ``minibatch_size`` elements along the first dimension
     targets : dict of {:class:`~nengo:nengo.Probe`: \
                        :class:`~numpy:numpy.ndarray`}
-        the same structure as ``targets``, but with each array reduced to
+        The same structure as ``targets``, but with each array reduced to
         ``minibatch_size`` elements along the first dimension
     """
 

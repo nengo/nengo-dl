@@ -12,12 +12,12 @@ class TruncatedNormal(Distribution):
     Parameters
     ----------
     mean : float, optional
-        mean of the normal distribution
+        Mean of the normal distribution
     stddev : float, optional
-        standard deviation of the normal distribution
+        Standard deviation of the normal distribution
     limit : float, optional
-        resample any values more than this distance from the mean. if None,
-        then limit will be set to 2 standard deviations
+        Resample any values more than this distance from the mean. If None,
+        then limit will be set to 2 standard deviations.
     """
 
     mean = NumberParam("mean")
@@ -74,12 +74,12 @@ class VarianceScaling(Distribution):
     Parameters
     ----------
     scale : float, optional
-        overall scale on values
+        Overall scale on values
     mode : "fan_in" or "fan_out" or "fan_avg", optional
-        whether to scale based on input or output dimensionality, or average of
+        Whether to scale based on input or output dimensionality, or average of
         the two
     distribution: "uniform" or "normal", optional
-        whether to use a uniform or normal distribution for weights
+        Whether to use a uniform or normal distribution for weights
     """
 
     scale = NumberParam("scale", low=0)
@@ -141,10 +141,10 @@ class Glorot(VarianceScaling):
     Parameters
     ----------
     scale : float, optional
-        scale on weight distribution. for rectified linear units this should
-        be sqrt(2), otherwise usually 1
+        Scale on weight distribution. For rectified linear units this should
+        be sqrt(2), otherwise usually 1.
     distribution: "uniform" or "normal", optional
-        whether to use a uniform or normal distribution for weights
+        Whether to use a uniform or normal distribution for weights
 
     References
     ----------
@@ -165,10 +165,10 @@ class He(VarianceScaling):
     Parameters
     ----------
     scale : float, optional
-        scale on weight distribution. for rectified linear units this should
-        be sqrt(2), otherwise usually 1
+        Scale on weight distribution. For rectified linear units this should
+        be sqrt(2), otherwise usually 1.
     distribution: "uniform" or "normal", optional
-        whether to use a uniform or normal distribution for weights
+        Whether to use a uniform or normal distribution for weights
 
     References
     ----------

@@ -36,28 +36,28 @@ class Simulator(object):
     Parameters
     ----------
     network : :class:`~nengo:nengo.Network` or None
-        a network object to be built and then simulated. If None,
+        A network object to be built and then simulated. If None,
         then a built model must be passed to ``model`` instead
     dt : float, optional
-        length of a simulator timestep, in seconds
+        Length of a simulator timestep, in seconds
     seed : int, optional
-        seed for all stochastic operators used in this simulator
+        Seed for all stochastic operators used in this simulator
     model : :class:`~nengo:nengo.builder.Model`, optional
-        pre-built model object
+        Pre-built model object
     dtype : ``tf.DType``, optional
-        floating point precision to use for simulation
+        Floating point precision to use for simulation
     device : None or ``"/cpu:0"`` or ``"/gpu:[0-n]"``, optional
-        device on which to execute computations (if None then uses the
+        Device on which to execute computations (if None then uses the
         default device as determined by TensorFlow)
     unroll_simulation : int, optional
-        unroll simulation loop by explicitly building the given number of
+        Unroll simulation loop by explicitly building the given number of
         iterations into the computation graph (improves simulation speed
         but increases build time)
     minibatch_size : int, optional
-        the number of simultaneous inputs that will be passed through the
+        The number of simultaneous inputs that will be passed through the
         network
     tensorboard : str, optional
-        if not None, save network output in the TensorFlow summary format to
+        If not None, save network output in the TensorFlow summary format to
         the given directory, which can be loaded into TensorBoard
     """
 
@@ -169,7 +169,7 @@ class Simulator(object):
         Parameters
         ----------
         seed : int, optional
-            if not None, overwrite the default simulator seed with this value
+            If not None, overwrite the default simulator seed with this value
             (note: this becomes the new default simulator seed)
         """
 
@@ -199,10 +199,10 @@ class Simulator(object):
         Parameters
         ----------
         include_trainable : bool, optional
-            if True, also reset any training that has been performed on
+            If True, also reset any training that has been performed on
             network parameters (e.g., connection weights)
         include_probes : bool, optional
-            if True, also clear probe data
+            If True, also clear probe data
         """
 
         init_ops = [self.tensor_graph.local_init_op,
@@ -222,7 +222,7 @@ class Simulator(object):
         Parameters
         ----------
         kwargs : dict
-            see :meth:`.run_steps`
+            See :meth:`.run_steps`
         """
 
         self.run_steps(1, **kwargs)
@@ -233,9 +233,9 @@ class Simulator(object):
         Parameters
         ----------
         time_in_seconds : float
-            amount of time to run the simulation for
+            Run the simulator for the given number of simulated seconds
         kwargs : dict
-            see :meth:`.run_steps`
+            See :meth:`.run_steps`
         """
 
         steps = int(np.round(float(time_in_seconds) / self.dt))
@@ -247,13 +247,13 @@ class Simulator(object):
         Parameters
         ----------
         n_steps : int
-            the number of simulation steps to be executed
+            The number of simulation steps to be executed
         input_feeds : dict of {:class:`~nengo:nengo.Node`: \
                                :class:`~numpy:numpy.ndarray`}
-            override the values of input Nodes with the given data.  arrays
+            Override the values of input Nodes with the given data.  Arrays
             should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
         profile : bool, optional
-            if True, collect TensorFlow profiling information while the
+            If True, collect TensorFlow profiling information while the
             simulation is running (this will slow down the simulation)
 
         Notes
@@ -337,41 +337,41 @@ class Simulator(object):
         ----------
         inputs : dict of {:class:`~nengo:nengo.Node`: \
                           :class:`~numpy:numpy.ndarray`}
-            input values for Nodes in the network; arrays should have shape
+            Input values for Nodes in the network; arrays should have shape
             ``(batch_size, n_steps, node.size_out)``
         targets : dict of {:class:`~nengo:nengo.Probe`: \
                            :class:`~numpy:numpy.ndarray`}
-            desired output value at Probes, corresponding to each value in
+            Desired output value at Probes, corresponding to each value in
             ``inputs``; arrays should have shape
             ``(batch_size, n_steps, probe.size_in)``
         optimizer : ``tf.train.Optimizer``
-            Tensorflow optimizer, e.g.
+            TensorFlow optimizer, e.g.
             ``tf.train.GradientDescentOptimizer(learning_rate=0.1)``
         n_epochs : int, optional
-            run training for the given number of epochs (complete passes
+            Run training for the given number of epochs (complete passes
             through ``inputs``)
         objective : ``"mse"`` or callable, optional
-            the objective to be minimized. passing ``"mse"`` will train with
-            mean squared error. a custom function
+            The objective to be minimized. Passing ``"mse"`` will train with
+            mean squared error. A custom function
             ``f(output, target) -> loss`` can be passed that consumes the
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
             that Probe (loss will be averaged across Probes).
         shuffle : bool, optional
-            if True, randomize the data into different minibatches each epoch
+            If True, randomize the data into different minibatches each epoch
         summaries : dict of {str: :class:`~nengo:nengo.Connection` or \
                                   :class:`~nengo:nengo.Ensemble` or \
                                   :class:`~nengo:nengo.ensemble.Neurons` or \
                                   ``"loss"``}, optional
-            if not None, collect data during the training process using
-            TensorFlow's ``tf.summary`` format.  the dictionary should
+            If not None, collect data during the training process using
+            TensorFlow's ``tf.summary`` format.  The dictionary should
             consist of ``{label: obj}`` pairs, where ``obj`` is the object
-            for which we want to collect data.  the object can be a Connection
+            for which we want to collect data.  The object can be a Connection
             (in which case data on the corresponding weights will be
             collected), Ensemble (encoders), Neurons (biases), or ``"loss"``
             (the loss value for ``objective``).
         profile : bool, optional
-            if True, collect TensorFlow profiling information while training
+            If True, collect TensorFlow profiling information while training
             (this will slow down the training)
 
         Notes
@@ -484,20 +484,20 @@ class Simulator(object):
         ----------
         inputs : dict of {:class:`~nengo:nengo.Node`: \
                           :class:`~numpy:numpy.ndarray`}
-            input values for Nodes in the network; arrays should have shape
+            Input values for Nodes in the network; arrays should have shape
             ``(batch_size, n_steps, node.size_out)``
         targets : dict of {:class:`~nengo:nengo.Probe`: \
                            :class:`~numpy:numpy.ndarray`}
-            desired output value at Probes, corresponding to each value in
+            Desired output value at Probes, corresponding to each value in
             ``inputs``; arrays should have shape
             ``(batch_size, n_steps, probe.size_in)``
         objective : ``"mse"`` or callable
-            the objective used to compute loss. passing ``"mse"`` will use
-            mean squared error. a custom function
+            The objective used to compute loss. Passing ``"mse"`` will use
+            mean squared error. A custom function
             ``f(output, target) -> loss`` can be passed that consumes the
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
-            that Probe (loss will be averaged across Probes)
+            that Probe (loss will be averaged across Probes).
         """
 
         batch_size, n_steps = next(iter(inputs.values())).shape[:2]
@@ -543,11 +543,11 @@ class Simulator(object):
         Parameters
         ----------
         path : str
-            filepath of parameter output file
+            Filepath of parameter output file
         include_global : bool, optional
-            if True (default True), save global (trainable) network variables
+            If True (default True), save global (trainable) network variables
         include_local : bool, optional
-            if True (default False), save local (non-trainable) network
+            If True (default False), save local (non-trainable) network
             variables
         """
         if self.closed:
@@ -571,11 +571,11 @@ class Simulator(object):
         Parameters
         ----------
         path : str
-            filepath of parameter input file
+            Filepath of parameter input file
         include_global : bool, optional
-            if True (default True), load global (trainable) network variables
+            If True (default True), load global (trainable) network variables
         include_local : bool, optional
-            if True (default False), load local (non-trainable) network
+            If True (default False), load local (non-trainable) network
             variables
         """
         if self.closed:
@@ -605,12 +605,12 @@ class Simulator(object):
         ----------
         outputs : ``tf.Tensor`` or list of ``tf.Tensor`` or \
                   list of :class:`~nengo:nengo.Probe`
-            compute gradients wrt this output (if None, computes wrt each
+            Compute gradients wrt this output (if None, computes wrt each
             output probe)
         atol : float, optional
-            absolute error tolerance
+            Absolute error tolerance
         rtol : float, optional
-            relative (to numeric grad) error tolerance
+            Relative (to numeric grad) error tolerance
 
         Notes
         -----
@@ -702,7 +702,7 @@ class Simulator(object):
         Parameters
         ----------
         dt : float, optional
-            the sampling period of the probe to create a range for;
+            The sampling period of the probe to create a range for;
             if None, the simulator's ``dt`` will be used.
         """
 
@@ -739,22 +739,22 @@ class Simulator(object):
         Parameters
         ----------
         n_steps : int
-            the number of execution steps
+            The number of execution steps
         input_feeds : dict of {:class:`~nengo:nengo.Node`: \
                                :class:`~numpy:numpy.ndarray`}
-            override the values of input Nodes with the given data.  arrays
+            Override the values of input Nodes with the given data.  Arrays
             should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
         targets : dict of {:class:`~nengo:nengo.Probe`: \
                            :class:`~numpy:numpy.ndarray`}, optional
-            values for target placeholders (only necessary if loss is being
+            Values for target placeholders (only necessary if loss is being
             computed, e.g. when training the network)
         start : int, optional
-            initial value of simulator timestep
+            Initial value of simulator timestep
 
         Returns
         -------
         dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}
-            feed values for placeholder tensors in the network
+            Feed values for placeholder tensors in the network
         """
 
         # fill in loop variables
@@ -783,10 +783,15 @@ class Simulator(object):
         ----------
         input_feeds : dict of {:class:`~nengo:nengo.Node`: \
                                :class:`~numpy:numpy.ndarray`}
-            override the values of input Nodes with the given data.  arrays
+            Override the values of input Nodes with the given data.  Arrays
             should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
         n_steps : int
-            number of simulation timesteps for which to generate input data
+            Number of simulation timesteps for which to generate input data
+
+        Returns
+        -------
+        dict of {:class:`~nengo:nengo.Node`: :class:`~numpy:numpy.ndarray}
+            Simulation values for all the input Nodes in the network.
         """
 
         if input_feeds is None:
@@ -860,11 +865,11 @@ class Simulator(object):
         Parameters
         ----------
         probe_data : list of `np.ndarray`
-            probe data from every timestep
+            Probe data from every timestep
         start : int
-            the simulation timestep at which probe data starts
+            The simulation timestep at which probe data starts
         n_steps : int
-            the number of timesteps over which we want to collect data
+            The number of timesteps over which we want to collect data
         """
 
         # remove any extra timesteps (due to `unroll_simulation` mismatch)
@@ -888,15 +893,15 @@ class Simulator(object):
         data : dict of {:class:`~nengo:nengo.Node` or \
                             :class:`~nengo:nengo.Probe`: \
                         :class:`~numpy:numpy.ndarray`}
-            array of data associated with given objects in model (Nodes if
+            Array of data associated with given objects in model (Nodes if
             mode=="input" or Probes if mode=="target")
         mode : "input" or "target", optional
-            whether this data corresponds to an input or target value
+            Whether this data corresponds to an input or target value
         n_batch : int, optional
-            number of elements in batch (if None, will just verify that all
+            Number of elements in batch (if None, will just verify that all
             data items have same batch size)
         n_steps : int, optional
-            number of simulation steps (if None, will just verify that all
+            Number of simulation steps (if None, will just verify that all
             data items have same number of steps)
         """
 
@@ -981,9 +986,9 @@ class SimulationData(collections.Mapping):
     Parameters
     ----------
     sim : :class:`.Simulator`
-        the simulator from which data will be drawn
+        The simulator from which data will be drawn
     minibatched : bool
-        if False, discard the minibatch dimension on probe data
+        If False, discard the minibatch dimension on probe data
 
     Notes
     -----
@@ -1002,14 +1007,14 @@ class SimulationData(collections.Mapping):
         ----------
         obj : :class:`~nengo:nengo.Probe` or :class:`~nengo:nengo.Ensemble` \
               or :class:`~nengo:nengo.Connection`
-            object whose simulation data is being accessed
+            Object whose simulation data is being accessed
 
         Returns
         -------
         :class:`~numpy:numpy.ndarray` or \
                 :class:`~nengo:nengo.builder.ensemble.BuiltEnsemble` or \
                 :class:`~nengo:nengo.builder.connection.BuiltConnection`
-            array containing probed data if ``obj`` is a
+            Array containing probed data if ``obj`` is a
             :class:`~nengo:nengo.Probe`, otherwise the corresponding
             parameter object
         """
@@ -1068,14 +1073,14 @@ class SimulationData(collections.Mapping):
         Parameters
         ----------
         obj : ``NengoObject``
-            the nengo object for which we want to know the parameters
+            The nengo object for which we want to know the parameters
         attr : str
-            the parameter of ``obj`` to be returned
+            The parameter of ``obj`` to be returned
 
         Returns
         -------
         :class:`~numpy:numpy.ndarray`
-            current value of the parameters associated with the given object
+            Current value of the parameters associated with the given object
 
         Notes
         -----
@@ -1115,16 +1120,16 @@ class SimulationData(collections.Mapping):
         Parameters
         ----------
         obj : ``NengoObject``
-            the nengo object for which we want to know the parameters
+            The nengo object for which we want to know the parameters
         attr : str
-            the parameter of ``obj`` to be returned
+            The parameter of ``obj`` to be returned
 
         Returns
         -------
         obj : ``NengoObject``
-            the nengo object to key into model.sig
+            The nengo object to key into ``model.sig``
         attr : str
-            the name of the signal corresponding to input attr
+            The name of the signal corresponding to input attr
 
         """
 

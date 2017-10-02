@@ -36,20 +36,20 @@ class TensorGraph(object):
     Parameters
     ----------
     model : :class:`~nengo:nengo.builder.Model`
-        pre-built Nengo model describing the network to be simulated
+        Pre-built Nengo model describing the network to be simulated
     dt : float
-        length of a simulator timestep, in seconds
+        Length of a simulator timestep, in seconds
     unroll_simulation : int
-        unroll simulation loop by explicitly building ``unroll_simulation``
+        Unroll simulation loop by explicitly building ``unroll_simulation``
         iterations into the computation graph
     dtype : ``tf.DType``
-        floating point precision to use for simulation
+        Floating point precision to use for simulation
     minibatch_size : int
-        the number of simultaneous inputs that will be passed through the
+        The number of simultaneous inputs that will be passed through the
         network
     device : None or ``"/cpu:0"`` or ``"/gpu:[0-n]"``
-        device on which to execute computations (if None then uses the
-        default device as determined by Tensorflow)
+        Device on which to execute computations (if None then uses the
+        default device as determined by TensorFlow)
     """
 
     def __init__(self, model, dt, unroll_simulation, dtype,
@@ -209,10 +209,10 @@ class TensorGraph(object):
         Returns
         -------
         probe_tensors : list of ``tf.Tensor``
-            the Tensor objects representing the data required for each model
+            The Tensor objects representing the data required for each model
             Probe
         side_effects : list of ``tf.Tensor``
-            the output Tensors of computations that may have side-effects
+            The output Tensors of computations that may have side-effects
             (e.g., :class:`~nengo:nengo.Node` functions), meaning that they
             must be executed each time step even if their output doesn't appear
             to be used in the simulation
@@ -369,7 +369,7 @@ class TensorGraph(object):
 
     def build_inputs(self):
         """Sets up the inputs in the model (which will be computed outside of
-        Tensorflow and fed in each simulation block).
+        TensorFlow and fed in each simulation block).
         """
 
         self.invariant_ph = {}
@@ -391,12 +391,12 @@ class TensorGraph(object):
         Parameters
         ----------
         optimizer : ``tf.train.Optimizer``
-            instance of a Tensorflow optimizer class
+            Instance of a TensorFlow optimizer class
         targets : tuple of :class:`~nengo:nengo.Probe`
-            the Probes corresponding to the output signals being optimized
+            The Probes corresponding to the output signals being optimized
         objective : ``"mse"`` or callable
-            the objective to be minimized. passing ``"mse"`` will train with
-            mean squared error. a custom function
+            The objective to be minimized. Passing ``"mse"`` will train with
+            mean squared error. A custom function
             ``f(output, target) -> loss`` can be passed that consumes the
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
@@ -405,7 +405,7 @@ class TensorGraph(object):
         Returns
         -------
         ``tf.Tensor``
-            operator implementing the given optimizer update
+            Operator implementing the given optimizer update
         """
 
         loss = self.build_loss(objective, targets)
@@ -433,19 +433,19 @@ class TensorGraph(object):
         Parameters
         ----------
         objective : ``"mse"`` or callable
-            the objective used to compute loss. passing ``"mse"`` will use
-            mean squared error. a custom function
+            The objective used to compute loss. Passing ``"mse"`` will use
+            mean squared error. A custom function
             ``f(output, target) -> loss`` can be passed that consumes the
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
             that Probe (loss will be averaged across Probes).
         targets : tuple of :class:`~nengo:nengo.Probe`
-            the Probes corresponding to target values in objective
+            The Probes corresponding to target values in objective
 
         Returns
         -------
         ``tf.Tensor``
-            tensor representing the given objective applied to target probes
+            Tensor representing the given objective applied to target probes
         """
 
         if (objective, targets) in self.losses:
@@ -492,9 +492,9 @@ class TensorGraph(object):
         Parameters
         ----------
         sess : ``tf.Session``
-            the TensorFlow session for the simulator
+            The TensorFlow session for the simulator
         rng : :class:`~numpy:numpy.random.RandomState`
-            seeded random number generator
+            Seeded random number generator
         """
 
         for ops, built_ops in self.op_builds.items():
@@ -510,7 +510,7 @@ class TensorGraph(object):
                                   :class:`~nengo:nengo.Connection` or \
                                   :class:`~nengo:nengo.Ensemble` or \
                                   :class:`~nengo:nengo.ensemble.Neurons`}
-            dictionary containing labels for the summary data and the object
+            Dictionary containing labels for the summary data and the object
             for which we want to collect data.  Object can be a Connection (in
             which case data on weights will be collected), Ensemble (encoders),
             Neurons (biases), or a tuple of ``(objective, probes)`` that
@@ -519,7 +519,7 @@ class TensorGraph(object):
         Returns
         -------
         ``tf.Tensor``
-            merged summary op for the given summaries
+            Merged summary op for the given summaries
         """
 
         summary_ops = []
@@ -549,7 +549,7 @@ class TensorGraph(object):
         Parameters
         ----------
         sig : :class:`~nengo:nengo.builder.Signal`
-            a signal in the model
+            A signal in the model
 
         Returns
         -------

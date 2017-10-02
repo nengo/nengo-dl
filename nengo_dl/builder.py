@@ -21,9 +21,9 @@ class Builder(object):
         Parameters
         ----------
         ops : tuple of :class:`~nengo:nengo.builder.Operator`
-            the operator group to build into the model
+            The operator group to build into the model
         signals : :class:`.signals.SignalDict`
-            mapping from :class:`~nengo:nengo.builder.Signal` to
+            Mapping from :class:`~nengo:nengo.builder.Signal` to
             ``tf.Tensor`` (updated by operations)
         op_builds : dict of {tuple of :class:`~nengo.builder.Operator`, \
                              :class:~`.op_builders.OpBuilder`}
@@ -53,13 +53,13 @@ class Builder(object):
         Parameters
         ----------
         ops : tuple of :class:`~nengo:nengo.builder.Operator`
-            the operator group to build into the model
+            The operator group to build into the model
         signals : :class:`.signals.SignalDict`
-            mapping from :class:`~nengo:nengo.builder.Signal` to
+            Mapping from :class:`~nengo:nengo.builder.Signal` to
             ``tf.Tensor`` (updated by operations)
         op_builds : dict of {tuple of :class:`~nengo.builder.Operator`, \
                              :class:~`.op_builders.OpBuilder`}
-            mapping from operator groups to the pre-built builder objects
+            Mapping from operator groups to the pre-built builder objects
         """
 
         logger.debug("===================")
@@ -109,9 +109,9 @@ class OpBuilder(object):  # pragma: no cover
     Parameters
     ----------
     ops : list of :class:`~nengo:nengo.builder.Operator`
-        the operator group to build into the model
+        The operator group to build into the model
     signals : :class:`.signals.SignalDict`
-        mapping from :class:`~nengo:nengo.builder.Signal` to
+        Mapping from :class:`~nengo:nengo.builder.Signal` to
         ``tf.Tensor`` (updated by operations)
     """
 
@@ -125,15 +125,15 @@ class OpBuilder(object):  # pragma: no cover
         Parameters
         ----------
         signals : :class:`.signals.SignalDict`
-            mapping from :class:`~nengo:nengo.builder.Signal` to
+            Mapping from :class:`~nengo:nengo.builder.Signal` to
             ``tf.Tensor`` (updated by operations)
 
         Returns
         -------
         list of ``tf.Tensor``, optional
-            if not None, the returned tensors correspond to outputs with
+            If not None, the returned tensors correspond to outputs with
             possible side-effects, i.e. computations that need to be executed
-            in the tensorflow graph even if their output doesn't appear to be
+            in the TensorFlow graph even if their output doesn't appear to be
             used
         """
         raise BuildError("OpBuilders must implement a `build_step` function")
@@ -150,13 +150,13 @@ class OpBuilder(object):  # pragma: no cover
         Parameters
         ----------
         ops : list of :class:`~nengo:nengo.builder.Operator`
-            the operator group to build into the model
+            The operator group to build into the model
         signals : :class:`.signals.SignalDict`
-            mapping from :class:`~nengo:nengo.builder.Signal` to
+            Mapping from :class:`~nengo:nengo.builder.Signal` to
             ``tf.Tensor`` (updated by operations)
         sess : ``tf.Session``
-            the initialized simulation session
+            The initialized simulation session
         rng : :class:`~numpy:numpy.random.RandomState`
-            seeded random number generator
+            Seeded random number generator
         """
         pass

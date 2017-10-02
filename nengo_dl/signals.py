@@ -15,18 +15,18 @@ class TensorSignal(object):
     Parameters
     ----------
     indices : tuple or list or :class:`~numpy:numpy.ndarray` of int
-        indices along the first axis of the base array corresponding to the
+        Indices along the first axis of the base array corresponding to the
         data for this signal
     key : object
-        key mapping to the base array that contains the data for this signal
+        Key mapping to the base array that contains the data for this signal
     dtype : :class:`~numpy:numpy.dtype`
         dtype of the values represented by this signal
     shape : tuple of int
-        view shape of this signal (may differ from shape of base array)
+        View shape of this signal (may differ from shape of base array)
     minibatched : bool
-        if True then this signal contains a minibatch dimension
+        If True then this signal contains a minibatch dimension
     label : str, optional
-        name for this signal, used to make debugging easier
+        Name for this signal, used to make debugging easier
     """
 
     def __init__(self, indices, key, dtype, shape, minibatched,
@@ -67,12 +67,12 @@ class TensorSignal(object):
         Parameters
         ----------
         indices : slice or list of int
-            the desired subset of the indices in this TensorSignal
+            The desired subset of the indices in this TensorSignal
 
         Returns
         -------
         :class:`.signals.TensorSignal`
-            a new TensorSignal representing the subset of this TensorSignal
+            A new TensorSignal representing the subset of this TensorSignal
         """
 
         if indices is Ellipsis or indices is None:
@@ -91,13 +91,13 @@ class TensorSignal(object):
         Parameters
         ----------
         shape : tuple of int
-            new shape for the signal (one dimension can be -1 to indicate
+            New shape for the signal (one dimension can be -1 to indicate
             an inferred dimension size, as in numpy)
 
         Returns
         -------
         :class:`.signals.TensorSignal`
-            new TensorSignal representing the same data as this signal but
+            New TensorSignal representing the same data as this signal but
             with the given shape
         """
 
@@ -126,10 +126,10 @@ class TensorSignal(object):
         Parameters
         ----------
         axis : 0 or -1
-            where to insert the new dimension (currently only supports either
+            Where to insert the new dimension (currently only supports either
             the beginning or end of the array)
         length : int
-            the number of times to duplicate signal along the broadcast
+            The number of times to duplicate signal along the broadcast
             dimension
 
         Returns
@@ -185,11 +185,11 @@ class SignalDict(object):
     ----------
     sig_map : dict of {:class:`~nengo:nengo.builder.Signal`: \
                        :class:`.TensorSignal`}
-        mapping from ``nengo`` signals to ``nengo_dl`` signals
+        Mapping from ``nengo`` signals to ``nengo_dl`` signals
     dtype : ``tf.DType``
-        floating point precision used in signals
+        Floating point precision used in signals
     minibatch_size : int
-        number of items in each minibatch
+        Number of items in each minibatch
     """
 
     def __init__(self, sig_map, dtype, minibatch_size):
@@ -206,12 +206,12 @@ class SignalDict(object):
         Parameters
         ----------
         dst : :class:`.TensorSignal`
-            signal indicating the data to be modified in base array
+            Signal indicating the data to be modified in base array
         val : ``tf.Tensor``
-            update data (same shape as ``dst``, i.e. a dense array <= the size
+            Update data (same shape as ``dst``, i.e. a dense array <= the size
             of the base array)
         mode : "update" or "inc"
-            overwrite/add the data at ``dst`` with ``val``
+            Overwrite/add the data at ``dst`` with ``val``
         """
 
         if dst.tf_indices is None:
@@ -293,16 +293,16 @@ class SignalDict(object):
         Parameters
         ----------
         src : :class:`.TensorSignal`
-            signal indicating the data to be read from base array
+            Signal indicating the data to be read from base array
         force_copy : bool, optional
-            if True, always perform a gather, not a slice (this forces a
-            copy). note that setting ``force_copy=False`` does not guarantee
+            If True, always perform a gather, not a slice (this forces a
+            copy). Note that setting ``force_copy=False`` does not guarantee
             that a copy won't be performed.
 
         Returns
         -------
         ``tf.Tensor``
-            tensor object corresponding to a dense subset of data from the
+            Tensor object corresponding to a dense subset of data from the
             base array
         """
 
@@ -354,7 +354,7 @@ class SignalDict(object):
         Parameters
         ----------
         src : :class:`.TensorSignal`
-            signal indicating the data being read
+            Signal indicating the data being read
         """
 
         self.gather_bases += [self.bases[src.key]]
@@ -367,17 +367,17 @@ class SignalDict(object):
         ----------
         sigs : list of :class:`.TensorSignal` or \
                        :class:`~nengo:nengo.builder.Signal`
-            signals to be combined
+            Signals to be combined
         load_indices : bool, optional
-            if True, load the indices for the new signal into TensorFlow right
+            If True, load the indices for the new signal into TensorFlow right
             away (otherwise they will need to be manually loaded later)
         label : str, optional
-            name for combined signal (to help with debugging)
+            Name for combined signal (to help with debugging)
 
         Returns
         -------
         :class:`.TensorSignal`
-            new TensorSignal representing the concatenation of the data in
+            New TensorSignal representing the concatenation of the data in
             ``sigs``
         """
 
