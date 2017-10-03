@@ -559,6 +559,10 @@ def test_tensorboard(Simulator, tmpdir):
                       tf.train.GradientDescentOptimizer(0.0),
                       summaries={"a": a})
 
+    # check that nonexistent dir gets created
+    with Simulator(net, tensorboard=str(tmpdir.join("new"))):
+        assert os.path.exists(str(tmpdir.join("new")))
+
 
 @pytest.mark.parametrize("mode", ("run", "train"))
 def test_profile(Simulator, mode):

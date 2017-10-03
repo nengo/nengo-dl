@@ -139,6 +139,9 @@ class Simulator(object):
 
         # output simulation data for viewing via TensorBoard
         if tensorboard:
+            if not os.path.exists(tensorboard):
+                os.makedirs(tensorboard)
+
             run_number = max(
                 [int(x[4:]) for x in os.listdir(tensorboard)
                  if x.startswith("run")] or [-1]) + 1

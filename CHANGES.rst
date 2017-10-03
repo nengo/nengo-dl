@@ -48,6 +48,8 @@ Release History
   (`#11 <https://github.com/nengo/nengo_dl/issues/11>`_)
 - Implemented a modified PES builder in order to avoid slicing encoders on
   non-decoded PES connections
+- TensorBoard output directory will be automatically created if it doesn't
+  exist
 
 0.5.1 (August 28, 2017)
 -----------------------
