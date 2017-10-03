@@ -263,7 +263,7 @@ class ProgressBar(object):
         curr_time = time.time()
 
         # only update the progress bar once every second
-        if curr_time - self.last_time < 1:
+        if curr_time - self.last_time < 1 and self.curr_step < self.max_steps:
             return
         else:
             self.last_time = curr_time
