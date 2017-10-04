@@ -511,15 +511,16 @@ class TensorGraph(object):
 
         Parameters
         ----------
-        summaries : dict of {str: tuple or \
-                                  :class:`~nengo:nengo.Connection` or \
-                                  :class:`~nengo:nengo.Ensemble` or \
-                                  :class:`~nengo:nengo.ensemble.Neurons`}
-            Dictionary containing labels for the summary data and the object
-            for which we want to collect data.  Object can be a Connection (in
-            which case data on weights will be collected), Ensemble (encoders),
-            Neurons (biases), or a tuple of ``(objective, probes)`` that
-            indicates a loss function that will be tracked.
+        summaries : list of tuple or \
+                            :class:`~nengo:nengo.Connection` or \
+                            :class:`~nengo:nengo.Ensemble` or \
+                            :class:`~nengo:nengo.ensemble.Neurons` or \
+                            ``tf.Tensor``}
+            List of objects for which we want to collect data.  Object can be a
+            Connection (in which case data on weights will be collected),
+            Ensemble (encoders), Neurons (biases), a tuple of
+            ``(objective, probes)`` that indicates a loss function that will
+            be tracked, or a pre-built summary tensor.
 
         Returns
         -------
@@ -529,20 +530,24 @@ class TensorGraph(object):
 
         summary_ops = []
         with tf.device("/cpu:0"):
-            for name, obj in summaries.items():
+            for obj in summaries:
                 if isinstance(obj, tuple):
                     loss = self.build_loss(*obj)
-                    summary_ops.append(tf.summary.scalar(name, loss))
+                    summary_ops.append(tf.summary.scalar("loss", loss))
                 elif isinstance(obj, (Ensemble, Neurons, Connection)):
                     if isinstance(obj, Ensemble):
-                        param = self.model.sig[obj]["encoders"]
+                        param = "encoders"
+                        name = "Ensemble_%s" % obj.label
                     elif isinstance(obj, Neurons):
-                        param = self.model.sig[obj]["bias"]
+                        param = "bias"
+                        name = "Ensemble.neurons_%s" % obj.ensemble.label
                     elif isinstance(obj, Connection):
-                        param = self.model.sig[obj]["weights"]
+                        param = "weights"
+                        name = "Connection_%s" % obj.label
 
                     summary_ops.append(tf.summary.histogram(
-                        name, self.get_tensor(param)))
+                        utils.sanitize_name("%s_%s" % (name, param)),
+                        self.get_tensor(self.model.sig[obj][param])))
                 elif isinstance(obj, tf.Tensor):
                     # we assume that obj is a summary op
                     summary_ops.append(obj)

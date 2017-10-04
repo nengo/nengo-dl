@@ -521,8 +521,8 @@ def test_tensorboard(Simulator, tmpdir):
     with Simulator(net, tensorboard=str(tmpdir)) as sim:
         sim.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1))},
                   tf.train.GradientDescentOptimizer(0.0),
-                  summaries={"loss": "loss", "encoders": b,
-                             "biases": b.neurons, "weights": c},
+                  summaries=["loss", b, b.neurons, c,
+                             tf.summary.scalar("step_var", sim.training_step)],
                   n_epochs=3)
 
     event_file = os.path.join(
@@ -535,13 +535,14 @@ def test_tensorboard(Simulator, tmpdir):
             # metadata stuff
             continue
 
-        assert event.step == i - 3
+        assert event.step == i - 2
         tags = [s.tag for s in event.summary.value]
-        assert len(tags) == 4
-        assert "loss" in tags
-        assert "encoders" in tags
-        assert "biases" in tags
-        assert "weights" in tags
+        assert len(tags) == 5
+        assert "loss" in tags[0]
+        assert "Ensemble_None_encoders" == tags[1]
+        assert "Ensemble.neurons_None_bias" == tags[2]
+        assert "Connection_None_weights" == tags[3]
+        assert "step_var" == tags[4]
 
     assert i == 5
 
@@ -550,14 +551,14 @@ def test_tensorboard(Simulator, tmpdir):
         with Simulator(net, tensorboard=None) as sim:
             sim.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1))},
                       tf.train.GradientDescentOptimizer(0.0),
-                      summaries={"loss": "loss"})
+                      summaries=["loss"])
 
     # check for error on invalid object
     with pytest.raises(SimulationError):
         with Simulator(net, tensorboard=str(tmpdir)) as sim:
             sim.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1))},
                       tf.train.GradientDescentOptimizer(0.0),
-                      summaries={"a": a})
+                      summaries=[a])
 
     # check that nonexistent dir gets created
     with Simulator(net, tensorboard=str(tmpdir.join("new"))):

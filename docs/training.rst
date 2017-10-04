@@ -185,22 +185,20 @@ changing over the course of training.  TensorFlow has created `TensorBoard
 visualize this kind of data, and the ``summaries`` argument can be used to
 specify the model data that you would like to export for TensorBoard.
 
-It is specified as a dictionary with the form ``{label: obj, ...}`` where each
-element defines a plot label as well as the object for which we want to collect
+It is specified as a list of objects for which we want to collect
 data.  The data collected depends on the object: if it is a
 :class:`~nengo:nengo.Connection` then data will be collected about the
 distribution of the connection weights over the course of training; passing an
 :class:`~nengo:nengo.Ensemble` will collect data about the distribution of
 encoders, and :class:`~nengo:nengo.ensemble.Neurons` will collect data about
-the distribution of biases. Additionally, the string ``"loss"`` can be passed
-for ``obj``, in which case the training error for the given objective will be
+the distribution of biases. Additionally, the string ``"loss"`` can be passed,
+in which case the training error for the given objective will be
 collected over the course of training.
 
 Alternatively, you can manually create summaries using ``tf.summary.*`` ops for
 any Tensors you would like to track (see `the TensorFlow documentation
-<https://www.tensorflow.org/api_guides/python/summary>`_), and pass those as
-the ``obj`` in the dictionary.  In this case the ``label`` will be ignored,
-since it is specified in the ``tf.summary`` op.
+<https://www.tensorflow.org/api_guides/python/summary>`_), and include those
+in the summaries list.
 
 TensorBoard can be used to view the exported data via the command
 
@@ -220,10 +218,11 @@ the course of training in the ``Scalars`` tab at the top, and plots showing the
 distributions of weights/encoders/biases over time in the ``Distributions`` or
 ``Histograms`` tabs.  If you call ``sim.train`` several times with the same
 summaries, each call will result in its own set of plots, with a suffix added
-to the label indicating the call number (e.g. ``label, label_1, label_2,
-...``). If you run your code multiple times with the same ``tensorboard_dir``,
-data will be organized according to run number; you can turn on/off the plots
-for different runs using the checkboxes in the bottom left.
+to the label indicating the call number (e.g.
+``label, label_1, label_2, ...``). If you run your code multiple times with
+the same ``tensorboard_dir``, data will be organized according to run number;
+you can turn on/off the plots for different runs using the checkboxes in the
+bottom left.
 
 Other parameters
 ^^^^^^^^^^^^^^^^

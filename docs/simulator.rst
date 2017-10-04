@@ -125,7 +125,7 @@ By default the TensorBoard output will only contain a `visualization of the
 TensorFlow graph <https://www.tensorflow.org/get_started/graph_viz>`_
 constructed for this Simulator.  However, TensorBoard can also be used to track
 various aspects of the simulation throughout the training process; see
-:ref:`the documentation <summaries>` for details.
+:ref:`the sim.train documentation <summaries>` for details.
 
 Repeated Simulator calls with the same output directory will be organized into
 subfolders according to run number (e.g., ``<tensorboard_dir>/run_0``).

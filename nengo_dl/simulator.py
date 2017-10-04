@@ -372,16 +372,14 @@ class Simulator(object):
             that Probe (loss will be averaged across Probes).
         shuffle : bool, optional
             If True, randomize the data into different minibatches each epoch
-        summaries : dict of {str: :class:`~nengo:nengo.Connection` or \
-                                  :class:`~nengo:nengo.Ensemble` or \
-                                  :class:`~nengo:nengo.ensemble.Neurons` or \
-                                  ``"loss"`` or \
-                                  ``tf.Tensor``}, optional
+        summaries : list of :class:`~nengo:nengo.Connection` or \
+                            :class:`~nengo:nengo.Ensemble` or \
+                            :class:`~nengo:nengo.ensemble.Neurons` or \
+                            ``"loss"`` or \
+                            ``tf.Tensor``}
             If not None, collect data during the training process using
-            TensorFlow's ``tf.summary`` format.  The dictionary should
-            consist of ``{label: obj}`` pairs, where ``obj`` is the object
-            for which we want to collect data.  The object can be a Connection
-            (in which case data on the corresponding weights will be
+            TensorFlow's ``tf.summary`` format.  The summary objects can be a
+            Connection (in which case data on the corresponding weights will be
             collected), Ensemble (encoders), Neurons (biases), or ``"loss"``
             (the loss value for ``objective``).  The user can also create their
             own summaries and pass in the Tensors representing the summary ops.
@@ -436,9 +434,9 @@ class Simulator(object):
                 warnings.warn("Simulator was created with tensorboard=False; "
                               "ignoring requested summaries")
             else:
-                for k, v in summaries.items():
+                for i, v in enumerate(summaries):
                     if isinstance(v, str) and v == "loss":
-                        summaries[k] = (objective, tuple(targets.keys()))
+                        summaries[i] = (objective, tuple(targets.keys()))
                 summary_op = self.tensor_graph.build_summaries(summaries)
                 fetches.append(summary_op)
 
