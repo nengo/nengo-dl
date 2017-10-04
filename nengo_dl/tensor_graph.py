@@ -468,8 +468,13 @@ class TensorGraph(object):
 
             # compute loss
             if objective == "mse":
-                loss += [tf.reduce_mean(tf.square(
-                    self.target_phs[p] - self.probe_arrays[probe_index]))]
+                # note: nan targets converted to zero error
+                target = tf.where(tf.is_nan(self.target_phs[p]),
+                                  self.probe_arrays[probe_index],
+                                  self.target_phs[p])
+
+                loss += [tf.reduce_mean(
+                    tf.square(target - self.probe_arrays[probe_index]))]
             elif callable(objective):
                 # move minibatch dimension back to the front
                 x = tf.transpose(self.probe_arrays[probe_index], (2, 0, 1))

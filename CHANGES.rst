@@ -45,6 +45,8 @@ Release History
 
 - Resetting the simulator now only rebuilds the necessary components in the
   graph (as opposed to rebuilding the whole graph)
+- The default ``"mse"`` loss implementation will now automatically convert
+  ``np.nan`` values in the target to zero error
 
 **Fixed**
 
