@@ -976,9 +976,12 @@ class Simulator(object):
         return self.tensor_graph.training_step
 
     def __enter__(self):
+        self._graph_context = self.tensor_graph.graph.as_default()
+        self._graph_context.__enter__()
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, *args):
+        self._graph_context.__exit__(*args)
         self.close()
 
     def __del__(self):

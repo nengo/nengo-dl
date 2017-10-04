@@ -37,6 +37,9 @@ Release History
   operations).
 - Users can manually create ``tf.summary`` ops and pass them to ``sim.train``
   summaries
+- The Simulator context will now also set the default TensorFlow graph to the
+  one associated with the Simulator (so any TensorFlow ops created within the
+  Simulator context will automatically be added to the correct graph)
 
 **Changed**
 
