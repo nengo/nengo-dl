@@ -533,19 +533,21 @@ class TensorGraph(object):
                 if isinstance(obj, tuple):
                     loss = self.build_loss(*obj)
                     summary_ops.append(tf.summary.scalar(name, loss))
-                else:
+                elif isinstance(obj, (Ensemble, Neurons, Connection)):
                     if isinstance(obj, Ensemble):
                         param = self.model.sig[obj]["encoders"]
                     elif isinstance(obj, Neurons):
                         param = self.model.sig[obj]["bias"]
                     elif isinstance(obj, Connection):
                         param = self.model.sig[obj]["weights"]
-                    else:
-                        raise SimulationError(
-                            "Unknown summary object: %s" % obj)
 
                     summary_ops.append(tf.summary.histogram(
                         name, self.get_tensor(param)))
+                elif isinstance(obj, tf.Tensor):
+                    # we assume that obj is a summary op
+                    summary_ops.append(obj)
+                else:
+                    raise SimulationError("Unknown summary object: %s" % obj)
 
             return tf.summary.merge(summary_ops)
 

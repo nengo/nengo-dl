@@ -35,6 +35,8 @@ Release History
 - Added ``sim.training_step`` variable which will track the current training
   iteration (can be used, e.g., for TensorFlow's variable learning rate
   operations).
+- Users can manually create ``tf.summary`` ops and pass them to ``sim.train``
+  summaries
 
 **Changed**
 

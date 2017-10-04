@@ -375,14 +375,16 @@ class Simulator(object):
         summaries : dict of {str: :class:`~nengo:nengo.Connection` or \
                                   :class:`~nengo:nengo.Ensemble` or \
                                   :class:`~nengo:nengo.ensemble.Neurons` or \
-                                  ``"loss"``}, optional
+                                  ``"loss"`` or \
+                                  ``tf.Tensor``}, optional
             If not None, collect data during the training process using
             TensorFlow's ``tf.summary`` format.  The dictionary should
             consist of ``{label: obj}`` pairs, where ``obj`` is the object
             for which we want to collect data.  The object can be a Connection
             (in which case data on the corresponding weights will be
             collected), Ensemble (encoders), Neurons (biases), or ``"loss"``
-            (the loss value for ``objective``).
+            (the loss value for ``objective``).  The user can also create their
+            own summaries and pass in the Tensors representing the summary ops.
         profile : bool, optional
             If True, collect TensorFlow profiling information while training
             (this will slow down the training)

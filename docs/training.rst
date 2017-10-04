@@ -196,6 +196,12 @@ the distribution of biases. Additionally, the string ``"loss"`` can be passed
 for ``obj``, in which case the training error for the given objective will be
 collected over the course of training.
 
+Alternatively, you can manually create summaries using ``tf.summary.*`` ops for
+any Tensors you would like to track (see `the TensorFlow documentation
+<https://www.tensorflow.org/api_guides/python/summary>`_), and pass those as
+the ``obj`` in the dictionary.  In this case the ``label`` will be ignored,
+since it is specified in the ``tf.summary`` op.
+
 TensorBoard can be used to view the exported data via the command
 
 .. code-block:: bash
