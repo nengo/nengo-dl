@@ -32,6 +32,9 @@ Release History
   <https://www.nengo.ai/nengo_dl/training.html>`__).
 - Added some examples demonstrating how to use Nengo DL in a more complicated
   task using semantic pointers to encode/retrieve information
+- Added ``sim.training_step`` variable which will track the current training
+  iteration (can be used, e.g., for TensorFlow's variable learning rate
+  operations).
 
 **Changed**
 

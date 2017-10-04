@@ -440,6 +440,9 @@ class Simulator(object):
                 summary_op = self.tensor_graph.build_summaries(summaries)
                 fetches.append(summary_op)
 
+        # increment training step
+        fetches.append(self.tensor_graph.training_step_inc)
+
         # save the internal state of the simulator
         tmpdir = tempfile.TemporaryDirectory()
         self.save_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
@@ -458,7 +461,6 @@ class Simulator(object):
         progress = utils.ProgressBar(
             n_epochs * batch_size // self.minibatch_size, "Training")
 
-        step = 0
         for n in range(n_epochs):
             for inp, tar in utils.minibatch_generator(
                     inputs, targets, self.minibatch_size, rng=self.rng,
@@ -471,10 +473,9 @@ class Simulator(object):
                     options=run_options, run_metadata=run_metadata)
 
                 if summary_op is not None:
-                    self.summary.add_summary(outputs[2], step)
+                    self.summary.add_summary(outputs[2], outputs[-1])
 
                 progress.step("loss=%f" % outputs[1])
-                step += 1
 
         # restore internal state of simulator
         self.load_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
@@ -967,6 +968,10 @@ class Simulator(object):
     @dt.setter
     def dt(self, dummy):
         raise ReadonlyError(attr='dt', obj=self)
+
+    @property
+    def training_step(self):
+        return self.tensor_graph.training_step
 
     def __enter__(self):
         return self

@@ -904,3 +904,24 @@ def test_simulation_data(Simulator, seed):
 
     with pytest.raises(ValidationError):
         sim.data[nengo.Ensemble(10, 1, add_to_container=False)]
+
+
+def test_learning_rate_schedule(Simulator):
+    with nengo.Network() as net:
+        a = nengo.Node([0])
+        b = nengo.Ensemble(10, 1)
+        nengo.Connection(a, b)
+        p = nengo.Probe(b)
+
+    with Simulator(net) as sim:
+        vals = [1.0, 0.1, 0.001]
+        l_rate = tf.train.piecewise_constant(
+            sim.training_step,
+            [tf.constant(4, dtype=tf.int64), tf.constant(9, dtype=tf.int64)],
+            vals)
+        opt = tf.train.GradientDescentOptimizer(l_rate)
+
+        for i in range(3):
+            assert np.allclose(sim.sess.run(l_rate), vals[i])
+            sim.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1))},
+                      opt, n_epochs=5)

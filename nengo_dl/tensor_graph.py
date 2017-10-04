@@ -145,6 +145,14 @@ class TensorGraph(object):
         self.signals.dt = tf.constant(self.dt, self.dtype)
         self.signals.dt_val = self.dt  # store the actual value as well
 
+        # variable to track training step
+        with tf.device("/cpu:0"):
+            with tf.variable_scope("misc_vars", reuse=False):
+                self.training_step = tf.get_variable(
+                    "training_step", initializer=tf.constant_initializer(0),
+                    dtype=tf.int64, shape=(), trainable=False)
+            self.training_step_inc = tf.assign_add(self.training_step, 1)
+
         # create base arrays
         self.base_vars = []
         for k, (v, trainable) in self.base_arrays_init.items():
@@ -193,14 +201,11 @@ class TensorGraph(object):
         self.build_loop()
 
         # ops for initializing variables (will be called by simulator)
-        self.trainable_init_op = tf.variables_initializer(
-            tf.trainable_variables())
+        trainable_vars = tf.trainable_variables() + [self.training_step]
+        self.trainable_init_op = tf.variables_initializer(trainable_vars)
         self.local_init_op = tf.local_variables_initializer()
-        # note: the only non-trainable global variables should be those
-        # created inside TensorNodes
         self.global_init_op = tf.variables_initializer(
-            [v for v in tf.global_variables()
-             if v not in tf.trainable_variables()])
+            [v for v in tf.global_variables() if v not in trainable_vars])
 
     def build_step(self):
         """Build the operators that execute a single simulation timestep
