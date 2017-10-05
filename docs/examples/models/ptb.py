@@ -1,22 +1,16 @@
 
-"""
-This is a work-in-progress LSTM language model implemented with TensorFlow.
-
-The Penn Treebank data required to use this model can be obtained as follows:
-$ wget http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz
-$ tar xvf simple-examples.tgz
-"""
 import os
-import nengo.spa as spa
+import re
 
 import numpy as np
 import tensorflow as tf
+import nengo.spa as spa
 
 from tensorflow.contrib.seq2seq import sequence_loss
-from helpers import ptb_producer, ptb_raw_data, has_punc
+from .helpers import ptb_producer, ptb_raw_data
 
 
-class PTBModel(object):
+class LanguageModel(object):
     """LSTM language model for use with the Penn Treebank dataset. This model
     is very loosely adapted from code accompanying the Tensorflow tutorial at
     https://www.tensorflow.org/tutorials/recurrent. The goal is to provide a
@@ -26,7 +20,7 @@ class PTBModel(object):
     Parameters
     ----------
     path : str
-        The absolute path to a directory containing the PTB text
+        The absolute path to a directory containing the PTB text files
     dim : int
         The dimensionality of the LSTM state vectors.
     """
@@ -34,26 +28,31 @@ class PTBModel(object):
         self.ptb = ptb_raw_data(path)
         self.word_to_id = self.ptb['word_to_id']
         self.id_to_word = self.ptb['id_to_word']
-        self.vocab = self.ptb['vocabulary']
+        self.vsize = self.ptb['vocabulary']
         self.dim = dim
-        self.producer = ptb_producer
         self.build_graph()
 
+    @staticmethod
+    def has_punc(word):
+        regex = re.compile(r"[0-9]|[^\w]")
+        if regex.findall(word):
+            return True
+
     def _start_session(self):
-        '''Creates a session object for executing a built computation graph'''
+        """Creates a session object for executing a built computation graph"""
         if not hasattr(self, 'sess'):
             self.sess = tf.Session(graph=self.graph)
             self.sess.run(self.initializer)
 
     def build_graph(self, max_grad=5):
-        '''Builds the computation graph to be executed during model training
+        """Builds the computation graph to be executed during model training
         and inference.
 
         Parameters
         ----------
         max_grad : int (optional)
             The maximum gradient norm to use for gradient clipping
-        '''
+        """
         self.graph = tf.Graph()
 
         with self.graph.as_default():
@@ -65,7 +64,7 @@ class PTBModel(object):
             b_size = tf.shape(self.xs)[0]
             n_steps = tf.shape(self.xs)[1]
 
-            e_matrix = tf.Variable(tf.random_uniform([self.vocab, self.dim],
+            e_matrix = tf.Variable(tf.random_uniform([self.vsize, self.dim],
                                    -1.0, 1.0), name='embedding_matrix')
 
             embeddings = tf.nn.embedding_lookup(e_matrix, self.xs)
@@ -79,12 +78,12 @@ class PTBModel(object):
 
             output = tf.reshape(tf.concat(outputs, 1), [-1, self.dim])
 
-            b_softmax = tf.Variable(tf.zeros(self.vocab), name='b_softmax')
-            W_softmax = tf.Variable(tf.random_uniform([self.dim, self.vocab],
+            b_softmax = tf.Variable(tf.zeros(self.vsize), name='b_softmax')
+            W_softmax = tf.Variable(tf.random_uniform([self.dim, self.vsize],
                                     -0.1, 0.1), name='W_softmax')
 
             logits = tf.nn.xw_plus_b(output, W_softmax, b_softmax)
-            logits = tf.reshape(logits, [b_size, n_steps, self.vocab])
+            logits = tf.reshape(logits, [b_size, n_steps, self.vsize])
             self.probs = tf.nn.softmax(logits)
 
             ones = tf.ones([b_size, n_steps], dtype=tf.float32)
@@ -104,7 +103,7 @@ class PTBModel(object):
             self.initializer = tf.global_variables_initializer()
 
     def train(self, rate, epochs, b_size=20, n_steps=15):
-        '''Trains the model for some number of epochs using the PTB dataset.
+        """Trains the model for some number of epochs using the PTB dataset.
 
         Parameters
         ----------
@@ -117,7 +116,7 @@ class PTBModel(object):
         n_steps : int (optional)
             The number of time steps to unroll the network during training,
             since we are doing truncated backpropogation through time.
-        '''
+        """
         self.total_cost = 0
         self.iterations = 0
 
@@ -125,7 +124,7 @@ class PTBModel(object):
         zeros = np.zeros((2, b_size, self.dim))
 
         for epoch in range(epochs):
-            data = self.producer(self.ptb['train_data'], b_size, n_steps)
+            data = ptb_producer(self.ptb['train_data'], b_size, n_steps)
 
             for words, labels in data:
                 feed_dict = {self.xs: words, self.ys: labels, self.init: zeros}
@@ -139,7 +138,7 @@ class PTBModel(object):
             print('')
 
     def predict(self, prompt, n_steps):
-        '''Predict a continuation for some linguistic prompt.
+        """Predict a continuation for some linguistic prompt.
 
         Parameters
         ----------
@@ -147,10 +146,11 @@ class PTBModel(object):
             A sequence of words for conditioning the LSTM's hidden state
         n_steps : int
             The number of time steps to run the LSTM to generate continuations
-        '''
+        """
         words = [w.lower() for w in prompt.split()]
-        assert all([word in self.word_to_id for word in words])
+        assert all([w in self.word_to_id for w in words])
 
+        # for initializing the LSTM cell with a batch_size of 1
         state = np.zeros((2, 1, self.dim))
 
         for word in words:
@@ -176,28 +176,26 @@ class PTBModel(object):
 
             idx = np.argmax(probs[0, 0, :])
 
-        return words, predictions
+        return predictions
 
     def perplexity_eval(self, data, b_size=20, n_steps=15):
-        '''Compute the average perplexity on a PTB-style dataset
+        """Compute the average perplexity on a PTB-style dataset
 
         Parameters
         ----------
         data : list of int
             A list of word ids constituting a text file.
         b_size : int (optional)
-            The batch size to use during training
+            The batch size to use for computing perplexity
         n_steps : int (optional)
-            The number of time steps to unroll the network during training,
-            since we are doing truncated backpropogation through time.
-        '''
-
+            The number of time steps to unroll the network
+        """
         state = np.zeros((2, b_size, self.dim))
 
         total_cost = 0
         iterations = 0
 
-        feed = self.producer(data, b_size, n_steps)
+        feed = ptb_producer(data, b_size, n_steps)
 
         for words, labels in feed:
             feed_dict = {self.xs: words, self.ys: labels, self.init: state}
@@ -210,9 +208,9 @@ class PTBModel(object):
         return perplexity
 
     def save_variables(self, var_names, filename):
-        '''Save a list of named variables in the model to a checkpoint file,
+        """Save a list of named variables in the model to a checkpoint file,
         specifically for use in a Nengo DL tensornode. The naming logic here
-        is a hack for this specific use case (Fix TBD.)
+        is a hack for this specific use case. TODO: Fix.
 
         Parameters
         ----------
@@ -220,7 +218,7 @@ class PTBModel(object):
             A list of variable names included in self.graph (errors otherwise)
         b_size : str
             The name of a checkpoint file to save the variables to
-        '''
+        """
         with self.graph.as_default():
             tn_scope = 'SimTensorNodeBuilder/'
             all_vars = tf.global_variables()
@@ -238,24 +236,24 @@ class PTBModel(object):
             saver.save(self.sess, filename)
 
     def save(self, filename):
-        '''Save the model to a checkpoint file'''
+        """Save the model to a checkpoint file"""
         with self.graph.as_default():
             saver = tf.train.Saver()
             saver.save(self.sess, filename)
 
     def load(self, filename):
-        '''Load an existing model from a checkpoint file'''
+        """Load an existing model from a checkpoint file"""
         with self.graph.as_default():
             self._start_session()
             saver = tf.train.Saver()
             saver.restore(self.sess, filename)
 
     def build_spa_vocab(self, dim):
-        '''Build a spa Vocabulary using the model vocabulary'''
+        """Build a spa Vocabulary using the model vocabulary"""
         vocab = spa.Vocabulary(dim, max_similarity=1.0)
 
         for word, idx in self.word_to_id.items():
-            if not has_punc(word):
+            if not self.has_punc(word):
                 vocab.parse(word.upper())
 
         return vocab
@@ -269,8 +267,7 @@ if __name__ == '__main__':
     dim = 300
     rate = 1.0
 
-    model = PTBModel(path, dim)
-    model.build_graph()
+    model = LanguageModel(path, dim)
     model.train(rate=rate, epochs=5, b_size=b_size, n_steps=n_steps)
 
     model.save('ptb_model.ckpt')
