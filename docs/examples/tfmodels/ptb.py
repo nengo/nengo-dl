@@ -1,5 +1,3 @@
-
-import os
 import re
 
 import numpy as np
@@ -117,24 +115,23 @@ class LanguageModel(object):
             The number of time steps to unroll the network during training,
             since we are doing truncated backpropogation through time.
         """
-        self.total_cost = 0
-        self.iterations = 0
-
         self._start_session()
         zeros = np.zeros((2, b_size, self.dim))
 
         for epoch in range(epochs):
+            total_cost = 0
+            iterations = 0
             data = ptb_producer(self.ptb['train_data'], b_size, n_steps)
 
             for words, labels in data:
                 feed_dict = {self.xs: words, self.ys: labels, self.init: zeros}
                 cost, _ = self.sess.run([self.cost, self.train_op], feed_dict)
 
-                self.total_cost += cost
-                self.iterations += n_steps
+                total_cost += cost
+                iterations += n_steps
 
             print('Epoch: ', epoch)
-            print('Train PPL: ', np.exp(self.total_cost / self.iterations))
+            print('Train PPL: ', np.exp(total_cost / iterations))
             print('')
 
     def predict(self, prompt, n_steps):
@@ -203,8 +200,8 @@ class LanguageModel(object):
                                         feed_dict)
             total_cost += cost
             iterations += n_steps
-            perplexity = np.exp(total_cost / iterations)
 
+        perplexity = np.exp(total_cost / iterations)
         return perplexity
 
     def save_variables(self, var_names, filename):
@@ -257,17 +254,3 @@ class LanguageModel(object):
                 vocab.parse(word.upper())
 
         return vocab
-
-
-if __name__ == '__main__':
-    path = os.path.join(os.getcwd(), 'simple-examples/data')
-
-    b_size = 20
-    n_steps = 15
-    dim = 300
-    rate = 1.0
-
-    model = LanguageModel(path, dim)
-    model.train(rate=rate, epochs=5, b_size=b_size, n_steps=n_steps)
-
-    model.save('ptb_model.ckpt')

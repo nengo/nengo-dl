@@ -15,5 +15,5 @@ data
 docs/mnist.pkl
 docs/examples/*
 !docs/examples/*.ipynb
-!docs/examples/models/
+!docs/examples/tfmodels/
 tmp
