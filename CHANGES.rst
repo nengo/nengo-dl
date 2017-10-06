@@ -50,6 +50,8 @@ Release History
   graph (as opposed to rebuilding the whole graph)
 - The default ``"mse"`` loss implementation will now automatically convert
   ``np.nan`` values in the target to zero error
+- If there are multiple target probes given to ``sim.train``/``sim.loss`` the
+  total error will now be summed across probes (instead of averaged)
 
 **Fixed**
 

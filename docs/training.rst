@@ -170,7 +170,7 @@ If there are multiple output Probes defined in ``targets`` then by default the
 same objective will be used for all probes.  This can be overriden by passing
 a dictionary with the form ``{my_probe0: my_objective0,
 my_probe1: my_objective1, ...}`` for the ``objective``, specifying a different
-objective for each probe. In either case, the error will be then averaged
+objective for each probe. In either case, the error will then be summed
 across the probes to produce an overall error value.
 
 Note that :meth:`.Simulator.loss` can be used to check the loss

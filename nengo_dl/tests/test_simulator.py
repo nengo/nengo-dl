@@ -954,13 +954,13 @@ def test_multiple_objective(Simulator, seed):
         p_c = nengo.Probe(c)
 
     with Simulator(net, unroll_simulation=1) as sim:
-        inputs = {a: np.ones((10, 5, 1))}
-        targets = {p_b: np.zeros((10, 5, 1)), p_c: np.zeros((10, 5, 1))}
+        inputs = {a: np.ones((10, 1, 1))}
+        targets = {p_b: np.zeros((10, 1, 1)), p_c: np.zeros((10, 1, 1))}
         objective = {
             p_b: lambda x, y: x,
             p_c: lambda x, y: x * 0}
 
-        assert np.allclose(sim.loss(inputs, targets, objective), 0.5,
+        assert np.allclose(sim.loss(inputs, targets, objective), 1,
                            atol=1e-3)
 
         b_bias = np.copy(sim.data[b].bias)

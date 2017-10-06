@@ -449,12 +449,12 @@ class TensorGraph(object):
             ``f(output, target) -> loss`` can be passed that consumes the
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
-            that Probe (loss will be averaged across Probes).
+            that Probe (loss will be summed across Probes).
 
         Returns
         -------
         ``tf.Tensor``
-            Tensor representing the mean of the given objectives applied to
+            Tensor representing the sum of the given objectives applied to
             target probes
         """
 
@@ -493,9 +493,9 @@ class TensorGraph(object):
             else:
                 raise NotImplementedError
 
-        # average loss across probes (note: this will also average across
+        # sum loss across probes (note: this will also sum across
         # the output of `objective` if it doesn't return a scalar)
-        loss = tf.reduce_mean(loss)
+        loss = tf.reduce_sum(loss)
 
         self.losses[key] = loss
 
