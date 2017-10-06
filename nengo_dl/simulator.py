@@ -238,8 +238,18 @@ class Simulator(object):
             See :meth:`.run_steps`
         """
 
+        if time_in_seconds < 0:
+            raise ValidationError(
+                "Must be positive (got %g)" % (time_in_seconds,),
+                attr="time_in_seconds")
+
         steps = int(np.round(float(time_in_seconds) / self.dt))
-        self.run_steps(steps, **kwargs)
+
+        if steps == 0:
+            warnings.warn("%g results in running for 0 timesteps. Simulator "
+                          "still at time %g." % (time_in_seconds, self.time))
+        else:
+            self.run_steps(steps, **kwargs)
 
     def run_steps(self, n_steps, input_feeds=None, profile=False):
         """Simulate for the given number of steps.
