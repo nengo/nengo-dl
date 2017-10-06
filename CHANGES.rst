@@ -30,6 +30,8 @@ Release History
 - Added functionality for outputting summary data during the training process
   that can be viewed in TensorBoard (see the `sim.train documentation
   <https://www.nengo.ai/nengo_dl/training.html>`__).
+- Added some examples demonstrating how to use Nengo DL in a more complicated
+  task using semantic pointers to encode/retrieve information
 
 **Changed**
 

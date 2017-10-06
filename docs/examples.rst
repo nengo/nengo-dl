@@ -12,3 +12,5 @@ the
     examples/nef_init
     examples/pretrained_model
     examples/spiking_mnist
+    examples/spa_retrieval_optimization
+    examples/spa_memory_optimization
