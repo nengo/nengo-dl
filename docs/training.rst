@@ -166,10 +166,12 @@ rather than using the default:
     with nengo_dl.Simulator(net, ...) as sim:
         sim.train(objective=my_objective, ...)
 
-If there are multiple output Probes defined in ``targets`` then the error
-will be computed for each output individually (using the specified objective).
-Then the error will be averaged across outputs to produce an overall
-error value.
+If there are multiple output Probes defined in ``targets`` then by default the
+same objective will be used for all probes.  This can be overriden by passing
+a dictionary with the form ``{my_probe0: my_objective0,
+my_probe1: my_objective1, ...}`` for the ``objective``, specifying a different
+objective for each probe. In either case, the error will be then averaged
+across the probes to produce an overall error value.
 
 Note that :meth:`.Simulator.loss` can be used to check the loss
 (error) value for a given objective.

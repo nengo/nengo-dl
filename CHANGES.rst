@@ -29,7 +29,7 @@ Release History
   <https://www.nengo.ai/nengo_dl/tensor_node.html>`_).
 - Added functionality for outputting summary data during the training process
   that can be viewed in TensorBoard (see the `sim.train documentation
-  <https://www.nengo.ai/nengo_dl/training.html>`__).
+  <https://www.nengo.ai/nengo_dl/training.html#summaries>`__).
 - Added some examples demonstrating how to use Nengo DL in a more complicated
   task using semantic pointers to encode/retrieve information
 - Added ``sim.training_step`` variable which will track the current training
@@ -40,6 +40,9 @@ Release History
 - The Simulator context will now also set the default TensorFlow graph to the
   one associated with the Simulator (so any TensorFlow ops created within the
   Simulator context will automatically be added to the correct graph)
+- Users can now specify a different objective for each output probe during
+  training/loss calculation (see the `sim.train documentation
+  <https://www.nengo.ai/nengo_dl/training.html#objective>`__).
 
 **Changed**
 

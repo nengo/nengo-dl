@@ -369,7 +369,10 @@ class Simulator(object):
             ``f(output, target) -> loss`` can be passed that consumes the
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
-            that Probe (loss will be averaged across Probes).
+            that Probe (loss will be averaged across Probes).  Note that by
+            default the same objective will be used for all probes in
+            ``targets``; a dictionary of ``{probe: obj, ...}`` can be passed
+            for ``objective`` to specify a different objective for each probe.
         shuffle : bool, optional
             If True, randomize the data into different minibatches each epoch
         summaries : list of :class:`~nengo:nengo.Connection` or \
@@ -418,13 +421,17 @@ class Simulator(object):
         #     [self.tensor_graph.probe_arrays[self.model.probes.index(p)]
         #      for p in targets])
 
+        # apply objective to all probes if individual objectives weren't given
+        if not isinstance(objective, dict):
+            objective = {p: objective for p in targets}
+
         # build optimizer op
         opt_op, opt_slots_init = self.tensor_graph.build_optimizer(
-            optimizer, tuple(targets.keys()), objective)
+            optimizer, objective)
         fetches = [opt_op]
 
         # get loss op
-        loss = self.tensor_graph.losses[(objective, tuple(targets.keys()))]
+        loss = self.tensor_graph.build_loss(objective)
         fetches.append(loss)
 
         # add summaries
@@ -436,7 +443,7 @@ class Simulator(object):
             else:
                 for i, v in enumerate(summaries):
                     if isinstance(v, str) and v == "loss":
-                        summaries[i] = (objective, tuple(targets.keys()))
+                        summaries[i] = objective
                 summary_op = self.tensor_graph.build_summaries(summaries)
                 fetches.append(summary_op)
 
@@ -461,6 +468,7 @@ class Simulator(object):
         progress = utils.ProgressBar(
             n_epochs * batch_size // self.minibatch_size, "Training")
 
+        # run training
         for n in range(n_epochs):
             for inp, tar in utils.minibatch_generator(
                     inputs, targets, self.minibatch_size, rng=self.rng,
@@ -511,7 +519,10 @@ class Simulator(object):
             ``f(output, target) -> loss`` can be passed that consumes the
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
-            that Probe (loss will be averaged across Probes).
+            that Probe (loss will be averaged across Probes). Note that by
+            default the same objective will be used for all probes in
+            ``targets``; a dictionary of ``{probe: obj, ...}`` can be passed
+            for ``objective`` to specify a different objective for each probe.
         """
 
         batch_size, n_steps = next(iter(inputs.values())).shape[:2]
@@ -527,8 +538,12 @@ class Simulator(object):
             raise ValidationError("The number of timesteps in loss data "
                                   "must be >= unroll_simulation", "inputs")
 
+        # apply objective to all probes if individual objectives weren't given
+        if not isinstance(objective, dict):
+            objective = {p: objective for p in targets}
+
         # get loss op
-        loss = self.tensor_graph.build_loss(objective, tuple(targets.keys()))
+        loss = self.tensor_graph.build_loss(objective)
 
         # save the internal state of the simulator
         tmpdir = tempfile.TemporaryDirectory()

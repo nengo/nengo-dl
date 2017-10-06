@@ -187,7 +187,7 @@ def test_train_recurrent(Simulator, seed):
         sim.train(
             {inp: x}, {p: y}, tf.train.RMSPropOptimizer(1e-3), n_epochs=200)
 
-        sim.check_gradients(sim.tensor_graph.losses[("mse", (p,))])
+        sim.check_gradients(sim.tensor_graph.build_loss({p: "mse"}))
 
         sim.run_steps(n_steps, input_feeds={inp: x[:minibatch_size]})
 
@@ -509,6 +509,7 @@ def test_tensorboard(Simulator, tmpdir):
         b = nengo.Ensemble(10, 1)
         c = nengo.Connection(a, b)
         p = nengo.Probe(b)
+        p2 = nengo.Probe(c)
 
     with Simulator(net, tensorboard=str(tmpdir)):
         assert os.path.exists("%s/run_0" % tmpdir)
@@ -519,7 +520,8 @@ def test_tensorboard(Simulator, tmpdir):
 
     # check that training summaries are output properly
     with Simulator(net, tensorboard=str(tmpdir)) as sim:
-        sim.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1))},
+        sim.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1)),
+                                              p2: np.zeros((1, 10, 1))},
                   tf.train.GradientDescentOptimizer(0.0),
                   summaries=["loss", b, b.neurons, c,
                              tf.summary.scalar("step_var", sim.training_step)],
@@ -537,12 +539,14 @@ def test_tensorboard(Simulator, tmpdir):
 
         assert event.step == i - 2
         tags = [s.tag for s in event.summary.value]
-        assert len(tags) == 5
-        assert "loss" in tags[0]
-        assert "Ensemble_None_encoders" == tags[1]
-        assert "Ensemble.neurons_None_bias" == tags[2]
-        assert "Connection_None_weights" == tags[3]
-        assert "step_var" == tags[4]
+        assert len(tags) == 7
+        assert "loss/loss" in tags[0]
+        assert "loss/Probe_None_loss" in tags[1]
+        assert "loss/Probe_None_loss" in tags[2]
+        assert "Ensemble_None_encoders" == tags[3]
+        assert "Ensemble.neurons_None_bias" == tags[4]
+        assert "Connection_None_weights" == tags[5]
+        assert "step_var" == tags[6]
 
     assert i == 5
 
@@ -926,3 +930,42 @@ def test_learning_rate_schedule(Simulator):
             assert np.allclose(sim.sess.run(l_rate), vals[i])
             sim.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1))},
                       opt, n_epochs=5)
+
+
+def test_multiple_objective(Simulator, seed):
+    with nengo.Network(seed=seed) as net:
+        net.config[nengo.Connection].synapse = None
+
+        a = nengo.Node([0])
+
+        # note: b is configured this way so that the output, and therefore
+        # loss, will be equal to the input, so we can control it easily
+        b = nengo.Ensemble(
+            100, 1, neuron_type=nengo.RectifiedLinear(),
+            gain=nengo.dists.Choice([1]), bias=nengo.dists.Choice([0]),
+            encoders=nengo.dists.Choice([[1]]))
+
+        c = nengo.Ensemble(10, 1)
+
+        nengo.Connection(a, b)
+        nengo.Connection(a, c)
+
+        p_b = nengo.Probe(b)
+        p_c = nengo.Probe(c)
+
+    with Simulator(net, unroll_simulation=1) as sim:
+        inputs = {a: np.ones((10, 5, 1))}
+        targets = {p_b: np.zeros((10, 5, 1)), p_c: np.zeros((10, 5, 1))}
+        objective = {
+            p_b: lambda x, y: x,
+            p_c: lambda x, y: x * 0}
+
+        assert np.allclose(sim.loss(inputs, targets, objective), 0.5,
+                           atol=1e-3)
+
+        b_bias = np.copy(sim.data[b].bias)
+        c_bias = sim.data[c].bias
+        sim.train(inputs, targets, tf.train.GradientDescentOptimizer(1.0),
+                  objective=objective, n_epochs=10)
+        assert np.allclose(sim.data[c].bias, c_bias)
+        assert not np.allclose(sim.data[b].bias, b_bias)

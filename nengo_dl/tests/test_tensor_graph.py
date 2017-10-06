@@ -55,14 +55,14 @@ def test_build_loss(Simulator):
         p = nengo.Probe(inp)
 
     with Simulator(net) as sim:
-        assert (sim.tensor_graph.build_loss("mse", (p,)) is
-                sim.tensor_graph.build_loss("mse", (p,)))
+        assert (sim.tensor_graph.build_loss({p: "mse"}) is
+                sim.tensor_graph.build_loss({p: "mse"}))
 
         def loss(*args):
             return args[0]
 
-        assert (sim.tensor_graph.build_loss(loss, (p,)) is
-                sim.tensor_graph.build_loss(loss, (p,)))
+        assert (sim.tensor_graph.build_loss({p: loss}) is
+                sim.tensor_graph.build_loss({p: loss}))
 
 
 def test_build_optimizer(Simulator):
@@ -75,8 +75,8 @@ def test_build_optimizer(Simulator):
     # check optimizer caching
     with Simulator(net) as sim:
         opt = tf.train.GradientDescentOptimizer(0)
-        assert (sim.tensor_graph.build_optimizer(opt, (p,), "mse") is
-                sim.tensor_graph.build_optimizer(opt, (p,), "mse"))
+        assert (sim.tensor_graph.build_optimizer(opt, {p: "mse"}) is
+                sim.tensor_graph.build_optimizer(opt, {p: "mse"}))
 
     # error when no trainable elements
     with nengo.Network() as net:
@@ -85,7 +85,7 @@ def test_build_optimizer(Simulator):
 
     with Simulator(net) as sim:
         with pytest.raises(ValueError):
-            sim.tensor_graph.build_optimizer(opt, (p,), "mse")
+            sim.tensor_graph.build_optimizer(opt, {p: "mse"})
 
 
 def test_mark_signals():
