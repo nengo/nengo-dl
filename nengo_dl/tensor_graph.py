@@ -523,24 +523,26 @@ class TensorGraph(object):
         """
 
         summary_ops = []
-        for name, obj in summaries.items():
-            if isinstance(obj, tuple):
-                loss = self.build_loss(*obj)
-                summary_ops.append(tf.summary.scalar(name, loss))
-            else:
-                if isinstance(obj, Ensemble):
-                    param = self.model.sig[obj]["encoders"]
-                elif isinstance(obj, Neurons):
-                    param = self.model.sig[obj]["bias"]
-                elif isinstance(obj, Connection):
-                    param = self.model.sig[obj]["weights"]
+        with tf.device("/cpu:0"):
+            for name, obj in summaries.items():
+                if isinstance(obj, tuple):
+                    loss = self.build_loss(*obj)
+                    summary_ops.append(tf.summary.scalar(name, loss))
                 else:
-                    raise SimulationError("Unknown summary object: %s" % obj)
+                    if isinstance(obj, Ensemble):
+                        param = self.model.sig[obj]["encoders"]
+                    elif isinstance(obj, Neurons):
+                        param = self.model.sig[obj]["bias"]
+                    elif isinstance(obj, Connection):
+                        param = self.model.sig[obj]["weights"]
+                    else:
+                        raise SimulationError(
+                            "Unknown summary object: %s" % obj)
 
-                summary_ops.append(tf.summary.histogram(
-                    name, self.get_tensor(param)))
+                    summary_ops.append(tf.summary.histogram(
+                        name, self.get_tensor(param)))
 
-        return tf.summary.merge(summary_ops)
+            return tf.summary.merge(summary_ops)
 
     @with_self
     def get_tensor(self, sig):
