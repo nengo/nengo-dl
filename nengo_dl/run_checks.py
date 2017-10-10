@@ -15,6 +15,7 @@ pytest.main([
     os.path.dirname(nengo.__file__),
     '--simulator', 'nengo_dl.tests.Simulator',
     '--ref-simulator', 'nengo_dl.tests.Simulator',
+    '--disable-warnings'
 ])
 
 # run local tests
