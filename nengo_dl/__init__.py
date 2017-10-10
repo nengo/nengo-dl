@@ -19,22 +19,6 @@ if not any(["gpu" in x.name for x in device_lib.list_local_devices()]):
     warnings.warn("No GPU support detected. It is recommended that you "
                   "install tensorflow-gpu (`pip install tensorflow-gpu`).")
 
-# check nengo version
-from nengo.version import version_info as nengo_version
-
-minimum_nengo_version = (2, 5, 0)
-latest_nengo_version = (2, 5, 1)
-if nengo_version < minimum_nengo_version:  # pragma: no cover
-    raise ValueError(
-        "`nengo_dl` does not support `nengo` version %s. Upgrade "
-        "with 'pip install --upgrade --no-deps nengo'." %
-        (nengo_version,))
-elif nengo_version > latest_nengo_version:  # pragma: no cover
-    warnings.warn(
-        "This version of `nengo_dl` has not been tested with your `nengo` "
-        "version %s. The latest fully supported version is %s" %
-        (nengo_version, latest_nengo_version))
-
 # need to explicitly import these to trigger the builder registration
 from nengo_dl import (
     op_builders, neuron_builders, process_builders, learning_rule_builders)

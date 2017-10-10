@@ -10,7 +10,7 @@ from nengo.builder.signal import Signal
 import numpy as np
 import pytest
 
-from nengo_dl import builder, nengo_version, op_builders
+from nengo_dl import builder, op_builders
 from nengo_dl.graph_optimizer import (
     mergeable, greedy_planner, tree_planner, transitive_planner, noop_planner,
     order_signals, noop_order_signals, create_signals,
@@ -19,9 +19,7 @@ from nengo_dl.graph_optimizer import (
 from nengo_dl.tensor_node import SimTensorNode
 
 
-@pytest.fixture(
-    params=[greedy_planner, tree_planner] + (
-        [transitive_planner] if nengo_version >= (2, 4, 0) else []))
+@pytest.fixture(params=[greedy_planner, tree_planner, transitive_planner])
 def planner(request):
     return request.param
 
