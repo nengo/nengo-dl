@@ -18,8 +18,8 @@ Release History
    - Removed
    - Fixed
 
-0.5.2 (unreleased)
-------------------
+0.5.2 (October 11, 2017)
+------------------------
 
 **Added**
 
