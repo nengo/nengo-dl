@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, division
 
 from collections import OrderedDict
 import logging
@@ -15,6 +15,11 @@ import numpy as np
 import tensorflow as tf
 
 from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node
+
+if tf.__version__ < "1.4.0":
+    from tensorflow.contrib.data import Dataset, Iterator
+else:
+    from tensorflow.python.data import Dataset, Iterator
 
 logger = logging.getLogger(__name__)
 
@@ -186,8 +191,10 @@ class TensorGraph(object):
         logger.debug("created base arrays")
         logger.debug([str(x) for x in self.base_vars])
 
-        # set up invariant inputs
-        self.build_inputs()
+        # set up inputs
+        # TODO: check if this cpu assignment hurts performance
+        with tf.device("/cpu:0"):
+            self.build_inputs()
 
         # pre-build stage
         self.op_builds = {}
@@ -307,10 +314,13 @@ class TensorGraph(object):
                     self.signals.step = step
 
                     # fill in invariant input data
-                    for n in self.invariant_ph:
-                        self.signals.scatter(
-                            self.sig_map[self.model.sig[n]["out"]],
-                            self.invariant_ph[n][loop_i])
+                    if self.data_phs is not None:
+                        for n in self.invariant_inputs:
+                            data = self.data_iter_next[n][loop_i]
+                            data.set_shape((n.size_out, self.minibatch_size))
+                            self.signals.scatter(
+                                self.sig_map[self.model.sig[n]["out"]],
+                                data)
 
                     # build the operators for a single step
                     # note: we tie things to the `loop_i` variable so that we
@@ -377,7 +387,7 @@ class TensorGraph(object):
         TensorFlow and fed in each simulation block).
         """
 
-        self.invariant_ph = {}
+        data_phs = {}
         for n in self.invariant_inputs:
             if self.model.sig[n]["out"] in self.sig_map:
                 # make sure the indices for this input are loaded into
@@ -386,8 +396,73 @@ class TensorGraph(object):
                 self.sig_map[self.model.sig[n]["out"]].load_indices()
 
                 # set up a placeholder input for this node
-                self.invariant_ph[n] = tf.placeholder(
-                    self.dtype, (None, n.size_out, self.minibatch_size))
+                data_phs[n] = tf.placeholder(
+                    self.dtype, (None, None, n.size_out))
+
+        if len(data_phs) > 0:
+            tmp = tf.shape(next(iter(data_phs.values())))
+            batch_size = tmp[0]
+            sig_len = tmp[1]
+
+            for p in self.model.probes:
+                data_phs[p] = tf.placeholder_with_default(
+                    tf.zeros((batch_size, sig_len, p.size_in),
+                             dtype=self.dtype),
+                    (None, None, p.size_in),
+                    name=utils.sanitize_name(str(p)) + "_ph")
+
+            # build output iterators
+            self.datasets = {}
+
+            # datasets can only work with string keys
+            id_map = {str(id(x)): x for x in data_phs}
+            data_ph_ids = {str(id(k)): v for k, v in data_phs.items()}
+
+            # normal sim.run inputs
+            data = Dataset.from_tensors(data_ph_ids)
+            pad_len = tf.cast(tf.ceil(sig_len / self.unroll),
+                              tf.int32) * self.unroll - sig_len
+            data = data.map(
+                lambda x: {k: tf.pad(v, ((0, 0), (0, pad_len), (0, 0)))
+                           for k, v in x.items()})
+            data = data.repeat(1)
+            data = data.map(lambda x: {k: tf.transpose(v, (1, 2, 0))
+                                       for k, v in x.items()})
+            self.datasets["run"] = data
+
+            # sim.train inputs
+            # TODO: do we need the sig_len padding for these?
+            self.epoch_ph = tf.placeholder(tf.int64, ())
+            data = Dataset.from_tensor_slices(data_ph_ids)
+            data = data.shuffle(tf.cast(tf.where(batch_size < 32, batch_size,
+                                                 batch_size // 4),
+                                        tf.int64))
+            data = data.repeat(self.epoch_ph)
+            data = data.batch(self.minibatch_size)
+            data = data.filter(lambda x: any(
+                tf.shape(v)[0] != self.minibatch_size for v in x.values()))
+            data = data.map(lambda x: {k: tf.transpose(v, (1, 2, 0))
+                                       for k, v in x.items()})
+            self.datasets["train"] = data
+
+            data = Dataset.from_tensor_slices(data_ph_ids)
+            data = data.repeat(self.epoch_ph)
+            data = data.batch(self.minibatch_size)
+            data = data.filter(lambda x: any(
+                tf.shape(v)[0] != self.minibatch_size for v in x.values()))
+            data = data.map(lambda x: {k: tf.transpose(v, (1, 2, 0))
+                                       for k, v in x.items()})
+            self.datasets["train_no_shuffle"] = data
+
+            # create iterators
+            self.data_phs = data_phs
+            self.data_iter = Iterator.from_structure(
+                self.datasets["run"].output_types,
+                self.datasets["run"].output_shapes)
+            self.data_iter_next = {id_map[k]: v for k, v in
+                                   self.data_iter.get_next().items()}
+        else:
+            self.data_phs = None
 
     @with_self
     def build_optimizer(self, optimizer, objective):
@@ -469,27 +544,27 @@ class TensorGraph(object):
         loss = []
         for p, obj in objective.items():
             probe_index = self.model.probes.index(p)
-
-            # create a placeholder for the target values
-            if p not in self.target_phs:
-                self.target_phs[p] = tf.placeholder(
-                    self.dtype, (None, p.size_in, self.minibatch_size),
-                    name="targets")
+            target = self.data_iter_next[p]
 
             # compute loss
             if obj == "mse":
                 # note: nan targets converted to zero error
-                target = tf.where(tf.is_nan(self.target_phs[p]),
+                target = tf.where(tf.is_nan(target),
                                   self.probe_arrays[probe_index],
-                                  self.target_phs[p])
+                                  target)
 
                 loss += [tf.reduce_mean(
                     tf.square(target - self.probe_arrays[probe_index]))]
             elif callable(obj):
                 # move minibatch dimension back to the front
                 x = tf.transpose(self.probe_arrays[probe_index], (2, 0, 1))
-                t = tf.transpose(self.target_phs[p], (2, 0, 1))
-                loss += [obj(x, t)]
+                t = tf.transpose(target, (2, 0, 1))
+
+                # note: control dependencies is here so that the target
+                # iterator always gets incremented even if it isn't used in
+                # the loss function (so that it terminates)
+                with tf.control_dependencies([t]):
+                    loss += [obj(x, t)]
             else:
                 raise NotImplementedError
 
