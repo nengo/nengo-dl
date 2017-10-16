@@ -142,6 +142,8 @@ class Simulator(object):
                 self.minibatch_size, device, progress)
 
         # construct graph
+        with self.tensor_graph.graph.as_default():
+            tf.set_random_seed(self.seed)
         with utils.ProgressBar("Constructing graph", "Construction",
                                max_value=None) as progress:
             self.tensor_graph.build(progress)
@@ -200,7 +202,8 @@ class Simulator(object):
         if seed is not None:
             self.seed = seed
         self.rng = np.random.RandomState(self.seed)
-        tf.set_random_seed(self.seed)
+        with self.tensor_graph.graph.as_default():
+            tf.set_random_seed(self.seed)
 
         self.tensor_graph.build_post(self.sess, self.rng)
 
@@ -313,6 +316,14 @@ class Simulator(object):
             self._check_data(input_feeds, mode="input",
                              n_batch=self.minibatch_size, n_steps=n_steps)
 
+        # set up inputs
+        input_feed = self._generate_inputs(input_feeds, n_steps)
+        if self.tensor_graph.data_phs is not None:
+            self.sess.run(
+                self.tensor_graph.data_iter.make_initializer(
+                    self.tensor_graph.datasets["run"]),
+                feed_dict=input_feed)
+
         if profile:
             run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
             run_metadata = tf.RunMetadata()
@@ -330,8 +341,8 @@ class Simulator(object):
                 steps_run, probe_data = self.sess.run(
                     [self.tensor_graph.steps_run,
                      list(self.tensor_graph.probe_arrays.values())],
-                    feed_dict=self._fill_feed(actual_steps, input_feeds,
-                                              start=self.n_steps),
+                    feed_dict={self.tensor_graph.step_var: self.n_steps,
+                               self.tensor_graph.stop_var: self.n_steps + n_steps},
                     options=run_options, run_metadata=run_metadata)
             except (tf.errors.InternalError, tf.errors.UnknownError) as e:
                 if e.op.type == "PyFunc":
@@ -492,6 +503,18 @@ class Simulator(object):
         self.save_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
                          include_global=False)
 
+        # set up inputs
+        data = self._generate_inputs(inputs, n_steps)
+        data.update({self.tensor_graph.data_phs[p]: v
+                     for p, v in targets.items()})
+        data[self.tensor_graph.epoch_ph] = n_epochs
+
+        self.sess.run(
+            self.tensor_graph.data_iter.make_initializer(
+                self.tensor_graph.datasets[
+                    "train" if shuffle else "train_no_shuffle"]),
+            feed_dict=data)
+
         if profile:
             run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
             run_metadata = tf.RunMetadata()
@@ -505,25 +528,24 @@ class Simulator(object):
             vars=["loss"])
 
         # run training
-        with progress:
-            for n in range(n_epochs):
-                for offset, inp, tar in utils.minibatch_generator(
-                        inputs, targets, self.minibatch_size, rng=self.rng,
-                        shuffle=shuffle, truncation=truncation):
-                    if offset == 0:
-                        self.soft_reset()
+        while True:
+            self.soft_reset()
 
-                    steps = next(iter(inp.values())).shape[1]
-                    feed = self._fill_feed(steps, inp, tar, start=offset)
-                    outputs = self.sess.run(
-                        fetches, feed_dict=feed,
-                        options=run_options, run_metadata=run_metadata)
+            try:
+                outputs = self.sess.run(
+                    fetches,
+                    feed_dict={self.tensor_graph.step_var: 0,
+                               self.tensor_graph.stop_var: n_steps},
+                    options=run_options, run_metadata=run_metadata)
+            except tf.errors.OutOfRangeError:
+                break
 
-                    if summary_op is not None:
-                        self.summary.add_summary(outputs[2], outputs[-1])
+            if summary_op is not None:
+                self.summary.add_summary(outputs[2], outputs[-1])
 
-                    if profile:
-                        profiler.add_step(int(outputs[-1]), run_metadata)
+            if profile:
+                profiler.add_step(int(outputs[-1]), run_metadata)
+            progress.step("loss=%f" % outputs[1])
 
                     if offset == 0:
                         progress.step(loss="%.4f" % outputs[1])
@@ -589,6 +611,16 @@ class Simulator(object):
         # get loss op
         loss = self.tensor_graph.build_loss(objective)
 
+        # set up inputs
+        data = self._generate_inputs(inputs, n_steps)
+        data.update({self.tensor_graph.data_phs[p]: v
+                     for p, v in targets.items()})
+        data[self.tensor_graph.epoch_ph] = 1
+        self.sess.run(
+            self.tensor_graph.data_iter.make_initializer(
+                self.tensor_graph.datasets["train_no_shuffle"]),
+            feed_dict=data)
+
         # save the internal state of the simulator
         tmpdir = tempfile.TemporaryDirectory()
         self.save_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
@@ -596,12 +628,17 @@ class Simulator(object):
 
         # compute loss on data
         loss_val = 0
-        for i, (_, inp, tar) in enumerate(utils.minibatch_generator(
-                inputs, targets, self.minibatch_size, rng=self.rng)):
+        steps = 0
+        while True:
             self.soft_reset()
-            loss_val += self.sess.run(
-                loss, feed_dict=self._fill_feed(n_steps, inp, tar))
-        loss_val /= i + 1
+            try:
+                loss_val += self.sess.run(
+                    loss, feed_dict={self.tensor_graph.step_var: 0,
+                                     self.tensor_graph.stop_var: n_steps})
+                steps += 1
+            except tf.errors.OutOfRangeError:
+                break
+        loss_val /= steps
 
         # restore internal state of simulator
         self.load_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
@@ -802,11 +839,26 @@ class Simulator(object):
         delta = 1e-3
         n_steps = self.unroll * 2
 
-        feed = self._fill_feed(
-            n_steps, {n: np.zeros((self.minibatch_size, n_steps, n.size_out))
-                      for n in self.tensor_graph.invariant_inputs},
-            {p: np.zeros((self.minibatch_size, n_steps, p.size_in))
-             for p in self.tensor_graph.target_phs})
+        # note: we generate the inputs transposed, so that when we flatten
+        # and traverse them the order will match with that in the analytic
+        # gradient calculation
+        feed = self._generate_inputs(
+            {n: np.zeros((n_steps, n.size_out, self.minibatch_size))
+             for n in self.tensor_graph.invariant_inputs}, n_steps)
+
+        # extra_feed is used to bypass the input iterators (since they don't
+        # work well with the analytic gradient calculation)
+        extra_feed = {}
+        extra_feed.update({
+            self.tensor_graph.data_iter_next[n]:
+                np.zeros((n_steps, n.size_out, self.minibatch_size))
+            for n in self.tensor_graph.invariant_inputs})
+        extra_feed.update({
+            self.tensor_graph.data_iter_next[p]:
+                np.zeros((n_steps, p.size_in, self.minibatch_size))
+            for p in self.model.probes})
+        extra_feed.update({self.tensor_graph.step_var: 0,
+                           self.tensor_graph.stop_var: n_steps})
 
         if outputs is None:
             # note: the x + 0 is necessary because `gradient_checker`
@@ -818,15 +870,17 @@ class Simulator(object):
             outputs = [self.tensor_graph.probe_arrays[p] + 0 for p in outputs]
 
         # check gradient wrt inp
-        for node, inp in self.tensor_graph.input_ph.items():
-            inp_shape = inp.get_shape().as_list()
-            inp_shape = [n_steps if x is None else x for x in inp_shape]
-            inp_tens = self.tensor_graph.input_ph[node]
-            feed[inp_tens] = np.ascontiguousarray(feed[inp_tens])
-            inp_val = np.ravel(feed[inp_tens])
+        for node in self.tensor_graph.invariant_inputs:
+            inp = self.tensor_graph.data_phs[node]
+
+            # note: inp_shape is post-transpose
+            inp_shape = (n_steps, node.size_out, self.minibatch_size)
+
+            feed[inp] = np.ascontiguousarray(feed[inp])
+            inp_val = np.ravel(feed[inp])
             for out in outputs:
-                out_shape = out.get_shape().as_list()
-                out_shape = [n_steps if x is None else x for x in out_shape]
+                out_shape = [n_steps if x is None else x
+                             for x in out.get_shape().as_list()]
 
                 # we need to compute the numeric jacobian manually, to
                 # correctly handle variables (tensorflow doesn't expect
@@ -838,11 +892,25 @@ class Simulator(object):
                 for i in range(numeric.shape[0]):
                     self.soft_reset()
                     inp_val[i] = delta
-                    plus = self.sess.run(out, feed_dict=feed)
+                    self.sess.run(
+                        self.tensor_graph.data_iter.make_initializer(
+                            self.tensor_graph.datasets["run"]),
+                        feed_dict={k: np.transpose(v, (2, 0, 1)) for k, v in
+                                   feed.items()})
+                    plus = self.sess.run(
+                        out, feed_dict={self.tensor_graph.step_var: 0,
+                                        self.tensor_graph.stop_var: n_steps})
 
                     self.soft_reset()
                     inp_val[i] = -delta
-                    minus = self.sess.run(out, feed_dict=feed)
+                    self.sess.run(
+                        self.tensor_graph.data_iter.make_initializer(
+                            self.tensor_graph.datasets["run"]),
+                        feed_dict={k: np.transpose(v, (2, 0, 1)) for k, v in
+                                   feed.items()})
+                    minus = self.sess.run(
+                        out, feed_dict={self.tensor_graph.step_var: 0,
+                                        self.tensor_graph.stop_var: n_steps})
 
                     numeric[i] = np.ravel((plus - minus) / (2 * delta))
 
@@ -851,12 +919,14 @@ class Simulator(object):
                 self.soft_reset()
 
                 dx, dy = gradient_checker._compute_dx_and_dy(
-                    inp, out, out_shape)
+                    self.tensor_graph.data_iter_next[node], out,
+                    out_shape)
 
                 with self.sess.as_default():
                     analytic = gradient_checker._compute_theoretical_jacobian(
-                        inp, inp_shape, np.zeros(inp_shape), dy, out_shape, dx,
-                        extra_feed_dict=feed)
+                        self.tensor_graph.data_iter_next[node],
+                        inp_shape, np.zeros(inp_shape), dy, out_shape, dx,
+                        extra_feed_dict=extra_feed)
 
                 if np.any(np.isnan(analytic)) or np.any(np.isnan(numeric)):
                     raise SimulationError("NaNs detected in gradient")
@@ -1009,10 +1079,10 @@ class Simulator(object):
             if using_output:
                 if n in input_feeds:
                     # move minibatch dimension to the end
-                    feed_val = np.moveaxis(input_feeds[n], 0, -1)
+                    feed_val = input_feeds[n]
                 elif isinstance(n.output, np.ndarray):
-                    feed_val = np.tile(n.output[None, :, None],
-                                       (n_steps, 1, self.minibatch_size))
+                    feed_val = np.tile(n.output[None, None, :],
+                                       (self.minibatch_size, n_steps, 1))
                 else:
                     feed_val = np.zeros(
                         (n_steps, n.size_out, self.minibatch_size),
@@ -1025,7 +1095,7 @@ class Simulator(object):
                             func((i + self.n_steps + 1) * self.dt)
                             for func in self.input_funcs[(n, n.output)]])
 
-                feed_vals[self.tensor_graph.input_ph[n]] = feed_val
+                feed_vals[self.tensor_graph.data_phs[n]] = feed_val
             elif not isinstance(n.output, np.ndarray):
                 # note: we still call the function even if the output
                 # is not being used, because it may have side-effects

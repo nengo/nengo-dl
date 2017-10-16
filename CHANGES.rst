@@ -33,6 +33,7 @@ Release History
   standard conventions).  This only affects the display name of the project
   on PyPI/GitHub, and the documentation now resides at
   https://www.nengo.ai/nengo-dl/; there are no functional changes to user code.
+- Use ``tf.data`` for training data pipeline (improves training speed).
 
 **Fixed**
 
@@ -117,7 +118,7 @@ Release History
 **Fixed**
 
 - Fixed a bug where input nodes that were only read as a view were not
-  feedable
+  feedable.
 - Updated ``tensorflow-gpu`` installation check
 - Improved numerical stability of ``LIFRate`` gradients  (`#26 
   <https://github.com/nengo/nengo-dl/issues/26>`_)
