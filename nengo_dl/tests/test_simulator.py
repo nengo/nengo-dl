@@ -107,10 +107,17 @@ def test_input_feeds(Simulator):
         nengo.Connection(inp, out, synapse=None)
         p = nengo.Probe(out)
 
+        # check that sliced input nodes are fed properly as well
+        inp2 = nengo.Node([0, 0, 0])
+        out2 = nengo.Node(size_in=2)
+        nengo.Connection(inp2[:2], out2, synapse=None)
+        p2 = nengo.Probe(out2)
+
     with Simulator(net, minibatch_size=minibatch_size) as sim:
         val = np.random.randn(minibatch_size, 50, 3)
-        sim.run_steps(50, input_feeds={inp: val})
+        sim.run_steps(50, input_feeds={inp: val, inp2: val})
         assert np.allclose(sim.data[p], val)
+        assert np.allclose(sim.data[p2], val[..., :2])
 
 
 @pytest.mark.parametrize("neurons", (True, False))
@@ -118,9 +125,7 @@ def test_train_ff(Simulator, neurons, seed):
     minibatch_size = 4
     n_hidden = 20
 
-    np.random.seed(seed)
-
-    with nengo.Network() as net:
+    with nengo.Network(seed=seed) as net:
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
         net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
         net.config[nengo.Connection].synapse = None
@@ -235,8 +240,6 @@ def test_train_objective(Simulator, unroll, seed):
 def test_train_sparse(Simulator, seed):
     minibatch_size = 4
     n_hidden = 5
-
-    np.random.seed(seed)
 
     with nengo.Network(seed=seed) as net:
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])

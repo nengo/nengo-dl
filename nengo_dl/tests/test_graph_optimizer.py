@@ -760,7 +760,7 @@ def test_remove_zero_incs():
     assert new_operators == []
 
     # check that node inputs don't get removed
-    x = DummySignal(label="<Node lorem ipsum.out")
+    x = DummySignal(label="<Node lorem ipsum")
     operators = [DotInc(DummySignal(initial_value=1), x, DummySignal())]
     new_operators = remove_zero_incs(operators)
     assert new_operators == operators
@@ -828,7 +828,7 @@ def test_remove_constant_copies():
     assert new_operators[0].value == 0
 
     # check that Copy with Node input doesn't get changed
-    x = DummySignal(label="<Node lorem ipsum.out")
+    x = DummySignal(label="<Node lorem ipsum")
     operators = [Copy(x, DummySignal())]
     new_operators = remove_constant_copies(operators)
     assert new_operators == operators
@@ -964,7 +964,7 @@ def test_remove_identity_muls(Op):
     assert new_operators == operators
 
     # check that node inputs don't get removed
-    x = DummySignal(label="<Node lorem ipsum.out")
+    x = DummySignal(label="<Node lorem ipsum")
     operators = [Op(x, DummySignal(), DummySignal())]
     new_operators = remove_identity_muls(operators)
     assert new_operators == operators

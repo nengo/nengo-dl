@@ -21,6 +21,10 @@ Release History
 0.5.3 (unreleased)
 ------------------
 
+**Fixed**
+
+- Fixed a bug where input nodes that were only read as a view were not
+  feedable
 
 0.5.2 (October 11, 2017)
 ------------------------

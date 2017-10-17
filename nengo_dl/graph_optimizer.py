@@ -1278,6 +1278,10 @@ def remove_zero_incs(operators):
         Modified list of operators
     """
 
+    logger.debug("REMOVE_ZERO_INCS")
+    logger.debug("input ops")
+    logger.debug(operators)
+
     sets, incs, _, updates = signal_io_dicts(operators)
 
     new_operators = []
@@ -1288,7 +1292,7 @@ def remove_zero_incs(operators):
                 # value might change, so we should never get rid of this op).
                 # checking the name of the signal seems a bit fragile, but I
                 # can't think of a better solution
-                if src.name.startswith("<Node") and src.name.endswith(".out"):
+                if src.name.startswith("<Node"):
                     continue
 
                 # find any ops that modify src
@@ -1310,6 +1314,9 @@ def remove_zero_incs(operators):
                 new_operators.append(op)
         else:
             new_operators.append(op)
+
+    logger.debug("new ops")
+    logger.debug(new_operators)
 
     return new_operators
 
@@ -1386,7 +1393,7 @@ def remove_constant_copies(operators):
             # value might change, so we should never get rid of this op).
             # checking the name of the signal seems a bit fragile, but I can't
             # think of a better solution
-            if src.name.startswith("<Node") and src.name.endswith(".out"):
+            if src.name.startswith("<Node"):
                 new_operators.append(op)
                 continue
 
@@ -1470,7 +1477,7 @@ def remove_identity_muls(operators):
                 # value might change, so we should never get rid of this op).
                 # checking the name of the signal seems a bit fragile, but I
                 # can't think of a better solution
-                if src.name.startswith("<Node") and src.name.endswith(".out"):
+                if src.name.startswith("<Node"):
                     continue
 
                 # find any ops that modify src
