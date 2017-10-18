@@ -25,6 +25,7 @@ Release History
 
 - Fixed a bug where input nodes that were only read as a view were not
   feedable
+- Updated ``tensorflow-gpu`` installation check
 
 0.5.2 (October 11, 2017)
 ------------------------
