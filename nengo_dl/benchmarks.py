@@ -1,3 +1,4 @@
+import os
 import time
 
 import matplotlib.pyplot as plt
@@ -239,11 +240,16 @@ def profile_run():
 
 
 def profile_train(use_tensor_layer):
-    nl = tf.nn.relu
+    """Run profiler on a training benchmark.
 
-    # nl = functools.partial(softlif_layer, sigma=0.002, tau_rc=0.022,
-    #                        tau_ref=0.002, amplitude=0.063)
-    # nl = tf.nn.sigmoid
+    Parameters
+    ----------
+    use_tensor_layer : bool
+        If True, use individual tensor_layers to build the network, as opposed
+        to a single TensorNode containing all layers.
+    """
+
+    nl = tf.nn.relu
 
     def softlif_layer(x, sigma=1, tau_ref=0.002, tau_rc=0.02, amplitude=1):
         # x -= 1
@@ -254,26 +260,11 @@ def profile_train(use_tensor_layer):
 
     @nengo_dl.reshaped((28, 28, 1))
     def mnist_node(_, x):
-        # init = init_ops.variance_scaling_initializer(scale=1, mode="fan_avg",
-        #                                              distribution="uniform")
-        # bias_init = init_ops.zeros_initializer()
-
-        x = tf.layers.conv2d(x, filters=32, kernel_size=3,
-                             activation=nl,
-                             # kernel_initializer=init,
-                             # bias_initializer=bias_init,
-                             )
-        x = tf.layers.conv2d(x, filters=32, kernel_size=3,
-                             activation=nl,
-                             # kernel_initializer=init,
-                             # bias_initializer=bias_init,
-                             )
+        x = tf.layers.conv2d(x, filters=32, kernel_size=3, activation=nl)
+        x = tf.layers.conv2d(x, filters=32, kernel_size=3, activation=nl)
         x = tf.layers.average_pooling2d(x, pool_size=2, strides=2)
         x = tf.contrib.layers.flatten(x)
-        x = tf.layers.dense(x, 128, activation=nl,
-                            # kernel_initializer=init,
-                            # bias_initializer=bias_init,
-                            )
+        x = tf.layers.dense(x, 128, activation=nl)
         x = tf.layers.dropout(x, rate=0.4)
         x = tf.layers.dense(x, 10)
 
@@ -293,16 +284,14 @@ def profile_train(use_tensor_layer):
 
             x = nengo_dl.tensor_layer(
                 inp, tf.layers.conv2d, shape_in=(28, 28, 1), filters=32,
-                kernel_size=3,
-                # activation=nl
+                kernel_size=3
             )
             x = nengo_dl.tensor_layer(x, nengo.RectifiedLinear(),
                                       **ensemble_params)
 
             x = nengo_dl.tensor_layer(
                 x, tf.layers.conv2d, shape_in=(26, 26, 32),
-                transform=amplitude, filters=32, kernel_size=3,
-                # activation=nl
+                transform=amplitude, filters=32, kernel_size=3
             )
             x = nengo_dl.tensor_layer(x, nengo.RectifiedLinear(),
                                       **ensemble_params)
@@ -312,8 +301,7 @@ def profile_train(use_tensor_layer):
                 synapse=synapse, transform=amplitude, pool_size=2, strides=2)
 
             x = nengo_dl.tensor_layer(
-                x, tf.layers.dense, units=128,
-                # activation=nl
+                x, tf.layers.dense, units=128
             )
             x = nengo_dl.tensor_layer(x, nengo.RectifiedLinear(),
                                       **ensemble_params)
@@ -345,13 +333,94 @@ def profile_train(use_tensor_layer):
         # run a few times to try to eliminate startup overhead (only the data
         # from the last run will be kept)
         for _ in range(3):
-            sim.train(inputs, targets, opt, n_epochs=1000, objective=obj,
-                      profile=False)
+            sim.train(inputs, targets, opt, n_epochs=100, objective=obj,
+                      profile=True)
 
             # sim.run_steps(2, input_feeds=inputs, profile=True)
 
 
+def matmul_vs_reduce():
+    """Compares two different approaches to batched matrix multiplication
+    (tf.matmul vs tf.multiply+tf.reduce_sum).
+
+    This is relevant for figuring out which approach is more efficient
+    on a given system for different matrix shapes (determining which method
+    we use in DotIncBuilder).
+    """
+
+    # a_shape = (n_ops, s0, s1, 1)
+    # x_shape = (n_ops, 1, s1, mini)
+    # for matmul we omit the 1 dimensions
+
+    a_c = tf.placeholder(tf.float64, shape=(None, None, None), name="a_c")
+    x_c = tf.placeholder(tf.float64, shape=(None, None, None), name="b_c")
+    a_d = tf.placeholder(tf.float64, shape=(None, None, None, 1), name="a_d")
+    x_d = tf.placeholder(tf.float64, shape=(None, 1, None, None), name="b_d")
+    c = tf.matmul(a_c, x_c)
+    d = tf.reduce_sum(tf.multiply(a_d, x_d), axis=-2)
+
+    reps = 100
+    n_ops_range = [1, 4, 8, 16, 32, 64]
+    mini_range = [1, 16, 32, 64, 128]
+    s0_range = [1, 64, 128, 192, 256]
+    s1_range = [1, 64, 128, 192, 256]
+
+    matmul_times = np.zeros((len(n_ops_range), len(mini_range), len(s0_range),
+                             len(s1_range)))
+    reduce_times = np.zeros_like(matmul_times)
+
+    with tf.Session() as sess:
+        for i, n_ops in enumerate(n_ops_range):
+            for j, mini in enumerate(mini_range):
+                print(n_ops, mini)
+
+                for k, s0 in enumerate(s0_range):
+                    for l, s1 in enumerate(s1_range):
+                        a_val = np.random.randn(n_ops, s0, s1, 1)
+                        x_val = np.random.randn(n_ops, 1, s1, mini)
+
+                        for r in range(reps + 3):
+                            if r == 3:
+                                start = time.time()
+                            c_val = sess.run(c, feed_dict={a_c: a_val[..., 0],
+                                                           x_c: x_val[:, 0]})
+                        matmul_times[i, j, k, l] = (time.time() - start) / reps
+
+                        for r in range(reps + 3):
+                            if r == 3:
+                                start = time.time()
+                            d_val = sess.run(d, feed_dict={a_d: a_val,
+                                                           x_d: x_val})
+                        reduce_times[i, j, k, l] = (time.time() - start) / reps
+
+                        assert np.allclose(c_val, d_val)
+
+    fig, ax = plt.subplots(len(n_ops_range), len(mini_range), sharex=True,
+                           sharey=True)
+
+    X, Y = np.meshgrid(s0_range, s1_range)
+    Z = matmul_times - reduce_times
+    v = np.sort(np.concatenate((np.linspace(np.min(Z), np.max(Z), 10), [0])))
+    for i, n_ops in enumerate(n_ops_range):
+        for j, mini in enumerate(mini_range):
+            cs = ax[i][j].contourf(X, Y, Z[i, j], v)
+            if i == 0:
+                ax[i][j].set_title("mini %d" % mini)
+            if j == 0:
+                ax[i][j].set_ylabel("ops %d" % n_ops)
+
+    np.savez(os.path.join(DATA_DIR, "matmul_benchmarks"), n_ops_range,
+             mini_range, s0_range, s1_range, Z)
+
+    fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+    fig.colorbar(cs, cax=cbar_ax)
+
+    plt.show()
+
+
 if __name__ == "__main__":
-    # compare_backends(raw=True)
+    compare_backends(raw=True)
     # profile_run()
-    profile_train(use_tensor_layer=True)
+    # profile_train(use_tensor_layer=True)
+    # matmul_vs_reduce()

@@ -188,19 +188,18 @@ class DotIncBuilder(OpBuilder):
         #             -1, signals.minibatch_size)
 
         # approach #3
-        # TODO: what should the minibatch_size cutoff be?
-        self.using_matmul = (
-            signals.minibatch_size >= 32 and
-            not self.A_data.minibatched and self.X_data.minibatched)
-        if not self.using_matmul:
-            # add empty dimension to X for broadcasting (since we'll be doing
-            # it with the mul->reduce method)
-            self.X_data = self.X_data.reshape((self.X_data.shape[0], 1) +
-                                              self.X_data.shape[1:])
-
-            # add empty minibatch dimension if needed
-            if not self.A_data.minibatched and self.X_data.minibatched:
-                self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
+        # self.using_matmul = (
+        #     signals.minibatch_size >= 32 and
+        #     not self.A_data.minibatched and self.X_data.minibatched)
+        # if not self.using_matmul:
+        #     # add empty dimension to X for broadcasting (since we'll be doing
+        #     # it with the mul->reduce method)
+        #     self.X_data = self.X_data.reshape((self.X_data.shape[0], 1) +
+        #                                       self.X_data.shape[1:])
+        #
+        #     # add empty minibatch dimension if needed
+        #     if not self.A_data.minibatched and self.X_data.minibatched:
+        #         self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
 
         self.A_data.load_indices()
         self.X_data.load_indices()
@@ -209,37 +208,37 @@ class DotIncBuilder(OpBuilder):
         A = signals.gather(self.A_data)
         X = signals.gather(self.X_data)
 
-        # approach #1: using einsum (einsum seems to be super slow)
-        # if self.A_data.minibatched and self.X_data.minibatched:
-        #     dot = tf.einsum("ijkl,ikl->ijl", A, X)
-        # elif self.A_data.minibatched and not self.X_data.minibatched:
-        #     dot = tf.einsum("ijkl,ik->ijl", A, X)
-        # elif not self.A_data.minibatched and self.X_data.minibatched:
-        #     dot = tf.batch_matmul(A, X)
-        # else:
-        #     dot = tf.einsum("ijk,ik->ij", A, X)
+        # approach #1: using einsum
+        if self.A_data.minibatched and self.X_data.minibatched:
+            dot = tf.einsum("ijkl,ikl->ijl", A, X)
+        elif self.A_data.minibatched and not self.X_data.minibatched:
+            dot = tf.einsum("ijkl,ik->ijl", A, X)
+        elif not self.A_data.minibatched and self.X_data.minibatched:
+            dot = tf.matmul(A, X)
+        else:
+            dot = tf.einsum("ijk,ik->ij", A, X)
 
         # approach #2: transpose/tile and use batch_matmul for everything
         # if not self.A_data.minibatched and self.X_data.minibatched:
-        #     dot = tf.batch_matmul(A, X)
+        #     dot = tf.matmul(A, X)
         # else:
         #     minibatched = self.A_data.minibatched or self.X_data.minibatched
         #
         #     A = tf.transpose(A, (0, 3, 1, 2)) if minibatched else A
         #     X = tf.transpose(X, (0, 3, 1, 2)) if minibatched else X
-        #     dot = tf.batch_matmul(A, X)
+        #     dot = tf.matmul(A, X)
         #
         #     if minibatched:
         #         dot = tf.transpose(dot, (0, 2, 3, 1))
 
         # approach #3: mix of batch_matmul and manual multiply/reduce
-        if self.using_matmul:
-            dot = tf.matmul(A, X)
-        else:
-            dot = tf.multiply(A, X)
-            reduce_axis = -1 - (self.A_data.minibatched or
-                                self.X_data.minibatched)
-            dot = tf.reduce_sum(dot, axis=reduce_axis)
+        # if self.using_matmul:
+        #     dot = tf.matmul(A, X)
+        # else:
+        #     dot = tf.multiply(A, X)
+        #     reduce_axis = -1 - (self.A_data.minibatched or
+        #                         self.X_data.minibatched)
+        #     dot = tf.reduce_sum(dot, axis=reduce_axis)
 
         signals.scatter(self.Y_data, dot, mode=self.mode)
 
