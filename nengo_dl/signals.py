@@ -276,12 +276,20 @@ class SignalDict(object):
                 len(dst.indices) == var.get_shape()[0]):
             if mode == "inc":
                 result = tf.assign_add(var, src)
-            else:
+            elif mode == "update":
                 result = tf.assign(var, src)
+            elif mode == "mul":
+                result = tf.scatter_mul(var, dst.tf_indices, src)
+            else:
+                raise NotImplementedError
         elif mode == "inc":
             result = tf.scatter_add(var, dst.tf_indices, src)
-        else:
+        elif mode == "update":
             result = tf.scatter_update(var, dst.tf_indices, src)
+        elif mode == "mul":
+            result = tf.scatter_mul(var, dst.tf_indices, src)
+        else:
+            raise NotImplementedError
 
         # result = gen_state_ops._destroy_temporary_variable(var, var_name)
 

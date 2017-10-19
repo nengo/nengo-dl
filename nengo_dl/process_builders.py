@@ -141,6 +141,8 @@ class LowpassBuilder(object):
         self.input_data = signals.combine([op.input for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
 
+        self.use_scatter_mul = False
+
         nums = []
         dens = []
         for op in ops:
@@ -167,21 +169,23 @@ class LowpassBuilder(object):
         # note: applying the negative here
         dens = -np.asarray(dens)[:, None]
 
-        # need to manually broadcast for scatter_mul
-        # dens = np.tile(dens, (1, signals.minibatch_size))
+        if self.use_scatter_mul:
+            # need to manually broadcast for scatter_mul
+            dens = np.tile(dens, (1, signals.minibatch_size))
 
         self.nums = tf.constant(nums, dtype=self.output_data.dtype)
         self.dens = tf.constant(dens, dtype=self.output_data.dtype)
 
     def build_step(self, signals):
-        # signals.scatter(self.output_data, self.dens, mode="mul")
-        # input = signals.gather(self.input_data)
-        # signals.scatter(self.output_data, self.nums * input, mode="inc")
-
-        input = signals.gather(self.input_data)
-        output = signals.gather(self.output_data)
-        signals.scatter(self.output_data,
-                        self.dens * output + self.nums * input)
+        if self.use_scatter_mul:
+            signals.scatter(self.output_data, self.dens, mode="mul")
+            input = signals.gather(self.input_data)
+            signals.scatter(self.output_data, self.nums * input, mode="inc")
+        else:
+            input = signals.gather(self.input_data)
+            output = signals.gather(self.output_data)
+            signals.scatter(self.output_data,
+                            self.dens * output + self.nums * input)
 
 
 class LinearFilterBuilder(object):
