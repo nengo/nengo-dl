@@ -99,10 +99,16 @@ def align_func(output_shape, output_dtype):
                 raise SimulationError(
                     "Function %r returned None" %
                     function_name(func, sanitize=False))
-            elif not np.all(np.isfinite(output)):
+            try:
+                if not np.all(np.isfinite(output)):
+                    raise SimulationError(
+                        "Function %r returned invalid value %r" %
+                        (function_name(func, sanitize=False), output))
+            except (TypeError, ValueError):
                 raise SimulationError(
-                    "Function %r returned invalid value %r" %
-                    (function_name(func, sanitize=False), output))
+                    "Function %r returned a value %r of invalid type %r" %
+                    (function_name(func, sanitize=False), output,
+                     type(output)))
             output = np.asarray(output, dtype=output_dtype)
             output = output.reshape(output_shape)
             return output
