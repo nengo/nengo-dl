@@ -114,6 +114,8 @@ class Simulator(object):
                               "dt (%g)" % (model.dt, dt), NengoWarning)
             self.model = model
 
+        self.model._in_nengo_dl = True
+
         if network is not None:
             print("Building network", end="", flush=True)
             start = time.time()
