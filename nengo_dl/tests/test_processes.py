@@ -93,3 +93,14 @@ def test_zero_matrices(Simulator, zero, seed):
     y = synapse.filt(x, dt=dt, y0=0)
 
     assert allclose(t, y, yhat, delay=dt * 2 if zero == "D" else dt, atol=5e-5)
+
+
+def test_linear_filter_gradient(Simulator):
+    with nengo.Network() as net:
+        a = nengo.Node([1])
+        b = nengo.Node(size_in=1)
+        nengo.Connection(a, b, synapse=Alpha(0.01))
+        nengo.Probe(b, synapse=Alpha(0.1))
+
+    with Simulator(net) as sim:
+        sim.check_gradients()

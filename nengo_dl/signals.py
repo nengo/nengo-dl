@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import logging
 
 from nengo.builder.signal import Signal
@@ -199,6 +199,7 @@ class SignalDict(object):
         self.bases = None
         self.reads_by_base = defaultdict(list)
         self.gather_bases = []
+        self.internal_vars = OrderedDict()
 
     def scatter(self, dst, val, mode="update"):
         """Updates the base data corresponding to ``dst``.
@@ -308,7 +309,7 @@ class SignalDict(object):
 
         if src.tf_indices is None:
             raise BuildError("Indices for %s have not been loaded into "
-                             "Tensorflow" % src)
+                             "TensorFlow" % src)
 
         logger.debug("gather")
         logger.debug("src %s", src)
@@ -408,3 +409,19 @@ class SignalDict(object):
             output.load_indices()
 
         return output
+
+    def make_internal(self, name, shape, minibatched=True):
+        with tf.variable_scope(tf.get_default_graph().get_name_scope(),
+                               reuse=False):
+            var = tf.get_local_variable(
+                name,
+                shape=shape + (self.minibatch_size,) if minibatched else shape,
+                dtype=self.dtype, trainable=False,
+                initializer=tf.zeros_initializer())
+        sig = TensorSignal(
+            np.arange(shape[0]), object(), self.dtype, shape, minibatched,
+            label=name)
+        sig.load_indices()
+        self.internal_vars[sig.key] = var
+
+        return sig

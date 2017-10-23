@@ -173,6 +173,10 @@ class LowpassBuilder(object):
         self.nums = tf.constant(nums, dtype=self.output_data.dtype)
         self.dens = tf.constant(dens, dtype=self.output_data.dtype)
 
+        # create a variable to represent the internal state of the filter
+        # self.state_sig = signals.make_internal(
+        #     "state", self.output_data.shape)
+
     def build_step(self, signals):
         # signals.scatter(self.output_data, self.dens, mode="mul")
         # input = signals.gather(self.input_data)
@@ -183,8 +187,18 @@ class LowpassBuilder(object):
         signals.scatter(self.output_data,
                         self.dens * output + self.nums * input)
 
+        # method using _step
+        # note: this build_step function doesn't use _step for efficiency
+        # reasons (we can avoid an extra scatter by reusing the output signal
+        # as the state signal)
+        # input = signals.gather(self.input_data)
+        # prev_state = signals.gather(self.state_sig)
+        # new_state = self.dens * prev_state + self.nums * input
+        # signals.scatter(self.state_sig, new_state)
+        # signals.scatter(self.output_data, new_state)
 
-class LinearFilterBuilder(object):
+
+class LinearFilterBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.LinearFilter` synapse
     operators."""
 
@@ -256,43 +270,49 @@ class LinearFilterBuilder(object):
             # add empty dimension for broadcasting
             self.D = tf.constant(np.asarray(Ds)[:, None], dtype=signals.dtype)
 
-        self.offsets = tf.range(0, len(ops) * As[0].shape[0], As[0].shape[0])
+        self.offsets = tf.expand_dims(
+            tf.range(0, len(ops) * As[0].shape[0], As[0].shape[0]),
+            axis=1)
 
         # create a variable to represent the internal state of the filter
-        with tf.variable_scope(utils.sanitize_name(str(op.process)),
-                               reuse=False):
-            self.state = tf.get_local_variable(
-                "state", shape=(self.state_d,
-                                signals.minibatch_size * self.signal_d),
-                dtype=signals.dtype, trainable=False,
-                initializer=tf.zeros_initializer())
+        self.state_sig = signals.make_internal(
+            "state", (self.state_d, signals.minibatch_size * self.signal_d),
+            minibatched=False)
 
     def build_step(self, signals):
         input = signals.gather(self.input_data)
         input = tf.reshape(input, (self.n_ops, -1))
 
+        state = signals.gather(self.state_sig)
+
+        # compute output
         if self.C is None:
             output = tf.zeros_like(input)
         else:
-            output = self.state * self.C
+            output = state * self.C
             output = tf.reshape(
-                output, (self.n_ops, -1,
-                         signals.minibatch_size * self.signal_d))
+                output,
+                (self.n_ops, -1, signals.minibatch_size * self.signal_d))
             output = tf.reduce_sum(output, axis=1)
 
         if self.D is not None:
             output += self.D * input
 
+        signals.scatter(self.output_data, output)
+
+        # update state
         r = gen_sparse_ops._sparse_tensor_dense_mat_mul(
-            self.A_indices, self.A, self.A_shape, self.state)
+            self.A_indices, self.A, self.A_shape, state)
 
-        # make sure that the values based on state have been computed before
-        # we update the state
-        with tf.control_dependencies([output, r]):
-            self.state = tf.assign(self.state, r)
-            self.state = tf.scatter_add(self.state, self.offsets, input)
+        with tf.control_dependencies([output]):
+            state = r + tf.scatter_nd(self.offsets, input,
+                                      self.state_sig.shape)
+            # TODO: tensorflow does not yet support sparse_tensor_dense_add
+            # on the GPU
+            # state = gen_sparse_ops._sparse_tensor_dense_add(
+            #     self.offsets, input, self.state_sig.shape, r)
+        state.set_shape(self.state_sig.shape)
 
-        # make sure that the state update ops run before the next time we
-        # apply the filter
-        with tf.control_dependencies([self.state]):
-            signals.scatter(self.output_data, output)
+        signals.mark_gather(self.input_data)
+        signals.mark_gather(self.state_sig)
+        signals.scatter(self.state_sig, state)

@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 from collections import OrderedDict
+import itertools
 import logging
 import warnings
 
@@ -295,8 +296,9 @@ class TensorGraph(object):
 
         def loop_body(step, stop, loop_i, probe_arrays, base_vars):
             self.signals.bases = OrderedDict(
-                [(k, v) for k, v in zip(self.base_arrays_init.keys(),
-                                        base_vars)])
+                [(k, v) for k, v in zip(itertools.chain(
+                    self.base_arrays_init.keys(),
+                    self.signals.internal_vars.keys()), base_vars)])
 
             for iter in range(self.unroll):
                 logger.debug("BUILDING ITERATION %d", iter)
@@ -357,7 +359,8 @@ class TensorGraph(object):
         loop_vars = (
             self.step_var, self.stop_var, loop_i, probe_arrays,
             tuple(x._ref() if isinstance(x, tf.Variable) else x
-                  for x in self.base_vars))
+                  for x in self.base_vars) +
+            tuple(x._ref() for x in self.signals.internal_vars.values()))
 
         # TODO: add option to disable backprop through loop, for when users
         # want to train a network running over time, but optimize on a
