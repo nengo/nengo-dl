@@ -211,12 +211,18 @@ class DotIncBuilder(OpBuilder):
         # approach #1: using einsum
         if self.A_data.minibatched and self.X_data.minibatched:
             dot = tf.einsum("ijkl,ikl->ijl", A, X)
-        elif self.A_data.minibatched and not self.X_data.minibatched:
-            dot = tf.einsum("ijkl,ik->ijl", A, X)
         elif not self.A_data.minibatched and self.X_data.minibatched:
             dot = tf.matmul(A, X)
         else:
-            dot = tf.einsum("ijk,ik->ij", A, X)
+            # note: these cases never come up (so far) in nengo, since X
+            # is always minibatched. but preserving them here for posterity,
+            # in case they are ever used
+
+            # A minibatched, X not minibatched
+            # dot = tf.einsum("ijkl,ik->ijl", A, X)
+            # A not minibatched, X not minibatched
+            # dot = tf.einsum("ijk,ik->ij", A, X)
+            raise NotImplementedError
 
         # approach #2: transpose/tile and use batch_matmul for everything
         # if not self.A_data.minibatched and self.X_data.minibatched:
