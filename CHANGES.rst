@@ -27,6 +27,9 @@ Release History
   scales the output in the same way as the new ``amplitude`` parameter in
   ``LIF``/``LIFRate`` (see `Nengo PR #1325
   <https://github.com/nengo/nengo/pull/1325>`_).
+- Added ``progress_bar=False`` option to ``sim.run``, which will disable the
+  information about the simulation status printed to standard output (`#17
+  <https://github.com/nengo/nengo_dl/issues/17>`_).
 
 **Changed**
 

@@ -254,7 +254,8 @@ class Simulator(object):
         else:
             self.run_steps(steps, **kwargs)
 
-    def run_steps(self, n_steps, input_feeds=None, profile=False):
+    def run_steps(self, n_steps, input_feeds=None, profile=False,
+                  progress_bar=True):
         """Simulate for the given number of steps.
 
         Parameters
@@ -268,6 +269,9 @@ class Simulator(object):
         profile : bool, optional
             If True, collect TensorFlow profiling information while the
             simulation is running (this will slow down the simulation)
+        progress_bar : bool, optional
+            If True, print information about the simulation status to standard
+            output.
 
         Notes
         -----
@@ -292,8 +296,9 @@ class Simulator(object):
             self._check_data(input_feeds, mode="input",
                              n_batch=self.minibatch_size, n_steps=n_steps)
 
-        print("Simulation started", end="", flush=True)
-        start = time.time()
+        if progress_bar:
+            print("Simulation started", end="", flush=True)
+            start = time.time()
 
         if profile:
             run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
@@ -328,8 +333,9 @@ class Simulator(object):
         self.n_steps += n_steps
         self.time = self.n_steps * self.dt
 
-        print("\rSimulation completed in %s" %
-              datetime.timedelta(seconds=int(time.time() - start)))
+        if progress_bar:
+            print("\rSimulation completed in %s" %
+                  datetime.timedelta(seconds=int(time.time() - start)))
 
         if profile:
             if isinstance(profile, str):
