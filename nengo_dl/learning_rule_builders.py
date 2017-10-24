@@ -20,6 +20,8 @@ class SimBCMBuilder(OpBuilder):
     operators."""
 
     def __init__(self, ops, signals):
+        super(SimBCMBuilder, self).__init__(ops, signals)
+
         self.post_data = signals.combine([op.post_filtered for op in ops])
         self.theta_data = signals.combine([op.theta for op in ops])
 
@@ -55,6 +57,8 @@ class SimOjaBuilder(OpBuilder):
         operators."""
 
     def __init__(self, ops, signals):
+        super(SimOjaBuilder, self).__init__(ops, signals)
+
         self.post_data = signals.combine([op.post_filtered for op in ops])
 
         self.pre_data = signals.combine(
@@ -99,6 +103,8 @@ class SimVojaBuilder(OpBuilder):
         operators."""
 
     def __init__(self, ops, signals):
+        super(SimVojaBuilder, self).__init__(ops, signals)
+
         self.post_data = signals.combine([op.post_filtered for op in ops])
 
         self.pre_data = signals.combine(

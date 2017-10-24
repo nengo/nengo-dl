@@ -26,8 +26,8 @@ class ResetBuilder(OpBuilder):
     operators."""
 
     def __init__(self, ops, signals):
-        logger.debug("reset")
-        logger.debug([str(x) for x in ops])
+        super(ResetBuilder, self).__init__(ops, signals)
+
         logger.debug("val %s", [op.value for op in ops])
         logger.debug("dst %s", [op.dst for op in ops])
 
@@ -66,8 +66,8 @@ class CopyBuilder(OpBuilder):
     operators."""
 
     def __init__(self, ops, signals):
-        logger.debug("sliced_copy")
-        logger.debug([str(op) for op in ops])
+        super(CopyBuilder, self).__init__(ops, signals)
+
         logger.debug("src %s", [op.src for op in ops])
         logger.debug("src_slice %s", [getattr(op, "src_slice", None)
                                       for op in ops])
@@ -111,8 +111,8 @@ class ElementwiseIncBuilder(OpBuilder):
     operators."""
 
     def __init__(self, ops, signals):
-        logger.debug("elementwise_inc"), len(ops)
-        logger.debug("\n".join([str(x) for x in ops]))
+        super(ElementwiseIncBuilder, self).__init__(ops, signals)
+
         logger.debug("dst %s", [op.Y for op in ops])
         logger.debug("A %s", [op.A for op in ops])
         logger.debug("X %s", [op.X for op in ops])
@@ -161,8 +161,8 @@ class DotIncBuilder(OpBuilder):
     operators."""
 
     def __init__(self, ops, signals):
-        logger.debug("dot_inc"), len(ops)
-        logger.debug("\n".join([str(x) for x in ops]))
+        super(DotIncBuilder, self).__init__(ops, signals)
+
         logger.debug("dst %s", [op.Y for op in ops])
         logger.debug("A %s", [op.A for op in ops])
         logger.debug("X %s", [op.X for op in ops])
@@ -256,8 +256,8 @@ class SparseDotIncBuilder(DotIncBuilder):
     operators."""
 
     def __init__(self, ops, signals):
-        logger.debug("dot_inc"), len(ops)
-        logger.debug("\n".join([str(x) for x in ops]))
+        super(DotIncBuilder, self).__init__(ops, signals)
+
         logger.debug("dst %s", [op.Y for op in ops])
         logger.debug("A %s", [op.A for op in ops])
         logger.debug("X %s", [op.X for op in ops])
@@ -338,8 +338,8 @@ class SimPyFuncBuilder(OpBuilder):
     operators."""
 
     def __init__(self, ops, signals):
-        logger.debug("sim_py_func")
-        logger.debug([str(op) for op in ops])
+        super(SimPyFuncBuilder, self).__init__(ops, signals)
+
         logger.debug("t %s", [op.t for op in ops])
         logger.debug("x %s", [op.x for op in ops])
         logger.debug("fn %s", [op.fn for op in ops])

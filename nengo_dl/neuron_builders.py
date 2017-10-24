@@ -28,8 +28,8 @@ class SimNeuronsBuilder(OpBuilder):
     TF_NEURON_IMPL = (RectifiedLinear, Sigmoid, LIF, LIFRate, SoftLIFRate)
 
     def __init__(self, ops, signals):
-        logger.debug("sim_neurons")
-        logger.debug([op for op in ops])
+        super(SimNeuronsBuilder, self).__init__(ops, signals)
+
         logger.debug("J %s", [op.J for op in ops])
 
         neuron_type = type(ops[0].neurons)
@@ -59,7 +59,7 @@ class SimNeuronsBuilder(OpBuilder):
         self.built_neurons.build_step(signals)
 
 
-class GenericNeuronBuilder(object):
+class GenericNeuronBuilder(OpBuilder):
     """Builds all neuron types for which there is no custom Tensorflow
     implementation.
 
@@ -72,6 +72,8 @@ class GenericNeuronBuilder(object):
     """
 
     def __init__(self, ops, signals):
+        super(GenericNeuronBuilder, self).__init__(ops, signals)
+
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
         self.state_data = [signals.combine([op.states[i] for op in ops])
@@ -146,11 +148,13 @@ class GenericNeuronBuilder(object):
             signals.scatter(s, state_out[i])
 
 
-class RectifiedLinearBuilder(object):
+class RectifiedLinearBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.RectifiedLinear`
     neuron operators."""
 
     def __init__(self, ops, signals):
+        super(RectifiedLinearBuilder, self).__init__(ops, signals)
+
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
 
@@ -159,10 +163,12 @@ class RectifiedLinearBuilder(object):
         signals.scatter(self.output_data, tf.nn.relu(J))
 
 
-class SigmoidBuilder(object):
+class SigmoidBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.Sigmoid` neuron operators."""
 
     def __init__(self, ops, signals):
+        super(SigmoidBuilder, self).__init__(ops, signals)
+
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
         self.tau_ref = tf.constant(
@@ -174,10 +180,12 @@ class SigmoidBuilder(object):
         signals.scatter(self.output_data, tf.nn.sigmoid(J) / self.tau_ref)
 
 
-class LIFRateBuilder(object):
+class LIFRateBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.LIFRate` neuron operators."""
 
     def __init__(self, ops, signals):
+        super(LIFRateBuilder, self).__init__(ops, signals)
+
         self.tau_ref = tf.constant(
             [[op.neurons.tau_ref] for op in ops
              for _ in range(op.J.shape[0])], dtype=signals.dtype)
@@ -209,10 +217,12 @@ class LIFRateBuilder(object):
         signals.scatter(self.output_data, tf.where(j > 0, rates, self.zeros))
 
 
-class LIFBuilder(object):
+class LIFBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.LIF` neuron operators."""
 
     def __init__(self, ops, signals):
+        super(LIFBuilder, self).__init__(ops, signals)
+
         self.tau_ref = tf.constant(
             [[op.neurons.tau_ref] for op in ops
              for _ in range(op.J.shape[0])], dtype=signals.dtype)

@@ -116,7 +116,8 @@ class OpBuilder(object):  # pragma: no cover
     """
 
     def __init__(self, ops, signals):
-        pass
+        logger.debug(self.__class__.__name__)
+        logger.debug("\n".join(str(x) for x in ops))
 
     def build_step(self, signals):
         """This function builds whatever computations need to be executed in

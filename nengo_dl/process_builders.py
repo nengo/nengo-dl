@@ -31,15 +31,15 @@ class SimProcessBuilder(OpBuilder):
     TF_PROCESS_IMPL = (Lowpass, LinearFilter)
 
     def __init__(self, ops, signals):
-        logger.debug("sim_process")
-        logger.debug([op for op in ops])
+        super(SimProcessBuilder, self).__init__(ops, signals)
+
         logger.debug("process %s", [op.process for op in ops])
         logger.debug("input %s", [op.input for op in ops])
         logger.debug("output %s", [op.output for op in ops])
         logger.debug("t %s", [op.t for op in ops])
 
         # if we have a custom tensorflow implementation for this process type,
-        # then we build that. otherwise we'll just execute the process step
+        # then we build that. otherwise we'll execute the process step
         # function externally (using `tf.py_func`), so we just need to set up
         # the inputs/outputs for that.
 
@@ -62,19 +62,21 @@ class SimProcessBuilder(OpBuilder):
             self.built_process.build_post(ops, signals, sess, rng)
 
 
-class GenericProcessBuilder(object):
-    """Builds all process types for which there is no custom Tensorflow
+class GenericProcessBuilder(OpBuilder):
+    """Builds all process types for which there is no custom TensorFlow
     implementation.
 
     Notes
     -----
     These will be executed as native Python functions, requiring execution to
-    move in and out of Tensorflow.  This can significantly slow down the
+    move in and out of TensorFlow.  This can significantly slow down the
     simulation, so any performance-critical processes should consider
-    adding a custom Tensorflow implementation for their type instead.
+    adding a custom TensorFlow implementation for their type instead.
     """
 
     def __init__(self, ops, signals):
+        super(GenericProcessBuilder, self).__init__(ops, signals)
+
         self.input_data = (None if ops[0].input is None else
                            signals.combine([op.input for op in ops]))
         self.output_data = signals.combine([op.output for op in ops])
@@ -134,10 +136,12 @@ class GenericProcessBuilder(object):
                     op.output.shape, signals.dt_val, op.process.get_rng(rng))
 
 
-class LowpassBuilder(object):
+class LowpassBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.Lowpass` synapse operators."""
 
     def __init__(self, ops, signals):
+        super(LowpassBuilder, self).__init__(ops, signals)
+
         self.input_data = signals.combine([op.input for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
 
@@ -203,6 +207,8 @@ class LinearFilterBuilder(OpBuilder):
     operators."""
 
     def __init__(self, ops, signals):
+        super(LinearFilterBuilder, self).__init__(ops, signals)
+
         self.input_data = signals.combine([op.input for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
 
