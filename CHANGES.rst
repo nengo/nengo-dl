@@ -21,6 +21,13 @@ Release History
 0.5.3 (unreleased)
 ------------------
 
+**Added**
+
+- The ``SoftLIFRate`` neuron type now has an ``amplitude`` parameter, which
+  scales the output in the same way as the new ``amplitude`` parameter in
+  ``LIF``/``LIFRate`` (see `Nengo PR #1325
+  <https://github.com/nengo/nengo/pull/1325>`_).
+
 **Fixed**
 
 - Fixed a bug where input nodes that were only read as a view were not

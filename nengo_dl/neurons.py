@@ -1,5 +1,6 @@
 from nengo.neurons import LIFRate
 from nengo.params import NumberParam
+from nengo.version import version_info
 import numpy as np
 
 
@@ -23,6 +24,9 @@ class SoftLIFRate(LIFRate):
     tau_ref : float
         Absolute refractory period, in seconds. This is how long the
         membrane voltage is held at zero after a spike.
+    amplitude : float
+        Scaling factor on the neuron output. Corresponds to the relative
+        amplitude of the output spikes of the neuron.
 
     References
     ----------
@@ -41,6 +45,9 @@ class SoftLIFRate(LIFRate):
         super(SoftLIFRate, self).__init__(**lif_args)
         self.sigma = sigma
         self._epsilon = 1e-15
+
+        if version_info < (2, 6, 1):
+            self.amplitude = 1.0
 
     @property
     def _argreprs(self):
@@ -69,5 +76,5 @@ class SoftLIFRate(LIFRate):
         x[valid] = y_v
         x += self._epsilon
 
-        output[:] = 1. / (
+        output[:] = self.amplitude / (
             self.tau_ref + self.tau_rc * np.log1p(1. / x))

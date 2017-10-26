@@ -483,7 +483,7 @@ class Simulator(object):
                 if summary_op is not None:
                     self.summary.add_summary(outputs[2], outputs[-1])
 
-                progress.step("loss=%f" % outputs[1])
+                progress.step("loss=%.4f" % outputs[1])
 
         # restore internal state of simulator
         self.load_params(os.path.join(tmpdir.name, "tmp"), include_local=True,

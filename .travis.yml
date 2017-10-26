@@ -18,15 +18,20 @@ env:
     - TF_VERSION="tensorflow"
     - NENGO_VERSION="nengo"
 
+  # TODO: change nengo_version back to latest release in docs/examples after
+  # 2.6.1 released
+
   matrix:
     - MODE="pep8"
     - MODE="docs"
+      NENGO_VERSION="git+https://github.com/nengo/nengo.git"
     - # default build
     - MODE="coverage"
     - MODE="coverage"
       PYTHON_VERSION="2.7"
       NENGO_VERSION="git+https://github.com/nengo/nengo.git"
     - MODE="examples"
+      NENGO_VERSION="git+https://github.com/nengo/nengo.git"
     - NENGO_DL_TEST_PRECISION="64"
     - NENGO_DL_TEST_UNROLL="5"
     - PYTHON_VERSION="2.7"

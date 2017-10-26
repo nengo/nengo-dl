@@ -1,7 +1,8 @@
 import logging
 
-from nengo.neurons import RectifiedLinear, Sigmoid, LIF, LIFRate
 from nengo.builder.neurons import SimNeurons
+from nengo.neurons import RectifiedLinear, Sigmoid, LIF, LIFRate
+from nengo.version import version_info
 import numpy as np
 import tensorflow as tf
 
@@ -193,6 +194,13 @@ class LIFRateBuilder(OpBuilder):
             [[op.neurons.tau_rc] for op in ops
              for _ in range(op.J.shape[0])], dtype=signals.dtype)
 
+        if version_info < (2, 6, 1):
+            self.amplitude = tf.constant(1.0, dtype=signals.dtype)
+        else:
+            self.amplitude = tf.constant(
+                [[op.neurons.amplitude] for op in ops
+                 for _ in range(op.J.shape[0])], dtype=signals.dtype)
+
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
         self.zeros = tf.zeros(self.J_data.shape + (signals.minibatch_size,),
@@ -213,32 +221,22 @@ class LIFRateBuilder(OpBuilder):
         #                   tf.shape(J)))
 
         j -= 1
-        rates = 1 / (self.tau_ref + self.tau_rc * tf.log1p(1 / j))
+        rates = self.amplitude / (self.tau_ref + self.tau_rc * tf.log1p(1 / j))
         signals.scatter(self.output_data, tf.where(j > 0, rates, self.zeros))
 
 
-class LIFBuilder(OpBuilder):
+class LIFBuilder(LIFRateBuilder):
     """Build a group of :class:`~nengo:nengo.LIF` neuron operators."""
 
     def __init__(self, ops, signals):
         super(LIFBuilder, self).__init__(ops, signals)
 
-        self.tau_ref = tf.constant(
-            [[op.neurons.tau_ref] for op in ops
-             for _ in range(op.J.shape[0])], dtype=signals.dtype)
-        self.tau_rc = tf.constant(
-            [[op.neurons.tau_rc] for op in ops
-             for _ in range(op.J.shape[0])], dtype=signals.dtype)
         self.min_voltage = tf.constant(
             [[op.neurons.min_voltage] for op in ops
              for _ in range(op.J.shape[0])], dtype=signals.dtype)
 
-        self.J_data = signals.combine([op.J for op in ops])
-        self.output_data = signals.combine([op.output for op in ops])
         self.voltage_data = signals.combine([op.states[0] for op in ops])
         self.refractory_data = signals.combine([op.states[1] for op in ops])
-        self.zeros = tf.zeros(self.J_data.shape + (signals.minibatch_size,),
-                              signals.dtype)
 
     def build_step(self, signals):
         J = signals.gather(self.J_data)
@@ -251,7 +249,7 @@ class LIFBuilder(OpBuilder):
         voltage -= (J - voltage) * (tf.exp(-delta_t / self.tau_rc) - 1)
 
         spiked = voltage > 1
-        spikes = tf.cast(spiked, signals.dtype) / signals.dt
+        spikes = tf.cast(spiked, signals.dtype) * self.amplitude / signals.dt
         signals.scatter(self.output_data, spikes)
 
         # note: this scatter/gather approach is slower than just doing the
@@ -302,6 +300,6 @@ class SoftLIFRateBuilder(LIFRateBuilder):
         z = tf.nn.softplus(j / self.sigma) * self.sigma
         z += self.epsilon
 
-        rates = 1 / (self.tau_ref + self.tau_rc * tf.log1p(1 / z))
+        rates = self.amplitude / (self.tau_ref + self.tau_rc * tf.log1p(1 / z))
 
         signals.scatter(self.output_data, rates)
