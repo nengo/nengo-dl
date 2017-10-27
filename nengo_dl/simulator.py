@@ -95,7 +95,7 @@ class Simulator(object):
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
                  dtype=tf.float32, device=None, unroll_simulation=1,
-                 minibatch_size=None, tensorboard=False):
+                 minibatch_size=None, tensorboard=None):
         self.closed = False
         self.unroll = unroll_simulation
         self.minibatch_size = 1 if minibatch_size is None else minibatch_size
@@ -138,7 +138,7 @@ class Simulator(object):
               datetime.timedelta(seconds=int(time.time() - start)))
 
         # output simulation data for viewing via TensorBoard
-        if tensorboard:
+        if tensorboard is not None:
             if not os.path.exists(tensorboard):
                 os.makedirs(tensorboard)
 

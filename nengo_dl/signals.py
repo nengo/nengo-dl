@@ -390,17 +390,19 @@ class SignalDict(object):
 
         sigs = [self.sig_map[s] if isinstance(s, Signal) else s for s in sigs]
 
-        key = sigs[0].key
         # make sure all the signals have the same base
-        assert all([s.key == key for s in sigs])
-
-        indices = np.concatenate([s.indices for s in sigs], axis=0)
+        # note: this also tells us that they have the same dtype and
+        # minibatching
+        key = sigs[0].key
+        assert all(s.key == key for s in sigs)
 
         # make sure all signals have the same shape (except first axis,
         # which we're concatenating along); note, this can fail even if they
         # all have the same base, due to reshaping
-        assert all([s.shape[1:] == sigs[0].shape[1:] for s in sigs])
         shape = (np.sum([s.shape[0] for s in sigs]),) + sigs[0].shape[1:]
+        assert all(s.shape[1:] == shape[1:] for s in sigs)
+
+        indices = np.concatenate([s.indices for s in sigs], axis=0)
 
         output = TensorSignal(indices, key, sigs[0].dtype, shape,
                               sigs[0].minibatched, label=label)

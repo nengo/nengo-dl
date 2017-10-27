@@ -189,8 +189,8 @@ def test_train_recurrent(Simulator, seed):
         y = np.outer(np.linspace(0, 1, batch_size),
                      np.linspace(0, 1, n_steps))[:, :, None]
 
-        sim.train(
-            {inp: x}, {p: y}, tf.train.RMSPropOptimizer(1e-3), n_epochs=200)
+        sim.train({inp: x}, {p: y}, tf.train.RMSPropOptimizer(1e-3),
+                  n_epochs=200)
 
         sim.check_gradients(sim.tensor_graph.build_loss({p: "mse"}))
 

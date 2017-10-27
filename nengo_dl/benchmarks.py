@@ -231,7 +231,7 @@ def profile_run():
     # note: in order for GPU profiling to work, you have to manually add
     # ...\CUDA\v8.0\extras\CUPTI\libx64 to your path
     net, p = pes(128, 32, nengo.RectifiedLinear())
-    with nengo_dl.Simulator(net, tensorboard=False, unroll_simulation=50,
+    with nengo_dl.Simulator(net, tensorboard=None, unroll_simulation=50,
                             device="/gpu:0") as sim:
         # run a few times to try to eliminate startup overhead (only the data
         # from the last run will be kept)

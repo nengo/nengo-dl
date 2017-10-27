@@ -28,6 +28,11 @@ Release History
   ``LIF``/``LIFRate`` (see `Nengo PR #1325
   <https://github.com/nengo/nengo/pull/1325>`_).
 
+**Changed**
+
+- Changed the default ``tensorboard`` argument in ``Simulator`` from ``False``
+  to ``None``
+
 **Fixed**
 
 - Fixed a bug where input nodes that were only read as a view were not

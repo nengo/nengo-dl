@@ -2,6 +2,7 @@ import logging
 import warnings
 
 from nengo.builder.processes import SimProcess
+from nengo.exceptions import SimulationError
 from nengo.synapses import Lowpass, LinearFilter
 from nengo.utils.filter_design import (cont2discrete, tf2ss, ss2tf,
                                        BadCoefficients)
@@ -92,6 +93,10 @@ class GenericProcessBuilder(OpBuilder):
         # combines the result
         @utils.align_func(self.output_shape, self.output_data.dtype)
         def merged_func(time, input):  # pragma: no cover
+            if any(x is None for a in self.step_fs for x in a):
+                raise SimulationError(
+                    "build_post has not been called for %s" % self)
+
             input_offset = 0
             func_output = []
             for i, op in enumerate(ops):
