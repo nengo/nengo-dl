@@ -358,7 +358,7 @@ def test_generate_inputs(Simulator, seed):
     with Simulator(net, minibatch_size=2, unroll_simulation=3) as sim:
         feed = sim._generate_inputs({inp[0]: np.zeros((2, 3, 1))}, 3)
 
-        ph = [sim.tensor_graph.invariant_ph[x] for x in inp]
+        ph = [sim.tensor_graph.data_phs[x] for x in inp]
 
         assert len(sim.tensor_graph.invariant_inputs) == len(inp)
         assert len(feed) == len(inp)
@@ -366,13 +366,13 @@ def test_generate_inputs(Simulator, seed):
         sim.reset()
         sim.run_steps(3, input_feeds={inp[0]: np.zeros((2, 3, 1))})
 
-        vals = [np.zeros((3, 1, 2)),
-                np.tile(np.sin(sim.trange())[:, None, None], (1, 1, 2)),
-                np.tile(proc.run_steps(3)[:, :, None], (1, 1, 2)),
-                np.ones((3, 1, 2)) * 2]
+        vals = [np.zeros((2, 3, 1)),
+                np.tile(np.sin(sim.trange())[None, :, None], (2, 1, 1)),
+                np.tile(proc.run_steps(3)[None, :, :], (2, 1, 1)),
+                np.ones((2, 3, 1)) * 2]
         for i, x in enumerate(vals):
             assert np.allclose(feed[ph[i]], x)
-            assert np.allclose(sim.data[p[i]], x.transpose(2, 0, 1))
+            assert np.allclose(sim.data[p[i]], x)
 
 
 def test_save_load_params(Simulator, tmpdir):
