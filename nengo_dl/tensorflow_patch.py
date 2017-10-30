@@ -91,6 +91,27 @@ def patch_state_grads():
 
         return grad, None, updates_grad
 
+    def ScatterMulGrads(op, grad):
+        # note: we can't compute `d_updates` because it depends on the value
+        # of the variable at the time of the multiplication, which we don't
+        # have access to. but we can compute `d_var`.
+
+        var, indices, updates = op.inputs
+
+        if isinstance(grad, ops.IndexedSlices):
+            raise NotImplementedError
+        else:
+            var_grad = gen_state_ops._temporary_variable(
+                grad.get_shape(), grad.dtype)
+            var_name = var_grad.op.name
+            var_grad = state_ops.assign(var_grad, grad)
+            var_grad = state_ops.scatter_mul(
+                var_grad, indices, updates)
+            var_grad = gen_state_ops._destroy_temporary_variable(var_grad,
+                                                                 var_name)
+
+        return var_grad, None, None
+
     def AssignGrads(op, grad):
         return array_ops.zeros_like(grad), grad
 
@@ -101,6 +122,8 @@ def patch_state_grads():
         "type": ScatterUpdateGrads, "location": traceback.extract_stack()}
     ops._gradient_registry._registry["ScatterAdd"] = {
         "type": ScatterAddGrads, "location": traceback.extract_stack()}
+    ops._gradient_registry._registry["ScatterMul"] = {
+        "type": ScatterMulGrads, "location": traceback.extract_stack()}
     ops._gradient_registry._registry["Assign"] = {
         "type": AssignGrads, "location": traceback.extract_stack()}
     ops._gradient_registry._registry["AssignAdd"] = {
