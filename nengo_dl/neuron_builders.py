@@ -208,18 +208,6 @@ class LIFRateBuilder(OpBuilder):
 
     def build_step(self, signals):
         j = signals.gather(self.J_data)
-
-        # indices = tf.cast(tf.where(j > 0), tf.int32)
-        # tau_ref = tf.gather_nd(
-        #     self.tau_ref, tf.expand_dims(indices[:, 0], 1))
-        # tau_rc = tf.gather_nd(self.tau_rc, tf.expand_dims(indices[:, 0], 1))
-        # j = tf.gather_nd(j, indices)
-        #
-        # signals.scatter(
-        #     self.output_data,
-        #     tf.scatter_nd(indices, 1 / (tau_ref + tau_rc * tf.log1p(1 / j)),
-        #                   tf.shape(J)))
-
         j -= 1
         rates = self.amplitude / (self.tau_ref + self.tau_rc * tf.log1p(1 / j))
         signals.scatter(self.output_data, tf.where(j > 0, rates, self.zeros))
@@ -246,27 +234,11 @@ class LIFBuilder(LIFRateBuilder):
         refractory -= signals.dt
         delta_t = tf.clip_by_value(signals.dt - refractory, 0, signals.dt)
 
-        voltage -= (J - voltage) * (tf.exp(-delta_t / self.tau_rc) - 1)
+        voltage -= (J - voltage) * tf.expm1(-delta_t / self.tau_rc)
 
         spiked = voltage > 1
         spikes = tf.cast(spiked, signals.dtype) * self.amplitude / signals.dt
         signals.scatter(self.output_data, spikes)
-
-        # note: this scatter/gather approach is slower than just doing the
-        # computation on the whole array (even though we're not using the
-        # result for any of the neurons that didn't spike).
-        # this is because there is no GPU kernel for scatter/gather_nd. so if
-        # that gets implemented in the future, this may be faster.
-        # indices = tf.cast(tf.where(spiked), tf.int32)
-        # indices0 = tf.expand_dims(indices[:, 0], 1)
-        # tau_rc = tf.gather_nd(self.tau_rc, indices0)
-        # tau_ref = tf.gather_nd(self.tau_ref, indices0)
-        # t_spike = tau_ref + signals.dt + tau_rc * tf.log1p(
-        #     -(tf.gather_nd(voltage, indices) - 1) /
-        #     (tf.gather_nd(J, indices) - 1))
-        # refractory = tf.where(
-        #     spiked, tf.scatter_nd(indices, t_spike, tf.shape(refractory)),
-        #     refractory)
 
         t_spike = (self.tau_ref + signals.dt +
                    self.tau_rc * tf.log1p((1 - voltage) / (J - 1)))
