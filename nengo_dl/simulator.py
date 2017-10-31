@@ -17,7 +17,6 @@ from nengo.exceptions import (ReadonlyError, SimulatorClosed, NengoWarning,
                               SimulationError, ValidationError)
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.client.timeline import Timeline
 from tensorflow.python.ops import gradient_checker
 
 from nengo_dl import utils, DATA_DIR
@@ -342,9 +341,12 @@ class Simulator(object):
                 filename = profile
             else:
                 filename = os.path.join(DATA_DIR, "nengo_dl_profile.json")
-            timeline = Timeline(run_metadata.step_stats)
-            with open(filename, "w") as f:
-                f.write(timeline.generate_chrome_trace_format())
+            options = tf.profiler.ProfileOptionBuilder.time_and_memory()
+            options["output"] = "timeline:outfile=%s" % filename
+            options["min_bytes"] = 0
+            tf.profiler.profile(
+                self.tensor_graph.graph, run_meta=run_metadata,
+                cmd="scope", options=options)
 
     def train(self, inputs, targets, optimizer, n_epochs=1, objective="mse",
               shuffle=True, summaries=None, profile=False):
@@ -467,6 +469,7 @@ class Simulator(object):
         if profile:
             run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
             run_metadata = tf.RunMetadata()
+            profiler = tf.profiler.Profiler(self.tensor_graph.graph)
         else:
             run_options = None
             run_metadata = None
@@ -489,6 +492,9 @@ class Simulator(object):
                 if summary_op is not None:
                     self.summary.add_summary(outputs[2], outputs[-1])
 
+                if profile:
+                    profiler.add_step(int(outputs[-1]), run_metadata)
+
                 progress.step("loss=%.4f" % outputs[1])
 
         # restore internal state of simulator
@@ -501,9 +507,10 @@ class Simulator(object):
                 filename = profile
             else:
                 filename = os.path.join(DATA_DIR, "nengo_dl_profile.json")
-            timeline = Timeline(run_metadata.step_stats)
-            with open(filename, "w") as f:
-                f.write(timeline.generate_chrome_trace_format())
+            options = tf.profiler.ProfileOptionBuilder.time_and_memory()
+            options["output"] = "timeline:outfile=%s" % filename
+            options["min_bytes"] = 0
+            profiler.profile_name_scope(options)
 
     def loss(self, inputs, targets, objective):
         """Compute the loss value for the given objective and inputs/targets.

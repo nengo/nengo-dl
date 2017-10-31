@@ -333,7 +333,7 @@ def profile_train(use_tensor_layer):
         # run a few times to try to eliminate startup overhead (only the data
         # from the last run will be kept)
         for _ in range(3):
-            sim.train(inputs, targets, opt, n_epochs=100, objective=obj,
+            sim.train(inputs, targets, opt, n_epochs=10, objective=obj,
                       profile=True)
 
             # sim.run_steps(2, input_feeds=inputs, profile=True)

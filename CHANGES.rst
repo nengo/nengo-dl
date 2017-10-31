@@ -35,6 +35,10 @@ Release History
 
 - Changed the default ``tensorboard`` argument in ``Simulator`` from ``False``
   to ``None``
+- Use the new `tf.profiler
+  <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/profiler/README.md>`_
+  tool to collect profiling data in ``sim.run_steps`` and ``sim.train`` when
+  ``profile=True``.
 
 **Fixed**
 

@@ -580,7 +580,9 @@ def test_profile(Simulator, mode):
         nengo.Connection(a, x)
         p = nengo.Probe(x)
 
-    filename = os.path.join(DATA_DIR, "nengo_dl_profile.json")
+    suffix = "" if tf.__version__ < "1.4.0" else "_-1"
+
+    filename = os.path.join(DATA_DIR, "nengo_dl_profile.json%s" % suffix)
     if os.path.exists(filename):
         os.remove(filename)
     elif not os.path.exists(os.path.dirname(filename)):
@@ -602,8 +604,8 @@ def test_profile(Simulator, mode):
             sim.train({a: np.zeros((1, 5, 1))}, {p: np.zeros((1, 5, 1))},
                       tf.train.GradientDescentOptimizer(1), profile="tmp.txt")
 
-        assert os.path.exists("tmp.txt")
-        os.remove("tmp.txt")
+        assert os.path.exists("tmp.txt%s" % suffix)
+        os.remove("tmp.txt%s" % suffix)
 
 
 def test_dt_readonly(Simulator):
