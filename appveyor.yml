@@ -24,6 +24,7 @@ install:
   - conda info -a
   - conda install %NUMPY_VERSION% matplotlib
   - pip install %TF_VERSION%
+  - conda install --force html5lib  # fixes a bug related to tensorflow and pip
   - pip install %NENGO_VERSION%
   - pip install -r requirements-test.txt
   - if %MODE% == examples (
