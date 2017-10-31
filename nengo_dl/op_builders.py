@@ -144,9 +144,12 @@ class ElementwiseIncBuilder(OpBuilder):
         A = signals.gather(self.A_data)
         X = signals.gather(self.X_data)
 
-        result = tf.multiply(A, X)
+        result = self._step(A, X)
 
         signals.scatter(self.Y_data, result, mode=self.mode)
+
+    def _step(self, A, X):
+        return tf.multiply(A, X)
 
 
 # class DotSet(DotInc):
@@ -208,6 +211,11 @@ class DotIncBuilder(OpBuilder):
         A = signals.gather(self.A_data)
         X = signals.gather(self.X_data)
 
+        dot = self._step(A, X)
+
+        signals.scatter(self.Y_data, dot, mode=self.mode)
+
+    def _step(self, A, X):
         # approach #1: using einsum
         if self.A_data.minibatched and self.X_data.minibatched:
             dot = tf.einsum("ijkl,ikl->ijl", A, X)
@@ -246,7 +254,7 @@ class DotIncBuilder(OpBuilder):
         #                         self.X_data.minibatched)
         #     dot = tf.reduce_sum(dot, axis=reduce_axis)
 
-        signals.scatter(self.Y_data, dot, mode=self.mode)
+        return dot
 
 
 @Builder.register(DotInc)
@@ -263,6 +271,7 @@ class SparseDotIncBuilder(DotIncBuilder):
         logger.debug("X %s", [op.X for op in ops])
 
         self.mode = "inc" if type(ops[0]) == DotInc else "update"
+        self.minibatch_size = signals.minibatch_size
 
         self.len_match = True
         for i, s0 in enumerate(ops[0].all_signals):
@@ -308,12 +317,16 @@ class SparseDotIncBuilder(DotIncBuilder):
             self.A_shape = tf.constant(corner, dtype=tf.int64)
 
     def build_step(self, signals):
-        if self.len_match:
-            super(SparseDotIncBuilder, self).build_step(signals)
-            return
-
         A = signals.gather(self.A_data)
         X = signals.gather(self.X_data)
+
+        dot = self._step(A, X)
+
+        signals.scatter(self.Y_data, dot, mode=self.mode)
+
+    def _step(self, A, X):
+        if self.len_match:
+            return super(SparseDotIncBuilder, self)._step(A, X)
 
         A = tf.reshape(A, (-1,))
 
@@ -327,9 +340,9 @@ class SparseDotIncBuilder(DotIncBuilder):
         # sparse_A = tf.scatter_nd(self.sparse_indices, A, self.A_shape)
         # dot = tf.matmul(sparse_A, X, a_is_sparse=self.is_sparse)
 
-        dot.set_shape(self.Y_data.shape + (signals.minibatch_size,))
+        dot.set_shape(self.Y_data.shape + (self.minibatch_size,))
 
-        signals.scatter(self.Y_data, dot, mode=self.mode)
+        return dot
 
 
 @Builder.register(SimPyFunc)
@@ -395,16 +408,21 @@ class SimPyFuncBuilder(OpBuilder):
         inputs = ([] if self.input_data is None
                   else signals.gather(self.input_data))
 
+        outputs = self._step(time, inputs)
+
+        if self.output_data is not None:
+            signals.scatter(self.output_data, outputs)
+
+        # note: we only need to run the node for side effects, not the
+        # assignment operator. if the result of the assignment is actually
+        # used anywhere, then it will be run as part of the normal graph.
+        return outputs
+
+    def _step(self, time, inputs):
         with tf.device("/cpu:0"):
             node_outputs = tf.py_func(
                 self.merged_func, [time, inputs], self.output_dtype,
                 name=self.merged_func.__name__)
         node_outputs.set_shape(self.output_shape)
 
-        if self.output_data is not None:
-            signals.scatter(self.output_data, node_outputs)
-
-        # note: we only need to run the node for side effects, not the
-        # assignment operator. if the result of the assignment is actually
-        # used anywhere, then it will be run as part of the normal graph.
         return node_outputs

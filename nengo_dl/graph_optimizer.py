@@ -14,7 +14,8 @@ from nengo.utils.simulator import operator_dependency_graph
 import numpy as np
 
 from nengo_dl import (signals, process_builders, builder, tensor_node,
-                      op_builders, learning_rule_builders, neuron_builders)
+                      op_builders, learning_rule_builders, neuron_builders,
+                      meta_builders)
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +141,13 @@ def mergeable(op, chosen_ops):
         attr = ("pre_decoded" if isinstance(op, SimVoja) else
                 "pre_filtered")
         if getattr(op, attr).shape[0] != getattr(c, attr).shape[0]:
+            return False
+    elif isinstance(op, meta_builders.SimConnection):
+        # the sub-ops in the fused op most all be mergeable
+        if len(op.ops) != len(c.ops):
+            return False
+
+        if not all(mergeable(a, [b]) for a, b in zip(op.ops, c.ops)):
             return False
 
     return True

@@ -121,17 +121,22 @@ class GenericProcessBuilder(OpBuilder):
         input = ([] if self.input_data is None
                  else signals.gather(self.input_data))
 
+        result = self._step(signals.time, input)
+
+        signals.scatter(self.output_data, result, mode=self.mode)
+
+    def _step(self, time, input):
         # note: we need to make sure that the previous call to this function
         # has completed before the next starts, since we don't know that the
         # functions are thread safe
         with tf.control_dependencies(self.prev_result), tf.device("/cpu:0"):
             result = tf.py_func(
-                self.merged_func, [signals.time, input],
+                self.merged_func, [time, input],
                 self.output_data.dtype, name=self.merged_func.__name__)
         result.set_shape(self.output_shape)
         self.prev_result = [result]
 
-        signals.scatter(self.output_data, result, mode=self.mode)
+        return result
 
     def build_post(self, ops, signals, sess, rng):
         for i, op in enumerate(ops):
@@ -183,8 +188,8 @@ class LowpassBuilder(OpBuilder):
         self.dens = tf.constant(dens, dtype=self.output_data.dtype)
 
         # create a variable to represent the internal state of the filter
-        # self.state_sig = signals.make_internal(
-        #     "state", self.output_data.shape)
+        self.state_sig = signals.make_internal(
+            "state", self.output_data.shape)
 
     def build_step(self, signals):
         # signals.scatter(self.output_data, self.dens, mode="mul")
@@ -201,10 +206,17 @@ class LowpassBuilder(OpBuilder):
         # reasons (we can avoid an extra scatter by reusing the output signal
         # as the state signal)
         # input = signals.gather(self.input_data)
-        # prev_state = signals.gather(self.state_sig)
-        # new_state = self.dens * prev_state + self.nums * input
-        # signals.scatter(self.state_sig, new_state)
+        # new_state = self._step(input, signals)
         # signals.scatter(self.output_data, new_state)
+
+    def _step(self, input, signals):
+        prev_state = signals.gather(self.state_sig)
+
+        new_state = self.dens * prev_state + self.nums * input
+
+        signals.scatter(self.state_sig, new_state)
+
+        return new_state
 
 
 class LinearFilterBuilder(OpBuilder):
@@ -292,6 +304,14 @@ class LinearFilterBuilder(OpBuilder):
 
     def build_step(self, signals):
         input = signals.gather(self.input_data)
+
+        output = self._step(input, signals)
+
+        signals.mark_gather(self.input_data)
+        signals.mark_gather(self.state_sig)
+        signals.scatter(self.output_data, output)
+
+    def _step(self, input, signals):
         input = tf.reshape(input, (self.n_ops, -1))
 
         state = signals.gather(self.state_sig)
@@ -309,8 +329,6 @@ class LinearFilterBuilder(OpBuilder):
         if self.D is not None:
             output += self.D * input
 
-        signals.scatter(self.output_data, output)
-
         # update state
         r = gen_sparse_ops._sparse_tensor_dense_mat_mul(
             self.A_indices, self.A, self.A_shape, state)
@@ -324,6 +342,5 @@ class LinearFilterBuilder(OpBuilder):
             #     self.offsets, input, self.state_sig.shape, r)
         state.set_shape(self.state_sig.shape)
 
-        signals.mark_gather(self.input_data)
-        signals.mark_gather(self.state_sig)
         signals.scatter(self.state_sig, state)
+        return output

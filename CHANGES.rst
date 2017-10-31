@@ -27,6 +27,8 @@ Release History
   scales the output in the same way as the new ``amplitude`` parameter in
   ``LIF``/``LIFRate`` (see `Nengo PR #1325
   <https://github.com/nengo/nengo/pull/1325>`_).
+- Added new meta-Operators to the `nengo_dl` build process, which improve
+  simulation/training speed.
 
 **Changed**
 

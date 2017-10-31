@@ -15,7 +15,8 @@ from nengo.neurons import Direct
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node
+from nengo_dl import (builder, graph_optimizer, signals, utils, tensor_node,
+                      meta_builders)
 
 logger = logging.getLogger(__name__)
 
@@ -107,10 +108,6 @@ class TensorGraph(object):
             planner = graph_optimizer.tree_planner
         plan = planner(operators)
 
-        # TODO: we could also merge operators sequentially (e.g., combine
-        # a copy and dotinc into one op), as long as the intermediate signal
-        # is only written to by one op and read by one op
-
         # order signals/operators to promote contiguous reads
         sigs, self.plan = graph_optimizer.order_signals(plan, n_passes=10)
 
@@ -119,6 +116,17 @@ class TensorGraph(object):
         self.base_arrays_init, self.sig_map = graph_optimizer.create_signals(
             sigs, self.plan, float_type=dtype.as_numpy_dtype,
             minibatch_size=self.minibatch_size)
+
+        # add dummy TensorSignals for internal signals in meta ops (so that we
+        # can use their signals without having an associated base array)
+        for op in operators:
+            if isinstance(op, meta_builders.SimConnection):
+                for o in op.ops:
+                    for s in o.all_signals:
+                        if s not in self.sig_map:
+                            self.sig_map[s] = signals.TensorSignal(
+                                np.arange(s.shape[0]), None, self.dtype,
+                                s.shape, s.minibatched)
 
         logger.info("Optimized plan length: %d", len(self.plan))
         logger.info("Number of base arrays: %d", len(self.base_arrays_init))
@@ -248,7 +256,8 @@ class TensorGraph(object):
         probe_tensors = []
         for p in self.model.probes:
             probe_sig = self.model.sig[p]["in"]
-            if probe_sig in self.sig_map:
+            if (probe_sig in self.sig_map and
+                    self.sig_map[probe_sig].key is not None):
                 # TODO: better solution to avoid the forced_copy
                 # we need to make sure that probe reads occur before the
                 # probe value is overwritten on the next timestep. however,
@@ -382,7 +391,8 @@ class TensorGraph(object):
 
         self.invariant_ph = {}
         for n in self.invariant_inputs:
-            if self.model.sig[n]["out"] in self.sig_map:
+            sig = self.model.sig[n]["out"]
+            if sig in self.sig_map and self.sig_map[sig].key is not None:
                 # make sure the indices for this input are loaded into
                 # TensorFlow (they may not be, if the output of this node is
                 # only read as part of a larger block during the simulation)
@@ -735,7 +745,15 @@ class TensorGraph(object):
         # signals are not trainable by default, and views take on the
         # properties of their bases
         for op in self.model.operators:
-            for sig in op.all_signals:
+            if isinstance(op, meta_builders.SimConnection):
+                # for meta ops we need to mark all the signals from the sub-ops
+                # note: this is not the same as op.all_signals, because that
+                # only includes the externally exposed signals
+                all_signals = [s for o in op.ops for s in o.all_signals]
+            else:
+                all_signals = op.all_signals
+
+            for sig in all_signals:
                 if not hasattr(sig.base, "trainable"):
                     sig.base.trainable = False
 
