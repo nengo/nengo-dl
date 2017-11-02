@@ -51,10 +51,12 @@ class TensorGraph(object):
     device : None or ``"/cpu:0"`` or ``"/gpu:[0-n]"``
         Device on which to execute computations (if None then uses the
         default device as determined by TensorFlow)
+    progress : :class:`.utils.ProgressBar`
+        Progress bar for optimization stage
     """
 
-    def __init__(self, model, dt, unroll_simulation, dtype,
-                 minibatch_size, device):
+    def __init__(self, model, dt, unroll_simulation, dtype, minibatch_size,
+                 device, progress):
         self.model = model
         self.dt = dt
         self.unroll = unroll_simulation
@@ -92,40 +94,50 @@ class TensorGraph(object):
         logger.info("Initial plan length: %d", len(operators))
 
         # apply graph simplification functions
-        old_operators = []
-        while len(old_operators) != len(operators):
-            old_operators = operators
-            operators = graph_optimizer.remove_constant_copies(operators)
-            operators = graph_optimizer.remove_unmodified_resets(operators)
-            operators = graph_optimizer.remove_zero_incs(operators)
-            operators = graph_optimizer.remove_identity_muls(operators)
+        with progress.sub("operator simplificaton", max_value=None):
+            old_operators = []
+            while len(old_operators) != len(operators):
+                old_operators = operators
+                operators = graph_optimizer.remove_constant_copies(operators)
+                operators = graph_optimizer.remove_unmodified_resets(operators)
+                operators = graph_optimizer.remove_zero_incs(operators)
+                operators = graph_optimizer.remove_identity_muls(operators)
 
         # group mergeable operators
         try:
             planner = model.toplevel.config[model.toplevel].planner
         except (ConfigError, AttributeError):
             planner = graph_optimizer.tree_planner
-        plan = planner(operators)
+
+        with progress.sub("merging operators", max_value=None):
+            plan = planner(operators)
 
         # TODO: we could also merge operators sequentially (e.g., combine
         # a copy and dotinc into one op), as long as the intermediate signal
         # is only written to by one op and read by one op
 
         # order signals/operators to promote contiguous reads
-        sigs, self.plan = graph_optimizer.order_signals(plan, n_passes=10)
+        with progress.sub("ordering signals", max_value=None):
+            sigs, self.plan = graph_optimizer.order_signals(plan, n_passes=10)
 
         # create base arrays and map Signals to TensorSignals (views on those
         # base arrays)
-        self.base_arrays_init, self.sig_map = graph_optimizer.create_signals(
-            sigs, self.plan, float_type=dtype.as_numpy_dtype,
-            minibatch_size=self.minibatch_size)
+        with progress.sub("creating signals", max_value=None):
+            self.base_arrays_init, self.sig_map = \
+                graph_optimizer.create_signals(
+                    sigs, self.plan, float_type=dtype.as_numpy_dtype,
+                    minibatch_size=self.minibatch_size)
 
         logger.info("Optimized plan length: %d", len(self.plan))
         logger.info("Number of base arrays: %d", len(self.base_arrays_init))
 
     @with_self
-    def build(self):
-        """Constructs a new graph to simulate the model."""
+    def build(self, progress):
+        """Constructs a new graph to simulate the model.
+
+        progress : :class:`.utils.ProgressBar`
+            Progress bar for construction stage
+        """
 
         self.signals = signals.SignalDict(self.sig_map, self.dtype,
                                           self.minibatch_size)
@@ -155,9 +167,10 @@ class TensorGraph(object):
             self.training_step_inc = tf.assign_add(self.training_step, 1)
 
         # create base arrays
+        sub = progress.sub("creating base arrays")
         self.base_vars = []
         unique_ids = defaultdict(int)
-        for k, (v, trainable) in self.base_arrays_init.items():
+        for k, (v, trainable) in sub(self.base_arrays_init.items()):
             name = "%s_%s_%s_%d" % (
                 v.dtype, "_".join(str(x) for x in v.shape), trainable,
                 unique_ids[(v.dtype, v.shape, trainable)])
@@ -180,18 +193,20 @@ class TensorGraph(object):
         logger.debug([str(x) for x in self.base_vars])
 
         # set up invariant inputs
-        self.build_inputs()
+        sub = progress.sub("building inputs")
+        self.build_inputs(sub)
 
         # pre-build stage
+        sub = progress.sub("pre-build stage")
         self.op_builds = {}
-        for ops in self.plan:
+        for ops in sub(self.plan):
             with self.graph.name_scope(utils.sanitize_name(
                     builder.Builder.builders[type(ops[0])].__name__)):
-                builder.Builder.pre_build(ops, self.signals,
-                                          self.op_builds)
+                builder.Builder.pre_build(ops, self.signals, self.op_builds)
 
         # build stage
-        self.build_loop()
+        sub = progress.sub("unrolled step ops")
+        self.build_loop(sub)
 
         # ops for initializing variables (will be called by simulator)
         trainable_vars = tf.trainable_variables() + [self.training_step]
@@ -275,12 +290,13 @@ class TensorGraph(object):
 
         return probe_tensors, side_effects
 
-    def build_loop(self):
+    def build_loop(self, progress):
         """Build simulation loop.
 
-        Loop can be constructed using the ``tf.while_loop`` architecture, or
-        explicitly unrolled.  Unrolling increases graph construction time
-        and memory usage, but increases simulation speed.
+        Parameters
+        ----------
+        progress : :class:`.utils.ProgressBar`
+            Progress bar for loop construction
         """
 
         def loop_condition(step, stop, *_):
@@ -292,7 +308,7 @@ class TensorGraph(object):
                     self.base_arrays_init.keys(),
                     self.signals.internal_vars.keys()), base_vars)])
 
-            for iter in range(self.unroll):
+            for iter in progress(range(self.unroll)):
                 logger.debug("BUILDING ITERATION %d", iter)
                 with self.graph.name_scope("iteration_%d" % iter):
                     # note: nengo step counter is incremented at the beginning
@@ -367,13 +383,18 @@ class TensorGraph(object):
             x = p.stack()
             self.probe_arrays += [x]
 
-    def build_inputs(self):
+    def build_inputs(self, progress):
         """Sets up the inputs in the model (which will be computed outside of
         TensorFlow and fed in each simulation block).
+
+        Parameters
+        ----------
+        progress : :class:`.utils.ProgressBar`
+            Progress bar for input construction
         """
 
         self.invariant_ph = {}
-        for n in self.invariant_inputs:
+        for n in progress(self.invariant_inputs):
             if self.model.sig[n]["out"] in self.sig_map:
                 # make sure the indices for this input are loaded into
                 # TensorFlow (they may not be, if the output of this node is

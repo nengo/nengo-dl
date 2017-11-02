@@ -13,8 +13,9 @@ from nengo import Process, Ensemble, Connection, Probe
 from nengo.builder import Model
 from nengo.builder.connection import BuiltConnection
 from nengo.builder.ensemble import BuiltEnsemble
-from nengo.exceptions import (ReadonlyError, SimulatorClosed, NengoWarning,
-                              SimulationError, ValidationError)
+from nengo.exceptions import (
+    ReadonlyError, SimulatorClosed, NengoWarning, SimulationError,
+    ValidationError)
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops import gradient_checker
@@ -117,24 +118,21 @@ class Simulator(object):
             print("Building network", end="", flush=True)
             start = time.time()
             self.model.build(network, progress_bar=False)
-            print("\rBuilding completed in %s " %
+            print("\rBuild finished in %s " %
                   datetime.timedelta(seconds=int(time.time() - start)))
 
         # set up tensorflow graph plan
-        print("Optimizing graph", end="", flush=True)
-        start = time.time()
-        self.tensor_graph = TensorGraph(
-            self.model, self.dt, unroll_simulation, dtype, self.minibatch_size,
-            device)
-        print("\rOptimization completed in %s " %
-              datetime.timedelta(seconds=int(time.time() - start)))
+        with utils.ProgressBar("Optimizing graph", "Optimization",
+                               max_value=None) as progress:
+
+            self.tensor_graph = TensorGraph(
+                self.model, self.dt, unroll_simulation, dtype,
+                self.minibatch_size, device, progress)
 
         # construct graph
-        print("Constructing graph", end="", flush=True)
-        start = time.time()
-        self.tensor_graph.build()
-        print("\rConstruction completed in %s " %
-              datetime.timedelta(seconds=int(time.time() - start)))
+        with utils.ProgressBar("Constructing graph", "Construction",
+                               max_value=None) as progress:
+            self.tensor_graph.build(progress)
 
         # output simulation data for viewing via TensorBoard
         if tensorboard is not None:
@@ -295,10 +293,6 @@ class Simulator(object):
             self._check_data(input_feeds, mode="input",
                              n_batch=self.minibatch_size, n_steps=n_steps)
 
-        if progress_bar:
-            print("Simulation started", end="", flush=True)
-            start = time.time()
-
         if profile:
             run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
             run_metadata = tf.RunMetadata()
@@ -306,35 +300,37 @@ class Simulator(object):
             run_options = None
             run_metadata = None
 
+        progress = (
+            utils.ProgressBar("Simulating", "Simulation", max_value=None)
+            if progress_bar else utils.NullProgressBar())
+
         # execute the simulation loop
-        try:
-            steps_run, probe_data = self.sess.run(
-                [self.tensor_graph.steps_run, self.tensor_graph.probe_arrays],
-                feed_dict=self._fill_feed(actual_steps, input_feeds,
-                                          start=self.n_steps),
-                options=run_options, run_metadata=run_metadata)
-        except (tf.errors.InternalError, tf.errors.UnknownError) as e:
-            if e.op.type == "PyFunc":
-                raise SimulationError(
-                    "Function '%s' caused an error (see error log above)" %
-                    e.op.name)
-            else:
-                raise e  # pragma: no cover
+        with progress:
+            try:
+                steps_run, probe_data = self.sess.run(
+                    [self.tensor_graph.steps_run,
+                     self.tensor_graph.probe_arrays],
+                    feed_dict=self._fill_feed(actual_steps, input_feeds,
+                                              start=self.n_steps),
+                    options=run_options, run_metadata=run_metadata)
+            except (tf.errors.InternalError, tf.errors.UnknownError) as e:
+                if e.op.type == "PyFunc":
+                    raise SimulationError(
+                        "Function '%s' caused an error (see error log above)" %
+                        e.op.name)
+                else:
+                    raise e  # pragma: no cover
 
-        # update probe data
-        self._update_probe_data(probe_data, self.n_steps, n_steps)
+            # update probe data
+            self._update_probe_data(probe_data, self.n_steps, n_steps)
 
-        # update n_steps
-        # note: we update n_steps according to the number of steps that the
-        # user asked for, not the number of steps that were actually run (
-        # in the case of uneven unroll_simulation)
-        assert steps_run == actual_steps
-        self.n_steps += n_steps
-        self.time = self.n_steps * self.dt
-
-        if progress_bar:
-            print("\rSimulation completed in %s" %
-                  datetime.timedelta(seconds=int(time.time() - start)))
+            # update n_steps
+            # note: we update n_steps according to the number of steps that the
+            # user asked for, not the number of steps that were actually run (
+            # in the case of uneven unroll_simulation)
+            assert steps_run == actual_steps
+            self.n_steps += n_steps
+            self.time = self.n_steps * self.dt
 
         if profile:
             if isinstance(profile, str):
@@ -475,27 +471,28 @@ class Simulator(object):
             run_metadata = None
 
         progress = utils.ProgressBar(
-            n_epochs * batch_size // self.minibatch_size, "Training")
+            "Training", max_value=n_epochs * batch_size // self.minibatch_size,
+            vars=["loss"])
 
         # run training
-        for n in range(n_epochs):
-            for inp, tar in utils.minibatch_generator(
-                    inputs, targets, self.minibatch_size, rng=self.rng,
-                    shuffle=shuffle):
-                # TODO: set up queue to feed in data more efficiently
-                self.soft_reset()
+        with progress:
+            for n in range(n_epochs):
+                for inp, tar in utils.minibatch_generator(
+                        inputs, targets, self.minibatch_size, rng=self.rng,
+                        shuffle=shuffle):
+                    self.soft_reset()
 
-                outputs = self.sess.run(
-                    fetches, feed_dict=self._fill_feed(n_steps, inp, tar),
-                    options=run_options, run_metadata=run_metadata)
+                    outputs = self.sess.run(
+                        fetches, feed_dict=self._fill_feed(n_steps, inp, tar),
+                        options=run_options, run_metadata=run_metadata)
 
-                if summary_op is not None:
-                    self.summary.add_summary(outputs[2], outputs[-1])
+                    if summary_op is not None:
+                        self.summary.add_summary(outputs[2], outputs[-1])
 
-                if profile:
-                    profiler.add_step(int(outputs[-1]), run_metadata)
+                    if profile:
+                        profiler.add_step(int(outputs[-1]), run_metadata)
 
-                progress.step("loss=%.4f" % outputs[1])
+                    progress.step(loss="%.4f" % outputs[1])
 
         # restore internal state of simulator
         self.load_params(os.path.join(tmpdir.name, "tmp"), include_local=True,

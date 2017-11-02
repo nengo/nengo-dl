@@ -2,7 +2,6 @@ import logging
 
 from nengo.builder.neurons import SimNeurons
 from nengo.neurons import RectifiedLinear, Sigmoid, LIF, LIFRate
-from nengo.version import version_info
 import numpy as np
 import tensorflow as tf
 
@@ -194,12 +193,14 @@ class LIFRateBuilder(OpBuilder):
             [[op.neurons.tau_rc] for op in ops
              for _ in range(op.J.shape[0])], dtype=signals.dtype)
 
-        if version_info < (2, 6, 1):
-            self.amplitude = tf.constant(1.0, dtype=signals.dtype)
-        else:
+        # TODO: we can remove this check if we upgrade nengo dependency to
+        # >= 2.6.1
+        if hasattr(ops[0].neurons, "amplitude"):
             self.amplitude = tf.constant(
                 [[op.neurons.amplitude] for op in ops
                  for _ in range(op.J.shape[0])], dtype=signals.dtype)
+        else:
+            self.amplitude = tf.constant(1.0, dtype=signals.dtype)
 
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])

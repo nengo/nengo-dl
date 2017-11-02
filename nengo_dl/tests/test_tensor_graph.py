@@ -101,7 +101,8 @@ def test_mark_signals():
     model = nengo.builder.Model()
     model.build(net)
 
-    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None,
+                                  utils.NullProgressBar())
     tg.mark_signals()
 
     assert model.sig[ens0]["encoders"].trainable
@@ -157,7 +158,10 @@ def test_mark_signals_config():
     model = nengo.builder.Model()
     model.build(net)
 
-    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
+    progress = utils.NullProgressBar()
+
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None,
+                                  progress)
     tg.mark_signals()
 
     assert not model.sig[ens0]["encoders"].trainable
@@ -181,7 +185,8 @@ def test_mark_signals_config():
     model = nengo.builder.Model()
     model.build(net)
 
-    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None,
+                                  progress)
     with pytest.warns(UserWarning):
         tg.mark_signals()
 
@@ -198,7 +203,8 @@ def test_mark_signals_config():
     model = nengo.builder.Model()
     model.build(net)
 
-    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None,
+                                  progress)
     with pytest.warns(UserWarning):
         tg.mark_signals()
 
@@ -210,7 +216,8 @@ def test_mark_signals_config():
     model = nengo.builder.Model()
     model.add_op(op)
 
-    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None,
+                                  progress)
     with pytest.warns(UserWarning):
         tg.mark_signals()
 
@@ -235,7 +242,8 @@ def test_planner_config(config_planner):
     model.add_op(nengo.builder.operator.DotInc(sig, sig2, sig3))
     model.add_op(nengo.builder.operator.DotInc(sig, sig2, sig3))
 
-    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None)
+    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None,
+                                  utils.NullProgressBar())
 
     assert len(tg.plan) == (2 if config_planner else 1)
 

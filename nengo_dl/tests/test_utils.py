@@ -157,3 +157,17 @@ def test_configure_trainable():
     # check that calling configure outside network context is an error
     with pytest.raises(NetworkContextError):
         utils.configure_settings(trainable=None)
+
+
+def test_progress_bar():
+    progress = utils.ProgressBar("test").start()
+    sub = progress.sub().start()
+
+    # check that starting a new subprocess closes the first one
+    sub2 = progress.sub().start()
+    assert sub.finished
+
+    # check that closing the parent process closes the sub
+    progress.finish()
+    assert sub2.finished
+    assert progress.finished
