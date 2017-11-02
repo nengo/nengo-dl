@@ -30,6 +30,8 @@ NengoDL imports several open source libraries:
   `BSD license <http://www.numpy.org/license.html>`__
 * `TensorFlow <https://www.tensorflow.org/>`_ - Used under
   `Apache license <https://github.com/tensorflow/tensorflow/blob/master/LICENSE>`__
+* `Progressbar 2 <https://progressbar-2.readthedocs.io/en/latest/>`_ - Used under
+  `BSD license <https://github.com/WoLpH/python-progressbar/blob/develop/LICENSE>`__
 * `backports.print_function <https://github.com/jaraco/backports.print_function>`_ - Used under
   `MIT license <https://github.com/jaraco/backports.print_function/blob/master/setup.py>`__
 * `backports.tempfile <https://github.com/pjdelport/backports.tempfile>`_ - Used under

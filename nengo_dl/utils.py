@@ -1,9 +1,10 @@
 from __future__ import print_function
 
-import datetime
+from functools import partial
 import logging
 import re
 import sys
+import threading
 import time
 import warnings
 
@@ -11,6 +12,7 @@ from nengo import Connection, Ensemble, Network, ensemble
 from nengo.exceptions import SimulationError, ConfigError, NetworkContextError
 from nengo.params import BoolParam, Parameter
 import numpy as np
+import progressbar
 import tensorflow as tf
 from tensorflow.python.framework.ops import get_gradient_function
 
@@ -213,82 +215,183 @@ def find_non_differentiable(inputs, outputs):
                     "elements: %s" % o.op)
 
 
-class ProgressBar(object):
-    """Displays a progress bar and ETA for tracked steps.
+class MessageBar(progressbar.BouncingBar):
+    """ProgressBar widget for progress bars with possibly unknown duration.
 
     Parameters
     ----------
-    max_steps : int
-        Number of steps required to complete the tracked process
-    label : str, optional
-        A description of what is being tracked
+    msg : str, optional
+        A message to be displayed in the middle of the progress bar
+    finish_msg : str, optional
+        A message to be displayed when the progress bar is finished
     """
+    def __init__(self, msg="", finish_msg="", **kwargs):
+        super(MessageBar, self).__init__(**kwargs)
+        self.msg = msg
+        self.finish_msg = finish_msg
 
-    def __init__(self, max_steps, label=None):
-        self.max_steps = max_steps
-        self.width = 30
-        self.label = label
+    def __call__(self, progress, data, width):
+        if progress.end_time:
+            return self.finish_msg
 
-        self.reset()
+        if progress.max_value is progressbar.UnknownLength:
+            bar = progressbar.BouncingBar
+        else:
+            bar = progressbar.Bar
+        line = bar.__call__(self, progress, data, width)
 
-    def reset(self):
-        """Reset the tracker to initial conditions."""
+        if data["percentage"] is None:
+            msg = self.msg
+        else:
+            msg = "%s (%d%%)" % (self.msg, data["percentage"])
 
-        self.curr_step = 0
-        self.start_time = time.time()
-        self.last_time = -1
+        offset = width // 2 - len(msg) // 2
 
-        print("[%s] ETA: unknown" % (" " * self.width), end="", flush=True)
+        return line[:offset] + msg + line[offset + len(msg):]
 
-    def stop(self):
-        """Stop the progress tracker.
 
-        Normally this will be called automatically when ``max_steps`` is
-        reached, but it can be called manually to trigger an early finish.
+class ProgressBar(progressbar.ProgressBar):
+    """Handles progress bar display for some tracked process.
+
+    Parameters
+    ----------
+    present : str
+        Description of process in present (e.g., "Simulating")
+    past : str, optional
+        Description of process in past (e.g., "Simulation")
+    max_value : int or None, optional
+        The maximum number of steps in the tracked process (or ``None`` if
+        the maximum number of steps is unknown)
+    vars : list of str, optional
+        Extra variables that will be displayed at the end of the progress bar
+
+    Notes
+    -----
+    Launches a separate thread to handle the progress bar display updates.
+    """
+    def __init__(self, present, past=None, max_value=1, vars=None,
+                 **kwargs):
+
+        self.present = present
+        self.sub_bar = None
+        self.finished = False
+
+        if past is None:
+            past = present
+
+        self.msg_bar = MessageBar(
+            msg=present, finish_msg="%s finished in" % past)
+        widgets = [self.msg_bar, " "]
+
+        if max_value is None:
+            widgets.append(progressbar.Timer(format="%(elapsed)s"))
+        else:
+            widgets.append(progressbar.ETA(
+                format="ETA: %(eta)s",
+                format_finished="%(elapsed)s"))
+
+        if vars is not None:
+            self.var_vals = progressbar.FormatCustomText(
+                " (" + ", ".join("%s: %%(%s)s" % (v, v) for v in vars) + ")",
+                {v: "---" for v in vars})
+            widgets.append(self.var_vals)
+        else:
+            self.var_vals = None
+
+        def update_thread():
+            while not self.finished:
+                if self.sub_bar is None or self.sub_bar.finished:
+                    self.update()
+                time.sleep(0.001)
+
+        self.thread = threading.Thread(target=update_thread)
+        self.thread.daemon = True
+
+        if max_value is None:
+            max_value = progressbar.UnknownLength
+
+        super(ProgressBar, self).__init__(
+            poll_interval=0.1, widgets=widgets, fd=sys.stdout,
+            max_value=max_value, **kwargs)
+
+    def start(self, **kwargs):
+        """Start tracking process, initialize display."""
+
+        super(ProgressBar, self).start(**kwargs)
+
+        self.thread.start()
+
+        return self
+
+    def finish(self, **kwargs):
+        """Stop tracking process, finish display."""
+
+        if self.sub_bar is not None and not self.sub_bar.finished:
+            self.sub_bar.finish()
+
+        self.finished = True
+        self.thread.join()
+
+        super(ProgressBar, self).finish(**kwargs)
+
+    def step(self, **vars):
+        """Advance the progress bar one step.
+
+        Parameters
+        ----------
+        vars : dict of {str: str}
+            Values for the extra variables displayed at the end of the progress
+            bar (defined in :meth:`.ProgressBar.__init__`)
         """
 
-        line = "\n"
-        line += ("Completed" if self.label is None else
-                 self.label + " completed")
-        line += " in %s" % datetime.timedelta(
-            seconds=int(time.time() - self.start_time))
-        print(line)
-        self.curr_step = None
+        if self.var_vals is not None:
+            self.var_vals.update_mapping(**vars)
+        self.value += 1
 
-    def step(self, msg=None):
-        """Increment the progress tracker one step.
+    def sub(self, msg=None, **kwargs):
+        """Creates a new progress bar for tracking a sub-process.
 
         Parameters
         ----------
         msg : str, optional
-            Display the given string at the end of the progress bar
+            Description of sub-process
         """
 
-        self.curr_step += 1
+        if self.sub_bar is not None and not self.sub_bar.finished:
+            self.sub_bar.finish()
 
-        curr_time = time.time()
+        self.sub_bar = ProgressBar(
+            present="%s: %s" % (self.present, msg) if msg else self.present,
+            **kwargs)
+        self.sub_bar.finish = partial(self.sub_bar.finish, end="\r")
 
-        # only update the progress bar once every second
-        if curr_time - self.last_time < 1 and self.curr_step < self.max_steps:
-            return
-        else:
-            self.last_time = curr_time
+        return self.sub_bar
 
-        progress = int(self.width * self.curr_step / self.max_steps)
+    def __next__(self):
+        """Wraps an iterable using this progress bar."""
 
-        eta = int((curr_time - self.start_time) *
-                  (self.max_steps - self.curr_step) / self.curr_step)
+        try:
+            if self.start_time is None:
+                self.start()
+            else:
+                self.step()
+            value = next(self._iterable)
+            return value
+        except StopIteration:
+            self.finish()
+            raise
 
-        line = "\r[%s%s] ETA: %s" % ("#" * progress,
-                                     " " * (self.width - progress),
-                                     datetime.timedelta(seconds=eta))
-        if msg is not None or self.label is not None:
-            line += " (%s)" % (self.label if msg is None else msg)
+    next = __next__  # for python 2.x
 
-        print(line, end="", flush=True)
 
-        if self.curr_step == self.max_steps:
-            self.stop()
+class NullProgressBar(progressbar.NullBar):
+    """A progress bar that does nothing.
+
+    Used to replace ProgressBar when we want to disable output.
+    """
+
+    def sub(self, *args, **kwargs):
+        return self
 
 
 def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,

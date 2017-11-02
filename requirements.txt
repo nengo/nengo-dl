@@ -1,5 +1,6 @@
 numpy>=1.11.0
 nengo>=2.5.0
 tensorflow>=1.3.0
+progressbar2>=3.34.0
 backports.tempfile;python_version<'3.4'
 backports.print_function;python_version<'3.4'

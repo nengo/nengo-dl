@@ -30,6 +30,7 @@ Release History
 - Added ``progress_bar=False`` option to ``sim.run``, which will disable the
   information about the simulation status printed to standard output (`#17
   <https://github.com/nengo/nengo_dl/issues/17>`_).
+- Added progress bars for the build/simulation process.
 
 **Changed**
 
