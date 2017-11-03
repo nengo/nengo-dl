@@ -34,13 +34,13 @@ env:
       NENGO_VERSION="git+https://github.com/nengo/nengo.git"
     - NENGO_DL_TEST_PRECISION="64"
     - NENGO_DL_TEST_UNROLL="5"
-    - PYTHON_VERSION="2.7"
-    - PYTHON_VERSION="3.4"
-    - PYTHON_VERSION="3.6"
+    - NENGO_VERSION="git+https://github.com/nengo/nengo.git"
     - NUMPY_VERSION="numpy==1.11.0"
       TF_VERSION="tensorflow==1.3.0"
       NENGO_VERSION="nengo==2.5.0"
-    - NENGO_VERSION="git+https://github.com/nengo/nengo.git"
+    - PYTHON_VERSION="2.7"
+    - PYTHON_VERSION="3.4"
+    - PYTHON_VERSION="3.6"
 
 # setup xvfb so we can test examples with matplotlib
 before_script:
