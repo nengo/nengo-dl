@@ -779,6 +779,8 @@ def order_signals(plan, n_passes=10):
     logger.debug(sorted_signals)
     logger.debug("new plan")
     logger.debug("\n" + "\n".join([str(x) for x in new_plan.values()]))
+    logger.debug("blocks")
+    logger.debug("\n" + display_signal_blocks(new_plan, sorted_signals))
 
     return sorted_signals, [new_plan[ops] for ops in plan]
 
@@ -807,12 +809,12 @@ def hamming_sort(blocks):
 
     n_unique = len(unique_blocks)
 
-    logger.debug("hamming sort:")
-    logger.debug("unique blocks")
-    logger.debug(unique_blocks)
+    logger.log(logging.DEBUG - 1, "hamming sort:")
+    logger.log(logging.DEBUG - 1, "unique blocks")
+    logger.log(logging.DEBUG - 1, unique_blocks)
 
     while True:
-        logger.debug("curr_blocks %s", curr_blocks)
+        logger.log(logging.DEBUG - 1, "curr_blocks %s", curr_blocks)
 
         if curr_blocks is None:
             # first pass through loop, initialize with default first block
@@ -1116,6 +1118,10 @@ def create_signals(sigs, plan, float_type, minibatch_size):
 
         if open == 0:
             breaks += [i + 1]
+
+    logging.debug("partitions")
+    logging.debug("\n" + "".join("|" if i in breaks else " "
+                                 for i in range(len(sigs))))
 
     # create all the base signals
     for i, sig in enumerate(sigs):
@@ -1507,7 +1513,27 @@ def remove_identity_muls(operators):
 
 def signal_io_dicts(operators):
     """Organizes operators into dictionaries according to the signals they
-    set/inc/read/update."""
+    set/inc/read/update.
+
+    Parameters
+    ----------
+    operators : list of :class:`~nengo:nengo.builder.Operator`
+        Operators in the model
+
+    Returns
+    sets : dict of {:class:`~nengo:nengo.builder.Signal`: \
+                    list of :class:`~nengo:nengo.builder.Operator`}
+        A dictionary indicating all the Operators that set each signal.
+    incs : dict of {:class:`~nengo:nengo.builder.Signal`: \
+                    list of :class:`~nengo:nengo.builder.Operator`}
+        A dictionary indicating all the Operators that inc each signal.
+    reads : dict of {:class:`~nengo:nengo.builder.Signal`: \
+                     list of :class:`~nengo:nengo.builder.Operator`}
+        A dictionary indicating all the Operators that read each signal.
+    updates : dict of {:class:`~nengo:nengo.builder.Signal`: \
+                       list of :class:`~nengo:nengo.builder.Operator`}
+        A dictionary indicating all the Operators that update each signal.
+    """
 
     # note: we manually initialize the arrays because we want there to be
     # an entry for all the signal bases, but get an error if we try to
@@ -1528,3 +1554,33 @@ def signal_io_dicts(operators):
             updates[s.base].append(op)
 
     return sets, incs, reads, updates
+
+
+def display_signal_blocks(operators, all_signals):
+    """Creates a visual depiction of the signals blocks read by each operator
+    group.
+
+    Parameters
+    ----------
+    operators : list of tuple of :class:`~nengo:nengo.builder.Operator`
+        Operator execution plan
+    all_signals : list of :class:`~nengo:nengo.builder.Signal`
+        Base signals arranged into some order
+
+    Returns
+    -------
+    str
+        A string where each row corresponds to one operator group, and the
+        non-blank characters in the line indicate that the operator group
+        reads/writes that signal (with a number used to distinguish the
+        different signal blocks within the operator group).
+    """
+
+    sig_idxs = {s: i for i, s in enumerate(all_signals)}
+    output = np.asarray([[" " for _ in all_signals] for _ in operators])
+    for n, group in enumerate(operators):
+        for i in range(len(group[0].all_signals)):
+            sig_group = [sig_idxs[op.all_signals[i].base] for op in group]
+            output[n, sig_group] = str(i)
+
+    return "\n".join("".join(line) for line in output)
