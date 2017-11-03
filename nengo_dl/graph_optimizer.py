@@ -124,15 +124,11 @@ def mergeable(op, chosen_ops):
                 raise NotImplementedError
         elif isinstance(c.process, custom_impl):
             return False
-
-        # processes must also have the same mode
-        if op.mode != c.mode:
-            return False
     elif isinstance(op, tensor_node.SimTensorNode):
         # not possible to merge TensorNodes, since each one can be performing
         # an entirely different function. and unlike SimPyFunc, there is no
         # point trying to execute all those functions at once, because they're
-        # already integrated into the Tensorflow graph.
+        # already integrated into the TensorFlow graph.
         return False
     elif isinstance(op, (SimVoja, SimOja, SimBCM)):
         # pre inputs must have the same dimensionality so that we can broadcast
@@ -772,8 +768,7 @@ def order_signals(plan, n_passes=10):
     assert len(new_plan) == len(plan)
     for ops, new_ops in new_plan.items():
         assert len(ops) == len(new_ops)
-        for op in ops:
-            assert op in new_ops
+        assert set(ops) == set(new_ops)
 
     logger.debug("final sorted signals")
     logger.debug(sorted_signals)

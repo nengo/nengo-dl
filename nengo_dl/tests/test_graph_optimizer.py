@@ -171,8 +171,10 @@ def test_mergeable():
     # simprocess
     # mode must match
     assert not mergeable(
-        SimProcess(Lowpass(0), None, None, DummySignal(), mode="inc"),
-        [SimProcess(Lowpass(0), None, None, DummySignal(), mode="set")])
+        SimProcess(Lowpass(0), None, DummySignal(), DummySignal(),
+                   mode="inc"),
+        [SimProcess(Lowpass(0), None, DummySignal(), DummySignal(),
+                    mode="set")])
 
     # check that lowpass match
     assert mergeable(SimProcess(Lowpass(0), None, None, DummySignal()),

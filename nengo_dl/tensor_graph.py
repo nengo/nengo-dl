@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import itertools
 import logging
 import warnings
@@ -156,20 +156,12 @@ class TensorGraph(object):
 
         # create base arrays
         self.base_vars = []
+        unique_ids = defaultdict(int)
         for k, (v, trainable) in self.base_arrays_init.items():
-            unique_idx = 0
-            duplicate = True
-            while duplicate:
-                name = "%s_%s_%s_%s" % (
-                    v.dtype, "_".join(str(x) for x in v.shape), trainable,
-                    unique_idx)
-
-                if any([name in x.name for x in (
-                        tf.trainable_variables() if trainable else
-                        tf.local_variables())]):
-                    unique_idx += 1
-                else:
-                    duplicate = False
+            name = "%s_%s_%s_%d" % (
+                v.dtype, "_".join(str(x) for x in v.shape), trainable,
+                unique_ids[(v.dtype, v.shape, trainable)])
+            unique_ids[(v.dtype, v.shape, trainable)] += 1
 
             if trainable:
                 with tf.variable_scope("trainable_vars", reuse=False):

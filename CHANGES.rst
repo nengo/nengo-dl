@@ -39,6 +39,7 @@ Release History
   <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/profiler/README.md>`_
   tool to collect profiling data in ``sim.run_steps`` and ``sim.train`` when
   ``profile=True``.
+- Minor improvements to efficiency of build process.
 
 **Fixed**
 
