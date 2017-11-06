@@ -40,6 +40,8 @@ Release History
   tool to collect profiling data in ``sim.run_steps`` and ``sim.train`` when
   ``profile=True``.
 - Minor improvements to efficiency of build process.
+- Minor improvements to simulation efficiency targeting small ops
+  (``tf.reshape/identity/constant``).
 
 **Fixed**
 

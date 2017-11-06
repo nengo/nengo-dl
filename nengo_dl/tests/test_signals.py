@@ -210,8 +210,7 @@ def test_signal_dict_gather():
     x = TensorSignal(np.arange(var_size), key, tf.float32, (var_size,), 1)
     x.load_indices()
     y = signals.gather(x)
-    assert y.op.type == "Identity"
-    assert y.op.inputs[0] is signals.bases[key]
+    assert y is signals.bases[key]
 
     # reading from strided full array
     x = TensorSignal(np.arange(0, var_size, 2), key, tf.float32,

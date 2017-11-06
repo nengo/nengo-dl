@@ -162,6 +162,7 @@ class TensorSignal(object):
         that slice."""
 
         self.tf_indices = tf.constant(self.indices, dtype=tf.int32)
+        self.tf_shape = tf.constant(self.full_shape, dtype=tf.int32)
 
         start = self.indices[0]
         stop = self.indices[-1] + 1
@@ -231,7 +232,7 @@ class SignalDict(object):
 
         if dst.tf_indices is None:
             raise BuildError("Indices for %s have not been loaded into "
-                             "Tensorflow" % dst)
+                             "TensorFlow" % dst)
         # if not dst.minibatched:
         #     raise BuildError("Assigning to a trainable variable")
         if val.dtype.is_floating and val.dtype.base_dtype != self.dtype:
@@ -244,7 +245,7 @@ class SignalDict(object):
         dst_shape = ((dst.shape[0],) +
                      tuple(self.bases[dst.key].get_shape().as_list()[1:]))
         if val.get_shape() != dst_shape:
-            val = tf.reshape(val, dst_shape)
+            val = tf.reshape(val, dst.tf_shape)
 
         logger.debug("scatter")
         logger.debug("values %s", val)
@@ -290,13 +291,15 @@ class SignalDict(object):
                 dst.indices[-1] == var.get_shape()[0].value - 1 and
                 len(dst.indices) == var.get_shape()[0]):
             if mode == "inc":
-                result = tf.assign_add(var, src)
+                result = tf.assign_add(var, src, use_locking=False)
             else:
-                result = tf.assign(var, src)
+                result = tf.assign(var, src, use_locking=False)
         elif mode == "inc":
-            result = tf.scatter_add(var, dst.tf_indices, src)
+            result = tf.scatter_add(var, dst.tf_indices, src,
+                                    use_locking=False)
         else:
-            result = tf.scatter_update(var, dst.tf_indices, src)
+            result = tf.scatter_update(var, dst.tf_indices, src,
+                                       use_locking=False)
 
         # result = gen_state_ops._destroy_temporary_variable(var, var_name)
 
@@ -339,7 +342,7 @@ class SignalDict(object):
         elif (src.indices[0] == 0 and
               src.indices[-1] == var.get_shape()[0].value - 1 and
               len(src.indices) == var.get_shape()[0]):
-            result = tf.identity(var)
+            result = var
         else:
             result = tf.strided_slice(var, *src.as_slice)
 
@@ -350,7 +353,8 @@ class SignalDict(object):
         # reshape the data according to the shape set in `src`, if there is
         # one, otherwise keep the shape of the base array
         if result.get_shape() != src.full_shape:
-            result = tf.reshape(result, src_shape)
+            result = tf.reshape(result, src.tf_shape)
+            result.set_shape(src.full_shape)
 
         # whenever we read from an array we use this to mark it as "read"
         # (so that any future writes to the array will be scheduled after

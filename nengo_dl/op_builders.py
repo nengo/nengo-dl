@@ -122,12 +122,15 @@ class ElementwiseIncBuilder(OpBuilder):
         self.Y_data = signals.combine([op.Y for op in ops])
 
         # group all the A's and X's
-        A_data = signals.combine([op.A for op in ops], load_indices=False)
-        X_data = signals.combine([op.X for op in ops], load_indices=False)
+        self.A_data = signals.combine([op.A for op in ops], load_indices=False)
+        self.X_data = signals.combine([op.X for op in ops], load_indices=False)
 
         # separate data from each op along the first dimension
-        self.A_data = A_data.reshape((len(ops), -1) + A_data.shape[1:])
-        self.X_data = X_data.reshape((len(ops), -1) + X_data.shape[1:])
+        if self.A_data.shape[0] != self.X_data.shape[0]:
+            self.A_data = self.A_data.reshape(
+                (len(ops), -1) + self.A_data.shape[1:])
+            self.X_data = self.X_data.reshape(
+                (len(ops), -1) + self.X_data.shape[1:])
 
         # add empty trailing dimensions for elementwise broadcasting
         while self.A_data.ndim < self.X_data.ndim:
@@ -179,15 +182,16 @@ class DotIncBuilder(OpBuilder):
         self.A_data = A_data.reshape((len(ops), -1, A_data.shape[1]))
         self.X_data = X_data.reshape((len(ops), -1))
 
-        # approach #2
-        # if self.A_data.minibatched or not self.X_data.minibatched:
-        #     self.X_data = self.X_data.reshape(self.X_data.shape[:2] + (1,) +
-        #                                       self.X_data.shape[2:])
-        #     if self.A_data.minibatched and not self.X_data.minibatched:
-        #         self.X_data = self.X_data.broadcast(
-        #             -1, signals.minibatch_size)
+        # approach #1: transpose (if necessary) and use matmul for everything
+        if self.A_data.minibatched:
+            # add broadcast dimension to X
+            self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
 
-        # approach #3
+            # precompute transposition indices
+            self.perm = tf.constant((0, 3, 1, 2))
+            self.perm_inv = tf.constant((0, 2, 3, 1))
+
+        # approach #2: mix of matmul and manual multiply/reduce
         # self.using_matmul = (
         #     signals.minibatch_size >= 32 and
         #     not self.A_data.minibatched and self.X_data.minibatched)
@@ -208,9 +212,18 @@ class DotIncBuilder(OpBuilder):
         A = signals.gather(self.A_data)
         X = signals.gather(self.X_data)
 
-        # approach #1: using einsum
+        # approach #1
         if self.A_data.minibatched and self.X_data.minibatched:
-            dot = tf.einsum("ijkl,ikl->ijl", A, X)
+            # dot = tf.einsum("ijkl,ikl->ijl", A, X)
+
+            # note: this is just a duplicate of what einsum does internally;
+            # we do it manually so that we can move the perm/perm_inv constants
+            # into the pre-build step
+            A = tf.transpose(A, self.perm)
+            X = tf.transpose(X, self.perm)
+            dot = tf.matmul(A, X)
+            dot = tf.transpose(dot, self.perm_inv)
+            dot.set_shape(self.A_data.shape[:2] + (1, signals.minibatch_size))
         elif not self.A_data.minibatched and self.X_data.minibatched:
             dot = tf.matmul(A, X)
         else:
@@ -224,20 +237,7 @@ class DotIncBuilder(OpBuilder):
             # dot = tf.einsum("ijk,ik->ij", A, X)
             raise NotImplementedError
 
-        # approach #2: transpose/tile and use batch_matmul for everything
-        # if not self.A_data.minibatched and self.X_data.minibatched:
-        #     dot = tf.matmul(A, X)
-        # else:
-        #     minibatched = self.A_data.minibatched or self.X_data.minibatched
-        #
-        #     A = tf.transpose(A, (0, 3, 1, 2)) if minibatched else A
-        #     X = tf.transpose(X, (0, 3, 1, 2)) if minibatched else X
-        #     dot = tf.matmul(A, X)
-        #
-        #     if minibatched:
-        #         dot = tf.transpose(dot, (0, 2, 3, 1))
-
-        # approach #3: mix of batch_matmul and manual multiply/reduce
+        # approach #2
         # if self.using_matmul:
         #     dot = tf.matmul(A, X)
         # else:
@@ -284,7 +284,10 @@ class SparseDotIncBuilder(DotIncBuilder):
             self.Y_data = signals.combine([op.Y for op in ops])
 
             # group all the A's and X's
-            self.A_data = signals.combine([op.A for op in ops], label=str(ops))
+            self.A_data = signals.combine([op.A for op in ops],
+                                          load_indices=False)
+            self.A_data = self.A_data.reshape((-1,))
+            self.A_data.load_indices()
             self.X_data = signals.combine([op.X for op in ops])
 
             assert not self.A_data.minibatched
@@ -314,8 +317,6 @@ class SparseDotIncBuilder(DotIncBuilder):
 
         A = signals.gather(self.A_data)
         X = signals.gather(self.X_data)
-
-        A = tf.reshape(A, (-1,))
 
         assert A.get_shape()[0] == self.sparse_indices.get_shape()[0]
 
