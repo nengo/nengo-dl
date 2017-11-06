@@ -15,7 +15,7 @@ def test_tensor_signal_basic():
         sig.indices[0] = 1
 
     # check ndim
-    sig = TensorSignal([0, 1, 2], None, None, (1, 2), True)
+    sig = TensorSignal([0, 1, 2], None, None, (1, 2), 1)
     assert sig.ndim == 2
 
 
@@ -123,12 +123,12 @@ def test_signal_dict_scatter():
     signals.bases = {key: tf.assign(tf.Variable(val, dtype=tf.float32),
                                     val)}
 
-    x = TensorSignal([0, 1, 2, 3], key, tf.float32, (4,), False)
+    x = TensorSignal([0, 1, 2, 3], key, tf.float32, (4,), None)
     with pytest.raises(BuildError):
         # assigning to trainable variable
         signals.scatter(x, None)
 
-    x.minibatched = True
+    x.minibatch_size = 1
     with pytest.raises(BuildError):
         # indices not loaded
         signals.scatter(x, None)
@@ -151,7 +151,7 @@ def test_signal_dict_scatter():
     assert np.allclose(y[4:], val[4:])
 
     # recognize assignment to full array
-    x = TensorSignal(np.arange(var_size), key, tf.float32, (var_size,), True)
+    x = TensorSignal(np.arange(var_size), key, tf.float32, (var_size,), 1)
     x.load_indices()
     y = tf.ones((var_size, 1))
     signals.scatter(x, y)
@@ -179,7 +179,7 @@ def test_signal_dict_gather():
     val = np.random.randn(var_size, minibatch_size)
     signals.bases = {key: tf.constant(val, dtype=tf.float32)}
 
-    x = TensorSignal([0, 1, 2, 3], key, tf.float32, (4,), True)
+    x = TensorSignal([0, 1, 2, 3], key, tf.float32, (4,), 1)
     with pytest.raises(BuildError):
         # indices not loaded
         signals.gather(x)
@@ -189,25 +189,25 @@ def test_signal_dict_gather():
     assert np.allclose(sess.run(signals.gather(x)), val[:4])
 
     # read with reshape
-    x = TensorSignal([0, 1, 2, 3], key, tf.float32, (2, 2), True)
+    x = TensorSignal([0, 1, 2, 3], key, tf.float32, (2, 2), 1)
     x.load_indices()
     assert np.allclose(sess.run(signals.gather(x)),
                        val[:4].reshape((2, 2, minibatch_size)))
 
     # gather read
-    x = TensorSignal([0, 1, 2, 3], key, tf.float32, (4,), True)
+    x = TensorSignal([0, 1, 2, 3], key, tf.float32, (4,), 1)
     x.load_indices()
     y = signals.gather(x, force_copy=True)
     assert y.op.type == "Gather"
 
-    x = TensorSignal([0, 0, 3, 3], key, tf.float32, (4,), True)
+    x = TensorSignal([0, 0, 3, 3], key, tf.float32, (4,), 1)
     x.load_indices()
     assert np.allclose(sess.run(signals.gather(x)),
                        val[[0, 0, 3, 3]])
     assert y.op.type == "Gather"
 
     # reading from full array
-    x = TensorSignal(np.arange(var_size), key, tf.float32, (var_size,), True)
+    x = TensorSignal(np.arange(var_size), key, tf.float32, (var_size,), 1)
     x.load_indices()
     y = signals.gather(x)
     assert y.op.type == "Identity"
@@ -215,18 +215,18 @@ def test_signal_dict_gather():
 
     # reading from strided full array
     x = TensorSignal(np.arange(0, var_size, 2), key, tf.float32,
-                     (var_size // 2 + 1,), True)
+                     (var_size // 2 + 1,), 1)
     x.load_indices()
     y = signals.gather(x)
     assert y.op.type == "StridedSlice"
     assert y.op.inputs[0] is signals.bases[key]
 
     # minibatch dimension
-    x = TensorSignal([0, 1, 2, 3], key, tf.float32, (4,), True)
+    x = TensorSignal([0, 1, 2, 3], key, tf.float32, (4,), 1)
     x.load_indices()
     assert signals.gather(x).get_shape() == (4, 1)
 
-    x = TensorSignal([0, 1, 2, 3], key, tf.float32, (4,), False)
+    x = TensorSignal([0, 1, 2, 3], key, tf.float32, (4,), None)
     x.load_indices()
     assert signals.gather(x).get_shape() == (4,)
 

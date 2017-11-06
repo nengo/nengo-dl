@@ -1169,7 +1169,9 @@ def create_signals(sigs, plan, float_type, minibatch_size):
         indices = np.arange(n - shape[0], n)
 
         sig_map[sig] = signals.TensorSignal(
-            indices, key, dtype, shape, sig.minibatched, label=sig.name)
+            indices, key, dtype, shape,
+            minibatch_size if sig.minibatched else None,
+            label=sig.name)
 
         logger.debug("created base signal")
         logger.debug(sig)

@@ -23,13 +23,14 @@ class TensorSignal(object):
         dtype of the values represented by this signal
     shape : tuple of int
         View shape of this signal (may differ from shape of base array)
-    minibatched : bool
-        If True then this signal contains a minibatch dimension
+    minibatch_size : int
+        If not None then this signal contains a minibatch dimension with the
+        given size
     label : str, optional
         Name for this signal, used to make debugging easier
     """
 
-    def __init__(self, indices, key, dtype, shape, minibatched,
+    def __init__(self, indices, key, dtype, shape, minibatch_size,
                  label="TensorSignal"):
         # make indices read-only
         assert isinstance(indices, (tuple, list, np.ndarray))
@@ -40,7 +41,7 @@ class TensorSignal(object):
         self.key = key
         self.dtype = dtype
         self.shape = shape
-        self.minibatched = minibatched
+        self.minibatch_size = minibatch_size
 
         self.label = label
 
@@ -81,7 +82,7 @@ class TensorSignal(object):
         new_indices = self.indices[indices]
         return TensorSignal(
             new_indices, self.key, self.dtype,
-            (len(new_indices),) + self.shape[1:], self.minibatched,
+            (len(new_indices),) + self.shape[1:], self.minibatch_size,
             label=self.label + ".slice")
 
     def reshape(self, shape):
@@ -116,7 +117,7 @@ class TensorSignal(object):
                 raise BuildError("Number of elements don't match in reshape")
 
         return TensorSignal(
-            self.indices, self.key, self.dtype, shape, self.minibatched,
+            self.indices, self.key, self.dtype, shape, self.minibatch_size,
             label=self.label + ".reshape(%s)" % (shape,))
 
     def broadcast(self, axis, length):
@@ -152,7 +153,7 @@ class TensorSignal(object):
             display_shape = (length,) + self.shape
 
         return TensorSignal(
-            indices, self.key, self.dtype, display_shape, self.minibatched,
+            indices, self.key, self.dtype, display_shape, self.minibatch_size,
             label=self.label + ".broadcast(%d, %d)" % (axis, length))
 
     def load_indices(self):
@@ -172,6 +173,19 @@ class TensorSignal(object):
                              tf.constant([step]))
         else:
             self.as_slice = None
+
+    @property
+    def full_shape(self):
+        """Shape including the minibatch dimension."""
+
+        return (self.shape + (self.minibatch_size,) if self.minibatched else
+                self.shape)
+
+    @property
+    def minibatched(self):
+        """Whether or not this TensorSignal contains a minibatch dimension."""
+
+        return self.minibatch_size is not None
 
 
 class SignalDict(object):
@@ -335,10 +349,7 @@ class SignalDict(object):
 
         # reshape the data according to the shape set in `src`, if there is
         # one, otherwise keep the shape of the base array
-        src_shape = src.shape
-        if src.minibatched:
-            src_shape += (self.minibatch_size,)
-        if result.get_shape() != src_shape:
+        if result.get_shape() != src.full_shape:
             result = tf.reshape(result, src_shape)
 
         # whenever we read from an array we use this to mark it as "read"
@@ -405,7 +416,7 @@ class SignalDict(object):
         indices = np.concatenate([s.indices for s in sigs], axis=0)
 
         output = TensorSignal(indices, key, sigs[0].dtype, shape,
-                              sigs[0].minibatched, label=label)
+                              sigs[0].minibatch_size, label=label)
 
         if load_indices:
             output.load_indices()
@@ -413,17 +424,17 @@ class SignalDict(object):
         return output
 
     def make_internal(self, name, shape, minibatched=True):
+        sig = TensorSignal(
+            np.arange(shape[0]), object(), self.dtype, shape,
+            self.minibatch_size if minibatched else None, label=name)
+        sig.load_indices()
+
         with tf.variable_scope(tf.get_default_graph().get_name_scope(),
                                reuse=False):
             var = tf.get_local_variable(
-                name,
-                shape=shape + (self.minibatch_size,) if minibatched else shape,
-                dtype=self.dtype, trainable=False,
+                name, shape=sig.full_shape, dtype=sig.dtype, trainable=False,
                 initializer=tf.zeros_initializer())
-        sig = TensorSignal(
-            np.arange(shape[0]), object(), self.dtype, shape, minibatched,
-            label=name)
-        sig.load_indices()
+
         self.internal_vars[sig.key] = var
 
         return sig
