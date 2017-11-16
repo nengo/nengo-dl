@@ -310,9 +310,8 @@ class Simulator(object):
         try:
             steps_run, probe_data = self.sess.run(
                 [self.tensor_graph.steps_run, self.tensor_graph.probe_arrays],
-                feed_dict=self._fill_feed(
-                    actual_steps, input_feeds, start=self.n_steps,
-                    display_progress=progress_bar),
+                feed_dict=self._fill_feed(actual_steps, input_feeds,
+                                          start=self.n_steps),
                 options=run_options, run_metadata=run_metadata)
         except (tf.errors.InternalError, tf.errors.UnknownError) as e:
             if e.op.type == "PyFunc":
@@ -775,8 +774,7 @@ class Simulator(object):
 
             self.closed = True
 
-    def _fill_feed(self, n_steps, inputs, targets=None, start=0,
-                   display_progress=False):
+    def _fill_feed(self, n_steps, inputs, targets=None, start=0):
         """Create a feed dictionary containing values for all the placeholder
         inputs in the network, which will be passed to ``tf.Session.run``.
 
@@ -804,8 +802,7 @@ class Simulator(object):
         # fill in loop variables
         feed_dict = {
             self.tensor_graph.step_var: start,
-            self.tensor_graph.stop_var: start + n_steps,
-            # self.tensor_graph.display_progress: display_progress
+            self.tensor_graph.stop_var: start + n_steps
         }
 
         # fill in input values
