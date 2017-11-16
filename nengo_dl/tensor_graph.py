@@ -333,6 +333,20 @@ class TensorGraph(object):
                                                          probe_tensors):
                         loop_i += 1
 
+                        # insert simulation progress bar update (tied to
+                        # loop variable)
+                        # with tf.device("/cpu:0"), tf.name_scope("ProgressBar"):
+                        #     def progress_update(x):
+                        #         self.sim_progress.step()
+                        #         return x
+                        #
+                        #     loop_i = tf.cond(
+                        #         self.display_progress,
+                        #         lambda: tf.py_func(progress_update, [loop_i],
+                        #                            loop_i.dtype),
+                        #         lambda: loop_i)
+                        #     loop_i.set_shape(())
+
             base_vars = tuple(self.signals.bases.values())
 
             return step, stop, loop_i, probe_arrays, base_vars
@@ -383,6 +397,10 @@ class TensorGraph(object):
                 # set up a placeholder input for this node
                 self.invariant_ph[n] = tf.placeholder(
                     self.dtype, (None, n.size_out, self.minibatch_size))
+
+                # with tf.device("/cpu:0"):
+                #     self.display_progress = tf.placeholder(tf.bool, ())
+                #     self.progress_bar = None
 
     @with_self
     def build_optimizer(self, optimizer, objective):
