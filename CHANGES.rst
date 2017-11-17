@@ -141,7 +141,7 @@ Release History
   the more general ``nengo_dl.configure_settings(trainable=x)``.  This has
   resulted in some small changes to how trainability is controlled within
   subnetworks; see the `updated documentation
-  <https://www.nengo.ai/nengo_dl/training.html#Choosing-which-elements-to-optimize>`_
+  <https://www.nengo.ai/nengo_dl/training.html#choosing-which-elements-to-optimize>`_
   for details.
 - Calling ``Simulator.train``/``Simulator.loss`` no longer resets the internal
   state of the simulation (so they can be safely intermixed with calls to
