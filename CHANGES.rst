@@ -49,6 +49,8 @@ Release History
 - Fixed a bug where input nodes that were only read as a view were not
   feedable
 - Updated ``tensorflow-gpu`` installation check
+- Improved numerical stability of ``LIFRate`` gradients  (`#26 
+  <https://github.com/nengo/nengo_dl/issues/26>`_)
 
 0.5.2 (October 11, 2017)
 ------------------------

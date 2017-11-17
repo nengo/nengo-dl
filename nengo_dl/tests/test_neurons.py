@@ -48,3 +48,16 @@ def test_soft_lif(Simulator, sigma, seed):
 
     assert np.allclose(nengo_curves, nengo_dl_curves)
     assert np.allclose(sim.data[p], sim2.data[p])
+
+
+@pytest.mark.parametrize(
+    "neuron_type", (nengo.LIFRate, SoftLIFRate))
+def test_neuron_gradients(Simulator, neuron_type, seed):
+    with nengo.Network(seed=seed) as net:
+        a = nengo.Node(output=[0])
+        b = nengo.Ensemble(50, 1, neuron_type=neuron_type())
+        nengo.Connection(a, b, synapse=None)
+        nengo.Probe(b)
+
+    with Simulator(net, seed=seed) as sim:
+        sim.check_gradients()

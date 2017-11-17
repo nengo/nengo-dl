@@ -207,11 +207,23 @@ class LIFRateBuilder(OpBuilder):
         self.zeros = tf.zeros(self.J_data.shape + (signals.minibatch_size,),
                               signals.dtype)
 
+        self.zero = tf.constant(0, dtype=signals.dtype)
+        self.one = tf.constant(1, dtype=signals.dtype)
+        self.epsilon = tf.constant(1e-15, dtype=signals.dtype)
+
     def build_step(self, signals):
         j = signals.gather(self.J_data)
-        j -= 1
-        rates = self.amplitude / (self.tau_ref + self.tau_rc * tf.log1p(1 / j))
-        signals.scatter(self.output_data, tf.where(j > 0, rates, self.zeros))
+        j -= self.one
+
+        # note: we convert all the j to be positive before this calculation
+        # (even though we'll only use the values that are already positive),
+        # otherwise we can end up with nans in the gradient
+        rates = self.amplitude / (
+            self.tau_ref + self.tau_rc * tf.log1p(self.one /
+                                                  tf.maximum(j, self.epsilon)))
+
+        signals.scatter(self.output_data, tf.where(j > self.zero, rates,
+                                                   self.zeros))
 
 
 class LIFBuilder(LIFRateBuilder):
@@ -233,16 +245,18 @@ class LIFBuilder(LIFRateBuilder):
         refractory = signals.gather(self.refractory_data)
 
         refractory -= signals.dt
-        delta_t = tf.clip_by_value(signals.dt - refractory, 0, signals.dt)
+        delta_t = tf.clip_by_value(signals.dt - refractory, self.zero,
+                                   signals.dt)
 
         voltage -= (J - voltage) * tf.expm1(-delta_t / self.tau_rc)
 
-        spiked = voltage > 1
+        spiked = voltage > self.one
         spikes = tf.cast(spiked, signals.dtype) * self.amplitude / signals.dt
         signals.scatter(self.output_data, spikes)
 
         t_spike = (self.tau_ref + signals.dt +
-                   self.tau_rc * tf.log1p((1 - voltage) / (J - 1)))
+                   self.tau_rc * tf.log1p((self.one - voltage) /
+                                          (J - self.one)))
         refractory = tf.where(spiked, t_spike, refractory)
 
         signals.mark_gather(self.J_data)
@@ -262,17 +276,16 @@ class SoftLIFRateBuilder(LIFRateBuilder):
         self.sigma = tf.constant(
             [[op.neurons.sigma] for op in ops
              for _ in range(op.J.shape[0])], dtype=signals.dtype)
-        self.epsilon = tf.constant(ops[0].neurons._epsilon,
-                                   dtype=signals.dtype)
 
     def build_step(self, signals):
         j = signals.gather(self.J_data)
 
-        j -= 1
+        j -= self.one
 
         z = tf.nn.softplus(j / self.sigma) * self.sigma
         z += self.epsilon
 
-        rates = self.amplitude / (self.tau_ref + self.tau_rc * tf.log1p(1 / z))
+        rates = self.amplitude / (
+            self.tau_ref + self.tau_rc * tf.log1p(self.one / z))
 
         signals.scatter(self.output_data, rates)
