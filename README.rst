@@ -56,11 +56,14 @@ adds a number of unique features, such as:
 - inserting networks defined using TensorFlow (such as
   convolutional neural networks) directly into a Nengo model
 
-More details can be found in the `NengoDL documentation
-<https://www.nengo.ai/nengo_dl/>`_.
+Documentation
+=============
 
-Installation
-============
+Check out the `documentation <https://www.nengo.ai/nengo_dl/>`_ for
 
-Installation instructions can be found `here
-<https://www.nengo.ai/nengo_dl/installation.html>`_.
+- `Installation instructions <https://www.nengo.ai/nengo_dl/installation.html>`_
+- `Details on the unique features of NengoDL
+  <https://www.nengo.ai/nengo_dl/frontend.html>`_
+- `Examples <https://www.nengo.ai/nengo_dl/examples.html>`_
+- `More information on how NengoDL works under the hood
+  <https://www.nengo.ai/nengo_dl/backend.html>`_
