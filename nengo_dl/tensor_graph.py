@@ -168,7 +168,7 @@ class TensorGraph(object):
 
         # create base arrays
         sub = progress.sub("creating base arrays")
-        self.base_vars = []
+        self.base_vars = OrderedDict()
         unique_ids = defaultdict(int)
         for k, (v, trainable) in sub(self.base_arrays_init.items()):
             name = "%s_%s_%s_%d" % (
@@ -187,10 +187,10 @@ class TensorGraph(object):
                         name, initializer=tf.constant_initializer(v),
                         dtype=v.dtype, shape=v.shape, trainable=False)
 
-            self.base_vars += [var]
+            self.base_vars[k] = var
 
         logger.debug("created base arrays")
-        logger.debug([str(x) for x in self.base_vars])
+        logger.debug([str(x) for x in self.base_vars.values()])
 
         # set up invariant inputs
         sub = progress.sub("building inputs")
@@ -305,8 +305,8 @@ class TensorGraph(object):
         def loop_body(step, stop, loop_i, probe_arrays, base_vars):
             self.signals.bases = OrderedDict(
                 [(k, v) for k, v in zip(itertools.chain(
-                    self.base_arrays_init.keys(),
-                    self.signals.internal_vars.keys()), base_vars)])
+                    self.base_vars.keys(), self.signals.internal_vars.keys()),
+                    base_vars)])
 
             for iter in progress(range(self.unroll)):
                 logger.debug("BUILDING ITERATION %d", iter)
@@ -367,7 +367,7 @@ class TensorGraph(object):
         loop_vars = (
             self.step_var, self.stop_var, loop_i, probe_arrays,
             tuple(x._ref() if isinstance(x, tf.Variable) else x
-                  for x in self.base_vars) +
+                  for x in self.base_vars.values()) +
             tuple(x._ref() for x in self.signals.internal_vars.values()))
 
         # TODO: add option to disable backprop through loop, for when users
@@ -614,12 +614,11 @@ class TensorGraph(object):
         """
 
         tensor_sig = self.sig_map[sig]
-        keys = list(self.signals.bases.keys())
 
         if tensor_sig.tf_indices is None:
             tensor_sig.load_indices()
 
-        base = self.base_vars[keys.index(tensor_sig.key)]
+        base = self.base_vars[tensor_sig.key]
         return tf.gather(base, tensor_sig.tf_indices)
 
     def mark_signals(self):

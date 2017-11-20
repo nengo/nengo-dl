@@ -6,7 +6,7 @@
   :target: https://travis-ci.org/nengo/nengo_dl
   :alt: Travis-CI build status
 
-.. image:: https://img.shields.io/appveyor/ci/nengo/nengo-dl/master.svg
+.. image:: https://ci.appveyor.com/api/projects/status/github/nengo/nengo_dl?branch=master&svg=true
   :target: https://ci.appveyor.com/project/nengo/nengo-dl
   :alt: AppVeyor build status
 
