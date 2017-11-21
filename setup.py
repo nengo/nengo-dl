@@ -23,7 +23,8 @@ else:
     try:
         from tensorflow.python.client import device_lib  # noqa: E402
 
-        if not any(["gpu" in x.name for x in device_lib.list_local_devices()]):
+        if not any(["GPU" in x.device_type.upper() for x in
+                    device_lib.list_local_devices()]):
             raise ImportError()
 
         tf_req = "tensorflow-gpu"
