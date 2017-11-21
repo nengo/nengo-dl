@@ -853,14 +853,18 @@ class Simulator(object):
                 # in nengo, but the gui does it.
 
                 if isinstance(n.output, Process):
-                    self.input_funcs[(n, n.output)] = n.output.make_step(
-                        (n.size_in,), (n.size_out,), self.dt,
-                        n.output.get_rng(self.rng))
+                    self.input_funcs[(n, n.output)] = [
+                        n.output.make_step(
+                            (n.size_in,), (n.size_out,), self.dt,
+                            n.output.get_rng(self.rng))
+                        for _ in range(self.minibatch_size)]
                 elif n.size_out > 0:
-                    self.input_funcs[(n, n.output)] = utils.align_func(
-                        (n.size_out,), self.tensor_graph.dtype)(n.output)
+                    self.input_funcs[(n, n.output)] = [utils.align_func(
+                        (n.size_out,), self.tensor_graph.dtype)(n.output)]
                 else:
-                    self.input_funcs[(n, n.output)] = n.output
+                    # a node with no inputs and no outputs, but it can still
+                    # have side effects
+                    self.input_funcs[(n, n.output)] = [n.output]
 
             if using_output:
                 if n in input_feeds:
@@ -870,26 +874,24 @@ class Simulator(object):
                     feed_val = np.tile(n.output[None, :, None],
                                        (n_steps, 1, self.minibatch_size))
                 else:
-                    func = self.input_funcs[(n, n.output)]
+                    feed_val = np.zeros(
+                        (n_steps, n.size_out, self.minibatch_size),
+                        dtype=self.tensor_graph.dtype.as_numpy_dtype)
 
-                    feed_val = []
-                    for i in range(self.n_steps + 1,
-                                   self.n_steps + n_steps + 1):
+                    for i in range(n_steps):
                         # note: need to copy the output of func, as func
                         # may mutate its outputs in-place on subsequent calls
-                        feed_val += [np.array(func(i * self.dt))]
-
-                    feed_val = np.stack(feed_val, axis=0)
-                    feed_val = np.tile(feed_val[..., None],
-                                       (1, 1, self.minibatch_size))
+                        feed_val[i] = np.transpose([
+                            func((i + self.n_steps + 1) * self.dt)
+                            for func in self.input_funcs[(n, n.output)]])
 
                 feed_vals[self.tensor_graph.invariant_ph[n]] = feed_val
             elif not isinstance(n.output, np.ndarray):
                 # note: we still call the function even if the output
                 # is not being used, because it may have side-effects
-                func = self.input_funcs[(n, n.output)]
                 for i in range(self.n_steps + 1, self.n_steps + n_steps + 1):
-                    func(i * self.dt)
+                    for func in self.input_funcs[(n, n.output)]:
+                        func(i * self.dt)
 
         return feed_vals
 

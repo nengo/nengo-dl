@@ -18,7 +18,7 @@ Release History
    - Removed
    - Fixed
 
-0.5.3 (unreleased)
+0.6.0 (unreleased)
 ------------------
 
 **Added**
@@ -43,6 +43,8 @@ Release History
 - Minor improvements to efficiency of build process.
 - Minor improvements to simulation efficiency targeting small ops
   (``tf.reshape/identity/constant``).
+- Process inputs are now reseeded for each input when batch processing (if seed
+  is not manually set).
 
 **Fixed**
 

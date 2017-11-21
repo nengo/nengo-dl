@@ -351,7 +351,7 @@ def test_generate_inputs(Simulator, seed):
     with nengo.Network() as net:
         proc = nengo.processes.WhiteNoise(seed=seed)
         inp = [nengo.Node([1]), nengo.Node(np.sin), nengo.Node(proc),
-               nengo.Node([2])]
+               nengo.Node([2]), nengo.Node(nengo.processes.WhiteNoise())]
 
         p = [nengo.Probe(x) for x in inp]
 
@@ -373,6 +373,9 @@ def test_generate_inputs(Simulator, seed):
         for i, x in enumerate(vals):
             assert np.allclose(feed[ph[i]], x)
             assert np.allclose(sim.data[p[i]], x.transpose(2, 0, 1))
+
+        # check that unseeded process was different in each minibatch item
+        assert not np.allclose(feed[ph[-1]][..., 0], feed[ph[-1]][..., 1])
 
 
 def test_save_load_params(Simulator, tmpdir):
