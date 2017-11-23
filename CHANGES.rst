@@ -53,6 +53,8 @@ Release History
 - Updated ``tensorflow-gpu`` installation check
 - Improved numerical stability of ``LIFRate`` gradients  (`#26 
   <https://github.com/nengo/nengo_dl/issues/26>`_)
+- Added more informative error message when data is provided with fewer items
+  than ``sim.minibatch_size`` (`#30 <https://github.com/nengo/nengo_dl/issues/30>`_)
 
 0.5.2 (October 11, 2017)
 ------------------------

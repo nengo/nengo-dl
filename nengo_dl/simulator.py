@@ -980,6 +980,13 @@ class Simulator(object):
                             "%s data" % mode)
 
         for n, x in data.items():
+            if x.shape[0] < self.minibatch_size:
+                raise ValidationError(
+                    "Size of minibatch (%d) for %s data less than Simulation "
+                    "`minibatch_size` (%d)" % (x.shape[0], n,
+                                               self.minibatch_size),
+                    "%s data" % mode)
+
             d = n.size_out if mode == "input" else n.size_in
             if x.shape[2] != d:
                 raise ValidationError(

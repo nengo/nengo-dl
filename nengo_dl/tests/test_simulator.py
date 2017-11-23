@@ -712,9 +712,9 @@ def test_check_data(Simulator):
         inp2 = nengo.Node([0, 0])
         p2 = nengo.Probe(inp2)
 
-    with Simulator(net) as sim:
-        zeros1 = np.zeros((1, 1, 1))
-        zeros2 = np.zeros((1, 1, 2))
+    with Simulator(net, minibatch_size=3) as sim:
+        zeros1 = np.zeros((3, 1, 1))
+        zeros2 = np.zeros((3, 1, 2))
 
         # make sure that valid inputs pass
         sim._check_data({inpa: zeros2, inpb: zeros1}, mode="input")
@@ -759,6 +759,12 @@ def test_check_data(Simulator):
             sim._check_data({inpa: zeros1})
         with pytest.raises(ValidationError):
             sim._check_data({pa: zeros1}, mode="target")
+
+        # data with batch size < minibatch_size
+        with pytest.raises(ValidationError):
+            sim._check_data({inpa: zeros2[[0]]})
+        with pytest.raises(ValidationError):
+            sim._check_data({pa: zeros2[[0]]}, mode="target")
 
 
 def test_matching_node_out(Simulator):
