@@ -440,8 +440,10 @@ class TensorGraph(object):
 
         with tf.variable_scope(optimizer.get_name()) as scope:
             # create optimizer operator
+            agg_method = tf.AggregationMethod.EXPERIMENTAL_ACCUMULATE_N
             opt_op = optimizer.minimize(
-                loss, var_list=tf.trainable_variables())
+                loss, var_list=tf.trainable_variables(),
+                aggregation_method=agg_method)
 
             # get any new variables created by the optimizer (so they
             # can be initialized)

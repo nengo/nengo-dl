@@ -69,8 +69,8 @@ def patch_state_grads():
             # note: we could use this approach for everything, but the
             # temporary variable approach seems to be slightly faster (but we
             # can't use that on indexedslices)
-            var_grad = grad + array_ops.scatter_nd(
-                array_ops.expand_dims(indices, 1), -updates_grad,
+            var_grad = grad - array_ops.scatter_nd(
+                array_ops.expand_dims(indices, 1), updates_grad,
                 var.get_shape())
         else:
             var_grad = gen_state_ops._temporary_variable(
