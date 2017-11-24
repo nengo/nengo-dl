@@ -1,5 +1,4 @@
 from collections import OrderedDict, defaultdict
-import itertools
 import os
 
 import nengo
@@ -650,9 +649,9 @@ def test_probe_data():
 
 
 @pytest.mark.parametrize(
-    "pre_val, post_val", itertools.product(
-        [0, lambda t: 0, nengo.processes.WhiteNoise(seed=0)],
-        [1, lambda t: 1, nengo.processes.WhiteNoise(seed=1)]))
+    "pre_val", [0, lambda t: 0, nengo.processes.WhiteNoise(seed=0)])
+@pytest.mark.parametrize(
+    "post_val", [1, lambda t: 1, nengo.processes.WhiteNoise(seed=1)])
 def test_node_output_change(Simulator, pre_val, post_val, seed):
     with nengo.Network(seed=seed) as net:
         inp = nengo.Node(pre_val)

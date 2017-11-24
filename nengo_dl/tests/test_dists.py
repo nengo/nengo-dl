@@ -1,6 +1,5 @@
 from __future__ import division
 
-import itertools
 import math
 
 import numpy as np
@@ -62,34 +61,31 @@ def _test_variance_scaling(dist, scale, mode, seed):
     assert samples.shape == shape
 
 
-@pytest.mark.parametrize(
-    "scale, mode, distribution",
-    itertools.product([1, 2], ["fan_in", "fan_out", "fan_avg"],
-                      ["uniform", "normal"]))
+@pytest.mark.parametrize("scale", [1, 2])
+@pytest.mark.parametrize("mode", ["fan_in", "fan_out", "fan_avg"])
+@pytest.mark.parametrize("distribution", ["uniform", "normal"])
 def test_variance_scaling(scale, mode, distribution, seed):
     dist = dists.VarianceScaling(scale=scale, mode=mode,
                                  distribution=distribution)
     _test_variance_scaling(dist, scale, mode, seed)
 
 
-@pytest.mark.parametrize(
-    "scale, distribution",
-    itertools.product([1, 2], ["uniform", "normal"]))
+@pytest.mark.parametrize("scale", [1, 2])
+@pytest.mark.parametrize("distribution", ["uniform", "normal"])
 def test_glorot(scale, distribution, seed):
     dist = dists.Glorot(scale=scale, distribution=distribution)
     _test_variance_scaling(dist, scale, "fan_avg", seed)
 
 
-@pytest.mark.parametrize(
-    "scale, distribution",
-    itertools.product([1, 2], ["uniform", "normal"]))
+@pytest.mark.parametrize("scale", [1, 2])
+@pytest.mark.parametrize("distribution", ["uniform", "normal"])
 def test_he(scale, distribution, seed):
     dist = dists.He(scale=scale, distribution=distribution)
     _test_variance_scaling(dist, scale ** 2, "fan_in", seed)
 
 
-@pytest.mark.parametrize("limit, stddev", itertools.product((None, 0.5),
-                                                            (1, 0.2)))
+@pytest.mark.parametrize("limit", [None, 0.5])
+@pytest.mark.parametrize("stddev", [1, 0.2])
 def test_truncated_normal(limit, stddev, seed):
     rng = np.random.RandomState(seed)
     dist = dists.TruncatedNormal(mean=0, stddev=stddev, limit=limit)
