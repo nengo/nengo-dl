@@ -18,9 +18,6 @@ from tensorflow.python.framework.ops import get_gradient_function
 
 logger = logging.getLogger(__name__)
 
-if sys.version_info < (3, 4):
-    from backports.print_function import print_ as print
-
 
 def sanitize_name(name):
     """Remove illegal TensorFlow name characters from string.

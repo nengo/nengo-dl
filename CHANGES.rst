@@ -50,6 +50,10 @@ Release History
   profiler; see the ``tf.profiler`` documentation for the `available options
   <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/profiler/g3doc/options.md>`_.
 
+**Removed**
+
+- Removed ``backports.print_function`` dependency
+
 **Fixed**
 
 - Fixed a bug where input nodes that were only read as a view were not

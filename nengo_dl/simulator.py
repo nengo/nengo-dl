@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 if sys.version_info < (3, 4):
     import backports.tempfile as tempfile  # noqa: F811
-    from backports.print_function import print_ as print
 
 
 class Simulator(object):
@@ -115,7 +114,7 @@ class Simulator(object):
             self.model = model
 
         if network is not None:
-            print("Building network", end="", flush=True)
+            print("Building network")
             start = time.time()
             self.model.build(network, progress_bar=False)
             print("\rBuild finished in %s " %
