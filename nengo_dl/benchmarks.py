@@ -34,16 +34,17 @@ def cconv(dimensions, neurons_per_d, neuron_type):
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1, -1])
         net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-1, 1)
 
-        cconv = nengo.networks.CircularConvolution(neurons_per_d, dimensions)
+        net.cconv = nengo.networks.CircularConvolution(
+            neurons_per_d, dimensions)
 
-        inp_a = nengo.Node([0] * dimensions)
-        inp_b = nengo.Node([1] * dimensions)
-        nengo.Connection(inp_a, cconv.A)
-        nengo.Connection(inp_b, cconv.B)
+        net.inp_a = nengo.Node([0] * dimensions)
+        net.inp_b = nengo.Node([1] * dimensions)
+        nengo.Connection(net.inp_a, net.cconv.A)
+        nengo.Connection(net.inp_b, net.cconv.B)
 
-        p = nengo.Probe(cconv.output)
+        net.p = nengo.Probe(net.cconv.output)
 
-    return net, p
+    return net
 
 
 def integrator(dimensions, neurons_per_d, neuron_type):
@@ -69,15 +70,15 @@ def integrator(dimensions, neurons_per_d, neuron_type):
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1, -1])
         net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-1, 1)
 
-        integ = nengo.networks.Integrator(0.1, neurons_per_d * dimensions,
-                                          dimensions)
+        net.integ = nengo.networks.Integrator(0.1, neurons_per_d * dimensions,
+                                              dimensions)
 
-        inp = nengo.Node([0] * dimensions)
-        nengo.Connection(inp, integ.input)
+        net.inp = nengo.Node([0] * dimensions)
+        nengo.Connection(net.inp, net.integ.input)
 
-        p = nengo.Probe(integ.ensemble)
+        net.p = nengo.Probe(net.integ.ensemble)
 
-    return net, p
+    return net
 
 
 def pes(dimensions, neurons_per_d, neuron_type):
@@ -103,20 +104,21 @@ def pes(dimensions, neurons_per_d, neuron_type):
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1, -1])
         net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-1, 1)
 
-        inp = nengo.Node([1] * dimensions)
-        pre = nengo.Ensemble(neurons_per_d * dimensions, dimensions)
-        post = nengo.Ensemble(neurons_per_d * dimensions, dimensions)
-        err = nengo.Node(size_in=dimensions)
-        nengo.Connection(inp, pre)
-        nengo.Connection(post, err, transform=-1)
-        nengo.Connection(inp, err)
+        net.inp = nengo.Node([1] * dimensions)
+        net.pre = nengo.Ensemble(neurons_per_d * dimensions, dimensions)
+        net.post = nengo.Ensemble(neurons_per_d * dimensions, dimensions)
+        net.err = nengo.Node(size_in=dimensions)
+        nengo.Connection(net.inp, net.pre)
+        nengo.Connection(net.post, net.err, transform=-1)
+        nengo.Connection(net.inp, net.err)
 
-        conn = nengo.Connection(pre, post, learning_rule_type=nengo.PES())
-        nengo.Connection(err, conn.learning_rule)
+        conn = nengo.Connection(
+            net.pre, net.post, learning_rule_type=nengo.PES())
+        nengo.Connection(net.err, conn.learning_rule)
 
-        p = nengo.Probe(post)
+        net.p = nengo.Probe(net.post)
 
-    return net, p
+    return net
 
 
 def compare_backends(raw=False):
@@ -147,7 +149,7 @@ def compare_backends(raw=False):
                         print("-" * 30)
                         print(bench, neurons, dimensions, neuron_type)
 
-                        net, p = bench(dimensions, neurons, neuron_type())
+                        net = bench(dimensions, neurons, neuron_type())
                         model = nengo.builder.Model()
                         model.build(net)
 
@@ -188,10 +190,10 @@ def compare_backends(raw=False):
                                 data[i, j, k, l, m] = np.nan
 
                             # if backend == nengo:
-                            #     canonical = sim.data[p]
+                            #     canonical = sim.data[net.p]
                             # else:
-                            #     assert np.allclose(canonical, sim.data[p],
-                            #                        atol=1e-3)
+                            #     assert np.allclose(
+                            #         canonical, sim.data[net.p], atol=1e-3)
 
         np.savez("%s/benchmark_data.npz" % DATA_DIR, data)
     else:
@@ -230,7 +232,7 @@ def profile_run():
 
     # note: in order for GPU profiling to work, you have to manually add
     # ...\CUDA\v8.0\extras\CUPTI\libx64 to your path
-    net, p = pes(128, 32, nengo.RectifiedLinear())
+    net = pes(128, 32, nengo.RectifiedLinear())
     with nengo_dl.Simulator(net, tensorboard=None, unroll_simulation=50,
                             device="/gpu:0") as sim:
         # run a few times to try to eliminate startup overhead (only the data
