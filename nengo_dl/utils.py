@@ -274,7 +274,7 @@ class ProgressBar(progressbar.ProgressBar):
 
         self.present = present
         self.sub_bar = None
-        self.finished = False
+        self.finished = None
 
         if past is None:
             past = present
@@ -319,6 +319,7 @@ class ProgressBar(progressbar.ProgressBar):
 
         super(ProgressBar, self).start(**kwargs)
 
+        self.finished = False
         self.thread.start()
 
         return self
@@ -326,7 +327,7 @@ class ProgressBar(progressbar.ProgressBar):
     def finish(self, **kwargs):
         """Stop tracking process, finish display."""
 
-        if self.sub_bar is not None and not self.sub_bar.finished:
+        if self.sub_bar is not None and self.sub_bar.finished is False:
             self.sub_bar.finish()
 
         self.finished = True
@@ -357,7 +358,7 @@ class ProgressBar(progressbar.ProgressBar):
             Description of sub-process
         """
 
-        if self.sub_bar is not None and not self.sub_bar.finished:
+        if self.sub_bar is not None and self.sub_bar.finished is False:
             self.sub_bar.finish()
 
         self.sub_bar = ProgressBar(
