@@ -45,6 +45,10 @@ Release History
   (``tf.reshape/identity/constant``).
 - Process inputs are now reseeded for each input when batch processing (if seed
   is not manually set).
+- Users can pass a dict of config options for the ``profile`` argument in
+  ``run_steps``/``train``, which will be passed on to the TensorFlow
+  profiler; see the ``tf.profiler`` documentation for the `available options
+  <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/profiler/g3doc/options.md>`_.
 
 **Fixed**
 

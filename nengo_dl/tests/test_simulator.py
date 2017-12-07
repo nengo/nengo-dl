@@ -573,7 +573,8 @@ def test_tensorboard(Simulator, tmpdir):
 
 
 @pytest.mark.parametrize("mode", ("run", "train"))
-def test_profile(Simulator, mode):
+@pytest.mark.parametrize("outfile", (None, "tmp.txt"))
+def test_profile(Simulator, mode, outfile):
     with nengo.Network() as net:
         a = nengo.Node([0])
         x = nengo.Node(size_in=1)
@@ -582,30 +583,31 @@ def test_profile(Simulator, mode):
 
     suffix = "" if tf.__version__ < "1.4.0" else "_-1"
 
-    filename = os.path.join(DATA_DIR, "nengo_dl_profile.json%s" % suffix)
+    if outfile is None:
+        filename = "nengo_dl_profile.json%s" % suffix
+    else:
+        filename = outfile + suffix
+    filename = os.path.join(DATA_DIR, filename)
     if os.path.exists(filename):
         os.remove(filename)
     elif not os.path.exists(os.path.dirname(filename)):
         os.makedirs(os.path.dirname(filename))
 
     with Simulator(net) as sim:
+        if outfile is None:
+            prof = True
+        else:
+            prof = {"output": "timeline:outfile=%s" % os.path.join(DATA_DIR,
+                                                                   outfile)}
+
         if mode == "run":
-            sim.run_steps(5, profile=True)
+            sim.run_steps(5, profile=prof)
         else:
             sim.train({a: np.zeros((1, 5, 1))}, {p: np.zeros((1, 5, 1))},
-                      tf.train.GradientDescentOptimizer(1), profile=True)
+                      tf.train.GradientDescentOptimizer(1), profile=prof)
 
         assert os.path.exists(filename)
         os.remove(filename)
-
-        if mode == "run":
-            sim.run_steps(5, profile="tmp.txt")
-        else:
-            sim.train({a: np.zeros((1, 5, 1))}, {p: np.zeros((1, 5, 1))},
-                      tf.train.GradientDescentOptimizer(1), profile="tmp.txt")
-
-        assert os.path.exists("tmp.txt%s" % suffix)
-        os.remove("tmp.txt%s" % suffix)
 
 
 def test_dt_readonly(Simulator):

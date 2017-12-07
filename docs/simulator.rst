@@ -230,13 +230,16 @@ profile
 If set to ``True``, profiling data will be collected while the simulation
 runs.  This will significantly slow down the simulation, so it should be left
 on ``False`` (the default) in most cases.  It is mainly used by developers,
-in order to help identify simulation bottlenecks.
+in order to help identify performance bottlenecks.
 
 Profiling data will be saved to ``<nengo_dl>/data/nengo_dl_profile.json``.  It
 can be viewed by opening a Chrome browser, navigating to
 `<chrome://tracing>`_ and loading the ``nengo_dl_profile.json`` file.
-Alternatively, a filename can be passed to ``profile`` to specify an output
-location for the profiling data.
+
+A dict of config options can be passed instead of ``True``, which will be
+passed on to the TensorFlow profiler.  See `the tf.profiler documentation
+<https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/profiler/g3doc/options.md>`_
+for details on the available options.
 
 .. _sim-doc:
 

@@ -265,7 +265,9 @@ class Simulator(object):
             should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
         profile : bool, optional
             If True, collect TensorFlow profiling information while the
-            simulation is running (this will slow down the simulation)
+            simulation is running (this will slow down the simulation).
+            Can also pass a dict of `config options for the profiler
+            <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/profiler/g3doc/options.md>`__.
         progress_bar : bool, optional
             If True, print information about the simulation status to standard
             output.
@@ -333,13 +335,12 @@ class Simulator(object):
             self.time = self.n_steps * self.dt
 
         if profile:
-            if isinstance(profile, str):
-                filename = profile
-            else:
-                filename = os.path.join(DATA_DIR, "nengo_dl_profile.json")
+            filename = os.path.join(DATA_DIR, "nengo_dl_profile.json")
             options = tf.profiler.ProfileOptionBuilder.time_and_memory()
             options["output"] = "timeline:outfile=%s" % filename
             options["min_bytes"] = 0
+            if isinstance(profile, dict):
+                options.update(profile)
             tf.profiler.profile(
                 self.tensor_graph.graph, run_meta=run_metadata,
                 cmd="scope", options=options)
@@ -392,7 +393,9 @@ class Simulator(object):
             own summaries and pass in the Tensors representing the summary ops.
         profile : bool, optional
             If True, collect TensorFlow profiling information while training
-            (this will slow down the training)
+            (this will slow down the training).  Can also pass a dict of
+            `config options for the profiler
+            <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/profiler/g3doc/options.md>`__.
 
         Notes
         -----
@@ -415,9 +418,10 @@ class Simulator(object):
         self._check_data(inputs, mode="input")
         self._check_data(targets, mode="target", n_steps=n_steps,
                          n_batch=batch_size)
-        if n_steps < self.unroll:
-            raise ValidationError("The number of timesteps in training data "
-                                  "must be >= unroll_simulation", "inputs")
+        if n_steps % self.unroll != 0:
+            raise ValidationError(
+                "The number of timesteps in training data must be evenly "
+                "divisible by unroll_simulation", "inputs")
 
         # check for non-differentiable elements in graph
         # utils.find_non_differentiable(
@@ -500,13 +504,12 @@ class Simulator(object):
         tmpdir.cleanup()
 
         if profile:
-            if isinstance(profile, str):
-                filename = profile
-            else:
-                filename = os.path.join(DATA_DIR, "nengo_dl_profile.json")
+            filename = os.path.join(DATA_DIR, "nengo_dl_profile.json")
             options = tf.profiler.ProfileOptionBuilder.time_and_memory()
             options["output"] = "timeline:outfile=%s" % filename
             options["min_bytes"] = 0
+            if isinstance(profile, dict):
+                options.update(profile)
             profiler.profile_name_scope(options)
 
     def loss(self, inputs, targets, objective):
@@ -544,9 +547,10 @@ class Simulator(object):
         self._check_data(inputs, mode="input")
         self._check_data(targets, mode="target", n_steps=n_steps,
                          n_batch=batch_size)
-        if n_steps < self.unroll:
-            raise ValidationError("The number of timesteps in loss data "
-                                  "must be >= unroll_simulation", "inputs")
+        if n_steps % self.unroll != 0:
+            raise ValidationError(
+                "The number of timesteps in loss data must be evenly "
+                "divisible by unroll_simulation", "inputs")
 
         # apply objective to all probes if individual objectives weren't given
         if not isinstance(objective, dict):
