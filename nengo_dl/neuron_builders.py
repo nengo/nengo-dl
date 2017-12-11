@@ -212,8 +212,8 @@ class LIFRateBuilder(OpBuilder):
         # (even though we'll only use the values that are already positive),
         # otherwise we can end up with nans in the gradient
         rates = self.amplitude / (
-            self.tau_ref + self.tau_rc * tf.log1p(self.one /
-                                                  tf.maximum(j, self.epsilon)))
+            self.tau_ref + self.tau_rc * tf.log1p(tf.reciprocal(
+                tf.maximum(j, self.epsilon))))
 
         signals.scatter(self.output_data, tf.where(j > self.zero, rates,
                                                    self.zeros))
@@ -276,7 +276,7 @@ class SoftLIFRateBuilder(LIFRateBuilder):
         z += self.epsilon
 
         rates = self.amplitude / (
-            self.tau_ref + self.tau_rc * tf.log1p(self.one / z))
+            self.tau_ref + self.tau_rc * tf.log1p(tf.reciprocal(z)))
 
         signals.scatter(self.output_data, rates)
 
