@@ -35,6 +35,7 @@ env:
     - NENGO_DL_TEST_PRECISION="64"
     - NENGO_DL_TEST_UNROLL="5"
     - NENGO_VERSION="git+https://github.com/nengo/nengo.git"
+      TF_VERSION="tf-nightly"
     - NUMPY_VERSION="numpy==1.11.0"
       TF_VERSION="tensorflow==1.3.0"
       NENGO_VERSION="nengo==2.5.0"
