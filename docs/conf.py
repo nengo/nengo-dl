@@ -58,6 +58,7 @@ source_encoding = 'utf-8'
 master_doc = 'index'
 suppress_warnings = ['image.nonlocal_uri']
 linkcheck_ignore = [r'http://localhost:\d+']
+linkcheck_anchors = False
 
 project = u'NengoDL'
 authors = u'Applied Brain Research'

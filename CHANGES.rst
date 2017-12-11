@@ -31,6 +31,9 @@ Release History
   information about the simulation status printed to standard output (`#17
   <https://github.com/nengo/nengo_dl/issues/17>`_).
 - Added progress bars for the build/simulation process.
+- Added truncated backpropagation option to ``sim.train`` (useful for reducing
+  memory usage during training).  See `the documentation for details
+  <https://www.nengo.ai/nengo_dl/training.html#truncation>`__.
 
 **Changed**
 

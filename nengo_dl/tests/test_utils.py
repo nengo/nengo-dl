@@ -51,13 +51,13 @@ def test_cast_dtype():
 
 @pytest.mark.parametrize("shuffle", (False, True))
 def test_minibatch_generator(shuffle):
-    inputs = {"a": np.arange(100)}
-    targets = {"b": np.arange(100) + 1}
+    inputs = {"a": np.arange(100)[:, None]}
+    targets = {"b": np.arange(1, 101)[:, None]}
 
     x_all = []
     y_all = []
-    for x, y in utils.minibatch_generator(inputs, targets, 10,
-                                          shuffle=shuffle):
+    for _, x, y in utils.minibatch_generator(inputs, targets, 10,
+                                             shuffle=shuffle):
         x_all += [x["a"]]
         y_all += [y["b"]]
 
@@ -65,19 +65,19 @@ def test_minibatch_generator(shuffle):
     y_all = np.concatenate(y_all)
 
     if shuffle:
-        assert not np.allclose(x_all, np.arange(100))
-        assert not np.allclose(y_all, np.arange(100) + 1)
-        x_all = np.sort(x_all)
-        y_all = np.sort(y_all)
+        assert not np.allclose(x_all, inputs["a"])
+        assert not np.allclose(y_all, targets["b"])
+        x_all = np.sort(x_all, axis=0)
+        y_all = np.sort(y_all, axis=0)
 
-    assert np.allclose(x_all, np.arange(100))
-    assert np.allclose(y_all, np.arange(100) + 1)
+    assert np.allclose(x_all, inputs["a"])
+    assert np.allclose(y_all, targets["b"])
 
     x_all = []
     y_all = []
     with pytest.warns(UserWarning):
-        for x, y in utils.minibatch_generator(inputs, targets, 12,
-                                              shuffle=shuffle):
+        for _, x, y in utils.minibatch_generator(inputs, targets, 12,
+                                                 shuffle=shuffle):
             assert x["a"].shape[0] == 12
             assert y["b"].shape[0] == 12
             x_all += [x["a"]]
@@ -89,11 +89,29 @@ def test_minibatch_generator(shuffle):
     assert len(y_all) == 96
 
     if shuffle:
-        assert not np.allclose(x_all, np.arange(96))
-        assert not np.allclose(y_all, np.arange(96) + 1)
+        assert not np.allclose(x_all, np.arange(96)[:, None])
+        assert not np.allclose(y_all, np.arange(1, 97)[:, None])
     else:
-        assert np.allclose(x_all, np.arange(96))
-        assert np.allclose(y_all, np.arange(96) + 1)
+        assert np.allclose(x_all, np.arange(96)[:, None])
+        assert np.allclose(y_all, np.arange(1, 97)[:, None])
+
+
+@pytest.mark.parametrize("truncation", (None, 3, 5))
+def test_truncation(truncation):
+    inputs = {"a": np.random.randn(2, 10)}
+    targets = {"b": np.random.randn(2, 10)}
+
+    dur = 10 if truncation is None else truncation
+
+    with pytest.warns(None) as w:
+        for i, (o, x, y) in enumerate(utils.minibatch_generator(
+                inputs, targets, 2, shuffle=False, truncation=truncation)):
+            assert np.allclose(x["a"], inputs["a"][:, o:o + dur])
+            assert np.allclose(y["b"], targets["b"][:, o:o + dur])
+
+    assert i == 10 // dur - (10 % dur == 0)
+
+    assert len(w) == (1 if truncation == 3 else 0)
 
 
 def test_print_op(capsys):

@@ -176,6 +176,45 @@ across the probes to produce an overall error value.
 Note that :meth:`.Simulator.loss` can be used to check the loss
 (error) value for a given objective.
 
+.. _truncation:
+
+truncation
+^^^^^^^^^^
+
+When optimizing a simulation over time we specify inputs and targets for all
+:math:`n` steps of the simulation.  The gradients are computed by running
+the simulation forward for :math:`n` steps, comparing the outputs to the
+targets we specified, and then propagating the gradients backwards from
+:math:`n` to 0.  This is known as `Backpropagation Through Time (BPTT)
+<https://en.wikipedia.org/wiki/Backpropagation_through_time>`_.
+
+However, in some cases we may not want to run BPTT over the full :math:`n`
+steps (usually because it requires a lot of memory to store all the
+intermediate values for :math:`n` steps of gradient calculation).  In this case
+we choose some value :math:`m < n`, run the simulation for :math:`m` steps,
+backpropagate the gradients over those :math:`m` steps, then run the simulation
+for :math:`m` more steps, and so on until we have run for the total :math:`n`
+steps.  This is known as Truncated BPTT.
+
+The ``truncation`` argument is used to specify :math:`m`, i.e.
+``sim.train(..., truncation=m)``.  If no value is given then full un-truncated
+BPTT will be performed.
+
+In general, truncated BPTT will result in worse performance than untruncated
+BPTT.  Truncation limits the range of the temporal dynamics that the network
+is able to learn.  For example, if we tried to learn a function where input
+:math:`x_t` should influence the output at :math:`y_{t+m+1}` that would not
+work well, because the errors from step :math:`t+m+1` never make it back to
+step :math:`t`.  More generally, a truncated system has less information about
+how outputs at :math:`t` will affect future performance, which will limit how
+well that system can be optimized.
+
+As mentioned, the main reason to use truncated BPTT is in order to reduce the
+memory demands during training.  So if you find yourself running out of memory
+while training a model, consider using the ``truncation`` argument (while
+ensuring that the value of :math:`m` is still large enough to capture the
+temporal dynamics in the task).
+
 .. _summaries:
 
 summaries

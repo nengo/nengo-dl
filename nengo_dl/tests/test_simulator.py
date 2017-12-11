@@ -163,7 +163,8 @@ def test_train_ff(Simulator, neurons, seed):
         assert np.allclose(sim.data[p], y, atol=1e-3)
 
 
-def test_train_recurrent(Simulator, seed):
+@pytest.mark.parametrize("truncation", (None, 5))
+def test_train_recurrent(Simulator, truncation, seed):
     batch_size = 100
     minibatch_size = 100
     n_hidden = 30
@@ -189,13 +190,14 @@ def test_train_recurrent(Simulator, seed):
                      np.linspace(0, 1, n_steps))[:, :, None]
 
         sim.train({inp: x}, {p: y}, tf.train.RMSPropOptimizer(1e-3),
-                  n_epochs=200)
+                  n_epochs=200, truncation=truncation)
 
         sim.check_gradients(sim.tensor_graph.build_loss({p: "mse"}))
 
         sim.run_steps(n_steps, input_feeds={inp: x[:minibatch_size]})
 
-    assert np.sqrt(np.mean((sim.data[p] - y[:minibatch_size]) ** 2)) < 0.05
+    assert np.sqrt(np.mean((sim.data[p] - y[:minibatch_size]) ** 2)) < (
+        0.1 if truncation else 0.05)
 
 
 @pytest.mark.parametrize("unroll", (1, 2))
@@ -298,6 +300,10 @@ def test_train_errors(Simulator):
         with pytest.raises(ValidationError):
             sim.train({a: np.ones((1, 1, 1))},
                       {p: np.ones((1, 1, 1))}, None)
+
+        with pytest.raises(ValidationError):
+            sim.train({a: np.ones((1, 4, 1))}, {p: np.ones((1, 4, 1))}, None,
+                      truncation=3)
 
 
 def test_loss(Simulator):

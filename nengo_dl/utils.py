@@ -222,6 +222,7 @@ class MessageBar(progressbar.BouncingBar):
     finish_msg : str, optional
         A message to be displayed when the progress bar is finished
     """
+
     def __init__(self, msg="", finish_msg="", **kwargs):
         super(MessageBar, self).__init__(**kwargs)
         self.msg = msg
@@ -266,6 +267,7 @@ class ProgressBar(progressbar.ProgressBar):
     -----
     Launches a separate thread to handle the progress bar display updates.
     """
+
     def __init__(self, present, past=None, max_value=1, vars=None,
                  **kwargs):
 
@@ -393,7 +395,7 @@ class NullProgressBar(progressbar.NullBar):
 
 
 def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
-                        rng=None):
+                        truncation=None, rng=None):
     """Generator to yield ``minibatch_sized`` subsets from ``inputs`` and
     ``targets``.
 
@@ -411,11 +413,17 @@ def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
     shuffle : bool, optional
         If True, the division of items into minibatches will be randomized each
         time the generator is created
+    truncation : int, optional
+        If not None, divide the data up into sequences of ``truncation``
+        timesteps.
     rng : :class:`~numpy:numpy.random.RandomState`, optional
         Seeded random number generator
 
     Yields
     ------
+    offset : int
+        The simulation step at which the returned data begins (will only be
+        nonzero if ``truncation`` is not ``None``).
     inputs : dict of {:class:`~nengo:nengo.Node`: \
                       :class:`~numpy:numpy.ndarray`}
         The same structure as ``inputs``, but with each array reduced to
@@ -426,7 +434,7 @@ def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
         ``minibatch_size`` elements along the first dimension
     """
 
-    n_inputs = next(iter(inputs.values())).shape[0]
+    n_inputs, n_steps = next(iter(inputs.values())).shape[:2]
 
     if rng is None:
         rng = np.random
@@ -436,6 +444,9 @@ def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
     else:
         perm = np.arange(n_inputs)
 
+    if truncation is None:
+        truncation = n_steps
+
     if n_inputs % minibatch_size != 0:
         warnings.warn(UserWarning(
             "Number of inputs (%d) is not an even multiple of "
@@ -443,10 +454,20 @@ def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
             (n_inputs, minibatch_size)))
         perm = perm[:-(n_inputs % minibatch_size)]
 
-    for i in range(0, n_inputs - n_inputs % minibatch_size,
-                   minibatch_size):
-        yield ({n: inputs[n][perm[i:i + minibatch_size]] for n in inputs},
-               {p: targets[p][perm[i:i + minibatch_size]] for p in targets})
+    if n_steps % truncation != 0:
+        warnings.warn(UserWarning(
+            "Length of training data (%d) is not an even multiple of "
+            "truncation length (%d); this may result in poor "
+            "training results" % (n_steps, truncation)))
+
+    for i in range(0, n_inputs - n_inputs % minibatch_size, minibatch_size):
+        batch_inp = {n: inputs[n][perm[i:i + minibatch_size]] for n in inputs}
+        batch_tar = {p: targets[p][perm[i:i + minibatch_size]]
+                     for p in targets}
+
+        for j in range(0, n_steps, truncation):
+            yield (j, {n: batch_inp[n][:, j:j + truncation] for n in inputs},
+                   {p: batch_tar[p][:, j:j + truncation] for p in targets})
 
 
 def configure_settings(**kwargs):

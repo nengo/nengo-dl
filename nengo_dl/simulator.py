@@ -345,7 +345,7 @@ class Simulator(object):
                 cmd="scope", options=options)
 
     def train(self, inputs, targets, optimizer, n_epochs=1, objective="mse",
-              shuffle=True, summaries=None, profile=False):
+              shuffle=True, truncation=None, summaries=None, profile=False):
         """Optimize the trainable parameters of the network using the given
         optimization method, minimizing the objective value over the given
         inputs and targets.
@@ -379,6 +379,9 @@ class Simulator(object):
             for ``objective`` to specify a different objective for each probe.
         shuffle : bool, optional
             If True, randomize the data into different minibatches each epoch
+        truncation: int, optional
+            If not None, use truncated backpropagation when training the
+            network, with the given truncation length.
         summaries : list of :class:`~nengo:nengo.Connection` or \
                             :class:`~nengo:nengo.Ensemble` or \
                             :class:`~nengo:nengo.ensemble.Neurons` or \
@@ -421,6 +424,10 @@ class Simulator(object):
             raise ValidationError(
                 "The number of timesteps in training data must be evenly "
                 "divisible by unroll_simulation", "inputs")
+        if truncation is not None and truncation % self.unroll != 0:
+            raise ValidationError(
+                "Truncation length must be evenly divisible by "
+                "unroll_simulation", "inputs")
 
         # check for non-differentiable elements in graph
         # utils.find_non_differentiable(
@@ -480,13 +487,16 @@ class Simulator(object):
         # run training
         with progress:
             for n in range(n_epochs):
-                for inp, tar in utils.minibatch_generator(
+                for offset, inp, tar in utils.minibatch_generator(
                         inputs, targets, self.minibatch_size, rng=self.rng,
-                        shuffle=shuffle):
-                    self.soft_reset()
+                        shuffle=shuffle, truncation=truncation):
+                    if offset == 0:
+                        self.soft_reset()
 
+                    steps = next(iter(inp.values())).shape[1]
+                    feed = self._fill_feed(steps, inp, tar, start=offset)
                     outputs = self.sess.run(
-                        fetches, feed_dict=self._fill_feed(n_steps, inp, tar),
+                        fetches, feed_dict=feed,
                         options=run_options, run_metadata=run_metadata)
 
                     if summary_op is not None:
@@ -495,7 +505,8 @@ class Simulator(object):
                     if profile:
                         profiler.add_step(int(outputs[-1]), run_metadata)
 
-                    progress.step(loss="%.4f" % outputs[1])
+                    if offset == 0:
+                        progress.step(loss="%.4f" % outputs[1])
 
         # restore internal state of simulator
         self.load_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
@@ -565,7 +576,7 @@ class Simulator(object):
 
         # compute loss on data
         loss_val = 0
-        for i, (inp, tar) in enumerate(utils.minibatch_generator(
+        for i, (_, inp, tar) in enumerate(utils.minibatch_generator(
                 inputs, targets, self.minibatch_size, rng=self.rng)):
             self.soft_reset()
             loss_val += self.sess.run(
