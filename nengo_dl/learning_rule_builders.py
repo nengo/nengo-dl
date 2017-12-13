@@ -149,7 +149,7 @@ def build_pes(model, pes, rule):
     A re-implementation of the Nengo PES rule builder, so that we can avoid
     slicing the encoders.
 
-    See :func:`~nengo:nengo.builder.learning_rules.build_pes:`.
+    See :func:`~nengo:nengo.builder.learning_rules.build_pes`.
 
     Parameters
     ----------

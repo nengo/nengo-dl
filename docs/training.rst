@@ -168,8 +168,9 @@ rather than using the default:
 
 If there are multiple output Probes defined in ``targets`` then by default the
 same objective will be used for all probes.  This can be overriden by passing
-a dictionary with the form ``{my_probe0: my_objective0,
-my_probe1: my_objective1, ...}`` for the ``objective``, specifying a different
+a dictionary with the form
+``{my_probe0: my_objective0, my_probe1: my_objective1, ...}`` for the
+``objective``, specifying a different
 objective for each probe. In either case, the error will then be summed
 across the probes to produce an overall error value.
 
@@ -271,7 +272,7 @@ Other parameters
 - ``n_epochs`` (int): run training for this many passes through the input data
 - ``shuffle`` (bool): if ``True`` (default), randomly assign data to different
   minibatches each epoch
-- ``profile`` (bool or str): collect profiling information
+- ``profile`` (bool or dict): collect profiling information
   (:ref:`as in Simulator.run <sim-profile>`)
 
 Choosing which elements to optimize
