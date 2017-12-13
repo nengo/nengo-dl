@@ -1,7 +1,7 @@
 NengoDL license
 ===============
 
-Copyright (c) 2015 Applied Brain Research Inc.
+Copyright (c) 2015-2017 Applied Brain Research Inc.
 
 NengoDL is made available under a proprietary license that permits
 using, copying, sharing, and making derivative works from NengoDL and its

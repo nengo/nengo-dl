@@ -3,7 +3,7 @@
 import os
 import warnings
 
-__copyright__ = "2015, Applied Brain Research"
+__copyright__ = "2015-2017, Applied Brain Research"
 __license__ = "Free for non-commercial use; see LICENSE.rst"
 from .version import version as __version__
 
