@@ -21,6 +21,9 @@ Release History
 0.6.1 (unreleased)
 ------------------
 
+**Fixed**
+
+- Better error message if training data has incorrect rank
 
 0.6.0 (December 13, 2017)
 -------------------------

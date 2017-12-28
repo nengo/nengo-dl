@@ -960,7 +960,13 @@ class Simulator(object):
             data items have same number of steps)
         """
 
-        for d in data:
+        for d, x in data.items():
+            if x.ndim != 3:
+                raise ValidationError(
+                    "should have rank 3 (batch_size, n_steps, dimensions), "
+                    "found rank %d" % x.ndim,
+                    "%s data" % mode)
+
             if mode == "input":
                 if d not in self.tensor_graph.invariant_inputs:
                     raise ValidationError(

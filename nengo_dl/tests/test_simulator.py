@@ -773,6 +773,12 @@ def test_check_data(Simulator):
         with pytest.raises(ValidationError):
             sim._check_data({pa: zeros2[[0]]}, mode="target")
 
+        # data with incorrect rank
+        with pytest.raises(ValidationError):
+            sim._check_data({inpa: zeros2[0]})
+        with pytest.raises(ValidationError):
+            sim._check_data({pa: zeros2[0]}, mode="target")
+
 
 def test_matching_node_out(Simulator):
     # make sure that nodes with identical outputs are handled correctly (the
