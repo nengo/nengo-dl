@@ -24,6 +24,8 @@ Release History
 **Fixed**
 
 - Better error message if training data has incorrect rank
+- Avoid reinstalling TensorFlow if one of the nightly build packages is already
+  installed
 
 0.6.0 (December 13, 2017)
 -------------------------

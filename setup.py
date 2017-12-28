@@ -5,30 +5,30 @@ import os
 import sys
 
 try:
+    from pip import get_installed_distributions
     from setuptools import find_packages, setup
 except ImportError:
     raise ImportError(
-        "'setuptools' is required but not installed. To install it, "
+        "'pip'/'setuptools' is required but not installed. To install it, "
         "follow the instructions at "
         "https://pip.pypa.io/en/stable/installing/#installing-with-get-pip-py")
 
 if "bdist_wheel" in sys.argv:
     # when building wheels we have to pick a requirement ahead of time (can't
     # check it at install time). so we'll go with tensorflow (non-gpu), since
-    # that is the safer option
+    # that is the safest option
     tf_req = "tensorflow"
 else:
-    # check if tensorflow-gpu is installed (so that we don't force tensorflow
-    # to be installed if tensorflow-gpu is already there)
-    try:
-        from tensorflow.python.client import device_lib  # noqa: E402
-
-        if not any(["GPU" in x.device_type.upper() for x in
-                    device_lib.list_local_devices()]):
-            raise ImportError()
-
-        tf_req = "tensorflow-gpu"
-    except ImportError:
+    # check if one of the tensorflow packages is already installed (so that we
+    # don't force tensorflow to be installed if e.g. tensorflow-gpu is already
+    # there)
+    tf_dists = ["tf-nightly-gpu", "tf-nightly", "tensorflow-gpu"]
+    installed_dists = [d.project_name for d in get_installed_distributions()]
+    for d in tf_dists:
+        if d in installed_dists:
+            tf_req = d
+            break
+    else:
         tf_req = "tensorflow"
 
 
@@ -61,8 +61,7 @@ setup(
     install_requires=["nengo>=2.5.0", "numpy>=1.11", "%s>=1.3.0" % tf_req,
                       "progressbar2>=3.34.0",
                       "backports.tempfile;python_version<'3.4'"],
-    entry_points={"nengo.backends":
-                  ["dl = nengo_dl:Simulator"]},
+    entry_points={"nengo.backends": ["dl = nengo_dl:Simulator"]},
     classifiers=['Development Status :: 4 - Beta',
                  'Intended Audience :: Science/Research',
                  'License :: Free for non-commercial use',
