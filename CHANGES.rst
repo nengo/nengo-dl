@@ -21,6 +21,12 @@ Release History
 0.6.1 (unreleased)
 ------------------
 
+**Changed**
+
+- Optimizer variables (e.g., momentum values) will only be initialized the
+  first time that optimizer is passed to ``sim.train``.  Subsequent calls to
+  ``sim.train`` will resume with the values from the previous call.
+
 **Fixed**
 
 - Better error message if training data has incorrect rank

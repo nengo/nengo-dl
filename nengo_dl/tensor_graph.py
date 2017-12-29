@@ -426,6 +426,10 @@ class TensorGraph(object):
         -------
         ``tf.Tensor``
             Operator implementing the given optimizer update
+        ``tf.Tensor`` or ``None``
+            Operator for initializing variables created by the optimizer
+            (``None`` if there is nothing to initialize, or if we're returning
+            a previously built optimizer that should already be initialized)
         """
 
         loss = self.build_loss(objective)
@@ -434,7 +438,7 @@ class TensorGraph(object):
 
         try:
             # return the cached optimizer if it exists
-            return self.optimizers[key]
+            return self.optimizers[key], None
         except KeyError:
             pass
 
@@ -447,12 +451,15 @@ class TensorGraph(object):
 
             # get any new variables created by the optimizer (so they
             # can be initialized)
-            opt_slots_init = tf.variables_initializer(
-                scope.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
+            vars = scope.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+            if len(vars) > 0:
+                opt_slots_init = tf.variables_initializer(vars)
+            else:
+                opt_slots_init = None
 
-        self.optimizers[key] = (opt_op, opt_slots_init)
+        self.optimizers[key] = opt_op
 
-        return self.optimizers[key]
+        return opt_op, opt_slots_init
 
     @with_self
     def build_loss(self, objective):

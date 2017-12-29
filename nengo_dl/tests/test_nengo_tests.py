@@ -3,8 +3,8 @@ import pkg_resources
 import nengo
 from nengo.builder.signal import Signal
 from nengo.builder.operator import ElementwiseInc, DotInc
-from nengo.utils.testing import warns
 import numpy as np
+import pytest
 
 
 import nengo_dl
@@ -15,7 +15,7 @@ def test_warn_on_opensim_del(Simulator):
         nengo.Ensemble(10, 1)
 
     sim = Simulator(net)
-    with warns(RuntimeWarning):
+    with pytest.warns(RuntimeWarning):
         sim.__del__()
     sim.close()
 

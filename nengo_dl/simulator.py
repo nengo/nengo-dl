@@ -222,7 +222,13 @@ class Simulator(object):
         ----------
         kwargs : dict
             See :meth:`.run_steps`
+
+        Notes
+        -----
+        Progress bar is disabled by default when running via this method.
         """
+
+        kwargs.setdefault("progress_bar", False)
 
         self.run_steps(1, **kwargs)
 
@@ -444,6 +450,10 @@ class Simulator(object):
             optimizer, objective)
         fetches = [opt_op]
 
+        # initialize any variables that were created by the optimizer
+        if opt_slots_init is not None:
+            self.sess.run(opt_slots_init)
+
         # get loss op
         loss = self.tensor_graph.build_loss(objective)
         fetches.append(loss)
@@ -468,9 +478,6 @@ class Simulator(object):
         tmpdir = tempfile.TemporaryDirectory()
         self.save_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
                          include_global=False)
-
-        # initialize any variables that were created by the optimizer
-        self.sess.run(opt_slots_init)
 
         if profile:
             run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
@@ -995,8 +1002,8 @@ class Simulator(object):
                     if x.shape[i] != args[i]:
                         raise ValidationError(
                             "Data for %s has %s=%s, which does not match "
-                            "expected size %s" % (n, labels[i], x.shape[i],
-                                                  args[i]),
+                            "expected size (%s)" % (n, labels[i], x.shape[i],
+                                                    args[i]),
                             "%s data" % mode)
 
         for n, x in data.items():

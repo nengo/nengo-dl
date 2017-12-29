@@ -75,8 +75,8 @@ def test_build_optimizer(Simulator):
     # check optimizer caching
     with Simulator(net) as sim:
         opt = tf.train.GradientDescentOptimizer(0)
-        assert (sim.tensor_graph.build_optimizer(opt, {p: "mse"}) is
-                sim.tensor_graph.build_optimizer(opt, {p: "mse"}))
+        assert (sim.tensor_graph.build_optimizer(opt, {p: "mse"})[0] is
+                sim.tensor_graph.build_optimizer(opt, {p: "mse"})[0])
 
     # error when no trainable elements
     with nengo.Network() as net:
