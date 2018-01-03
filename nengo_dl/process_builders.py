@@ -171,10 +171,14 @@ class LowpassBuilder(OpBuilder):
             nums += [num] * op.input.shape[0]
             dens += [den] * op.input.shape[0]
 
-        nums = np.asarray(nums)[:, None]
+        nums = np.asarray(nums)
+        while nums.ndim < len(self.input_data.full_shape):
+            nums = np.expand_dims(nums, -1)
 
         # note: applying the negative here
-        dens = -np.asarray(dens)[:, None]
+        dens = -np.asarray(dens)
+        while dens.ndim < len(self.input_data.full_shape):
+            dens = np.expand_dims(dens, -1)
 
         # need to manually broadcast for scatter_mul
         # dens = np.tile(dens, (1, signals.minibatch_size))
@@ -193,6 +197,7 @@ class LowpassBuilder(OpBuilder):
 
         input = signals.gather(self.input_data)
         output = signals.gather(self.output_data)
+
         signals.scatter(self.output_data,
                         self.dens * output + self.nums * input)
 
