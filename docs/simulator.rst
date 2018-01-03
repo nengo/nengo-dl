@@ -241,6 +241,10 @@ passed on to the TensorFlow profiler.  See `the tf.profiler documentation
 <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/profiler/g3doc/options.md>`_
 for details on the available options.
 
+Note that in order for GPU profiling to work, you need to manually add
+``<cuda>\extras\CUPTI\libx64`` to your path (where ``<cuda>`` is your
+CUDA installation directory).
+
 .. _sim-doc:
 
 API
