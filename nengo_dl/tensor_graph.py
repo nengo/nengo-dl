@@ -317,10 +317,10 @@ class TensorGraph(object):
                     self.signals.step = step
 
                     # fill in invariant input data
-                    for n in self.invariant_ph:
+                    for n in self.input_ph:
                         self.signals.scatter(
                             self.sig_map[self.model.sig[n]["out"]],
-                            self.invariant_ph[n][loop_i])
+                            self.input_ph[n][loop_i])
 
                     # build the operators for a single step
                     # note: we tie things to the `loop_i` variable so that we
@@ -370,18 +370,21 @@ class TensorGraph(object):
                   for x in self.base_vars.values()) +
             tuple(x._ref() for x in self.signals.internal_vars.values()))
 
-        # TODO: add option to disable backprop through loop, for when users
-        # want to train a network running over time, but optimize on a
-        # timestep-by-timestep basis
         loop_vars = tf.while_loop(
             loop_condition, loop_body, loop_vars=loop_vars,
             parallel_iterations=1, back_prop=True)
 
         self.steps_run = loop_vars[2]
-        self.probe_arrays = []
-        for p in loop_vars[3]:
-            x = p.stack()
-            self.probe_arrays += [x]
+        self.probe_arrays = OrderedDict()
+        for p, a in zip(self.model.probes, loop_vars[3]):
+            x = a.stack()
+
+            if self.model.sig[p]["in"].minibatched:
+                x = tf.transpose(x, np.roll(np.arange(x.get_shape().ndims), 1))
+            else:
+                x = tf.expand_dims(x, 0)
+
+            self.probe_arrays[p] = x
 
     def build_inputs(self, progress):
         """Sets up the inputs in the model (which will be computed outside of
@@ -393,7 +396,7 @@ class TensorGraph(object):
             Progress bar for input construction
         """
 
-        self.invariant_ph = {}
+        self.input_ph = {}
         for n in progress(self.invariant_inputs):
             if self.model.sig[n]["out"] in self.sig_map:
                 # make sure the indices for this input are loaded into
@@ -402,7 +405,7 @@ class TensorGraph(object):
                 self.sig_map[self.model.sig[n]["out"]].load_indices()
 
                 # set up a placeholder input for this node
-                self.invariant_ph[n] = tf.placeholder(
+                self.input_ph[n] = tf.placeholder(
                     self.dtype, (None, n.size_out, self.minibatch_size))
 
     @with_self
@@ -493,28 +496,24 @@ class TensorGraph(object):
 
         loss = []
         for p, obj in objective.items():
-            probe_index = self.model.probes.index(p)
-
             # create a placeholder for the target values
             if p not in self.target_phs:
                 self.target_phs[p] = tf.placeholder(
-                    self.dtype, (None, p.size_in, self.minibatch_size),
+                    self.dtype, (self.minibatch_size, None, p.size_in),
                     name="targets")
 
             # compute loss
             if obj == "mse":
                 # note: nan targets converted to zero error
                 target = tf.where(tf.is_nan(self.target_phs[p]),
-                                  self.probe_arrays[probe_index],
+                                  self.probe_arrays[p],
                                   self.target_phs[p])
 
                 loss += [tf.reduce_mean(
-                    tf.square(target - self.probe_arrays[probe_index]))]
+                    tf.square(target - self.probe_arrays[p]))]
             elif callable(obj):
                 # move minibatch dimension back to the front
-                x = tf.transpose(self.probe_arrays[probe_index], (2, 0, 1))
-                t = tf.transpose(self.target_phs[p], (2, 0, 1))
-                loss += [obj(x, t)]
+                loss += [obj(self.probe_arrays[p], self.target_phs[p])]
             else:
                 raise NotImplementedError
 

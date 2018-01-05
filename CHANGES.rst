@@ -26,6 +26,9 @@ Release History
 - Optimizer variables (e.g., momentum values) will only be initialized the
   first time that optimizer is passed to ``sim.train``.  Subsequent calls to
   ``sim.train`` will resume with the values from the previous call.
+- Low-level simulation input/output formats have been reworked to make them
+  slightly easier to use (for users who want to bypass ``sim.run`` or
+  ``sim.train`` and access the TensorFlow session directly).
 
 **Fixed**
 

@@ -363,7 +363,7 @@ def test_generate_inputs(Simulator, seed):
     with Simulator(net, minibatch_size=2, unroll_simulation=3) as sim:
         feed = sim._generate_inputs({inp[0]: np.zeros((2, 3, 1))}, 3)
 
-        ph = [sim.tensor_graph.invariant_ph[x] for x in inp]
+        ph = [sim.tensor_graph.input_ph[x] for x in inp]
 
         assert len(sim.tensor_graph.invariant_inputs) == len(inp)
         assert len(feed) == len(inp)
@@ -642,8 +642,8 @@ def test_probe_data():
     a = DummyProbe(add_to_container=False)
     b = DummyProbe(add_to_container=False)
     sim.model.params = OrderedDict(
-        {a: [np.zeros((1, 3, 5)), np.ones((1, 3, 5))],
-         b: [np.ones((1, 3, 1)), np.zeros((1, 3, 1))]})
+        {a: [np.zeros((5, 1, 3)), np.ones((5, 1, 3))],
+         b: [np.ones((1, 1, 3)), np.zeros((1, 1, 3))]})
     sim.model.probes = (a, b)
     data = SimulationData(sim, True)
     assert data[a].shape == (5, 2, 3)

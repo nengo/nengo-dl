@@ -316,7 +316,7 @@ class Simulator(object):
             try:
                 steps_run, probe_data = self.sess.run(
                     [self.tensor_graph.steps_run,
-                     self.tensor_graph.probe_arrays],
+                     list(self.tensor_graph.probe_arrays.values())],
                     feed_dict=self._fill_feed(actual_steps, input_feeds,
                                               start=self.n_steps),
                     options=run_options, run_metadata=run_metadata)
@@ -437,7 +437,7 @@ class Simulator(object):
 
         # check for non-differentiable elements in graph
         # utils.find_non_differentiable(
-        #     [self.tensor_graph.invariant_ph[n] for n in inputs],
+        #     [self.tensor_graph.input_ph[n] for n in inputs],
         #     [self.tensor_graph.probe_arrays[self.model.probes.index(p)]
         #      for p in targets])
 
@@ -690,19 +690,18 @@ class Simulator(object):
         if outputs is None:
             # note: the x + 0 is necessary because `gradient_checker`
             # doesn't work properly if the output variable is a tensorarray
-            outputs = [x + 0 for x in self.tensor_graph.probe_arrays]
+            outputs = [x + 0 for x in self.tensor_graph.probe_arrays.values()]
         elif isinstance(outputs, tf.Tensor):
             outputs = [outputs]
         else:
             outputs = [
-                self.tensor_graph.probe_arrays[self.model.probes.index(p)] + 0
-                for p in outputs]
+                self.tensor_graph.probe_arrays[p] + 0 for p in outputs]
 
         # check gradient wrt inp
-        for node, inp in self.tensor_graph.invariant_ph.items():
+        for node, inp in self.tensor_graph.input_ph.items():
             inp_shape = inp.get_shape().as_list()
             inp_shape = [n_steps if x is None else x for x in inp_shape]
-            inp_tens = self.tensor_graph.invariant_ph[node]
+            inp_tens = self.tensor_graph.input_ph[node]
             feed[inp_tens] = np.ascontiguousarray(feed[inp_tens])
             inp_val = np.ravel(feed[inp_tens])
             for out in outputs:
@@ -830,7 +829,7 @@ class Simulator(object):
         # fill in target values
         if targets is not None:
             feed_dict.update(
-                {self.tensor_graph.target_phs[p]: np.moveaxis(t, 0, -1)
+                {self.tensor_graph.target_phs[p]: t
                  for p, t in targets.items()})
 
         return feed_dict
@@ -906,7 +905,7 @@ class Simulator(object):
                             func((i + self.n_steps + 1) * self.dt)
                             for func in self.input_funcs[(n, n.output)]])
 
-                feed_vals[self.tensor_graph.invariant_ph[n]] = feed_val
+                feed_vals[self.tensor_graph.input_ph[n]] = feed_val
             elif not isinstance(n.output, np.ndarray):
                 # note: we still call the function even if the output
                 # is not being used, because it may have side-effects
@@ -920,7 +919,7 @@ class Simulator(object):
         """Updates the stored probe data (since the last reset) with the data
         from the latest run.
 
-        Downsamples the probe data returned from tensorflow (from every
+        Downsamples the probe data returned from TensorFlow (from every
         simulation timestep) according to probe `sample_every` and the number
         of steps run.
 
@@ -935,14 +934,14 @@ class Simulator(object):
         """
 
         # remove any extra timesteps (due to `unroll_simulation` mismatch)
-        probe_data = [p[:n_steps] for p in probe_data]
+        probe_data = [p[:, :n_steps] for p in probe_data]
 
         for i, p in enumerate(self.model.probes):
             if p.sample_every is not None:
                 # downsample probe according to `sample_every`
                 period = p.sample_every / self.dt
                 steps = np.arange(start, start + n_steps)
-                probe_data[i] = probe_data[i][(steps + 1) % period < 1]
+                probe_data[i] = probe_data[i][:, (steps + 1) % period < 1]
 
             # update stored probe data
             self.model.params[p].append(probe_data[i])
@@ -1110,15 +1109,9 @@ class SimulationData(collections.Mapping):
         if isinstance(obj, Probe):
             if len(data) == 0:
                 return []
-
-            data = np.concatenate(data, axis=0)
-            if self.sim.model.sig[obj]["in"].minibatched:
-                if self.minibatched:
-                    # move batch dimension to front
-                    data = np.moveaxis(data, -1, 0)
-                else:
-                    # get rid of batch dimension
-                    data = data[..., 0]
+            data = np.concatenate(data, axis=1)
+            if not self.minibatched:
+                data = data[0]
 
             data.setflags(write=False)
         elif isinstance(obj, Ensemble):
