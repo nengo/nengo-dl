@@ -1,0 +1,15 @@
+codecov:
+  ci:
+    - "!ci.appveyor.com"
+
+coverage:
+  status:
+    project:
+      default:
+        enabled: yes
+        target: auto
+    patch:
+      default:
+        enabled: yes
+        target: 100%
+    changes: no

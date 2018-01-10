@@ -1,3 +1,5 @@
+skip_branch_with_pr: true
+
 environment:
   MODE: test
   PYTHON_VERSION: C:\Miniconda35-x64
