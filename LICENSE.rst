@@ -47,7 +47,7 @@ To build the documentation, NengoDL uses:
   `MIT license <https://github.com/spatialaudio/nbsphinx/blob/master/LICENSE>`__
 * `numpydoc <https://github.com/numpy/numpydoc>`_ - Used under
   `BSD license <https://github.com/numpy/numpydoc/blob/master/LICENSE.txt>`__
-* `Pillow <https://python-pillow.org/>`_ - Used under
+* `Pillow <https://pillow.readthedocs.io/>`_ - Used under
   `PIL license <https://github.com/python-pillow/Pillow/blob/master/LICENSE>`__
 * `Sphinx <http://www.sphinx-doc.org/en/stable/>`_ - Used under
   `BSD license <https://github.com/sphinx-doc/sphinx/blob/master/LICENSE>`__
