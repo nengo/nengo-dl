@@ -43,12 +43,6 @@ def test_align_func():
     assert np.allclose(x, [[0, 1], [2, 3]])
 
 
-def test_cast_dtype():
-    assert utils.cast_dtype(np.float32, tf.float32) == tf.float32
-    assert utils.cast_dtype(np.int32, tf.float32) == tf.int32
-    assert utils.cast_dtype(tf.float64, tf.float32) == tf.float32
-
-
 @pytest.mark.parametrize("shuffle", (False, True))
 def test_minibatch_generator(shuffle):
     inputs = {"a": np.arange(100)[:, None]}

@@ -33,8 +33,9 @@ class ResetBuilder(OpBuilder):
 
         self.mode = "inc" if type(ops[0]) == ResetInc else "update"
 
-        dtype = utils.cast_dtype(np.asarray(ops[0].value).dtype,
-                                 signals.dtype).as_numpy_dtype
+        dtype = np.asarray(ops[0].value).dtype
+        if np.issubdtype(dtype, np.floating):
+            dtype = signals.dtype.as_numpy_dtype
 
         # unlike other ops, Reset signals might be spread across multiple
         # bases, which we need to handle

@@ -37,6 +37,10 @@ Release History
   installed
 - Lowpass synapse can now be applied to multidimensional inputs
 
+**Removed**
+
+- Removed ``utils.cast_dtype`` function
+
 0.6.0 (December 13, 2017)
 -------------------------
 

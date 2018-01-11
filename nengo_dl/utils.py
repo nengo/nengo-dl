@@ -150,34 +150,6 @@ def print_op(input, message):
     return output
 
 
-def cast_dtype(dtype, target):
-    """Changes float dtypes to the target dtype, leaves others unchanged.
-
-    Used to map all float values to a target precision.  Also casts numpy
-    dtypes to TensorFlow dtypes.
-
-    Parameters
-    ----------
-    dtype : ``tf.DType`` or :class:`~numpy:numpy.dtype`
-        Input dtype to be converted
-    target : ``tf.DType``
-        Floating point dtype to which all floating types should be converted
-
-    Returns
-    -------
-    ``tf.DType``
-        Input dtype, converted to ``target`` type if necessary
-    """
-
-    if not isinstance(dtype, tf.DType):
-        dtype = tf.as_dtype(dtype)
-
-    if dtype.is_floating:
-        dtype = target
-
-    return dtype
-
-
 def find_non_differentiable(inputs, outputs):
     """Searches through a TensorFlow graph to find non-differentiable elements
     between ``inputs`` and ``outputs`` (elements that would prevent us from

@@ -1129,7 +1129,7 @@ def create_signals(sigs, plan, float_type, minibatch_size):
                 curr_keys[k] = object()
 
         # convert to appropriate dtype
-        if np.issubdtype(sig.dtype, np.float):
+        if np.issubdtype(sig.dtype, np.floating):
             dtype = float_type
         elif np.issubdtype(sig.dtype, np.integer):
             dtype = np.int32
