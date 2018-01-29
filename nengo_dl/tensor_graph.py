@@ -550,15 +550,15 @@ class TensorGraph(object):
 
         Parameters
         ----------
-        summaries : list of tuple or \
+        summaries : list of dict or \
                             :class:`~nengo:nengo.Connection` or \
                             :class:`~nengo:nengo.Ensemble` or \
                             :class:`~nengo:nengo.ensemble.Neurons` or \
                             ``tf.Tensor``}
             List of objects for which we want to collect data.  Object can be a
             Connection (in which case data on weights will be collected),
-            Ensemble (encoders), Neurons (biases), a tuple of
-            ``(objective, probes)`` that indicates a loss function that will
+            Ensemble (encoders), Neurons (biases), a dict of
+            ``{probe: objective}`` that indicates a loss function that will
             be tracked, or a pre-built summary tensor.
 
         Returns
