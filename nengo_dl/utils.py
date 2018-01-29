@@ -225,7 +225,7 @@ class ProgressBar(progressbar.ProgressBar):
 
     Parameters
     ----------
-    present : str
+    present : str, optional
         Description of process in present (e.g., "Simulating")
     past : str, optional
         Description of process in past (e.g., "Simulation")
@@ -240,7 +240,7 @@ class ProgressBar(progressbar.ProgressBar):
     Launches a separate thread to handle the progress bar display updates.
     """
 
-    def __init__(self, present, past=None, max_value=1, vars=None,
+    def __init__(self, present="", past=None, max_value=1, vars=None,
                  **kwargs):
 
         self.present = present
