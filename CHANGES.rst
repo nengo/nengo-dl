@@ -36,6 +36,8 @@ Release History
 - Avoid reinstalling TensorFlow if one of the nightly build packages is already
   installed
 - Lowpass synapse can now be applied to multidimensional inputs
+- TensorNodes will no longer be built into the default graph when checking
+  their output dimensionality.
 
 **Removed**
 

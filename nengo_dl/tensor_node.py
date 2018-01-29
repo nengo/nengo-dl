@@ -31,14 +31,15 @@ class TensorFuncParam(Parameter):
             raise ValidationError("TensorNode output must be a function",
                                   attr=self.name, obj=node)
 
-        t, x = tf.constant(0.0), tf.zeros((1, node.size_in))
-        args = (t, x) if node.size_in > 0 else (t,)
-        try:
-            result = func(*args)
-        except Exception as e:
-            raise ValidationError(
-                "Calling TensorNode function with arguments %s produced an "
-                "error:\n%s" % (args, e), attr=self.name, obj=node)
+        with tf.Graph().as_default():
+            t, x = tf.constant(0.0), tf.zeros((1, node.size_in))
+            args = (t, x) if node.size_in > 0 else (t,)
+            try:
+                result = func(*args)
+            except Exception as e:
+                raise ValidationError(
+                    "Calling TensorNode function with arguments %s produced "
+                    "an error:\n%s" % (args, e), attr=self.name, obj=node)
 
         if not isinstance(result, tf.Tensor):
             raise ValidationError("TensorNode function must return a Tensor",
