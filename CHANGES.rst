@@ -29,6 +29,8 @@ Release History
 - Low-level simulation input/output formats have been reworked to make them
   slightly easier to use (for users who want to bypass ``sim.run`` or
   ``sim.train`` and access the TensorFlow session directly).
+- Batch dimension will always be first (if present) when checking model
+  parameters via ``sim.data``.
 
 **Fixed**
 

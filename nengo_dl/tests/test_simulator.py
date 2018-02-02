@@ -859,7 +859,7 @@ def test_simulation_data(Simulator, seed):
     N = 17
     d = 2
 
-    gain = rng.uniform(low=0.2, high=5, size=N)
+    gain = rng.uniform(low=1, high=2, size=N)
     bias = rng.uniform(low=0.2, high=1, size=N)
     enc = rng.uniform(-1, 1, size=(N, d))
     enc /= np.linalg.norm(enc, axis=1)[:, None]
@@ -868,11 +868,11 @@ def test_simulation_data(Simulator, seed):
         u = nengo.Node([0] * d)
         a = nengo.Ensemble(N, d, gain=gain, bias=bias, encoders=enc, radius=3)
         b = nengo.Ensemble(N, d, gain=gain, bias=bias, encoders=enc * 2,
-                           radius=3)
-        b.normalize_encoders = False
+                           radius=3, normalize_encoders=False)
         conn0 = nengo.Connection(u, a)
         conn = nengo.Connection(
-            a.neurons, b, transform=rng.uniform(-1, 1, size=(d, N)))
+            a.neurons, b, transform=rng.uniform(-1, 1, size=(d, N)),
+            learning_rule_type=nengo.PES())
 
         p = nengo.Probe(b)
 
@@ -885,7 +885,8 @@ def test_simulation_data(Simulator, seed):
         assert conn0 in sim.data
         assert p in sim.data
         assert net in sim.data
-        assert len(sim.data) == 8  # 7 objects + probe connection
+        assert conn.learning_rule in sim.data
+        assert len(sim.data) == 9  # 8 objects + probe connection
         for k, k2 in zip(sim.data, sim.data.keys()):
             assert k is k2
 
@@ -894,10 +895,10 @@ def test_simulation_data(Simulator, seed):
         assert np.allclose(bias, sim.data[a].bias)
 
         # check max_rates/intercepts
-        # max_rates, intercepts = a.neuron_type.max_rates_intercepts(
-        #     gain, bias)
-        # assert np.allclose(max_rates, sim.data[a].max_rates)
-        # assert np.allclose(intercepts, sim.data[a].intercepts)
+        max_rates, intercepts = a.neuron_type.max_rates_intercepts(
+            gain, bias)
+        assert np.allclose(max_rates, sim.data[a].max_rates)
+        assert np.allclose(intercepts, sim.data[a].intercepts)
 
         # check encoders/scaled_encoders
         assert np.allclose(enc, sim.data[a].encoders)
@@ -905,15 +906,17 @@ def test_simulation_data(Simulator, seed):
                            sim.data[a].scaled_encoders)
 
         # make sure that the inferences still work with non-normalized encoders
-        if nengo.version.version_info >= (2, 4, 0):
-            assert np.allclose(enc * 2, sim.data[b].encoders)
-            assert np.allclose(gain, sim.data[b].gain)
-            assert np.allclose(bias, sim.data[b].bias)
-            assert np.allclose(enc * 2 * gain[:, None] / b.radius,
-                               sim.data[b].scaled_encoders)
+        assert np.allclose(enc * 2, sim.data[b].encoders)
+        assert np.allclose(gain, sim.data[b].gain)
+        assert np.allclose(bias, sim.data[b].bias)
+        assert np.allclose(enc * 2 * gain[:, None] / b.radius,
+                           sim.data[b].scaled_encoders)
 
         # check connection weights
         assert np.allclose(conn.transform, sim.data[conn].weights)
+
+        # check that batch dimension eliminated
+        assert sim.data[conn].weights.shape == (d, N)
 
         # check that values can be updated live
         sig = sim.model.sig[a]['encoders']
@@ -925,6 +928,10 @@ def test_simulation_data(Simulator, seed):
         assert np.allclose(sim.data[a].scaled_encoders, 1)
         assert np.allclose(sim.data[a].gain, np.sqrt(2) * a.radius)
         assert np.allclose(sim.data[a].encoders, 1 / np.sqrt(2))
+
+    # check minibatch dimension moved to front
+    with Simulator(net, minibatch_size=3) as sim:
+        assert sim.data[conn].weights.shape == (3, d, N)
 
     # reverts back to init after simulator close, and warns
     with pytest.warns(UserWarning):

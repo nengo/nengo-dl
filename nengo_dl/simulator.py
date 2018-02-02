@@ -1120,8 +1120,8 @@ class SimulationData(collections.Mapping):
             bias = self.get_param(obj, "bias")
 
             # infer the related values (rolled into scaled_encoders)
-            gain = (obj.radius * np.linalg.norm(scaled_encoders, axis=1) /
-                    np.linalg.norm(data.encoders, axis=1))
+            gain = (obj.radius * np.linalg.norm(scaled_encoders, axis=-1) /
+                    np.linalg.norm(data.encoders, axis=-1))
             encoders = obj.radius * scaled_encoders / gain[:, None]
 
             # figure out max_rates/intercepts from neuron model
@@ -1183,10 +1183,17 @@ class SimulationData(collections.Mapping):
             # if sig isn't in sig_map then that means it isn't used anywhere
             # in the simulation (and therefore never changes), so we can
             # safely return the static build value
-            return getattr(self.sim.model.params[obj], attr)
+            param = getattr(self.sim.model.params[obj], attr)
+        else:
+            param = self.sim.sess.run(self.sim.tensor_graph.get_tensor(sig))
 
-        param = self.sim.tensor_graph.get_tensor(sig)
-        return self.sim.sess.run(param)
+        if sig.minibatched:
+            if not self.minibatched:
+                param = param[..., 0]
+            else:
+                param = np.moveaxis(param, -1, 0)
+
+        return param
 
     def _attr_map(self, obj, attr):
         """Maps from ``sim.data[obj].attr`` to the equivalent
