@@ -21,6 +21,11 @@ Release History
 0.6.1 (unreleased)
 ------------------
 
+**Added**
+
+- Added TensorFlow implementation for ``nengo.SpikingRectifiedLinear`` neuron
+  type.
+
 **Changed**
 
 - Optimizer variables (e.g., momentum values) will only be initialized the

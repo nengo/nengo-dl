@@ -1,7 +1,8 @@
 import logging
 
 from nengo.builder.neurons import SimNeurons
-from nengo.neurons import RectifiedLinear, Sigmoid, LIF, LIFRate
+from nengo.neurons import (RectifiedLinear, SpikingRectifiedLinear, Sigmoid,
+                           LIF, LIFRate)
 import numpy as np
 import tensorflow as tf
 
@@ -25,7 +26,8 @@ class SimNeuronsBuilder(OpBuilder):
         The neuron types that have a custom implementation
     """
 
-    TF_NEURON_IMPL = (RectifiedLinear, Sigmoid, LIF, LIFRate, SoftLIFRate)
+    TF_NEURON_IMPL = (RectifiedLinear, SpikingRectifiedLinear, Sigmoid,
+                      LIF, LIFRate, SoftLIFRate)
 
     def __init__(self, ops, signals):
         super(SimNeuronsBuilder, self).__init__(ops, signals)
@@ -44,7 +46,10 @@ class SimNeuronsBuilder(OpBuilder):
 
             if neuron_type == RectifiedLinear:
                 self.built_neurons = RectifiedLinearBuilder(ops, signals)
-            if neuron_type == Sigmoid:
+            elif neuron_type == SpikingRectifiedLinear:
+                self.built_neurons = SpikingRectifiedLinearBuilder(
+                    ops, signals)
+            elif neuron_type == Sigmoid:
                 self.built_neurons = SigmoidBuilder(ops, signals)
             elif neuron_type == LIFRate:
                 self.built_neurons = LIFRateBuilder(ops, signals)
@@ -158,9 +163,47 @@ class RectifiedLinearBuilder(OpBuilder):
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
 
+        # TODO: we can remove this check if we upgrade nengo dependency to
+        # >= 2.6.1
+        if hasattr(ops[0].neurons, "amplitude"):
+            if all(op.neurons.amplitude == 1 for op in ops):
+                self.amplitude = None
+            else:
+                self.amplitude = get_constant(ops, "amplitude", signals.dtype)
+        else:
+            self.amplitude = None
+
     def build_step(self, signals):
         J = signals.gather(self.J_data)
-        signals.scatter(self.output_data, tf.nn.relu(J))
+        out = tf.nn.relu(J)
+        if self.amplitude is not None:
+            out *= self.amplitude
+        signals.scatter(self.output_data, out)
+
+
+class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
+    """Build a group of :class:`~nengo:nengo.SpikingRectifiedLinear` neuron 
+       operators."""
+
+    def __init__(self, ops, signals):
+        super(SpikingRectifiedLinearBuilder, self).__init__(ops, signals)
+
+        self.voltage_data = signals.combine([op.states[0] for op in ops])
+
+        self.alpha = 1 if self.amplitude is None else self.amplitude
+        self.alpha /= signals.dt
+
+    def build_step(self, signals):
+        J = signals.gather(self.J_data)
+        voltage = signals.gather(self.voltage_data)
+
+        voltage += tf.nn.relu(J) * signals.dt
+        n_spikes = tf.floor(voltage)
+
+        signals.scatter(self.output_data, self.alpha * n_spikes)
+
+        voltage -= n_spikes
+        signals.scatter(self.voltage_data, voltage)
 
 
 class SigmoidBuilder(OpBuilder):
