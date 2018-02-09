@@ -529,11 +529,13 @@ def test_tensorboard(Simulator, tmpdir):
 
     # check that training summaries are output properly
     with Simulator(net, tensorboard=str(tmpdir)) as sim:
+        with tf.device("/cpu:0"):
+            summ = tf.summary.scalar("step_var", sim.training_step)
+
         sim.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1)),
                                               p2: np.zeros((1, 10, 1))},
                   tf.train.GradientDescentOptimizer(0.0),
-                  summaries=["loss", b, b.neurons, c,
-                             tf.summary.scalar("step_var", sim.training_step)],
+                  summaries=["loss", b, b.neurons, c, summ],
                   n_epochs=3)
 
     event_file = os.path.join(
@@ -950,10 +952,12 @@ def test_learning_rate_schedule(Simulator):
 
     with Simulator(net) as sim:
         vals = [1.0, 0.1, 0.001]
-        l_rate = tf.train.piecewise_constant(
-            sim.training_step,
-            [tf.constant(4, dtype=tf.int64), tf.constant(9, dtype=tf.int64)],
-            vals)
+        with tf.device("/cpu:0"):
+            l_rate = tf.train.piecewise_constant(
+                sim.training_step,
+                [tf.constant(4, dtype=tf.int64),
+                 tf.constant(9, dtype=tf.int64)],
+                vals)
         opt = tf.train.GradientDescentOptimizer(l_rate)
 
         for i in range(3):

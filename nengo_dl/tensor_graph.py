@@ -25,7 +25,7 @@ def with_self(func):
     wrapped method will be added to the TensorGraph object's graph."""
 
     def func_with_self(self, *args, **kwargs):
-        with self.graph.as_default(), tf.device(self.device):
+        with self.graph.as_default(), self.graph.device(self.device):
             return func(self, *args, **kwargs)
 
     return func_with_self

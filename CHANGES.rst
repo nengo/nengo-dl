@@ -31,6 +31,8 @@ Release History
   ``sim.train`` and access the TensorFlow session directly).
 - Batch dimension will always be first (if present) when checking model
   parameters via ``sim.data``.
+- TensorFlow ops created within the Simulator context will now default to
+  the same device as the Simulator.
 
 **Fixed**
 

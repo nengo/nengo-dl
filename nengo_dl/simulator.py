@@ -621,7 +621,8 @@ class Simulator(object):
             if include_local:
                 vars.extend(tf.local_variables())
 
-            path = tf.train.Saver(vars).save(self.sess, path)
+            with tf.device("/cpu:0"):
+                path = tf.train.Saver(vars).save(self.sess, path)
 
         logger.info("Model parameters saved to %s", path)
 
@@ -649,7 +650,8 @@ class Simulator(object):
             if include_local:
                 vars.extend(tf.local_variables())
 
-            tf.train.Saver(vars).restore(self.sess, path)
+            with tf.device("/cpu:0"):
+                tf.train.Saver(vars).restore(self.sess, path)
 
         logger.info("Model parameters loaded from %s", path)
 
@@ -1035,10 +1037,14 @@ class Simulator(object):
 
     def __enter__(self):
         self._graph_context = self.tensor_graph.graph.as_default()
+        self._device_context = self.tensor_graph.graph.device(
+            self.tensor_graph.device)
         self._graph_context.__enter__()
+        self._device_context.__enter__()
         return self
 
     def __exit__(self, *args):
+        self._device_context.__exit__(*args)
         self._graph_context.__exit__(*args)
         self.close()
 
