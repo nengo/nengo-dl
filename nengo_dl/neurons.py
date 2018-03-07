@@ -1,6 +1,5 @@
 from nengo.neurons import LIFRate
 from nengo.params import NumberParam
-from nengo.version import version_info
 import numpy as np
 
 
@@ -45,9 +44,6 @@ class SoftLIFRate(LIFRate):
         super(SoftLIFRate, self).__init__(**lif_args)
         self.sigma = sigma
         self._epsilon = 1e-15
-
-        if version_info < (2, 6, 1):
-            self.amplitude = 1.0
 
     @property
     def _argreprs(self):
