@@ -110,7 +110,7 @@ tensorboard
 
 This can be used to specify an output directory if you would like to export
 data from the simulation in a format that can be visualized in
-`TensorBoard <https://www.tensorflow.org/get_started/summaries_and_tensorboard>`_.
+`TensorBoard <https://www.tensorflow.org/programmers_guide/summaries_and_tensorboard>`_.
 
 To view the collected data, run the command
 
@@ -122,7 +122,7 @@ To view the collected data, run the command
 then open a web browser and navigate to http://localhost:6006.
 
 By default the TensorBoard output will only contain a `visualization of the
-TensorFlow graph <https://www.tensorflow.org/get_started/graph_viz>`_
+TensorFlow graph <https://www.tensorflow.org/programmers_guide/graph_viz>`_
 constructed for this Simulator.  However, TensorBoard can also be used to track
 various aspects of the simulation throughout the training process; see
 :ref:`the sim.train documentation <summaries>` for details.

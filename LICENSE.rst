@@ -41,13 +41,13 @@ To build the documentation, NengoDL uses:
   `Tumbolia Public License <https://github.com/davisp/ghp-import/blob/master/LICENSE>`__
 * `Jupyter <http://jupyter.org>`_ - Used under
   `BSD license <https://github.com/jupyter/jupyter/blob/master/LICENSE>`__
-* `matplotlib <http://matplotlib.org/>`_ - Used under
-  `modified PSF license <http://matplotlib.org/users/license.html>`__
+* `matplotlib <https://matplotlib.org/>`_ - Used under
+  `modified PSF license <https://matplotlib.org/users/license.html>`__
 * `nbsphinx <https://github.com/spatialaudio/nbsphinx>`_ - Used under
   `MIT license <https://github.com/spatialaudio/nbsphinx/blob/master/LICENSE>`__
 * `numpydoc <https://github.com/numpy/numpydoc>`_ - Used under
   `BSD license <https://github.com/numpy/numpydoc/blob/master/LICENSE.txt>`__
-* `Pillow <https://pillow.readthedocs.io/>`_ - Used under
+* `Pillow <https://pillow.readthedocs.io/en/latest>`_ - Used under
   `PIL license <https://github.com/python-pillow/Pillow/blob/master/LICENSE>`__
 * `Sphinx <http://www.sphinx-doc.org/en/stable/>`_ - Used under
   `BSD license <https://github.com/sphinx-doc/sphinx/blob/master/LICENSE>`__
@@ -62,8 +62,8 @@ To run the unit tests, NengoDL uses:
   `Apache license <https://bitbucket.org/ned/coveragepy/src/default/NOTICE.txt?fileviewer=file-view-default>`__
 * `Flake8 <http://flake8.pycqa.org/en/latest/>`_ - Used under
   `MIT license <https://gitlab.com/pycqa/flake8/blob/master/LICENSE>`__
-* `matplotlib <http://matplotlib.org/>`_ - Used under
-  `modified PSF license <http://matplotlib.org/users/license.html>`__
+* `matplotlib <https://matplotlib.org/>`_ - Used under
+  `modified PSF license <https://matplotlib.org/users/license.html>`__
 * `nbval <https://github.com/computationalmodelling/nbval>`_ - Used under
   `BSD license <https://github.com/computationalmodelling/nbval/blob/master/LICENSE>`__
 * `pytest <https://docs.pytest.org/en/latest/>`_ - Used under

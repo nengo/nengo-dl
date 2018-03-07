@@ -223,8 +223,8 @@ summaries
 
 It is often useful to view information about how aspects of a model are
 changing over the course of training.  TensorFlow has created `TensorBoard
-<https://www.tensorflow.org/get_started/summaries_and_tensorboard>`_ to help
-visualize this kind of data, and the ``summaries`` argument can be used to
+<https://www.tensorflow.org/programmers_guide/summaries_and_tensorboard>`_ to
+help visualize this kind of data, and the ``summaries`` argument can be used to
 specify the model data that you would like to export for TensorBoard.
 
 It is specified as a list of objects for which we want to collect
@@ -254,7 +254,7 @@ running you can view the data by opening a web browser and navigating to
 http://localhost:6006.
 
 For details on the usage of TensorBoard, consult the `TensorFlow documentation
-<https://www.tensorflow.org/get_started/summaries_and_tensorboard>`__.
+<https://www.tensorflow.org/programmers_guide/summaries_and_tensorboard>`__.
 However, as a brief summary, you will find plots showing the loss values over
 the course of training in the ``Scalars`` tab at the top, and plots showing the
 distributions of weights/encoders/biases over time in the ``Distributions`` or
