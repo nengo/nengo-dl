@@ -322,8 +322,11 @@ class SparseDotIncBuilder(DotIncBuilder):
         assert A.get_shape()[0] == self.sparse_indices.get_shape()[0]
 
         # approach 1: using sparse_tensor_dense_matmul
-        dot = gen_sparse_ops._sparse_tensor_dense_mat_mul(
-            self.sparse_indices, A, self.A_shape, X)
+        if tf.__version__ < "1.7.0":
+            mat_mul = gen_sparse_ops._sparse_tensor_dense_mat_mul
+        else:
+            mat_mul = gen_sparse_ops.sparse_tensor_dense_mat_mul
+        dot = mat_mul(self.sparse_indices, A, self.A_shape, X)
 
         # approach 2: matmul(a_is_sparse)
         # sparse_A = tf.scatter_nd(self.sparse_indices, A, self.A_shape)

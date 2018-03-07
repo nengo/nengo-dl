@@ -1,7 +1,7 @@
 import copy
 import traceback
 
-from tensorflow.python.framework import dtypes, ops
+from tensorflow.python.framework import dtypes, ops, versions
 from tensorflow.python.ops import (math_ops, array_ops, data_flow_ops,
                                    state_ops, gen_state_ops)
 
@@ -73,14 +73,19 @@ def patch_state_grads():
                 array_ops.expand_dims(indices, 1), updates_grad,
                 var.get_shape())
         else:
-            var_grad = gen_state_ops._temporary_variable(
-                grad.get_shape(), grad.dtype)
+            if versions.__version__ < "1.7.0":
+                temp_var = gen_state_ops._temporary_variable
+                destroy_temp_var = gen_state_ops._destroy_temporary_variable
+            else:
+                temp_var = gen_state_ops.temporary_variable
+                destroy_temp_var = gen_state_ops.destroy_temporary_variable
+
+            var_grad = temp_var(grad.get_shape(), grad.dtype)
             var_name = var_grad.op.name
             var_grad = state_ops.assign(var_grad, grad)
             var_grad = state_ops.scatter_update(
                 var_grad, indices, array_ops.zeros_like(updates))
-            var_grad = gen_state_ops._destroy_temporary_variable(var_grad,
-                                                                 var_name)
+            var_grad = destroy_temp_var(var_grad, var_name)
 
         return var_grad, None, updates_grad
 

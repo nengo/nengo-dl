@@ -317,8 +317,11 @@ class LinearFilterBuilder(OpBuilder):
         signals.scatter(self.output_data, output)
 
         # update state
-        r = gen_sparse_ops._sparse_tensor_dense_mat_mul(
-            self.A_indices, self.A, self.A_shape, state)
+        if tf.__version__ < "1.7.0":
+            mat_mul = gen_sparse_ops._sparse_tensor_dense_mat_mul
+        else:
+            mat_mul = gen_sparse_ops.sparse_tensor_dense_mat_mul
+        r = mat_mul(self.A_indices, self.A, self.A_shape, state)
 
         with tf.control_dependencies([output]):
             state = r + tf.scatter_nd(self.offsets, input,
