@@ -2,6 +2,7 @@ from collections import OrderedDict, defaultdict
 import os
 
 import nengo
+from nengo.dists import Uniform
 from nengo.exceptions import (SimulationError, SimulatorClosed, ReadonlyError,
                               ValidationError)
 import numpy as np
@@ -1003,3 +1004,47 @@ def test_multiple_objective(Simulator, seed):
                   objective=objective, n_epochs=10)
         assert np.allclose(sim.data[c].bias, c_bias)
         assert not np.allclose(sim.data[b].bias, b_bias)
+
+
+def test_get_nengo_params(Simulator, seed):
+    with nengo.Network(seed=seed) as net:
+        a = nengo.Ensemble(12, 3, label="a")
+        b = nengo.Ensemble(10, 4, label="b")
+        n = nengo.Node([1])
+        c = nengo.Connection(a.neurons[:5], b[:2], transform=Uniform(-1, 1),
+                             label="c")
+        d = nengo.Connection(a, b.neurons, function=lambda x: np.ones(5),
+                             transform=Uniform(-1, 1), label="d")
+        e = nengo.Connection(n, b, transform=Uniform(-1, 1), label="e")
+        f = nengo.Ensemble(5, 1, label="a")
+        p = nengo.Probe(b.neurons)
+
+    with Simulator(net, seed=seed) as sim:
+        # check that we get an error for non-ensemble/connection objects
+        with pytest.raises(ValueError):
+            sim.get_nengo_params(n)
+
+        # check that we get an error for duplicate labels
+        with pytest.raises(ValueError):
+            sim.get_nengo_params([a, f], as_dict=True)
+
+        # check that single objects are returned as single dicts
+        params = sim.get_nengo_params(d)
+        assert params["transform"] == 1
+
+        params = sim.get_nengo_params([a.neurons, b, c, d, e], as_dict=True)
+        sim.run_steps(100)
+
+    with nengo.Network(seed=seed + 1) as net:
+        a2 = nengo.Ensemble(12, 3, **params["a"])
+        b2 = nengo.Ensemble(10, 4, **params["b"])
+        n2 = nengo.Node([1])
+        nengo.Connection(a2.neurons[:5], b2[:2], **params["c"])
+        nengo.Connection(a2, b2.neurons, **params["d"])
+        nengo.Connection(n2, b2, **params["e"])
+        p2 = nengo.Probe(b2.neurons)
+
+    with Simulator(net, seed=seed) as sim2:
+        sim2.run_steps(100)
+
+        assert np.allclose(sim.data[p], sim2.data[p2])

@@ -21,6 +21,10 @@ Release History
 0.6.2 (unreleased)
 ------------------
 
+**Added**
+
+- Added ``sim.get_nengo_params`` function to more easily extract
+  model parameters for reuse when building different models.
 
 0.6.1 (March 7, 2018)
 ---------------------

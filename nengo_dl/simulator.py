@@ -13,9 +13,11 @@ from nengo import Process, Ensemble, Connection, Probe
 from nengo.builder import Model
 from nengo.builder.connection import BuiltConnection
 from nengo.builder.ensemble import BuiltEnsemble
+from nengo.ensemble import Neurons
 from nengo.exceptions import (
     ReadonlyError, SimulatorClosed, NengoWarning, SimulationError,
     ValidationError)
+from nengo.solvers import NoSolver
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops import gradient_checker
@@ -609,6 +611,12 @@ class Simulator(object):
         include_local : bool, optional
             If True (default False), save local (non-trainable) network
             variables
+
+        Notes
+        -----
+        This function is useful for saving/loading entire models; for
+        saving/loading individual objects within a model, see
+        :meth:`.get_nengo_params`.
         """
         if self.closed:
             raise SimulationError("Simulation has been closed, cannot save "
@@ -638,6 +646,12 @@ class Simulator(object):
         include_local : bool, optional
             If True (default False), load local (non-trainable) network
             variables
+
+        Notes
+        -----
+        This function is useful for saving/loading entire models; for
+        saving/loading individual objects within a model, see
+        :meth:`.get_nengo_params`.
         """
         if self.closed:
             raise SimulationError("Simulation has been closed, cannot load "
@@ -654,6 +668,100 @@ class Simulator(object):
                 tf.train.Saver(vars).restore(self.sess, path)
 
         logger.info("Model parameters loaded from %s", path)
+
+    def get_nengo_params(self, nengo_objs, as_dict=False):
+        """Extract model parameters in a form that can be used to initialize
+        Nengo objects in a different model.
+
+        For example:
+
+        .. code-block:: python
+
+            with nengo.Network() as net:
+                a = nengo.Ensemble(10, 1)
+                b = nengo.Ensemble(10, 1)
+                c = nengo.Connection(a, b)
+
+            with nengo_dl.Simulator(net) as sim:
+                # < do some optimization >
+                params = sim.get_nengo_params([a, b, c])
+
+            with nengo.Network() as new_net:
+                # < build some other network >
+
+                # now we want to insert two connected ensembles with the same
+                # parameters as our previous network:
+                d = nengo.Ensemble(10, 1, **params[0])
+                e = nengo.Ensemble(10, 1, **params[1])
+                f = nengo.Connection(d, e, **params[2])
+
+        Parameters
+        ----------
+        nengo_objs : (list of) :class:`~nengo:nengo.Ensemble` or \
+                               :class:`~nengo:nengo.Connection`
+            A single object or list of objects for which we want to get the
+            parameters.
+        as_dict : bool, optional
+            If True, return the values as a dictionary keyed by object label,
+            instead of a list (the default).  Note that in this case labels
+            must be unique.
+
+        Returns
+        -------
+        (list or dict) of dicts
+            kwarg dicts corresponding to ``nengo_objs`` (passing these
+            dicts as kwargs when creating new Nengo objects will result in a
+            new object with the same parameters as the source object).  A
+            single kwarg dict if a single object was passed in, or a list
+            (dict if ``as_dict=True``) of kwargs corresponding to multiple
+            input objects.
+        """
+
+        if isinstance(nengo_objs, (list, tuple)):
+            scalar = False
+        else:
+            scalar = True
+            nengo_objs = [nengo_objs]
+
+        # convert neurons to the parent ensemble
+        nengo_objs = [obj.ensemble if isinstance(obj, Neurons) else obj
+                      for obj in nengo_objs]
+
+        params = []
+        for obj in nengo_objs:
+            data = self.data[obj]
+            if isinstance(obj, Connection):
+                if isinstance(obj.pre_obj, Ensemble):
+                    params.append({
+                        "solver": NoSolver(data.weights.T, weights=False),
+                        "function": lambda x, data=data: np.zeros(
+                            data.weights.shape[0]),
+                        "transform": 1})
+                else:
+                    params.append({"transform": data.weights})
+            elif isinstance(obj, Ensemble):
+                params.append({"gain": data.gain, "bias": data.bias,
+                               "encoders": data.encoders})
+            else:
+                raise ValueError(
+                    "Can only get Nengo parameters for Ensembles or "
+                    "Connections")
+
+        if scalar:
+            return params[0]
+
+        if as_dict:
+            param_dict = {}
+            for obj, p in zip(nengo_objs, params):
+                if obj.label in param_dict:
+                    raise ValueError(
+                        "Duplicate label ('%s') detected; cannot return "
+                        "parameters with as_dict=True" % obj.label)
+                else:
+                    param_dict[obj.label] = p
+            params = param_dict
+
+        return params
 
     def check_gradients(self, outputs=None, atol=1e-5, rtol=1e-3):
         """Perform gradient checks for the network (used to verify that the
