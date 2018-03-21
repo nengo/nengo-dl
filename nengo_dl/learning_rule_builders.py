@@ -1,12 +1,10 @@
 import warnings
 
-from nengo import Ensemble, Lowpass
+from nengo import Lowpass
 from nengo.builder import Signal
 from nengo.builder import Builder as NengoBuilder
 from nengo.builder.learning_rules import SimBCM, SimOja, SimVoja, get_post_ens
-from nengo.builder.operator import Reset, DotInc, ElementwiseInc, Copy
-from nengo.connection import Neurons
-from nengo.exceptions import BuildError
+from nengo.builder.operator import Operator, Reset, DotInc, Copy
 from nengo.learning_rules import PES
 import numpy as np
 import tensorflow as tf
@@ -143,22 +141,89 @@ class SimVojaBuilder(OpBuilder):
         signals.scatter(self.output_data, update)
 
 
-def build_pes(model, pes, rule):
-    """Builds a :class:`~nengo:nengo.PES` object into a model.
+class SimPES(Operator):
+    r"""Calculate connection weight change according to the PES rule.
 
-    A re-implementation of the Nengo PES rule builder, so that we can avoid
-    slicing the encoders.
+    Implements the PES learning rule of the form
 
-    See :func:`~nengo:nengo.builder.learning_rules.build_pes`.
+    .. math:: \Delta \omega_{ij} = \frac{\kappa}{n} e_j a_i
+
+    where
+
+    * :math:`\kappa` is a scalar learning rate,
+    * :math:`n` is the number of presynaptic neurons
+    * :math:`e_j` is the error for the jth output dimension, and
+    * :math:`a_i` is the activity of a presynaptic neuron.
 
     Parameters
     ----------
-    model : :class:`~nengo:nengo.builder.Model`
+    pre_filtered : Signal
+        The presynaptic activity, :math:`a_i`.
+    error : Signal
+        The error signal, :math:`e_j`.
+    delta : Signal
+        The synaptic weight change to be applied, :math:`\Delta \omega_{ij}`.
+    learning_rate : float
+        The scalar learning rate, :math:`\kappa`.
+    tag : str, optional (Default: None)
+        A label associated with the operator, for debugging purposes.
+
+    Attributes
+    ----------
+    pre_filtered : Signal
+        The presynaptic activity, :math:`a_i`.
+    error : Signal
+        The error signal, :math:`e_j`.
+    delta : Signal
+        The synaptic weight change to be applied, :math:`\Delta \omega_{ij}`.
+    learning_rate : float
+        The scalar learning rate, :math:`\kappa`.
+    tag : str, optional (Default: None)
+        A label associated with the operator, for debugging purposes.
+
+    Notes
+    -----
+    1. sets ``[delta]``
+    2. incs ``[]``
+    3. reads ``[pre_filtered, error]``
+    4. updates ``[]``
+    """
+
+    def __init__(self, pre_filtered, error, delta, learning_rate, tag=None):
+        super(SimPES, self).__init__(tag=tag)
+
+        self.pre_filtered = pre_filtered
+        self.error = error
+        self.delta = delta
+        self.learning_rate = learning_rate
+
+        # TODO: change this to an update when (if) we make that change in nengo
+        self.sets = [delta]
+        self.incs = []
+        self.reads = [pre_filtered, error]
+        self.updates = []
+
+    def _descstr(self):
+        return 'pre=%s, error=%s -> %s' % (
+            self.pre_filtered, self.error, self.delta)
+
+
+def build_pes(model, pes, rule):
+    """Builds a `.PES` object into a model.
+
+    Parameters
+    ----------
+    model : Model
         The model to build into.
-    pes : :class:`~nengo:nengo.PES`
+    pes : PES
         Learning rule type to build.
-    rule : :class:`~nengo:nengo.connection.LearningRule`
+    rule : LearningRule
         The learning rule object corresponding to the neuron type.
+
+    Notes
+    -----
+    Does not modify ``model.params[]`` and can therefore be called
+    more than once with the same `.PES` instance.
     """
 
     conn = rule.connection
@@ -170,58 +235,83 @@ def build_pes(model, pes, rule):
 
     acts = model.build(Lowpass(pes.pre_tau), model.sig[conn.pre_obj]['out'])
 
-    # Compute the correction, i.e. the scaled negative error
-    correction = Signal(np.zeros(error.shape), name="PES:correction")
-    model.add_op(Reset(correction))
-
-    # correction = -learning_rate * (dt / n_neurons) * error
-    n_neurons = (conn.pre_obj.n_neurons if isinstance(conn.pre_obj, Ensemble)
-                 else conn.pre_obj.size_in)
-    lr_sig = Signal(-pes.learning_rate * model.dt / n_neurons,
-                    name="PES:learning_rate")
-    model.add_op(ElementwiseInc(lr_sig, error, correction, tag="PES:correct"))
-
     if not conn.is_decoded:
-        # NOTE: only this `if` block is changed from the regular nengo PES
-        # builder
+        # multiply error by post encoders to get a per-neuron error
 
         post = get_post_ens(conn)
-        weights = model.sig[conn]['weights']
         encoders = model.sig[post]['encoders']
 
         if conn.post_obj is not conn.post:
-            # in order to avoid slicing encoders, we pad `correction` out to
-            # the full base dimensionality and then do the dotinc with the full
-            # encoder matrix
-            padded_correction = Signal(np.zeros(encoders.shape[1]))
-            model.add_op(Copy(correction, padded_correction,
+            # in order to avoid slicing encoders along an axis > 0, we pad
+            # `error` out to the full base dimensionality and then do the
+            # dotinc with the full encoder matrix
+            padded_error = Signal(np.zeros(encoders.shape[1]))
+            model.add_op(Copy(error, padded_error,
                               dst_slice=conn.post_slice))
         else:
-            padded_correction = correction
+            padded_error = error
 
-        # error = dot(encoders, correction)
-        local_error = Signal(np.zeros(weights.shape[0]), name="PES:encoded")
+        # error = dot(encoders, error)
+        local_error = Signal(np.zeros(post.n_neurons), name="PES:encoded")
         model.add_op(Reset(local_error))
-        model.add_op(DotInc(encoders, padded_correction, local_error,
+        model.add_op(DotInc(encoders, padded_error, local_error,
                             tag="PES:encode"))
-    elif isinstance(conn.pre_obj, (Ensemble, Neurons)):
-        local_error = correction
-    else:  # pragma: no cover
-        raise BuildError("'pre' object '%s' not suitable for PES learning"
-                         % conn.pre_obj)
+    else:
+        local_error = error
 
-    # delta = local_error * activities
-    model.add_op(Reset(model.sig[rule]['delta']))
-    model.add_op(ElementwiseInc(
-        local_error.column(), acts.row(), model.sig[rule]['delta'],
-        tag="PES:Inc Delta"))
+    model.operators.append(SimPES(acts, local_error, model.sig[rule]['delta'],
+                                  pes.learning_rate))
 
     # expose these for probes
     model.sig[rule]['error'] = error
-    model.sig[rule]['correction'] = correction
     model.sig[rule]['activities'] = acts
 
 
+PES.probeable = ('error', 'activities', 'delta')
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=UserWarning)
     NengoBuilder.register(PES)(build_pes)
+
+
+@Builder.register(SimPES)
+class SimPESBuilder(OpBuilder):
+    """Build a group of :class:`.SimPES` operators."""
+
+    def __init__(self, ops, signals):
+        super(SimPESBuilder, self).__init__(ops, signals)
+
+        # we want to compute the outer product between pre_filtered, with shape
+        # (n_ops * pre_d, mini), and error, with shape (n_ops * error_d, mini).
+
+        # we tile the pre data to shape (n_ops * error_d * pre_d, mini), and
+        # then reshape to `(n_ops * error_d, pre_d, mini)`. then we reshape
+        # error to `(n_ops * error_d, 1, mini`). so then when we multiply
+        # them together we'll get the outer product error_d x pre_d that
+        # we want.
+
+        self.error_data = signals.combine([op.error for op in ops])
+
+        self.pre_data = signals.combine(
+            [op.pre_filtered for op in ops for _ in range(op.error.shape[0])],
+            load_indices=False)
+        self.pre_data = self.pre_data.reshape(
+            (self.error_data.shape[0], ops[0].pre_filtered.shape[0]))
+        self.pre_data.load_indices()
+
+        self.alpha = tf.constant(
+            [[[-op.learning_rate * signals.dt_val /
+               op.pre_filtered.shape[0]]]
+             for op in ops for _ in range(op.error.shape[0])],
+            dtype=signals.dtype)
+
+        self.output_data = signals.combine([op.delta for op in ops])
+
+    def build_step(self, signals):
+        pre_filtered = signals.gather(self.pre_data)
+        error = signals.gather(self.error_data)
+
+        error = tf.expand_dims(error, 1)
+
+        update = self.alpha * error * pre_filtered
+
+        signals.scatter(self.output_data, update)

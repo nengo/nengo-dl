@@ -130,7 +130,8 @@ def mergeable(op, chosen_ops):
         # point trying to execute all those functions at once, because they're
         # already integrated into the TensorFlow graph.
         return False
-    elif isinstance(op, (SimVoja, SimOja, SimBCM)):
+    elif isinstance(op, (learning_rule_builders.SimPES, SimVoja, SimOja,
+                         SimBCM)):
         # pre inputs must have the same dimensionality so that we can broadcast
         # them when computing the outer product
         attr = ("pre_decoded" if isinstance(op, SimVoja) else

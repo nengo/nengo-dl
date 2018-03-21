@@ -6,10 +6,15 @@ import numpy as np
 import pytest
 
 from nengo_dl import configure_settings, graph_optimizer
+from nengo_dl.learning_rule_builders import SimPES
 
 
-@pytest.mark.parametrize("rule", (nengo.Voja, nengo.Oja, nengo.BCM))
-def test_merged_learning(Simulator, rule, seed):
+@pytest.mark.parametrize("rule, weights", [(nengo.Voja, False),
+                                           (nengo.Oja, True),
+                                           (nengo.BCM, True),
+                                           (nengo.PES, True),
+                                           (nengo.PES, False)])
+def test_merged_learning(Simulator, rule, weights, seed):
     # a slightly more complicated network with mergeable learning rules, to
     # make sure that works OK
     dimensions = 2
@@ -24,10 +29,10 @@ def test_merged_learning(Simulator, rule, seed):
 
         conn0 = nengo.Connection(
             a, c, learning_rule_type=rule(),
-            solver=nengo.solvers.LstsqL2(weights=rule != nengo.Voja))
+            solver=nengo.solvers.LstsqL2(weights=weights))
         conn1 = nengo.Connection(
             b, d, learning_rule_type=rule(),
-            solver=nengo.solvers.LstsqL2(weights=rule != nengo.Voja))
+            solver=nengo.solvers.LstsqL2(weights=weights))
 
         p0 = nengo.Probe(conn0.learning_rule, "delta")
         p1 = nengo.Probe(conn1.learning_rule, "delta")
@@ -39,7 +44,7 @@ def test_merged_learning(Simulator, rule, seed):
 
     with Simulator(net) as sim:
         build_type = {nengo.Voja: SimVoja, nengo.Oja: SimOja,
-                      nengo.BCM: SimBCM}
+                      nengo.BCM: SimBCM, nengo.PES: SimPES}
 
         assert len([x for x in sim.tensor_graph.plan
                     if type(x[0]) == build_type[rule]]) == 1

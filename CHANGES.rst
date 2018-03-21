@@ -26,6 +26,10 @@ Release History
 - Added ``sim.get_nengo_params`` function to more easily extract
   model parameters for reuse when building different models.
 
+**Changed**
+
+- Improved speed of PES implementation by adding a custom operator.
+
 0.6.1 (March 7, 2018)
 ---------------------
 
