@@ -815,8 +815,7 @@ class Simulator(object):
         elif isinstance(outputs, tf.Tensor):
             outputs = [outputs]
         else:
-            outputs = [
-                self.tensor_graph.probe_arrays[p] + 0 for p in outputs]
+            outputs = [self.tensor_graph.probe_arrays[p] + 0 for p in outputs]
 
         # check gradient wrt inp
         for node, inp in self.tensor_graph.input_ph.items():

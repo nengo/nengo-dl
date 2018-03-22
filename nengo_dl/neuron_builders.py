@@ -268,20 +268,24 @@ class LIFBuilder(LIFRateBuilder):
         voltage = signals.gather(self.voltage_data)
         refractory = signals.gather(self.refractory_data)
 
-        refractory -= signals.dt
         delta_t = tf.clip_by_value(signals.dt - refractory, self.zero,
                                    signals.dt)
 
-        voltage -= (J - voltage) * tf.expm1(-delta_t / self.tau_rc)
+        dV = (voltage - J) * tf.expm1(-delta_t / self.tau_rc)
+        voltage += dV
 
         spiked = voltage > self.one
         spikes = tf.cast(spiked, signals.dtype) * self.amplitude
         signals.scatter(self.output_data, spikes)
 
-        t_spike = (self.tau_ref + signals.dt +
-                   self.tau_rc * tf.log1p((self.one - voltage) /
-                                          (J - self.one)))
-        refractory = tf.where(spiked, t_spike, refractory)
+        partial_ref = -self.tau_rc * tf.log1p((self.one - voltage) /
+                                              (J - self.one))
+        # FastLIF version (linearly approximate spike time when calculating
+        # remaining refractory period)
+        # partial_ref = signals.dt * (voltage - self.one) / dV
+
+        refractory = tf.where(spiked, self.tau_ref - partial_ref,
+                              refractory - signals.dt)
 
         signals.mark_gather(self.J_data)
         signals.scatter(self.refractory_data, refractory)
