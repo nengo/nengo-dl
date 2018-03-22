@@ -1,6 +1,7 @@
 import logging
 import warnings
 
+from nengo import builder
 from nengo.exceptions import BuildError
 import tensorflow as tf
 
@@ -161,3 +162,25 @@ class OpBuilder(object):  # pragma: no cover
             Seeded random number generator
         """
         pass
+
+
+class NengoBuilder(builder.Builder):
+    """Copy of the default Nengo builder.
+
+    This class is here so that we can register new build functions for
+    Nengo DL without affecting the default Nengo build process.
+    """
+
+    builders = {}
+
+    @classmethod
+    def build(cls, model, obj, *args, **kwargs):
+        try:
+            # first try building obj using any custom build functions that have
+            # been registered by Nengo DL
+            return builder.Builder.build.__func__(
+                NengoBuilder, model, obj, *args, **kwargs)
+        except BuildError:
+            # fallback on normal nengo builder
+            return builder.Builder.build.__func__(
+                builder.Builder, model, obj, *args, **kwargs)

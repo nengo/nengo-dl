@@ -1,15 +1,12 @@
-import warnings
-
 from nengo import Lowpass
 from nengo.builder import Signal
-from nengo.builder import Builder as NengoBuilder
 from nengo.builder.learning_rules import SimBCM, SimOja, SimVoja, get_post_ens
 from nengo.builder.operator import Operator, Reset, DotInc, Copy
 from nengo.learning_rules import PES
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl.builder import Builder, OpBuilder
+from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
 
 
 @Builder.register(SimBCM)
@@ -208,6 +205,7 @@ class SimPES(Operator):
             self.pre_filtered, self.error, self.delta)
 
 
+@NengoBuilder.register(PES)
 def build_pes(model, pes, rule):
     """Builds a `.PES` object into a model.
 
@@ -267,10 +265,8 @@ def build_pes(model, pes, rule):
     model.sig[rule]['activities'] = acts
 
 
+# remove 'correction' from probeable attributes
 PES.probeable = ('error', 'activities', 'delta')
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=UserWarning)
-    NengoBuilder.register(PES)(build_pes)
 
 
 @Builder.register(SimPES)

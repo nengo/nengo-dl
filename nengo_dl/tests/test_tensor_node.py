@@ -1,5 +1,5 @@
 import nengo
-from nengo.exceptions import ValidationError, SimulationError
+from nengo.exceptions import ValidationError, BuildError
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -33,9 +33,9 @@ def test_validation():
         n = TensorNode(lambda t: tf.zeros((5, 2)), size_out=4)
         assert n.size_out == 4
 
-    with nengo.Simulator(net) as sim:
-        with pytest.raises(SimulationError):
-            sim.step()
+    with pytest.raises(BuildError):
+        with nengo.Simulator(net):
+            pass
 
 
 def test_node(Simulator):

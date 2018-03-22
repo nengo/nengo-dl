@@ -1,13 +1,13 @@
 from nengo import Node, Connection, Ensemble, builder
 from nengo.base import NengoObject
 from nengo.builder.operator import Reset
-from nengo.exceptions import ValidationError, SimulationError
+from nengo.exceptions import ValidationError, BuildError
 from nengo.neurons import NeuronType
 from nengo.params import Default, IntParam, Parameter
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl.builder import Builder, OpBuilder
+from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
 
 
 class TensorFuncParam(Parameter):
@@ -117,8 +117,15 @@ class TensorNode(Node):
         self.size_out = size_out
         self.tensor_func = tensor_func
 
+    @property
+    def output(self):
+        raise BuildError(
+            "TensorNode does not have an `output` attribute (this probably "
+            "means you are trying to use a TensorNode inside a Simulator "
+            "other than Nengo DL)")
 
-@builder.Builder.register(TensorNode)
+
+@NengoBuilder.register(TensorNode)
 def build_tensor_node(model, node):
     """This is the Nengo build function, so that Nengo knows what to do with
     TensorNodes."""
@@ -136,7 +143,8 @@ def build_tensor_node(model, node):
     model.sig[node]['out'] = sig_out
     model.params[node] = None
 
-    model.add_op(SimTensorNode(node.tensor_func, model.time, sig_in, sig_out))
+    model.operators.append(SimTensorNode(node.tensor_func, model.time, sig_in,
+                                         sig_out))
 
 
 class SimTensorNode(builder.Operator):
@@ -174,17 +182,6 @@ class SimTensorNode(builder.Operator):
         self.incs = []
         self.reads = [time] if input is None else [time, input]
         self.updates = []
-
-    def make_step(self, *args, **kwargs):
-        """``make_step`` is never called by the NengoDL simulator, so if this
-        is called it means that someone is trying to execute a TensorNode in
-        some other Simulator."""
-
-        def error():
-            raise SimulationError("TensorNode can only be simulated in the "
-                                  "NengoDL simulator")
-
-        return error
 
 
 @Builder.register(SimTensorNode)
