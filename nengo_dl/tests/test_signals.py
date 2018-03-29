@@ -198,13 +198,13 @@ def test_signal_dict_gather():
     x = TensorSignal([0, 1, 2, 3], key, tf.float32, (4,), 1)
     x.load_indices()
     y = signals.gather(x, force_copy=True)
-    assert y.op.type == "Gather"
+    assert "Gather" in y.op.type
 
     x = TensorSignal([0, 0, 3, 3], key, tf.float32, (4,), 1)
     x.load_indices()
     assert np.allclose(sess.run(signals.gather(x)),
                        val[[0, 0, 3, 3]])
-    assert y.op.type == "Gather"
+    assert "Gather" in y.op.type
 
     # reading from full array
     x = TensorSignal(np.arange(var_size), key, tf.float32, (var_size,), 1)
