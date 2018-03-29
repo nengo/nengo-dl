@@ -30,6 +30,11 @@ Release History
 
 - Improved speed of PES implementation by adding a custom operator.
 
+**Fixed**
+
+- Checking ``nengo_dl`` version without ``nengo`` installed will no longer
+  result in an error.
+
 0.6.1 (March 7, 2018)
 ---------------------
 

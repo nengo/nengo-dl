@@ -39,6 +39,15 @@ def test_nengo_version_check():
         assert any("This version of `nengo_dl` has not been tested with "
                    "your `nengo` version" in str(x.message) for x in w)
 
+    # check that it still works without nengo (faking an import error by
+    # messing up sys.modules)
+    saved = sys.modules["nengo.version"]
+    sys.modules["nengo.version"] = None
+    with pytest.warns(None) as w:
+        reload(version)
+    assert len(w) == 0
+    sys.modules["nengo.version"] = saved
+
 
 @pytest.mark.gpu
 def test_tensorflow_gpu_warning():
