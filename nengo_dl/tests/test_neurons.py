@@ -29,8 +29,10 @@ def test_lif_deterministic(Simulator, seed):
 @pytest.mark.parametrize("sigma", (1, 0.5))
 def test_soft_lif(Simulator, sigma, seed):
     with nengo.Network(seed=seed) as net:
-        inp = nengo.Node([0])
-        ens = nengo.Ensemble(10, 1, neuron_type=SoftLIFRate(sigma=sigma))
+        inp = nengo.Node([0.5])
+        ens = nengo.Ensemble(10, 1, neuron_type=SoftLIFRate(sigma=sigma),
+                             intercepts=nengo.dists.Uniform(-1, 0),
+                             encoders=nengo.dists.Choice([[1]]))
         nengo.Connection(inp, ens)
         p = nengo.Probe(ens.neurons)
 

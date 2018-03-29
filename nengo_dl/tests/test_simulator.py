@@ -241,29 +241,30 @@ def test_train_objective(Simulator, unroll, seed):
 
 def test_train_sparse(Simulator, seed):
     minibatch_size = 4
-    n_hidden = 5
+    n_hidden = 20
 
     with nengo.Network(seed=seed) as net:
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])
         net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])
+        net.config[nengo.Ensemble].neuron_type = nengo.RectifiedLinear()
         net.config[nengo.Connection].synapse = None
 
         inp = nengo.Node([0, 0, 0, 0, 0])
-        ens = nengo.Ensemble(n_hidden, n_hidden,
-                             neuron_type=nengo.Sigmoid(tau_ref=1))
-        out = nengo.Ensemble(2, 2, neuron_type=nengo.Sigmoid(tau_ref=1))
-        nengo.Connection(inp[[0, 2, 3]], ens, transform=dists.Glorot())
-        nengo.Connection(ens, out, transform=dists.Glorot())
+        ens = nengo.Ensemble(n_hidden, 1)
+        out = nengo.Node(size_in=2)
+        nengo.Connection(inp[[0, 2, 3]], ens.neurons, transform=dists.Glorot())
+        nengo.Connection(ens.neurons, out, transform=dists.Glorot())
 
-        p = nengo.Probe(out.neurons)
+        p = nengo.Probe(out)
 
     with Simulator(net, minibatch_size=minibatch_size, unroll_simulation=1,
                    seed=seed) as sim:
         x = np.asarray([[[0, 0, 0, 0, 0]], [[0, 0, 1, 0, 0]],
                         [[1, 0, 0, 0, 0]], [[1, 0, 1, 0, 0]]])
-        y = np.asarray([[[0.1, 0]], [[0.9, 0]], [[0.9, 0]], [[0.1, 0]]])
+        y = np.asarray([[[0, 1]], [[1, 0]], [[1, 0]], [[0, 1]]])
 
-        sim.train({inp: x}, {p: y}, tf.train.MomentumOptimizer(1, 0.9),
+        sim.train({inp: x}, {p: y},
+                  tf.train.MomentumOptimizer(0.1, 0.9, use_nesterov=True),
                   n_epochs=500)
 
         sim.step(input_feeds={inp: x})
