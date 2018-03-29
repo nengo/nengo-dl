@@ -35,7 +35,7 @@ class SoftLIFRate(LIFRate):
     Notes
     -----
     Adapted from
-    https://github.com/nengo/nengo_extras/blob/master/nengo_extras/neurons.py
+    https://github.com/nengo/nengo-extras/blob/master/nengo_extras/neurons.py
     """
 
     sigma = NumberParam('sigma', low=0, low_open=True)

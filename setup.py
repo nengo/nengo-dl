@@ -47,14 +47,14 @@ version = runpy.run_path(os.path.join(
     root, 'nengo_dl', 'version.py'))['version']
 
 setup(
-    name="nengo_dl",
+    name="nengo-dl",
     version=version,
     author="Daniel Rasmussen",
     author_email="daniel.rasmussen@appliedbrainresearch.com",
     packages=find_packages(),
     include_package_data=True,
     scripts=[],
-    url="https://github.com/nengo/nengo_dl",
+    url="https://github.com/nengo/nengo-dl",
     license="Free for non-commercial use",
     description="Deep learning integration for Nengo",
     long_description=read('README.rst', 'CHANGES.rst'),

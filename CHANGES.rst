@@ -8,7 +8,7 @@ Release History
 
    **section**
 
-   - One-line description of change (link to Github issue/PR)
+   - One-line description of change (link to GitHub issue/PR)
 
 .. Changes should be organized in one of several sections:
 
@@ -29,6 +29,10 @@ Release History
 **Changed**
 
 - Improved speed of PES implementation by adding a custom operator.
+- Renamed project from ``nengo_dl`` to ``nengo-dl`` (to be more consistent with
+  standard conventions).  This only affects the display name of the project
+  on PyPI/GitHub, and the documentation now resides at
+  https://www.nengo.ai/nengo-dl/; there are no functional changes to user code.
 
 **Fixed**
 
@@ -81,11 +85,11 @@ Release History
   <https://github.com/nengo/nengo/pull/1325>`_).
 - Added ``progress_bar=False`` option to ``sim.run``, which will disable the
   information about the simulation status printed to standard output (`#17
-  <https://github.com/nengo/nengo_dl/issues/17>`_).
+  <https://github.com/nengo/nengo-dl/issues/17>`_).
 - Added progress bars for the build/simulation process.
 - Added truncated backpropagation option to ``sim.train`` (useful for reducing
   memory usage during training).  See `the documentation for details
-  <https://www.nengo.ai/nengo_dl/training.html#truncation>`__.
+  <https://www.nengo.ai/nengo-dl/training.html#truncation>`__.
 
 **Changed**
 
@@ -115,9 +119,9 @@ Release History
   feedable
 - Updated ``tensorflow-gpu`` installation check
 - Improved numerical stability of ``LIFRate`` gradients  (`#26 
-  <https://github.com/nengo/nengo_dl/issues/26>`_)
+  <https://github.com/nengo/nengo-dl/issues/26>`_)
 - Added more informative error message when data is provided with fewer items
-  than ``sim.minibatch_size`` (`#30 <https://github.com/nengo/nengo_dl/issues/30>`_)
+  than ``sim.minibatch_size`` (`#30 <https://github.com/nengo/nengo-dl/issues/30>`_)
 
 0.5.2 (October 11, 2017)
 ------------------------
@@ -127,10 +131,10 @@ Release History
 - TensorNode outputs can now define a ``post_build`` function that will be
   executed after the simulation is initialized (see the `TensorNode
   documentation for details
-  <https://www.nengo.ai/nengo_dl/tensor_node.html>`_).
+  <https://www.nengo.ai/nengo-dl/tensor_node.html>`_).
 - Added functionality for outputting summary data during the training process
   that can be viewed in TensorBoard (see the `sim.train documentation
-  <https://www.nengo.ai/nengo_dl/training.html#summaries>`__).
+  <https://www.nengo.ai/nengo-dl/training.html#summaries>`__).
 - Added some examples demonstrating how to use Nengo DL in a more complicated
   task using semantic pointers to encode/retrieve information
 - Added ``sim.training_step`` variable which will track the current training
@@ -143,7 +147,7 @@ Release History
   Simulator context will automatically be added to the correct graph)
 - Users can now specify a different objective for each output probe during
   training/loss calculation (see the `sim.train documentation
-  <https://www.nengo.ai/nengo_dl/training.html#objective>`__).
+  <https://www.nengo.ai/nengo-dl/training.html#objective>`__).
 
 **Changed**
 
@@ -159,9 +163,9 @@ Release History
 - ``sim.data`` now implements the full ``collections.Mapping`` interface
 - Fixed bug where signal order was non-deterministic for Networks containing
   objects with duplicate names
-  (`#9 <https://github.com/nengo/nengo_dl/issues/9>`_)
+  (`#9 <https://github.com/nengo/nengo-dl/issues/9>`_)
 - Fixed bug where non-slot optimizer variables were not initialized
-  (`#11 <https://github.com/nengo/nengo_dl/issues/11>`_)
+  (`#11 <https://github.com/nengo/nengo-dl/issues/11>`_)
 - Implemented a modified PES builder in order to avoid slicing encoders on
   non-decoded PES connections
 - TensorBoard output directory will be automatically created if it doesn't
@@ -186,10 +190,10 @@ Release History
 
 - Added ``nengo_dl.tensor_layer`` to help with the construction of
   layer-style TensorNodes (see the `TensorNode documentation
-  <https://www.nengo.ai/nengo_dl/tensor_node.html>`_)
+  <https://www.nengo.ai/nengo-dl/tensor_node.html>`_)
 - Added an example demonstrating `how to train a neural network
   that can run in spiking neurons
-  <https://www.nengo.ai/nengo_dl/examples/spiking_mnist.html>`_
+  <https://www.nengo.ai/nengo-dl/examples/spiking_mnist.html>`_
 - Added some distributions for weight initialization to ``nengo_dl.dists``
 - Added ``sim.train(..., profile=True)`` option to collect profiling
   information during training
@@ -211,7 +215,7 @@ Release History
   the more general ``nengo_dl.configure_settings(trainable=x)``.  This has
   resulted in some small changes to how trainability is controlled within
   subnetworks; see the `updated documentation
-  <https://www.nengo.ai/nengo_dl/training.html#choosing-which-elements-to-optimize>`_
+  <https://www.nengo.ai/nengo-dl/training.html#choosing-which-elements-to-optimize>`_
   for details.
 - Calling ``Simulator.train``/``Simulator.loss`` no longer resets the internal
   state of the simulation (so they can be safely intermixed with calls to
@@ -225,7 +229,7 @@ Release History
 **Fixed**
 
 - Fixed bug related to changing the output of a Node after the model is
-  constructed (`#4 <https://github.com/nengo/nengo_dl/issues/4>`_)
+  constructed (`#4 <https://github.com/nengo/nengo-dl/issues/4>`_)
 - Order of variable creation is now deterministic (helps make saving/loading
   parameters more reliable)
 - Configuring whether or not a model element is trainable does not affect
@@ -248,10 +252,10 @@ Release History
 
 - Added ability to manually specify which parts of a model are trainable
   (see the `sim.train documentation
-  <https://www.nengo.ai/nengo_dl/training.html>`_)
+  <https://www.nengo.ai/nengo-dl/training.html>`_)
 - Added some code examples (see the ``docs/examples`` directory, or the
   `pre-built examples in the documentation
-  <https://www.nengo.ai/nengo_dl/examples.html>`_)
+  <https://www.nengo.ai/nengo-dl/examples.html>`_)
 - Added the SoftLIFRate neuron type for training LIF networks (based on
   `this paper <https://arxiv.org/abs/1510.08829>`_)
 

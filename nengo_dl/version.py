@@ -6,7 +6,7 @@ represents a release version. Commits for which the version doesn't have
 
 import warnings
 
-name = "nengo_dl"
+name = "nengo-dl"
 version_info = (0, 6, 2)  # (major, minor, patch)
 dev = True
 

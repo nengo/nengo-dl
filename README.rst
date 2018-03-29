@@ -1,17 +1,17 @@
-.. image:: https://img.shields.io/pypi/v/nengo_dl.svg
-  :target: https://pypi.python.org/pypi/nengo_dl
+.. image:: https://img.shields.io/pypi/v/nengo-dl.svg
+  :target: https://pypi.python.org/pypi/nengo-dl
   :alt: Latest PyPI version
 
-.. image:: https://img.shields.io/travis/nengo/nengo_dl/master.svg
-  :target: https://travis-ci.org/nengo/nengo_dl
+.. image:: https://img.shields.io/travis/nengo/nengo-dl/master.svg
+  :target: https://travis-ci.org/nengo/nengo-dl
   :alt: Travis-CI build status
 
-.. image:: https://ci.appveyor.com/api/projects/status/github/nengo/nengo_dl?branch=master&svg=true
+.. image:: https://ci.appveyor.com/api/projects/status/github/nengo/nengo-dl?branch=master&svg=true
   :target: https://ci.appveyor.com/project/nengo/nengo-dl
   :alt: AppVeyor build status
 
-.. image:: https://img.shields.io/codecov/c/github/nengo/nengo_dl/master.svg
-  :target: https://codecov.io/gh/nengo/nengo_dl/branch/master
+.. image:: https://img.shields.io/codecov/c/github/nengo/nengo-dl/master.svg
+  :target: https://codecov.io/gh/nengo/nengo-dl/branch/master
   :alt: Test coverage
 
 ********************************************
@@ -59,11 +59,11 @@ adds a number of unique features, such as:
 Documentation
 =============
 
-Check out the `documentation <https://www.nengo.ai/nengo_dl/>`_ for
+Check out the `documentation <https://www.nengo.ai/nengo-dl/>`_ for
 
-- `Installation instructions <https://www.nengo.ai/nengo_dl/installation.html>`_
+- `Installation instructions <https://www.nengo.ai/nengo-dl/installation.html>`_
 - `Details on the unique features of NengoDL
-  <https://www.nengo.ai/nengo_dl/frontend.html>`_
-- `Examples <https://www.nengo.ai/nengo_dl/examples.html>`_
+  <https://www.nengo.ai/nengo-dl/frontend.html>`_
+- `Examples <https://www.nengo.ai/nengo-dl/examples.html>`_
 - `More information on how NengoDL works under the hood
-  <https://www.nengo.ai/nengo_dl/backend.html>`_
+  <https://www.nengo.ai/nengo-dl/backend.html>`_

@@ -8,7 +8,7 @@ Filing issues
 -------------
 
 If you find a bug in NengoDL, or think that a certain feature is missing,
-please consider `filing an issue <https://github.com/nengo/nengo_dl/issues>`_.
+please consider `filing an issue <https://github.com/nengo/nengo-dl/issues>`_.
 Please search the currently open issues first to see if your bug or feature
 request already exists. If so, feel free to add a comment to the issue
 so that we know that multiple people are affected.

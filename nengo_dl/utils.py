@@ -458,11 +458,11 @@ def configure_settings(**kwargs):
         or True/False will override the default for all objects.  In either
         case trainability can be further configured on a per-object basis (e.g.
         ``net.config[my_ensemble].trainable = True``.  See `the documentation
-        <https://www.nengo.ai/nengo_dl/training.html#choosing-which-elements-to-optimize>`_
+        <https://www.nengo.ai/nengo-dl/training.html#choosing-which-elements-to-optimize>`_
         for more details.
     planner : graph planning algorithm
         Pass one of the `graph planners
-        <https://www.nengo.ai/nengo_dl/graph_optimizer.html>`_ to change the
+        <https://www.nengo.ai/nengo-dl/graph_optimizer.html>`_ to change the
         default planner.
     """
 

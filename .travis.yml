@@ -99,7 +99,7 @@ after_success:
       ghp-import -m "Last update at $DATE" -b gh-pages docs/_build/html;
       git config --global user.email "travis@travis-ci.org";
       git config --global user.name "TravisCI";
-      git push -fq "https://$GH_TOKEN@github.com/nengo/nengo_dl.git" gh-pages;
+      git push -fq "https://$GH_TOKEN@github.com/nengo/nengo-dl.git" gh-pages;
     elif [[ "$MODE" == "coverage" ]]; then
       eval "bash <(curl -s https://codecov.io/bash)";
     fi

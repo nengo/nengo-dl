@@ -12,5 +12,5 @@ NengoDL
     backend
     project
 
-`Github <https://github.com/nengo/nengo_dl>`_ |
-`PyPI <https://pypi.python.org/pypi/nengo_dl>`_
+`Github <https://github.com/nengo/nengo-dl>`_ |
+`PyPI <https://pypi.python.org/pypi/nengo-dl>`_

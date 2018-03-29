@@ -232,7 +232,7 @@ runs.  This will significantly slow down the simulation, so it should be left
 on ``False`` (the default) in most cases.  It is mainly used by developers,
 in order to help identify performance bottlenecks.
 
-Profiling data will be saved to ``<nengo_dl>/data/nengo_dl_profile.json``.  It
+Profiling data will be saved to ``<nengo-dl>/data/nengo_dl_profile.json``.  It
 can be viewed by opening a Chrome browser, navigating to
 `<chrome://tracing>`_ and loading the ``nengo_dl_profile.json`` file.
 

@@ -7,7 +7,7 @@ Additional resources
 - `Nengo forums <https://forum.nengo.ai/>`_: To get help or ask questions about
   NengoDL, or Nengo in general.
 
-- `GitHub issue tracker <https://github.com/nengo/nengo_dl/issues>`_: To post bug
+- `GitHub issue tracker <https://github.com/nengo/nengo-dl/issues>`_: To post bug
   reports or make feature requests.
 
 - `TensorFlow documentation <https://www.tensorflow.org/>`_: Knowledge of
