@@ -10,6 +10,7 @@ import time
 import warnings
 
 from nengo import Process, Ensemble, Connection, Probe
+from nengo import version as nengo_version
 from nengo.builder import Model
 from nengo.builder.connection import BuiltConnection
 from nengo.builder.ensemble import BuiltEnsemble
@@ -77,6 +78,10 @@ class Simulator(object):
          "overridden so we can pass custom test simulators (see "
          "tests/test_nengo_tests.py:test_entry_point"),
 
+        ("nengo/tests/test_simulator.py:test_simulator_progress_bars",
+         "nengo_dl uses a different progress bar system (see "
+         "tests/test_utils.py:test_progress_bar"),
+
         ("nengo/tests/test_node.py:test_args",
          "time is passed as np.float32, not a float (see "
          "tests/test_nengo_tests.py:test_args"),
@@ -118,11 +123,15 @@ class Simulator(object):
             self.model = model
 
         if network is not None:
-            print("Building network")
-            start = time.time()
-            self.model.build(network, progress_bar=False)
-            print("\rBuild finished in %s " %
-                  datetime.timedelta(seconds=int(time.time() - start)))
+            if nengo_version.version_info < (2, 7, 1):
+                print("Building network")
+                start = time.time()
+                self.model.build(network, progress_bar=None)
+                print("\rBuild finished in %s " %
+                      datetime.timedelta(seconds=int(time.time() - start)))
+            else:
+                p = utils.ProgressBar("Building network", "Build")
+                self.model.build(network, progress=p)
 
         # set up tensorflow graph plan
         with utils.ProgressBar("Optimizing graph", "Optimization",

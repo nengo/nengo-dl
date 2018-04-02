@@ -172,14 +172,22 @@ def test_configure_trainable():
 
 
 def test_progress_bar():
-    progress = utils.ProgressBar("test").start()
+    progress = utils.ProgressBar("test", max_value=10).start()
+
+    assert progress.max_steps == progress.max_value == 10
+
     sub = progress.sub().start()
 
     # check that starting a new subprocess closes the first one
     sub2 = progress.sub().start()
     assert sub.finished
 
+    # check that iterable wrapping works properly
+    for _ in progress(range(11)):
+        pass
+
+    assert progress.value == 11
+
     # check that closing the parent process closes the sub
-    progress.finish()
     assert sub2.finished
     assert progress.finished
