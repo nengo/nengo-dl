@@ -646,7 +646,7 @@ def order_signals(plan, n_passes=10):
                 # we get a scatter_mul working)
                 reads[op] += op.updates
 
-        # the ith input signal for each op in the op group is one read group
+        # the i'th input signal for each op in the op group is one read group
         # (note that we only care about bases, since those are the things we
         # are trying to order)
         for i in range(len(reads[ops[0]])):

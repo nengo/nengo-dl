@@ -167,7 +167,7 @@ rather than using the default:
         sim.train(objective=my_objective, ...)
 
 If there are multiple output Probes defined in ``targets`` then by default the
-same objective will be used for all probes.  This can be overriden by passing
+same objective will be used for all probes.  This can be overridden by passing
 a dictionary with the form
 ``{my_probe0: my_objective0, my_probe1: my_objective1, ...}`` for the
 ``objective``, specifying a different
@@ -291,7 +291,7 @@ some offline training method then those two processes would conflict
 with each other, likely resulting in unintended effects.  So NengoDL will
 assume that those elements should not be optimized.
 
-Any of these default behaviours can be overriden using `Nengo's config system
+Any of these default behaviours can be overridden using `Nengo's config system
 <https://www.nengo.ai/nengo/config.html>`_.  Specifically, setting the
 ``trainable`` config attribute for an object will control whether or not it
 will be optimized.
