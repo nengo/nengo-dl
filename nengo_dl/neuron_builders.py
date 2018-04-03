@@ -238,17 +238,24 @@ class LIFRateBuilder(OpBuilder):
 
     def build_step(self, signals):
         j = signals.gather(self.J_data)
-        j -= self.one
 
-        # note: we convert all the j to be positive before this calculation
-        # (even though we'll only use the values that are already positive),
-        # otherwise we can end up with nans in the gradient
-        rates = self.amplitude / (
-            self.tau_ref + self.tau_rc * tf.log1p(tf.reciprocal(
-                tf.maximum(j, self.epsilon))))
+        @tf.custom_gradient
+        def lif_with_grad(x):
+            xm1 = x - self.one
+            denom = self.tau_ref + self.tau_rc * tf.log1p(tf.reciprocal(xm1))
+            active = xm1 > self.zero
+            rates = tf.where(active, self.amplitude / denom, self.zeros)
 
-        signals.scatter(self.output_data, tf.where(j > self.zero, rates,
-                                                   self.zeros))
+            def lif_grad(dy):
+                return tf.where(
+                    active, dy * self.tau_rc * rates / (xm1 * x * denom),
+                    self.zeros)
+
+            return rates, lif_grad
+
+        rates = lif_with_grad(j)
+
+        signals.scatter(self.output_data, rates)
 
 
 class LIFBuilder(LIFRateBuilder):
@@ -306,13 +313,21 @@ class SoftLIFRateBuilder(LIFRateBuilder):
     def build_step(self, signals):
         j = signals.gather(self.J_data)
 
-        j -= self.one
+        z = tf.nn.softplus((j - self.one) / self.sigma) * self.sigma
+        z = tf.maximum(z, self.epsilon)
 
-        z = tf.nn.softplus(j / self.sigma) * self.sigma
-        z += self.epsilon
+        @tf.custom_gradient
+        def softlif_with_grad(x):
+            denom = self.tau_ref + self.tau_rc * tf.log1p(tf.reciprocal(x))
+            rates = self.amplitude / denom
 
-        rates = self.amplitude / (
-            self.tau_ref + self.tau_rc * tf.log1p(tf.reciprocal(z)))
+            def softlif_grad(dy):
+                dx = dy * self.tau_rc * rates / (z * (z + self.one) * denom)
+                return dx
+
+            return rates, softlif_grad
+
+        rates = softlif_with_grad(z)
 
         signals.scatter(self.output_data, rates)
 
