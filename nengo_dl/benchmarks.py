@@ -227,19 +227,29 @@ def compare_backends(raw=False):
     plt.show()
 
 
-def profile_run():
+def profile(train=False):
     """Run profiler on one of the benchmarks."""
 
-    net = pes(128, 32, nengo.RectifiedLinear())
+    net = pes(128, 32, nengo.LIFRate())
     with nengo_dl.Simulator(net, tensorboard=None, unroll_simulation=50,
                             device="/gpu:0") as sim:
-        # run a few times to try to eliminate startup overhead (only the data
-        # from the last run will be kept)
-        for _ in range(3):
-            sim.run_steps(150, profile=True)
+
+        # note: we run a few times to try to eliminate startup overhead (only
+        # the data from the last run will be kept)
+        if train:
+            opt = tf.train.GradientDescentOptimizer(0.001)
+            x = np.random.randn(1, 100, net.inp.size_out)
+            y = np.random.randn(1, 100, net.p.size_in)
+            for _ in range(3):
+                sim.train({net.inp: x}, {net.p: y}, optimizer=opt, n_epochs=1,
+                          profile=False)
+
+        else:
+            for _ in range(3):
+                sim.run_steps(150, profile=True)
 
 
-def profile_train(use_tensor_layer):
+def profile_tensor_node(use_tensor_layer):
     """Run profiler on a training benchmark.
 
     Parameters
@@ -249,26 +259,6 @@ def profile_train(use_tensor_layer):
         to a single TensorNode containing all layers.
     """
 
-    nl = tf.nn.relu
-
-    def softlif_layer(x, sigma=1, tau_ref=0.002, tau_rc=0.02, amplitude=1):
-        # x -= 1
-        z = tf.nn.softplus(x / sigma) * sigma
-        z += 1e-10
-        rates = amplitude / (tau_ref + tau_rc * tf.log1p(1 / z))
-        return rates
-
-    @nengo_dl.reshaped((28, 28, 1))
-    def mnist_node(_, x):
-        x = tf.layers.conv2d(x, filters=32, kernel_size=3, activation=nl)
-        x = tf.layers.conv2d(x, filters=32, kernel_size=3, activation=nl)
-        x = tf.layers.average_pooling2d(x, pool_size=2, strides=2)
-        x = tf.contrib.layers.flatten(x)
-        x = tf.layers.dense(x, 128, activation=nl)
-        x = tf.layers.dropout(x, rate=0.4)
-        x = tf.layers.dense(x, 10)
-
-        return x
 
     with nengo.Network() as net:
         nengo_dl.configure_settings(trainable=False)
@@ -277,6 +267,8 @@ def profile_train(use_tensor_layer):
         inp = nengo.Node(np.ones(28 * 28))
 
         if use_tensor_layer:
+            nengo_nl = nengo.RectifiedLinear()
+
             ensemble_params = dict(max_rates=nengo.dists.Choice([100]),
                                    intercepts=nengo.dists.Choice([0]))
             amplitude = 1
@@ -286,14 +278,14 @@ def profile_train(use_tensor_layer):
                 inp, tf.layers.conv2d, shape_in=(28, 28, 1), filters=32,
                 kernel_size=3
             )
-            x = nengo_dl.tensor_layer(x, nengo.RectifiedLinear(),
+            x = nengo_dl.tensor_layer(x, nengo_nl,
                                       **ensemble_params)
 
             x = nengo_dl.tensor_layer(
                 x, tf.layers.conv2d, shape_in=(26, 26, 32),
                 transform=amplitude, filters=32, kernel_size=3
             )
-            x = nengo_dl.tensor_layer(x, nengo.RectifiedLinear(),
+            x = nengo_dl.tensor_layer(x, nengo_nl,
                                       **ensemble_params)
 
             x = nengo_dl.tensor_layer(
@@ -303,7 +295,7 @@ def profile_train(use_tensor_layer):
             x = nengo_dl.tensor_layer(
                 x, tf.layers.dense, units=128
             )
-            x = nengo_dl.tensor_layer(x, nengo.RectifiedLinear(),
+            x = nengo_dl.tensor_layer(x, nengo_nl,
                                       **ensemble_params)
 
             x = nengo_dl.tensor_layer(x, tf.layers.dropout, rate=0.4,
@@ -311,6 +303,30 @@ def profile_train(use_tensor_layer):
 
             x = nengo_dl.tensor_layer(x, tf.layers.dense, units=10)
         else:
+            nl = tf.nn.relu
+
+            # def softlif_layer(x, sigma=1, tau_ref=0.002, tau_rc=0.02,
+            #                   amplitude=1):
+            #     # x -= 1
+            #     z = tf.nn.softplus(x / sigma) * sigma
+            #     z += 1e-10
+            #     rates = amplitude / (tau_ref + tau_rc * tf.log1p(1 / z))
+            #     return rates
+
+            @nengo_dl.reshaped((28, 28, 1))
+            def mnist_node(_, x):
+                x = tf.layers.conv2d(x, filters=32, kernel_size=3,
+                                     activation=nl)
+                x = tf.layers.conv2d(x, filters=32, kernel_size=3,
+                                     activation=nl)
+                x = tf.layers.average_pooling2d(x, pool_size=2, strides=2)
+                x = tf.contrib.layers.flatten(x)
+                x = tf.layers.dense(x, 128, activation=nl)
+                x = tf.layers.dropout(x, rate=0.4)
+                x = tf.layers.dense(x, 10)
+
+                return x
+
             node = nengo_dl.TensorNode(mnist_node, size_in=28 * 28,
                                        size_out=10)
             x = node
@@ -324,11 +340,12 @@ def profile_train(use_tensor_layer):
         targets = {
             out_p: np.zeros((128, 2, 10)) + [1, 0, 0, 0, 0, 0, 0, 0, 0, 0]}
 
-        def obj(x, y):
-            return tf.nn.softmax_cross_entropy_with_logits(
-                logits=x, labels=y)
+        # def obj(x, y):
+        #     return tf.nn.softmax_cross_entropy_with_logits_v2(
+        #         logits=x, labels=y)
+        obj = "mse"
 
-        opt = tf.train.AdadeltaOptimizer(learning_rate=1)
+        opt = tf.train.GradientDescentOptimizer(learning_rate=1)
 
         # run a few times to try to eliminate startup overhead (only the data
         # from the last run will be kept)
@@ -421,6 +438,6 @@ def matmul_vs_reduce():
 
 if __name__ == "__main__":
     compare_backends(raw=True)
-    # profile_run()
-    # profile_train(use_tensor_layer=True)
+    # profile(train=False)
+    # profile_tensor_node(use_tensor_layer=True)
     # matmul_vs_reduce()
