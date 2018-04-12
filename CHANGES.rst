@@ -28,6 +28,7 @@ Release History
   computing error that is not easy to implement as an objective function).
   See `the documentation
   <https://www.nengo.ai/nengo-dl/training.html#objective>`__ for details.
+- Added `NengoDL white paper <https://arxiv.org/abs/1805.11144>`_
 
 **Changed**
 

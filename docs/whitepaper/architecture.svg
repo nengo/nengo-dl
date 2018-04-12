@@ -1,0 +1,1374 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="669.30005pt"
+   height="366.49982pt"
+   viewBox="0 0 836.62509 458.12476"
+   id="svg4387"
+   version="1.1"
+   inkscape:version="0.92.1 r15371"
+   sodipodi:docname="architecture.svg">
+  <defs
+     id="defs4389">
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter4291">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood4293" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite4295" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="2"
+         result="blur"
+         id="feGaussianBlur4297" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset4299" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite4301" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter4303">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood4305" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite4307" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="2"
+         result="blur"
+         id="feGaussianBlur4309" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset4311" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite4313" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter4315">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood4317" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite4319" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="2"
+         result="blur"
+         id="feGaussianBlur4321" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset4323" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite4325" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter4327">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood4329" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite4331" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="2"
+         result="blur"
+         id="feGaussianBlur4333" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset4335" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite4337" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter4339">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood4341" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite4343" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="2"
+         result="blur"
+         id="feGaussianBlur4345" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset4347" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite4349" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter4351">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood4353" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite4355" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="2"
+         result="blur"
+         id="feGaussianBlur4357" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset4359" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite4361" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter4363">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood4365" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite4367" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="2"
+         result="blur"
+         id="feGaussianBlur4369" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset4371" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite4373" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter4375">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood4377" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite4379" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="2"
+         result="blur"
+         id="feGaussianBlur4381" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset4383" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite4385" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter4387">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood4389" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite4391" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="2"
+         result="blur"
+         id="feGaussianBlur4393" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset4395" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite4397" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter4399">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood4401" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite4403" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="2"
+         result="blur"
+         id="feGaussianBlur4405" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset4407" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite4409" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter4411">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood4413" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite4415" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="2"
+         result="blur"
+         id="feGaussianBlur4417" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset4419" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite4421" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter4423">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood4425" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite4427" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="2"
+         result="blur"
+         id="feGaussianBlur4429" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset4431" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite4433" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter4435">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood4437" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite4439" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="2"
+         result="blur"
+         id="feGaussianBlur4441" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset4443" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite4445" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter4327-3">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood4329-6" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite4331-7" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="2"
+         result="blur"
+         id="feGaussianBlur4333-5" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset4335-3" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite4337-5" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter4375-3">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood4377-6" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite4379-0" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="2"
+         result="blur"
+         id="feGaussianBlur4381-6" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset4383-2" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite4385-6" />
+    </filter>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="188.62331"
+     inkscape:cy="278.66499"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     showguides="false"
+     inkscape:window-width="2560"
+     inkscape:window-height="1336"
+     inkscape:window-x="1672"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     units="pt"
+     fit-margin-top="7"
+     fit-margin-left="7"
+     fit-margin-right="7"
+     fit-margin-bottom="7" />
+  <metadata
+     id="metadata4392">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(337.04958,-14.877474)">
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#b4b4b4;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="M -328.29958,277.93363 H 470.83637"
+       id="path5752-8"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <g
+       id="g6108"
+       transform="translate(180.91631)">
+      <rect
+         x="-21.337704"
+         y="416.26337"
+         width="107.613"
+         height="43.626266"
+         rx="5.3534007"
+         ry="6.0075498"
+         pointer-events="none"
+         id="rect13-7-6-7-1-5-3-5-1-5-7-4"
+         style="fill:#ffffff;stroke:#000000;stroke-width:0.94517517;filter:url(#filter4423)" />
+      <text
+         id="text5078-2-4-6-8-5-9-31-0"
+         y="443.44513"
+         x="16.450729"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         xml:space="preserve"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial Bold'"
+           y="443.44513"
+           x="16.450729"
+           id="tspan5080-8-7-8-7-4-3-1-6"
+           sodipodi:role="line">GPU</tspan></text>
+    </g>
+    <g
+       id="g6108-5"
+       transform="translate(-121.07964)">
+      <rect
+         x="-21.337704"
+         y="416.26337"
+         width="107.613"
+         height="43.626266"
+         rx="5.3534007"
+         ry="6.0075498"
+         pointer-events="none"
+         id="rect13-7-6-7-1-5-3-5-1-5-7-4-8"
+         style="fill:#ffffff;stroke:#000000;stroke-width:0.94517517;filter:url(#filter4411)" />
+      <text
+         id="text5078-2-4-6-8-5-9-31-0-2"
+         y="443.44513"
+         x="11.10405"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         xml:space="preserve"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial Bold'"
+           y="443.44513"
+           x="11.10405"
+           id="tspan5080-8-7-8-7-4-3-1-6-6"
+           sodipodi:role="line">FPGA</tspan></text>
+    </g>
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#b4b4b4;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="M -328.29958,149.28583 H 470.83637"
+       id="path5752"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <g
+       id="g5612-37-0"
+       transform="matrix(-0.92128338,-0.38889194,-0.38889194,0.92128338,217.56977,48.64846)">
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -146.73012,18.718754 13.03516,196.110736"
+         id="path4998-3-0-3-41-8-5-1-6-3-6-5-6"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -130.02354,210.0041 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8-92-3"
+         inkscape:connector-curvature="0" />
+    </g>
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#b4b4b4;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="M -328.29958,398.79351 H 470.83637"
+       id="path5752-8-4"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <g
+       id="g5612-4-4-5-4"
+       transform="matrix(-0.55001413,-0.83515536,-0.83515536,0.55001413,212.27713,183.79982)">
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -130.02354,210.0041 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8-9-5-1-5"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -133.1383,127.07953 -0.55669,84.23377"
+         id="path4998-3-0-3-41-8-5-1-6-3-6-9-2-0-0"
+         inkscape:connector-curvature="0" />
+    </g>
+    <g
+       id="g5612-37-2-7"
+       transform="rotate(-22.88557,234.49655,-540.48758)">
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -135.40929,143.42919 1.71433,71.4003"
+         id="path4998-3-0-3-41-8-5-1-6-3-6-5-8-3"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -130.02354,210.0041 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8-92-9-6"
+         inkscape:connector-curvature="0" />
+    </g>
+    <g
+       id="g5612-37-2"
+       transform="matrix(-0.92128338,-0.38889194,-0.38889194,0.92128338,9.8302852,48.64846)">
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -135.40929,143.42919 1.71433,71.4003"
+         id="path4998-3-0-3-41-8-5-1-6-3-6-5-8"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -130.02354,210.0041 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8-92-9"
+         inkscape:connector-curvature="0" />
+    </g>
+    <g
+       id="g5612-4-4-5"
+       transform="matrix(-0.55001413,-0.83515536,-0.83515536,0.55001413,47.896922,183.79982)">
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -130.02354,210.0041 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8-9-5-1"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -133.1383,127.07953 -0.55669,84.23377"
+         id="path4998-3-0-3-41-8-5-1-6-3-6-9-2-0"
+         inkscape:connector-curvature="0" />
+    </g>
+    <g
+       id="g5612-3-8"
+       transform="translate(195.57694,198.17737)">
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -133.69496,176.49286 v 36.33663"
+         id="path4998-3-0-3-41-8-5-1-6-3-6-7-6"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -130.02354,210.0041 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8-8-0"
+         inkscape:connector-curvature="0" />
+    </g>
+    <g
+       id="g5612-3-8-4-7"
+       transform="translate(351.35428,198.17737)">
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -133.69496,176.49286 v 36.33663"
+         id="path4998-3-0-3-41-8-5-1-6-3-6-7-6-6-5"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -130.02354,210.0041 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8-8-0-7-9"
+         inkscape:connector-curvature="0" />
+    </g>
+    <g
+       id="g5677-4-0-1"
+       transform="translate(244.64286,150.14287)">
+      <rect
+         x="-110.096"
+         y="152.00505"
+         width="165.192"
+         height="73.571442"
+         rx="6"
+         ry="6"
+         pointer-events="none"
+         id="rect13-7-6-7-1-5-3-5-1-5-1-8"
+         style="fill:#ffffff;stroke:#000000;filter:url(#filter4375-3)" />
+      <text
+         id="text5078-2-4-6-8-5-9-0-7"
+         y="174.59547"
+         x="-99.317627"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         xml:space="preserve"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial Bold'"
+           y="174.59547"
+           x="-99.317627"
+           id="tspan5080-8-7-8-7-4-3-13-9"
+           sodipodi:role="line">Nengo DL simulator</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         x="-27.904297"
+         y="196.19797"
+         id="text5078-2-0-3-0-9-5-7-2"><tspan
+           sodipodi:role="line"
+           id="tspan5080-8-6-3-8-2-7-7-0"
+           x="-27.904297"
+           y="196.19797"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;text-anchor:middle">Python</tspan><tspan
+           sodipodi:role="line"
+           x="-27.904297"
+           y="211.19797"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;text-anchor:middle"
+           id="tspan5657-0-26-2">TensorFlow</tspan></text>
+    </g>
+    <text
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;font-family:Arial;-inkscape-font-specification:Arial;text-anchor:middle;fill:#000000"
+       x="-242.14072"
+       y="274.54651"
+       id="text25-2-9-3-6" />
+    <rect
+       style="fill:#ffffff;stroke:#000000;filter:url(#filter4315)"
+       id="rect13-7-6-7-1-5-3"
+       pointer-events="none"
+       ry="6"
+       rx="6"
+       height="95.000008"
+       width="313.75006"
+       y="33.127476"
+       x="-205.21284" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="-89.80294"
+       y="49.914349"
+       id="text5078-2-4-6"><tspan
+         sodipodi:role="line"
+         id="tspan5080-8-7-8"
+         x="-89.80294"
+         y="49.914349"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial Bold'">Nengo GUI</tspan></text>
+    <g
+       id="g5282"
+       transform="translate(0,5.7142857)">
+      <rect
+         x="-194.37503"
+         y="54.862202"
+         width="130"
+         height="50.714291"
+         rx="6"
+         ry="6"
+         pointer-events="none"
+         id="rect13-7-6-7-1-5-9"
+         style="fill:#ffffff;stroke:#000000;filter:url(#filter4291)" />
+      <g
+         transform="translate(1.0877457,0.49627113)"
+         id="g5276">
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+           x="-183.02162"
+           y="91.595749"
+           id="text5078-2-0"><tspan
+             sodipodi:role="line"
+             id="tspan5080-8-6"
+             x="-183.02162"
+             y="91.595749"
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial">HTML, D3.js, jQuery</tspan></text>
+        <text
+           id="text5078-2-4-8"
+           y="76.245422"
+           x="-149.80544"
+           style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+           xml:space="preserve"><tspan
+             style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:13.75px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial Bold'"
+             y="76.245422"
+             x="-149.80544"
+             id="tspan5080-8-7-7"
+             sodipodi:role="line">Client</tspan></text>
+      </g>
+    </g>
+    <g
+       id="g5612"
+       transform="rotate(-22.885571,-127.98574,-328.05422)">
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -135.40929,143.42919 1.71433,71.4003"
+         id="path4998-3-0-3-41-8-5-1-6-3-6"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -130.02354,210.0041 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8"
+         inkscape:connector-curvature="0" />
+    </g>
+    <rect
+       style="fill:#ffffff;stroke:#000000;filter:url(#filter4303)"
+       id="rect13-7-6-7-1-5-9-0"
+       pointer-events="none"
+       ry="6"
+       rx="6"
+       height="50.714291"
+       width="130"
+       y="60.576488"
+       x="-32.517879" />
+    <g
+       id="g5276-3"
+       transform="translate(156.31184,6.2105579)">
+      <text
+         id="text5078-2-0-3"
+         y="91.595749"
+         x="-144.33583"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         xml:space="preserve"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial"
+           y="91.595749"
+           x="-144.33583"
+           id="tspan5080-8-6-3"
+           sodipodi:role="line">Python</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         x="-145.586"
+         y="76.245422"
+         id="text5078-2-4-8-7"><tspan
+           sodipodi:role="line"
+           id="tspan5080-8-7-7-3"
+           x="-145.586"
+           y="76.245422"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:13.75px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial Bold'">Server</tspan></text>
+    </g>
+    <g
+       id="g5347"
+       transform="rotate(90,-21.058815,125.39867)">
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="M -53.214286,136.83779 V 160.9818"
+         id="path4998-3-0-3-41-8-5-1-6-3-6-2"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -49.542866,159.79887 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8-6"
+         inkscape:connector-curvature="0" />
+    </g>
+    <g
+       id="g5347-5"
+       transform="matrix(0,1,1,0,-201.38813,131.83835)">
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="M -53.214286,136.83779 V 160.9818"
+         id="path4998-3-0-3-41-8-5-1-6-3-6-2-2"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -49.542866,159.79887 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8-6-6"
+         inkscape:connector-curvature="0" />
+    </g>
+    <g
+       id="g5612-37"
+       transform="matrix(-0.92128337,-0.38889195,-0.38889195,0.92128337,120.97729,-75.595937)">
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -135.40929,143.42919 1.71433,71.4003"
+         id="path4998-3-0-3-41-8-5-1-6-3-6-5"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -130.02354,210.0041 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8-92"
+         inkscape:connector-curvature="0" />
+    </g>
+    <g
+       id="g5616">
+      <rect
+         x="118.89661"
+         y="33.127476"
+         width="151.62057"
+         height="95.000015"
+         rx="6"
+         ry="6"
+         pointer-events="none"
+         id="rect13-7-6-7-1-5-3-5"
+         style="fill:#ffffff;stroke:#000000;filter:url(#filter4327)" />
+      <text
+         id="text5078-2-4-6-8"
+         y="49.914349"
+         x="134.88268"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         xml:space="preserve"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial Bold'"
+           y="49.914349"
+           x="134.88268"
+           id="tspan5080-8-7-8-7"
+           sodipodi:role="line">Nengo examples</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         x="194.5106"
+         y="75.802574"
+         id="text5078-2-0-3-0"><tspan
+           sodipodi:role="line"
+           id="tspan5080-8-6-3-8"
+           x="194.5106"
+           y="75.802574"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;text-anchor:middle">Python</tspan><tspan
+           sodipodi:role="line"
+           x="194.5106"
+           y="90.802574"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;text-anchor:middle"
+           id="tspan5653">Jupyter</tspan><tspan
+           sodipodi:role="line"
+           x="194.5106"
+           y="105.80257"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;text-anchor:middle"
+           id="tspan5655">Matplotlib</tspan></text>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="-266.7717"
+       y="77.658241"
+       id="text5078-2-4-83"><tspan
+         sodipodi:role="line"
+         id="tspan5080-8-7-0"
+         x="-266.7717"
+         y="77.658241"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:110.00000238%;font-family:Arial;-inkscape-font-specification:'Arial Bold';text-align:center;text-anchor:middle">Visualizations</tspan><tspan
+         sodipodi:role="line"
+         x="-266.7717"
+         y="94.158241"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:110.00000238%;font-family:Arial;-inkscape-font-specification:'Arial Bold';text-align:center;text-anchor:middle"
+         id="tspan4687">and models</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="-267.59201"
+       y="219.8737"
+       id="text5078-2-4-83-1"><tspan
+         sodipodi:role="line"
+         x="-267.59201"
+         y="219.8737"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:110.00000238%;font-family:Arial;-inkscape-font-specification:'Arial Bold';text-align:center;text-anchor:middle"
+         id="tspan5587-8">Core framework</tspan></text>
+    <g
+       id="g5612-4-4-5-1-3"
+       transform="rotate(-56.63202,168.95707,-159.15333)">
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -138.54965,74.477775 4.85466,136.835525"
+         id="path4998-3-0-3-41-8-5-1-6-3-6-9-2-0-9-1"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -130.02354,210.0041 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8-9-5-1-2-9"
+         inkscape:connector-curvature="0" />
+    </g>
+    <g
+       id="g5612-4-4-5-1"
+       transform="matrix(-0.5500141,-0.83515537,-0.83515537,0.5500141,62.765947,69.488649)">
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -136.37847,108.76707 2.68348,102.54623"
+         id="path4998-3-0-3-41-8-5-1-6-3-6-9-2-0-9"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -130.02354,210.0041 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8-9-5-1-2"
+         inkscape:connector-curvature="0" />
+    </g>
+    <g
+       id="g5677"
+       transform="translate(154.85714,25.714286)">
+      <rect
+         x="-110.096"
+         y="152.00505"
+         width="151.62057"
+         height="73.571442"
+         rx="6"
+         ry="6"
+         pointer-events="none"
+         id="rect13-7-6-7-1-5-3-5-1"
+         style="fill:#ffffff;stroke:#000000;filter:url(#filter4339)" />
+      <text
+         id="text5078-2-4-6-8-5"
+         y="174.59547"
+         x="-75.818611"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         xml:space="preserve"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial Bold'"
+           y="174.59547"
+           x="-75.818611"
+           id="tspan5080-8-7-8-7-4"
+           sodipodi:role="line">Nengo core</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         x="-34.69001"
+         y="196.19797"
+         id="text5078-2-0-3-0-9"><tspan
+           sodipodi:role="line"
+           id="tspan5080-8-6-3-8-2"
+           x="-34.69001"
+           y="196.19797"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;text-anchor:middle">Python</tspan><tspan
+           sodipodi:role="line"
+           x="-34.69001"
+           y="211.19797"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;text-anchor:middle"
+           id="tspan5657">Numpy</tspan></text>
+    </g>
+    <g
+       id="g5612-4-4-5-2"
+       transform="rotate(-56.632018,126.5553,173.57543)">
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -130.02354,210.0041 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8-9-5-1-0"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -133.1383,127.07953 -0.55669,84.23377"
+         id="path4998-3-0-3-41-8-5-1-6-3-6-9-2-0-6"
+         inkscape:connector-curvature="0" />
+    </g>
+    <g
+       id="g5677-4"
+       transform="translate(-88.571431,150.14287)">
+      <rect
+         x="-110.096"
+         y="152.00505"
+         width="165.192"
+         height="73.571442"
+         rx="6"
+         ry="6"
+         pointer-events="none"
+         id="rect13-7-6-7-1-5-3-5-1-5"
+         style="fill:#ffffff;stroke:#000000;filter:url(#filter4363)" />
+      <text
+         id="text5078-2-4-6-8-5-9"
+         y="174.59547"
+         x="-100.48584"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         xml:space="preserve"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial Bold'"
+           y="174.59547"
+           x="-100.48584"
+           id="tspan5080-8-7-8-7-4-3"
+           sodipodi:role="line">Reference simulator</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         x="-27.904297"
+         y="196.19797"
+         id="text5078-2-0-3-0-9-5"><tspan
+           sodipodi:role="line"
+           id="tspan5080-8-6-3-8-2-7"
+           x="-27.904297"
+           y="196.19797"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;text-anchor:middle">Python</tspan><tspan
+           sodipodi:role="line"
+           x="-27.904297"
+           y="211.19797"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;text-anchor:middle"
+           id="tspan5657-0">Numpy</tspan></text>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="-267.07565"
+       y="336.05597"
+       id="text5078-2-4-83-1-8"><tspan
+         sodipodi:role="line"
+         x="-267.07565"
+         y="336.05597"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:110.00000238%;font-family:Arial;-inkscape-font-specification:'Arial Bold';text-align:center;text-anchor:middle"
+         id="tspan5805">Simulation</tspan><tspan
+         sodipodi:role="line"
+         x="-267.07565"
+         y="352.55597"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:110.00000238%;font-family:Arial;-inkscape-font-specification:'Arial Bold';text-align:center;text-anchor:middle"
+         id="tspan5809">backends</tspan></text>
+    <g
+       id="g5612-4-4-5-4-1"
+       transform="rotate(-56.632018,200.41691,36.491302)">
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -130.02354,210.0041 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8-9-5-1-5-5"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -133.1383,127.07953 -0.55669,84.23377"
+         id="path4998-3-0-3-41-8-5-1-6-3-6-9-2-0-0-5"
+         inkscape:connector-curvature="0" />
+    </g>
+    <g
+       id="g5927"
+       transform="translate(-29.821425,-9.1428508)">
+      <rect
+         x="6.6897092"
+         y="311.29077"
+         width="147.33485"
+         height="73.571442"
+         rx="6"
+         ry="6"
+         pointer-events="none"
+         id="rect13-7-6-7-1-5-3-5-1-5-5"
+         style="fill:#ffffff;stroke:#000000;filter:url(#filter4387)" />
+      <text
+         id="text5078-2-4-6-8-5-9-3"
+         y="333.8812"
+         x="15.025102"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         xml:space="preserve"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial Bold'"
+           y="333.8812"
+           x="15.025102"
+           id="tspan5080-8-7-8-7-4-3-4"
+           sodipodi:role="line">OpenCL simulator</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         x="80.28389"
+         y="355.48367"
+         id="text5078-2-0-3-0-9-5-9"><tspan
+           sodipodi:role="line"
+           id="tspan5080-8-6-3-8-2-7-0"
+           x="80.28389"
+           y="355.48367"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;text-anchor:middle">Python</tspan><tspan
+           sodipodi:role="line"
+           x="80.28389"
+           y="370.48367"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;text-anchor:middle"
+           id="tspan5657-0-2">OpenCL</tspan></text>
+    </g>
+    <g
+       id="g6113"
+       transform="translate(206.11135)">
+      <rect
+         x="-198.66743"
+         y="416.29077"
+         width="107.613"
+         height="43.570999"
+         rx="6"
+         ry="6"
+         pointer-events="none"
+         id="rect13-7-6-7-1-5-3-5-1-5-7"
+         style="fill:#ffffff;stroke:#000000;filter:url(#filter4435)" />
+      <text
+         id="text5078-2-4-6-8-5-9-31"
+         y="443.44513"
+         x="-160.46518"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         xml:space="preserve"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial Bold'"
+           y="443.44513"
+           x="-160.46518"
+           id="tspan5080-8-7-8-7-4-3-1"
+           sodipodi:role="line">CPU</tspan></text>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="-267.54532"
+       y="435.10724"
+       id="text5078-2-4-83-1-8-7"><tspan
+         sodipodi:role="line"
+         x="-267.54532"
+         y="435.10724"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:110.00000238%;font-family:Arial;-inkscape-font-specification:'Arial Bold';text-align:center;text-anchor:middle"
+         id="tspan5809-8">Physical</tspan><tspan
+         sodipodi:role="line"
+         x="-267.54532"
+         y="451.60724"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:110.00000238%;font-family:Arial;-inkscape-font-specification:'Arial Bold';text-align:center;text-anchor:middle"
+         id="tspan6106">hardware</tspan></text>
+    <g
+       id="g6108-5-0"
+       transform="translate(339.18292)">
+      <rect
+         x="-21.106642"
+         y="416.26337"
+         width="107.613"
+         height="43.626266"
+         rx="5.3534007"
+         ry="6.0075498"
+         pointer-events="none"
+         id="rect13-7-6-7-1-5-3-5-1-5-7-4-8-6"
+         style="fill:#ffffff;stroke:#000000;stroke-width:0.94517517;filter:url(#filter4399)" />
+      <text
+         id="text5078-2-4-6-8-5-9-31-0-2-6"
+         y="443.44513"
+         x="-5.6241169"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         xml:space="preserve"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial Bold'"
+           y="443.44513"
+           x="-5.6241169"
+           sodipodi:role="line"
+           id="tspan6166">SpiNNaker</tspan></text>
+    </g>
+    <g
+       id="g5612-3-8-4-7-4"
+       transform="translate(505.57774,198.17737)">
+      <path
+         sodipodi:nodetypes="cc"
+         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -133.69496,176.49286 v 36.33663"
+         id="path4998-3-0-3-41-8-5-1-6-3-6-7-6-6-5-7"
+         inkscape:connector-curvature="0" />
+      <path
+         sodipodi:nodetypes="cccc"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.66085482px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m -130.02354,210.0041 h -7.34284 l 3.67142,6.82878 z"
+         id="path5000-4-5-7-6-93-3-2-1-5-8-8-0-7-9-8"
+         inkscape:connector-curvature="0" />
+    </g>
+    <g
+       id="g5677-4-0"
+       transform="translate(419.21032,150.14287)">
+      <rect
+         x="-110.096"
+         y="152.00505"
+         width="165.192"
+         height="73.571442"
+         rx="6"
+         ry="6"
+         pointer-events="none"
+         id="rect13-7-6-7-1-5-3-5-1-5-1"
+         style="fill:#ffffff;stroke:#000000;filter:url(#filter4375)" />
+      <text
+         id="text5078-2-4-6-8-5-9-0"
+         y="174.59547"
+         x="-101.6687"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         xml:space="preserve"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial Bold'"
+           y="174.59547"
+           x="-101.6687"
+           id="tspan5080-8-7-8-7-4-3-13"
+           sodipodi:role="line">SpiNNaker simulator</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         x="-27.904297"
+         y="196.19797"
+         id="text5078-2-0-3-0-9-5-7"><tspan
+           sodipodi:role="line"
+           id="tspan5080-8-6-3-8-2-7-7"
+           x="-27.904297"
+           y="196.19797"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;text-anchor:middle">Python</tspan><tspan
+           sodipodi:role="line"
+           x="-27.904297"
+           y="211.19797"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;text-anchor:middle"
+           id="tspan5657-0-26">spinnaker_tools (C)</tspan></text>
+    </g>
+    <g
+       transform="translate(214.49373,10.726501)"
+       id="g5616-6">
+      <g
+         id="g522"
+         transform="translate(-50.625,-10.726501)">
+        <rect
+           style="fill:#ffffff;stroke:#000000;filter:url(#filter4327-3)"
+           id="rect13-7-6-7-1-5-3-5-2"
+           pointer-events="none"
+           ry="6"
+           rx="6"
+           height="95.000015"
+           width="151.62057"
+           y="33.127476"
+           x="118.89661" />
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+           x="125.02428"
+           y="49.914349"
+           id="text5078-2-4-6-8-9"><tspan
+             sodipodi:role="line"
+             id="tspan5080-8-7-8-7-1"
+             x="125.02428"
+             y="49.914349"
+             style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:15px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial Bold'">TensorFlow models</tspan></text>
+        <text
+           id="text5078-2-0-3-0-2"
+           y="81.82933"
+           x="194.61607"
+           style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+           xml:space="preserve"><tspan
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;text-anchor:middle"
+             y="81.82933"
+             x="194.61607"
+             id="tspan5080-8-6-3-8-7"
+             sodipodi:role="line">Python</tspan><tspan
+             id="tspan5655-9"
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;text-anchor:middle"
+             y="96.82933"
+             x="194.61607"
+             sodipodi:role="line">TensorFlow</tspan></text>
+      </g>
+    </g>
+  </g>
+</svg>

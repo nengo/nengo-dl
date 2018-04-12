@@ -4,6 +4,9 @@ Additional resources
 - `Nengo documentation <https://www.nengo.ai/>`_: If you are new to
   Nengo, you should start here.
 
+- `NengoDL white paper <https://arxiv.org/abs/1805.11144>`_: For a long-form
+  introduction to NengoDL.
+
 - `Nengo forums <https://forum.nengo.ai/>`_: To get help or ask questions about
   NengoDL, or Nengo in general.
 

@@ -95,15 +95,15 @@ def test_truncation(truncation):
     inputs = {"a": np.random.randn(2, 10)}
     targets = {"b": np.random.randn(2, 10)}
 
-    dur = 10 if truncation is None else truncation
+    duration = 10 if truncation is None else truncation
 
     with pytest.warns(None) as w:
         for i, (o, x, y) in enumerate(utils.minibatch_generator(
                 inputs, targets, 2, shuffle=False, truncation=truncation)):
-            assert np.allclose(x["a"], inputs["a"][:, o:o + dur])
-            assert np.allclose(y["b"], targets["b"][:, o:o + dur])
+            assert np.allclose(x["a"], inputs["a"][:, o:o + duration])
+            assert np.allclose(y["b"], targets["b"][:, o:o + duration])
 
-    assert i == 10 // dur - (10 % dur == 0)
+    assert i == 10 // duration - (10 % duration == 0)
 
     assert len(w) == (1 if truncation == 3 else 0)
 

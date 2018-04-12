@@ -93,6 +93,7 @@ script:
       coverage run -a -m pytest nengo_dl;
       coverage report -m;
     elif [[ "$MODE" == "examples" ]]; then
+      python docs/whitepaper/whitepaper2018_code.py > /dev/null &&
       pytest -v --durations 20 --nbval-lax docs/examples;
     else
       pytest -n 2 --pyargs nengo && pytest -n 2 --durations 20 nengo_dl;

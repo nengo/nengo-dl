@@ -22,6 +22,14 @@ pytest.main([
 print("#" * 30, "NENGO_DL TESTS", "#" * 30)
 pytest.main(['--gpu'])
 
+# test whitepaper plots
+sys.path.append("../docs/whitepaper")
+import whitepaper2018_plots
+
+sys.argv += "--no-show --reps 1 test".split()
+whitepaper2018_plots.main(obj={})
+
 # run flake8
-sys.argv += "--ignore E721 .".split()
+sys.argv = sys.argv[:1]
+sys.argv += "--ignore E721,E402 .".split()
 flake8.main()

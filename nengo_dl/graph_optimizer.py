@@ -379,30 +379,6 @@ def tree_planner(op_list, max_depth=3):
     return plan
 
 
-def noop_planner(operators):
-    """Orders operators into a valid execution order, but does not perform
-    any merging.
-
-    Parameters
-    ----------
-    operators : list of :class:`~nengo:nengo.builder.Operator`
-        All the ``nengo`` operators in a model (unordered)
-
-    Returns
-    -------
-    list of tuple of :class:`~nengo:nengo.builder.Operator`
-        Operators in execution order
-    """
-
-    dependency_graph = operator_dependency_graph(operators)
-    plan = [(op,) for op in toposort(dependency_graph)]
-
-    logger.debug("NOOP PLAN")
-    logger.debug("\n" + "\n".join([str(x) for x in plan]))
-
-    return plan
-
-
 def transitive_planner(op_list):
     """Create merged execution plan through transitive closure construction.
 
@@ -595,6 +571,30 @@ def transitive_closure_recurse(dg, ops, trans, builder_type, builder_types,
             except KeyError:
                 trans[op] = merged
                 cache[key] = merged
+
+
+def noop_planner(operators):
+    """Orders operators into a valid execution order, but does not perform
+    any merging.
+
+    Parameters
+    ----------
+    operators : list of :class:`~nengo:nengo.builder.Operator`
+        All the ``nengo`` operators in a model (unordered)
+
+    Returns
+    -------
+    list of tuple of :class:`~nengo:nengo.builder.Operator`
+        Operators in execution order
+    """
+
+    dependency_graph = operator_dependency_graph(operators)
+    plan = [(op,) for op in toposort(dependency_graph)]
+
+    logger.debug("NOOP PLAN")
+    logger.debug("\n" + "\n".join([str(x) for x in plan]))
+
+    return plan
 
 
 def order_signals(plan, n_passes=10):

@@ -11,8 +11,13 @@ dist
 .cache
 .coverage
 .idea
+.pytest_cache
 data
 docs/mnist.pkl
 docs/examples/*
 !docs/examples/*.ipynb
+docs/whitepaper/*
+!docs/whitepaper/*.tex
+!docs/whitepaper/*.py
+!docs/whitepaper/*.svg
 tmp

@@ -98,6 +98,7 @@ class TensorGraph(object):
             simplifications = model.toplevel.config[
                 model.toplevel].simplifications
         except (ConfigError, AttributeError):
+            # TODO: verify the performance improvement of the simplifications
             simplifications = [
                 graph_optimizer.remove_constant_copies,
                 graph_optimizer.remove_unmodified_resets,

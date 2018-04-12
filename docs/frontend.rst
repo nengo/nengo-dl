@@ -12,7 +12,7 @@ inserting TensorFlow code into a Nengo model.
     :maxdepth: 1
 
     simulator
-    tensor_node
     training
+    tensor_node
     extra_objects
 

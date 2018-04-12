@@ -12,7 +12,8 @@ from nengo_dl import DATA_DIR
 
 
 def cconv(dimensions, neurons_per_d, neuron_type):
-    """Circular convolution (EnsembleArray) benchmark.
+    """
+    Circular convolution (EnsembleArray) benchmark.
 
     Parameters
     ----------
@@ -25,7 +26,7 @@ def cconv(dimensions, neurons_per_d, neuron_type):
 
     Returns
     -------
-    nengo.Network
+    :class:`nengo:nengo.Network`
         benchmark network
     """
 
@@ -48,7 +49,8 @@ def cconv(dimensions, neurons_per_d, neuron_type):
 
 
 def integrator(dimensions, neurons_per_d, neuron_type):
-    """Single integrator ensemble benchmark.
+    """
+    Single integrator ensemble benchmark.
 
     Parameters
     ----------
@@ -61,7 +63,7 @@ def integrator(dimensions, neurons_per_d, neuron_type):
 
     Returns
     -------
-    nengo.Network
+    :class:`nengo:nengo.Network`
         benchmark network
     """
 
@@ -70,19 +72,20 @@ def integrator(dimensions, neurons_per_d, neuron_type):
         net.config[nengo.Ensemble].gain = nengo.dists.Choice([1, -1])
         net.config[nengo.Ensemble].bias = nengo.dists.Uniform(-1, 1)
 
-        net.integ = nengo.networks.Integrator(0.1, neurons_per_d * dimensions,
-                                              dimensions)
+        net.integ = nengo.networks.EnsembleArray(neurons_per_d, dimensions)
+        nengo.Connection(net.integ.output, net.integ.input, synapse=0.01)
 
         net.inp = nengo.Node([0] * dimensions)
-        nengo.Connection(net.inp, net.integ.input)
+        nengo.Connection(net.inp, net.integ.input, transform=0.01)
 
-        net.p = nengo.Probe(net.integ.ensemble)
+        net.p = nengo.Probe(net.integ.output)
 
     return net
 
 
 def pes(dimensions, neurons_per_d, neuron_type):
-    """PES learning rule benchmark.
+    """
+    PES learning rule benchmark.
 
     Parameters
     ----------
@@ -95,7 +98,7 @@ def pes(dimensions, neurons_per_d, neuron_type):
 
     Returns
     -------
-    nengo.Network
+    :class:`nengo:nengo.Network`
         benchmark network
     """
 
@@ -106,29 +109,65 @@ def pes(dimensions, neurons_per_d, neuron_type):
 
         net.inp = nengo.Node([1] * dimensions)
         net.pre = nengo.Ensemble(neurons_per_d * dimensions, dimensions)
-        net.post = nengo.Ensemble(neurons_per_d * dimensions, dimensions)
-        net.err = nengo.Node(size_in=dimensions)
+        net.post = nengo.Node(size_in=dimensions)
+
         nengo.Connection(net.inp, net.pre)
-        nengo.Connection(net.post, net.err, transform=-1)
-        nengo.Connection(net.inp, net.err)
 
         conn = nengo.Connection(
             net.pre, net.post, learning_rule_type=nengo.PES())
-        nengo.Connection(net.err, conn.learning_rule)
+
+        nengo.Connection(net.post, conn.learning_rule, transform=-1)
+        nengo.Connection(net.inp, conn.learning_rule)
 
         net.p = nengo.Probe(net.post)
 
     return net
 
 
+def basal_ganglia(dimensions, neurons_per_d, neuron_type):
+    """
+    Basal ganglia network benchmark.
+
+    Parameters
+    ----------
+    dimensions : int
+        Number of dimensions for vector values
+    neurons_per_d : int
+        Number of neurons to use per vector dimension
+    neuron_type : :class:`~nengo:nengo.neurons.NeuronType`
+        Simulation neuron type
+
+    Returns
+    -------
+    :class:`nengo:nengo.Network`
+        benchmark network
+    """
+
+    with nengo.Network(label="basal_ganglia", seed=0) as net:
+        net.config[nengo.Ensemble].neuron_type = neuron_type
+
+        net.inp = nengo.Node([1] * dimensions)
+        net.bg = nengo.networks.BasalGanglia(dimensions, neurons_per_d)
+        nengo.Connection(net.inp, net.bg.input)
+        net.p = nengo.Probe(net.bg.output)
+
+    return net
+
+
 def mnist(use_tensor_layer=True):
-    """A network designed to stress-test tensor layers (based on mnist net).
+    """
+    A network designed to stress-test tensor layers (based on mnist net).
 
     Parameters
     ----------
     use_tensor_layer : bool
         If True, use individual tensor_layers to build the network, as opposed
         to a single TensorNode containing all layers.
+
+    Returns
+    -------
+    :class:`nengo:nengo.Network`
+        benchmark network
     """
 
     with nengo.Network() as net:
@@ -209,7 +248,8 @@ def mnist(use_tensor_layer=True):
 
 
 def compare_backends(raw=False):
-    """Compare the run time of different backends across benchmarks and
+    """
+    Compare the run time of different backends across benchmarks and
     a range of parameters.
 
     Parameters
@@ -315,7 +355,8 @@ def compare_backends(raw=False):
 
 
 def profile(net, train=False, n_steps=150, **kwargs):
-    """Run profiler on a benchmark network.
+    """
+    Run profiler on a benchmark network.
 
     Parameters
     ----------
@@ -330,7 +371,6 @@ def profile(net, train=False, n_steps=150, **kwargs):
     Notes
     -----
     kwargs will be passed on to :class:`.Simulator`
-
     """
 
     with nengo_dl.Simulator(net, **kwargs) as sim:
@@ -351,7 +391,8 @@ def profile(net, train=False, n_steps=150, **kwargs):
 
 
 def matmul_vs_reduce():
-    """Compares two different approaches to batched matrix multiplication
+    """
+    Compares two different approaches to batched matrix multiplication
     (tf.matmul vs tf.multiply+tf.reduce_sum).
 
     This is relevant for figuring out which approach is more efficient
