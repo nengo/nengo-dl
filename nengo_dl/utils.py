@@ -347,6 +347,11 @@ class ProgressBar(progressbar.ProgressBar):
     def max_steps(self, n):
         self.max_value = n
 
+    def __enter__(self):
+        super(ProgressBar, self).__enter__()
+
+        return self.start()
+
     def __next__(self):
         """Wraps an iterable using this progress bar."""
 

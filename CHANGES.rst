@@ -38,6 +38,7 @@ Release History
 
 - Checking ``nengo_dl`` version without ``nengo`` installed will no longer
   result in an error.
+- Updated progress bar to work with ``progressbar2>=3.37.0``
 
 0.6.1 (March 7, 2018)
 ---------------------
