@@ -9,7 +9,7 @@ from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
 from nengo.exceptions import BuildError
 from nengo.utils.compat import iteritems
-from nengo.utils.graphs import toposort
+from nengo.utils.graphs import toposort, BidirectionalDAG
 from nengo.utils.simulator import operator_dependency_graph
 import numpy as np
 
@@ -257,7 +257,7 @@ def tree_planner(op_list, max_depth=3):
             if max_depth == 1 or new_len == 0:
                 # we've reached the end, so just return the number
                 # of remaining operators after selecting this group
-                result, length = [], new_len
+                remaining_length = new_len
             else:
                 # update the selected ops after adding group
                 new_selected = selected | group
@@ -265,7 +265,7 @@ def tree_planner(op_list, max_depth=3):
                 try:
                     # check if we've already computed the shortest path
                     # for the selected ops and depth
-                    result, length = cache[max_depth - 1][new_selected]
+                    remaining_length = cache[max_depth - 1][new_selected]
 
                 except KeyError:
                     # update the list of available items after selecting
@@ -280,7 +280,7 @@ def tree_planner(op_list, max_depth=3):
 
                     # recursively find the best plan on the remaining
                     # operators
-                    result, length = shortest_plan(
+                    _, remaining_length = shortest_plan(
                         new_selected, successors_of, predecessors_of, cache,
                         max_depth - 1, available)
 
@@ -294,14 +294,14 @@ def tree_planner(op_list, max_depth=3):
                             available[mergeable_cache[op]].remove(op)
                     available[i] = group
 
-            if length + 1 < shortest[1]:
+            if remaining_length + 1 < shortest[1]:
                 # new shortest path found
-                shortest = ([tuple(group)] + result, length + 1)
+                shortest = (tuple(group), remaining_length + 1)
 
         if shortest[0] is None:
             raise BuildError("Cycle detected during graph optimization")
 
-        cache[max_depth][selected] = shortest
+        cache[max_depth][selected] = shortest[1]
 
         return shortest
 
@@ -345,13 +345,12 @@ def tree_planner(op_list, max_depth=3):
     plan = []
     while len(successors_of) > 0:
         # find the best plan of the given depth
-        short_plan, _ = shortest_plan(
+        selected, _ = shortest_plan(
             frozenset(), successors_of, predecessors_of,
             [{} for _ in range(max_depth + 1)], max_depth, available)
 
         # select the first item in that plan (i.e., the best group to select
         # after looking ahead for max_depth steps)
-        selected = short_plan[0]
         plan.append(selected)
 
         # update the operator availability
@@ -416,9 +415,6 @@ def transitive_planner(op_list):
     list of tuple of :class:`~nengo:nengo.builder.Operator`
         Operators combined into mergeable groups and in execution order
     """
-
-    # note: importing this here since it only exists in nengo 2.4.0
-    from nengo.utils.graphs import BidirectionalDAG
 
     n_ele = len(op_list)
     merge_groups = {}

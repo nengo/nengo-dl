@@ -33,6 +33,7 @@ Release History
   standard conventions).  This only affects the display name of the project
   on PyPI/GitHub, and the documentation now resides at
   https://www.nengo.ai/nengo-dl/; there are no functional changes to user code.
+- Minor efficiency improvements to graph planner
 
 **Fixed**
 
