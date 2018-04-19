@@ -547,9 +547,6 @@ class Simulator(object):
                 profiler.add_step(int(outputs[-1]), run_metadata)
             progress.step("loss=%f" % outputs[1])
 
-                    if offset == 0:
-                        progress.step(loss="%.4f" % outputs[1])
-
         # restore internal state of simulator
         self.load_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
                          include_global=False)
@@ -1078,22 +1075,21 @@ class Simulator(object):
 
             if using_output:
                 if n in input_feeds:
-                    # move minibatch dimension to the end
                     feed_val = input_feeds[n]
                 elif isinstance(n.output, np.ndarray):
                     feed_val = np.tile(n.output[None, None, :],
                                        (self.minibatch_size, n_steps, 1))
                 else:
                     feed_val = np.zeros(
-                        (n_steps, n.size_out, self.minibatch_size),
+                        (self.minibatch_size, n_steps, n.size_out),
                         dtype=self.tensor_graph.dtype.as_numpy_dtype)
 
                     for i in range(n_steps):
                         # note: need to copy the output of func, as func
                         # may mutate its outputs in-place on subsequent calls
-                        feed_val[i] = np.transpose([
+                        feed_val[:, i] = [
                             func((i + self.n_steps + 1) * self.dt)
-                            for func in self.input_funcs[(n, n.output)]])
+                            for func in self.input_funcs[(n, n.output)]]
 
                 feed_vals[self.tensor_graph.data_phs[n]] = feed_val
             elif not isinstance(n.output, np.ndarray):

@@ -382,7 +382,7 @@ def test_generate_inputs(Simulator, seed):
             assert np.allclose(sim.data[p[i]], x)
 
         # check that unseeded process was different in each minibatch item
-        assert not np.allclose(feed[ph[-1]][..., 0], feed[ph[-1]][..., 1])
+        assert not np.allclose(feed[ph[-1]][0], feed[ph[-1]][1])
 
 
 def test_save_load_params(Simulator, tmpdir):
