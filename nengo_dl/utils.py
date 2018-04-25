@@ -375,8 +375,15 @@ class NullProgressBar(progressbar.NullBar):
     Used to replace ProgressBar when we want to disable output.
     """
 
+    def __init__(self, present="", past=None, max_value=1, vars=None,
+                 **kwargs):
+        super(NullProgressBar, self).__init__(max_value=max_value, **kwargs)
+
     def sub(self, *args, **kwargs):
         return self
+
+    def step(self):
+        pass
 
 
 def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,

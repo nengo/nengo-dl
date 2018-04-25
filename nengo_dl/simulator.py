@@ -62,6 +62,8 @@ class Simulator(object):
     tensorboard : str, optional
         If not None, save network output in the TensorFlow summary format to
         the given directory, which can be loaded into TensorBoard
+    progress_bar : bool, optional
+        If True (default), display progress information when building a model
     """
 
     # unsupported unit tests
@@ -102,7 +104,7 @@ class Simulator(object):
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
                  dtype=tf.float32, device=None, unroll_simulation=1,
-                 minibatch_size=None, tensorboard=None):
+                 minibatch_size=None, tensorboard=None, progress_bar=True):
         self.closed = False
         self.unroll = unroll_simulation
         self.minibatch_size = 1 if minibatch_size is None else minibatch_size
@@ -111,6 +113,9 @@ class Simulator(object):
                      else seed)
 
         # TODO: multi-GPU support
+
+        ProgressBar = (utils.ProgressBar if progress_bar else
+                       utils.NullProgressBar)
 
         # build model (uses default nengo builder)
         if model is None:
@@ -130,20 +135,20 @@ class Simulator(object):
                 print("\rBuild finished in %s " %
                       datetime.timedelta(seconds=int(time.time() - start)))
             else:
-                p = utils.ProgressBar("Building network", "Build")
+                p = ProgressBar("Building network", "Build")
                 self.model.build(network, progress=p)
 
         # set up tensorflow graph plan
-        with utils.ProgressBar("Optimizing graph", "Optimization",
-                               max_value=None) as progress:
+        with ProgressBar("Optimizing graph", "Optimization",
+                         max_value=None) as progress:
 
             self.tensor_graph = TensorGraph(
                 self.model, self.dt, unroll_simulation, dtype,
                 self.minibatch_size, device, progress)
 
         # construct graph
-        with utils.ProgressBar("Constructing graph", "Construction",
-                               max_value=None) as progress:
+        with ProgressBar("Constructing graph", "Construction",
+                         max_value=None) as progress:
             self.tensor_graph.build(progress)
 
         # output simulation data for viewing via TensorBoard

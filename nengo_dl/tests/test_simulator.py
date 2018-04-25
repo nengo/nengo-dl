@@ -1049,3 +1049,13 @@ def test_get_nengo_params(Simulator, seed):
         sim2.run_steps(100)
 
         assert np.allclose(sim.data[p], sim2.data[p2])
+
+
+@pytest.mark.parametrize("progress", (True, False))
+def test_progress_bar(Simulator, progress):
+    # note: ideally we would capture the stdout and check that output is
+    # actually being controlled. but the pytest capturing doesn't work,
+    # because it's being printed in a different thread (I think). so we just
+    # check that the parameter works without error
+    with Simulator(nengo.Network(), progress_bar=progress) as sim:
+        sim.run_steps(10, progress_bar=progress)

@@ -25,6 +25,8 @@ Release History
 
 - Added ``sim.get_nengo_params`` function to more easily extract
   model parameters for reuse when building different models.
+- Added ``Simulator(..., progress_bar=False)`` option to disable the progress
+  information printed to console when the network is building.
 
 **Changed**
 
