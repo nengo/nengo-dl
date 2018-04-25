@@ -221,7 +221,8 @@ class Simulator(object):
                     self.tensor_graph.global_init_op]
         if include_trainable:
             init_ops.append(self.tensor_graph.trainable_init_op)
-        self.sess.run(init_ops)
+        self.sess.run(init_ops, feed_dict={
+            ph: v for _, ph, v in self.tensor_graph.base_vars.values()})
 
         if include_probes:
             for p in self.model.probes:

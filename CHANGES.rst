@@ -34,6 +34,8 @@ Release History
   on PyPI/GitHub, and the documentation now resides at
   https://www.nengo.ai/nengo-dl/; there are no functional changes to user code.
 - Minor efficiency improvements to graph planner
+- Avoid using ``tf.constant``, to get around TensorFlow's 2GB limit on graph
+  size when building large models
 
 **Fixed**
 

@@ -176,21 +176,24 @@ class TensorGraph(object):
                 unique_ids[(v.dtype, v.shape, trainable)])
             unique_ids[(v.dtype, v.shape, trainable)] += 1
 
+            # we initialize all the variables from placeholders, and then
+            # feed in the initial values when the init op is called. this
+            # prevents TensorFlow from storing large constants in the graph
+            # def, which can cause problems for large models
+            ph = tf.placeholder(v.dtype, v.shape)
+
             if trainable:
                 with tf.variable_scope("trainable_vars", reuse=False):
-                    var = tf.get_variable(
-                        name, initializer=tf.constant_initializer(v),
-                        dtype=v.dtype, shape=v.shape, trainable=True)
+                    var = tf.get_variable(name, initializer=ph, trainable=True)
             else:
                 with tf.variable_scope("local_vars", reuse=False):
-                    var = tf.get_local_variable(
-                        name, initializer=tf.constant_initializer(v),
-                        dtype=v.dtype, shape=v.shape, trainable=False)
+                    var = tf.get_local_variable(name, initializer=ph,
+                                                trainable=False)
 
-            self.base_vars[k] = var
+            self.base_vars[k] = (var, ph, v)
 
         logger.debug("created base arrays")
-        logger.debug([str(x) for x in self.base_vars.values()])
+        logger.debug([str(x[0]) for x in self.base_vars.values()])
 
         # set up invariant inputs
         sub = progress.sub("building inputs")
@@ -366,7 +369,7 @@ class TensorGraph(object):
         # build simulation loop
         loop_vars = (
             self.step_var, self.stop_var, loop_i, probe_arrays,
-            tuple(x._ref() if isinstance(x, tf.Variable) else x
+            tuple(x[0]._ref() if isinstance(x[0], tf.Variable) else x[0]
                   for x in self.base_vars.values()) +
             tuple(x._ref() for x in self.signals.internal_vars.values()))
 
@@ -626,7 +629,7 @@ class TensorGraph(object):
         if tensor_sig.tf_indices is None:
             tensor_sig.load_indices()
 
-        base = self.base_vars[tensor_sig.key]
+        base = self.base_vars[tensor_sig.key][0]
         return tf.gather(base, tensor_sig.tf_indices)
 
     def mark_signals(self):

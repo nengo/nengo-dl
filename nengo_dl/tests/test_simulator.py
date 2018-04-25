@@ -397,10 +397,10 @@ def test_save_load_params(Simulator, tmpdir):
         net.config[ens].trainable = False
 
     with Simulator(net) as sim:
-        weights_var = [x for x in sim.tensor_graph.base_vars.values()
-                       if x.get_shape() == (1, 10)][0]
+        weights_var = [x[0] for x in sim.tensor_graph.base_vars.values()
+                       if x[0].get_shape() == (1, 10)][0]
         enc_var = sim.tensor_graph.base_vars[
-            sim.tensor_graph.sig_map[sim.model.sig[ens]["encoders"]].key]
+            sim.tensor_graph.sig_map[sim.model.sig[ens]["encoders"]].key][0]
         weights0, enc0 = sim.sess.run([weights_var, enc_var])
         sim.save_params(os.path.join(str(tmpdir), "train"))
         sim.save_params(os.path.join(str(tmpdir), "local"),
@@ -422,10 +422,10 @@ def test_save_load_params(Simulator, tmpdir):
         net2.config[ens].trainable = False
 
     with Simulator(net2) as sim:
-        weights_var = [x for x in sim.tensor_graph.base_vars.values()
-                       if x.get_shape() == (1, 10)][0]
+        weights_var = [x[0] for x in sim.tensor_graph.base_vars.values()
+                       if x[0].get_shape() == (1, 10)][0]
         enc_var = sim.tensor_graph.base_vars[
-            sim.tensor_graph.sig_map[sim.model.sig[ens]["encoders"]].key]
+            sim.tensor_graph.sig_map[sim.model.sig[ens]["encoders"]].key][0]
         weights1, enc1 = sim.sess.run([weights_var, enc_var])
         assert not np.allclose(weights0, weights1)
         assert not np.allclose(enc0, enc1)
@@ -925,7 +925,7 @@ def test_simulation_data(Simulator, seed):
         # check that values can be updated live
         sig = sim.model.sig[a]['encoders']
         tensor_sig = sim.tensor_graph.sig_map[sig]
-        base = sim.tensor_graph.base_vars[tensor_sig.key]
+        base = sim.tensor_graph.base_vars[tensor_sig.key][0]
         op = tf.assign(base, tf.ones_like(base))
         sim.sess.run(op)
 
