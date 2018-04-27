@@ -3,6 +3,7 @@ from nengo.builder import Signal
 from nengo.builder.learning_rules import SimBCM, SimOja, SimVoja, get_post_ens
 from nengo.builder.operator import Operator, Reset, DotInc, Copy
 from nengo.learning_rules import PES
+from nengo.version import version_info as nengo_version
 import numpy as np
 import tensorflow as tf
 
@@ -230,13 +231,17 @@ def build_pes(model, pes, rule):
     model.add_op(Reset(error))
     model.sig[rule]['in'] = error  # error connection will attach here
 
-    acts = model.build(Lowpass(pes.pre_tau), model.sig[conn.pre_obj]['out'])
+    if nengo_version < (2, 7, 1):
+        acts = model.build(
+            Lowpass(pes.pre_tau), model.sig[conn.pre_obj]["out"])
+    else:
+        acts = model.build(pes.pre_synapse, model.sig[conn.pre_obj]["out"])
 
     if not conn.is_decoded:
         # multiply error by post encoders to get a per-neuron error
 
         post = get_post_ens(conn)
-        encoders = model.sig[post]['encoders']
+        encoders = model.sig[post]["encoders"]
 
         if conn.post_obj is not conn.post:
             # in order to avoid slicing encoders along an axis > 0, we pad
@@ -256,16 +261,16 @@ def build_pes(model, pes, rule):
     else:
         local_error = error
 
-    model.operators.append(SimPES(acts, local_error, model.sig[rule]['delta'],
+    model.operators.append(SimPES(acts, local_error, model.sig[rule]["delta"],
                                   pes.learning_rate))
 
     # expose these for probes
-    model.sig[rule]['error'] = error
-    model.sig[rule]['activities'] = acts
+    model.sig[rule]["error"] = error
+    model.sig[rule]["activities"] = acts
 
 
 # remove 'correction' from probeable attributes
-PES.probeable = ('error', 'activities', 'delta')
+PES.probeable = ("error", "activities", "delta")
 
 
 @Builder.register(SimPES)
