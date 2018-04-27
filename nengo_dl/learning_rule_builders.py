@@ -25,12 +25,11 @@ class SimBCMBuilder(OpBuilder):
              for _ in range(op.post_filtered.shape[0])], load_indices=False)
         self.pre_data = self.pre_data.reshape((self.post_data.shape[0],
                                                ops[0].pre_filtered.shape[0]))
-        self.pre_data.load_indices()
+        self.pre_data.load_indices(constant=signals.constant)
 
-        self.learning_rate = tf.constant(
-            [[op.learning_rate] for op in ops
-             for _ in range(op.post_filtered.shape[0])],
-            dtype=signals.dtype)
+        self.learning_rate = signals.op_constant(
+            ops, [op.post_filtered.shape[0] for op in ops], "learning_rate",
+            signals.dtype, ndims=3)
 
         self.output_data = signals.combine([op.delta for op in ops])
 
@@ -61,20 +60,18 @@ class SimOjaBuilder(OpBuilder):
              for _ in range(op.post_filtered.shape[0])], load_indices=False)
         self.pre_data = self.pre_data.reshape((self.post_data.shape[0],
                                                ops[0].pre_filtered.shape[0]))
-        self.pre_data.load_indices()
+        self.pre_data.load_indices(constant=signals.constant)
 
         self.weights_data = signals.combine([op.weights for op in ops])
         self.output_data = signals.combine([op.delta for op in ops])
 
-        self.learning_rate = tf.constant(
-            [[[op.learning_rate]] for op in ops
-             for _ in range(op.post_filtered.shape[0])],
-            dtype=signals.dtype)
+        self.learning_rate = signals.op_constant(
+            ops, [op.post_filtered.shape[0] for op in ops], "learning_rate",
+            signals.dtype, ndims=3)
 
-        self.beta = tf.constant(
-            [[[op.beta]] for op in ops for _ in
-             range(op.post_filtered.shape[0])],
-            dtype=signals.dtype)
+        self.beta = signals.op_constant(
+            ops, [op.post_filtered.shape[0] for op in ops], "beta",
+            signals.dtype, ndims=3)
 
     def build_step(self, signals):
         pre = signals.gather(self.pre_data)
@@ -107,7 +104,7 @@ class SimVojaBuilder(OpBuilder):
              for _ in range(op.post_filtered.shape[0])], load_indices=False)
         self.pre_data = self.pre_data.reshape((self.post_data.shape[0],
                                                ops[0].pre_decoded.shape[0]))
-        self.pre_data.load_indices()
+        self.pre_data.load_indices(constant=signals.constant)
 
         self.learning_data = signals.combine(
             [op.learning_signal for op in ops
@@ -115,13 +112,13 @@ class SimVojaBuilder(OpBuilder):
         self.encoder_data = signals.combine([op.scaled_encoders for op in ops])
         self.output_data = signals.combine([op.delta for op in ops])
 
-        self.scale = tf.constant(
+        self.scale = signals.constant(
             np.concatenate([op.scale[:, None, None] for op in ops], axis=0),
             dtype=signals.dtype)
 
-        self.learning_rate = tf.constant(
-            [[op.learning_rate] for op in ops
-             for _ in range(op.post_filtered.shape[0])], dtype=signals.dtype)
+        self.learning_rate = signals.op_constant(
+            ops, [op.post_filtered.shape[0] for op in ops], "learning_rate",
+            signals.dtype)
 
     def build_step(self, signals):
         pre = signals.gather(self.pre_data)
@@ -139,7 +136,8 @@ class SimVojaBuilder(OpBuilder):
 
 
 class SimPES(Operator):
-    r"""Calculate connection weight change according to the PES rule.
+    r"""
+    Calculate connection weight change according to the PES rule.
 
     Implements the PES learning rule of the form
 
@@ -207,7 +205,8 @@ class SimPES(Operator):
 
 @NengoBuilder.register(PES)
 def build_pes(model, pes, rule):
-    """Builds a `.PES` object into a model.
+    """
+    Builds a `.PES` object into a model.
 
     Parameters
     ----------
@@ -292,9 +291,9 @@ class SimPESBuilder(OpBuilder):
             load_indices=False)
         self.pre_data = self.pre_data.reshape(
             (self.error_data.shape[0], ops[0].pre_filtered.shape[0]))
-        self.pre_data.load_indices()
+        self.pre_data.load_indices(constant=signals.constant)
 
-        self.alpha = tf.constant(
+        self.alpha = signals.constant(
             [[[-op.learning_rate * signals.dt_val /
                op.pre_filtered.shape[0]]]
              for op in ops for _ in range(op.error.shape[0])],

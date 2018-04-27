@@ -166,7 +166,9 @@ class RectifiedLinearBuilder(OpBuilder):
         if all(op.neurons.amplitude == 1 for op in ops):
             self.amplitude = None
         else:
-            self.amplitude = get_constant(ops, "amplitude", signals.dtype)
+            self.amplitude = signals.op_constant(
+                [op.neurons for op in ops], [op.J.shape[0] for op in ops],
+                "amplitude", signals.dtype)
 
     def build_step(self, signals):
         J = signals.gather(self.J_data)
@@ -210,7 +212,9 @@ class SigmoidBuilder(OpBuilder):
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
 
-        self.tau_ref = get_constant(ops, "tau_ref", signals.dtype)
+        self.tau_ref = signals.op_constant(
+            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
+            "tau_ref", signals.dtype)
 
     def build_step(self, signals):
         J = signals.gather(self.J_data)
@@ -223,9 +227,15 @@ class LIFRateBuilder(OpBuilder):
     def __init__(self, ops, signals):
         super(LIFRateBuilder, self).__init__(ops, signals)
 
-        self.tau_ref = get_constant(ops, "tau_ref", signals.dtype)
-        self.tau_rc = get_constant(ops, "tau_rc", signals.dtype)
-        self.amplitude = get_constant(ops, "amplitude", signals.dtype)
+        self.tau_ref = signals.op_constant(
+            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
+            "tau_ref", signals.dtype)
+        self.tau_rc = signals.op_constant(
+            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
+            "tau_rc", signals.dtype)
+        self.amplitude = signals.op_constant(
+            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
+            "amplitude", signals.dtype)
 
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
@@ -257,7 +267,9 @@ class LIFBuilder(LIFRateBuilder):
     def __init__(self, ops, signals):
         super(LIFBuilder, self).__init__(ops, signals)
 
-        self.min_voltage = get_constant(ops, "min_voltage", signals.dtype)
+        self.min_voltage = signals.op_constant(
+            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
+            "min_voltage", signals.dtype)
         self.amplitude /= signals.dt
 
         self.voltage_data = signals.combine([op.states[0] for op in ops])
@@ -301,7 +313,9 @@ class SoftLIFRateBuilder(LIFRateBuilder):
     def __init__(self, ops, signals):
         super(SoftLIFRateBuilder, self).__init__(ops, signals)
 
-        self.sigma = get_constant(ops, "sigma", signals.dtype)
+        self.sigma = signals.op_constant(
+            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
+            "sigma", signals.dtype)
 
     def build_step(self, signals):
         j = signals.gather(self.J_data)
@@ -315,32 +329,3 @@ class SoftLIFRateBuilder(LIFRateBuilder):
             self.tau_ref + self.tau_rc * tf.log1p(tf.reciprocal(z)))
 
         signals.scatter(self.output_data, rates)
-
-
-def get_constant(ops, attr, dtype):
-    """Creates a tensor representing the constant parameters of a neuron type.
-
-    Parameters
-    ----------
-    ops : list of :class:`~nengo:nengo.builder.neurons.SimNeurons`
-        The operators for some merged group of neuron ops
-    attr : str
-        The attribute of the neuron type that describes the constant parameter
-    dtype : ``tf.Dtype``
-        Numeric type of the parameter
-
-    Returns
-    -------
-    ``tf.Tensor``
-        Tensor containing the values of ``attr`` for the given ops.  This will
-        be a scalar if all the neurons have the same parameter value, or a
-        vector giving the parameter value for each individual neuron.
-    """
-
-    val0 = getattr(ops[0].neurons, attr)
-    if np.allclose([getattr(op.neurons, attr) for op in ops], val0):
-        return tf.constant(val0, dtype=dtype)
-    else:
-        return tf.constant(
-            [[getattr(op.neurons, attr)] for op in ops
-             for _ in range(op.J.shape[0])], dtype=dtype)

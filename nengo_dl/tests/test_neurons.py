@@ -1,11 +1,9 @@
 import nengo
-from nengo.builder.neurons import SimNeurons
-from nengo.builder.signal import Signal
 import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import SoftLIFRate, neuron_builders
+from nengo_dl import SoftLIFRate
 
 
 def test_lif_deterministic(Simulator, seed):
@@ -65,23 +63,3 @@ def test_neuron_gradients(Simulator, neuron_type, seed):
 
     with Simulator(net, seed=seed) as sim:
         sim.check_gradients()
-
-
-@pytest.mark.parametrize("dtype", (tf.float32, tf.float64))
-@pytest.mark.parametrize("diff", (True, False))
-def test_get_constant(dtype, diff):
-    ops = (SimNeurons(nengo.LIF(tau_rc=1), Signal(np.zeros(10)), None),
-           SimNeurons(nengo.LIF(tau_rc=2 if diff else 1), Signal(np.zeros(10)),
-                      None))
-
-    const = neuron_builders.get_constant(ops, "tau_rc", dtype)
-
-    assert const.dtype == dtype
-
-    with tf.Session() as sess:
-        x = sess.run(const)
-
-    if diff:
-        assert np.array_equal(x, [[1]] * 10 + [[2]] * 10)
-    else:
-        assert np.array_equal(x, 1.0)

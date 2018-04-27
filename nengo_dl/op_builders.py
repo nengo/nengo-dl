@@ -51,7 +51,7 @@ class ResetBuilder(OpBuilder):
                 value[..., None],
                 tuple(1 for _ in value.shape) + (signals.minibatch_size,))
             self.scatters += [(signals.combine([x.dst for x in group]),
-                               tf.constant(value))]
+                               signals.constant(value))]
 
         logger.debug("scatters")
         logger.debug("\n".join([str(x) for x in self.scatters]))
@@ -92,7 +92,7 @@ class CopyBuilder(OpBuilder):
             # copied to each minibatch dimension in dst
             self.src_data = self.src_data.broadcast(-1, signals.minibatch_size)
 
-        self.src_data.load_indices()
+        self.src_data.load_indices(constant=signals.constant)
 
     def build_step(self, signals):
         signals.scatter(self.dst_data, signals.gather(self.src_data),
@@ -141,8 +141,8 @@ class ElementwiseIncBuilder(OpBuilder):
         if not self.A_data.minibatched and self.X_data.minibatched:
             self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
 
-        self.A_data.load_indices()
-        self.X_data.load_indices()
+        self.A_data.load_indices(constant=signals.constant)
+        self.X_data.load_indices(constant=signals.constant)
 
     def build_step(self, signals):
         A = signals.gather(self.A_data)
@@ -206,8 +206,8 @@ class DotIncBuilder(OpBuilder):
         #     if not self.A_data.minibatched and self.X_data.minibatched:
         #         self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
 
-        self.A_data.load_indices()
-        self.X_data.load_indices()
+        self.A_data.load_indices(constant=signals.constant)
+        self.X_data.load_indices(constant=signals.constant)
 
     def build_step(self, signals):
         A = signals.gather(self.A_data)
@@ -288,7 +288,7 @@ class SparseDotIncBuilder(DotIncBuilder):
             self.A_data = signals.combine([op.A for op in ops],
                                           load_indices=False)
             self.A_data = self.A_data.reshape((-1,))
-            self.A_data.load_indices()
+            self.A_data.load_indices(constant=signals.constant)
             self.X_data = signals.combine([op.X for op in ops])
 
             assert not self.A_data.minibatched
@@ -306,7 +306,7 @@ class SparseDotIncBuilder(DotIncBuilder):
                 sparse_indices += [idxs]
 
             sparse_indices = np.concatenate(sparse_indices, axis=0)
-            self.sparse_indices = tf.constant(sparse_indices, dtype=(
+            self.sparse_indices = signals.constant(sparse_indices, dtype=(
                 tf.int32 if np.all(sparse_indices < np.iinfo(np.int32).max)
                 else tf.int64))
             self.A_shape = tf.constant(corner, dtype=tf.int64)

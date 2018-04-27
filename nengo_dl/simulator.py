@@ -193,6 +193,8 @@ class Simulator(object):
         self.time = 0.0
 
         # initialize variables
+        self.sess.run(self.tensor_graph.constant_init_op,
+                      feed_dict=self.tensor_graph.signals.constant_phs)
         self.soft_reset(include_trainable=True, include_probes=True)
 
         # execute post-build processes (we do this here because
@@ -619,7 +621,7 @@ class Simulator(object):
         path : str
             Filepath of parameter output file
         include_global : bool, optional
-            If True (default True), save global (trainable) network variables
+            If True (default True), save global/trainable network variables
         include_local : bool, optional
             If True (default False), save local (non-trainable) network
             variables

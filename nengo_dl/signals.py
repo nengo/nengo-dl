@@ -156,12 +156,24 @@ class TensorSignal(object):
             indices, self.key, self.dtype, display_shape, self.minibatch_size,
             label=self.label + ".broadcast(%d, %d)" % (axis, length))
 
-    def load_indices(self):
-        """Loads the indices for this signal into TensorFlow, and if the
-        indices form a contiguous slice then also loads the start/stop/step of
-        that slice."""
+    def load_indices(self, constant=None):
+        """
+        Loads the indices for this signal into TensorFlow.
 
-        self.tf_indices = tf.constant(self.indices, dtype=tf.int32)
+        If the indices form a contiguous slice then also loads the
+        start/stop/step of that slice.
+
+        Parameters
+        ----------
+        constant : callable, optional
+            A function that returns a TensorFlow constant (this is mainly
+            used with :meth:`.SignalDict.constant`)
+        """
+
+        if constant is None:
+            constant = tf.constant
+
+        self.tf_indices = constant(self.indices, dtype=tf.int32)
         self.tf_shape = tf.constant(self.full_shape, dtype=tf.int32)
 
         start = self.indices[0]
@@ -215,6 +227,7 @@ class SignalDict(object):
         self.reads_by_base = defaultdict(list)
         self.gather_bases = []
         self.internal_vars = OrderedDict()
+        self.constant_phs = {}
 
     def scatter(self, dst, val, mode="update"):
         """Updates the base data corresponding to ``dst``.
@@ -423,7 +436,7 @@ class SignalDict(object):
                               sigs[0].minibatch_size, label=label)
 
         if load_indices:
-            output.load_indices()
+            output.load_indices(constant=self.constant)
 
         return output
 
@@ -431,7 +444,7 @@ class SignalDict(object):
         sig = TensorSignal(
             np.arange(shape[0]), object(), self.dtype, shape,
             self.minibatch_size if minibatched else None, label=name)
-        sig.load_indices()
+        sig.load_indices(constant=self.constant)
 
         with tf.variable_scope(tf.get_default_graph().get_name_scope(),
                                reuse=False):
@@ -442,3 +455,88 @@ class SignalDict(object):
         self.internal_vars[sig.key] = var
 
         return sig
+
+    def constant(self, value, dtype=None, cutoff=1 << 25):
+        """
+        Returns a constant Tensor containing the given value.
+
+        The returned Tensor may be underpinned by a ``tf.constant`` op, or
+        a ``tf.Variable`` that will be initialized to the constant value.  We
+        use the latter in order to avoid storing large constant values in the
+        TensorFlow GraphDef, which has a hard-coded limit of 2GB at the moment.
+
+        Parameters
+        ----------
+        value : :class:`~numpy:numpy.ndarray`
+            Array containing the value of the constant
+        dtype : ``tf.DType``, optional
+            The type for the constant (if ``None``, the dtype of ``value``
+            will be used)
+        cutoff : int, optional
+            The size of constant (in bytes) for which we will switch from
+            ``tf.constant`` to ``tf.Variable``
+
+        Returns
+        -------
+        ``tf.Tensor``
+            A tensor representing the given value
+        """
+        value = np.asarray(value)
+
+        if dtype is None:
+            dtype = value.dtype
+        dtype = tf.as_dtype(dtype)
+
+        if value.nbytes > cutoff:
+            ph = tf.placeholder(dtype, value.shape)
+            self.constant_phs[ph] = value
+
+            with tf.variable_scope("constant_vars", reuse=False):
+                # tensorflow doesn't support int32 variables on the gpu, only
+                # int64 (for some reason). we don't want to use int64 since
+                # that would increase the size a lot, so we allow the variable
+                # to be created on the CPU if necessary, and then move it to
+                # the GPU with the identity
+                with tf.device(None):
+                    const_var = tf.get_variable(
+                        "constant_%d" % len(self.constant_phs), initializer=ph,
+                        collections=["constants"], trainable=False)
+
+                return tf.identity(const_var)
+        else:
+            return tf.constant(value, dtype=dtype)
+
+    def op_constant(self, ops, op_sizes, attr, dtype, ndims=2):
+        """
+        Creates a tensor representing the constant parameters of an op group.
+
+        Parameters
+        ----------
+        ops : list of object
+            The operators for some merged group of ops
+        op_sizes : list of int
+            The number of constant elements in each op
+        attr : str
+            The attribute of the op that describes the constant parameter
+        dtype : ``tf.DType``
+            Numeric type of the parameter
+        ndims : int
+            Empty dimensions will be added to the end of the returned tensor
+            for all ndims > 1 (in the case that it is not a scalar).
+
+        Returns
+        -------
+        ``tf.Tensor``
+            Tensor containing the values of ``attr`` for the given ops.  This
+            will be a scalar if all the ops have the same parameter value, or
+            an array giving the parameter value for each element in each op.
+        """
+
+        val0 = getattr(ops[0], attr)
+        if np.allclose([getattr(op, attr) for op in ops], val0):
+            return tf.constant(val0, dtype=dtype)
+        else:
+            return self.constant(
+                [np.reshape(getattr(op, attr), [1] * (ndims - 1))
+                 for i, op in enumerate(ops) for _ in range(op_sizes[i])],
+                dtype=dtype)

@@ -217,6 +217,8 @@ class TensorGraph(object):
         self.local_init_op = tf.local_variables_initializer()
         self.global_init_op = tf.variables_initializer(
             [v for v in tf.global_variables() if v not in trainable_vars])
+        self.constant_init_op = tf.variables_initializer(
+            tf.get_collection("constants"))
 
     def build_step(self):
         """Build the operators that execute a single simulation timestep

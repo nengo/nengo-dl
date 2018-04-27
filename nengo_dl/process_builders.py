@@ -183,8 +183,8 @@ class LowpassBuilder(OpBuilder):
         # need to manually broadcast for scatter_mul
         # dens = np.tile(dens, (1, signals.minibatch_size))
 
-        self.nums = tf.constant(nums, dtype=self.output_data.dtype)
-        self.dens = tf.constant(dens, dtype=self.output_data.dtype)
+        self.nums = signals.constant(nums, dtype=self.output_data.dtype)
+        self.dens = signals.constant(dens, dtype=self.output_data.dtype)
 
         # create a variable to represent the internal state of the filter
         # self.state_sig = signals.make_internal(
@@ -266,9 +266,9 @@ class LinearFilterBuilder(OpBuilder):
             corner += A.shape
             sparse_indices += [idxs]
         sparse_indices = np.concatenate(sparse_indices, axis=0)
-        self.A = tf.constant(np.concatenate(As, axis=0).flatten(),
-                             dtype=signals.dtype)
-        self.A_indices = tf.constant(sparse_indices, dtype=(
+        self.A = signals.constant(np.concatenate(As, axis=0).flatten(),
+                                  dtype=signals.dtype)
+        self.A_indices = signals.constant(sparse_indices, dtype=(
             tf.int32 if np.all(sparse_indices < np.iinfo(np.int32).max)
             else tf.int64))
         self.A_shape = tf.constant(corner, dtype=tf.int64)
@@ -277,14 +277,15 @@ class LinearFilterBuilder(OpBuilder):
             self.C = None
         else:
             # add empty dimension for broadcasting
-            self.C = tf.constant(np.concatenate(Cs)[:, None],
-                                 dtype=signals.dtype)
+            self.C = signals.constant(np.concatenate(Cs)[:, None],
+                                      dtype=signals.dtype)
 
         if np.allclose(Ds, 0):
             self.D = None
         else:
             # add empty dimension for broadcasting
-            self.D = tf.constant(np.asarray(Ds)[:, None], dtype=signals.dtype)
+            self.D = signals.constant(np.asarray(Ds)[:, None],
+                                      dtype=signals.dtype)
 
         self.offsets = tf.expand_dims(
             tf.range(0, len(ops) * As[0].shape[0], As[0].shape[0]),
