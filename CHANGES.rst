@@ -30,6 +30,8 @@ Release History
 - TensorFlow session config options can now be set using
   ``nengo_dl.configure_settings`` (e.g.,
   ``nengo_dl.configure_settings(session_config={"gpu_options.allow_growth": True})``)
+- The signal sorting/graph simplificaton functions can now be configured
+  through ``nengo_dl.configure_settings``
 
 **Changed**
 

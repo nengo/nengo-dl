@@ -94,14 +94,23 @@ class TensorGraph(object):
         logger.info("Initial plan length: %d", len(operators))
 
         # apply graph simplification functions
+        try:
+            simplifications = model.toplevel.config[
+                model.toplevel].simplifications
+        except (ConfigError, AttributeError):
+            simplifications = [
+                graph_optimizer.remove_constant_copies,
+                graph_optimizer.remove_unmodified_resets,
+                graph_optimizer.remove_zero_incs,
+                graph_optimizer.remove_identity_muls,
+            ]
+
         with progress.sub("operator simplificaton", max_value=None):
             old_operators = []
             while len(old_operators) != len(operators):
                 old_operators = operators
-                operators = graph_optimizer.remove_constant_copies(operators)
-                operators = graph_optimizer.remove_unmodified_resets(operators)
-                operators = graph_optimizer.remove_zero_incs(operators)
-                operators = graph_optimizer.remove_identity_muls(operators)
+                for simp in simplifications:
+                    operators = simp(operators)
 
         # group mergeable operators
         try:
@@ -117,8 +126,13 @@ class TensorGraph(object):
         # is only written to by one op and read by one op
 
         # order signals/operators to promote contiguous reads
+        try:
+            sorter = model.toplevel.config[model.toplevel].sorter
+        except (ConfigError, AttributeError):
+            sorter = graph_optimizer.order_signals
+
         with progress.sub("ordering signals", max_value=None):
-            sigs, self.plan = graph_optimizer.order_signals(plan, n_passes=10)
+            sigs, self.plan = sorter(plan, n_passes=10)
 
         # create base arrays and map Signals to TensorSignals (views on those
         # base arrays)
