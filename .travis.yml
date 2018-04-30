@@ -43,6 +43,8 @@ env:
 #    - dist: xenial # gives us a more up-to-date glibc (required by tensorflow)
 #      env: TF_VERSION="tf-nightly" NENGO_VERSION="git+https://github.com/nengo/nengo.git"
 
+# TODO: separate out into scripts
+
 # set up miniconda
 before_install:
   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh

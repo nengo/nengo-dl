@@ -27,6 +27,9 @@ Release History
   model parameters for reuse when building different models.
 - Added ``Simulator(..., progress_bar=False)`` option to disable the progress
   information printed to console when the network is building.
+- TensorFlow session config options can now be set using
+  ``nengo_dl.configure_settings`` (e.g.,
+  ``nengo_dl.configure_settings(session_config={"gpu_options.allow_growth": True})``)
 
 **Changed**
 

@@ -9,14 +9,6 @@ from .version import version as __version__
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
-# check GPU support
-from tensorflow.python.client import device_lib
-
-if not any(["GPU" in x.device_type.upper() for x in
-            device_lib.list_local_devices()]):
-    warnings.warn("No GPU support detected. It is recommended that you "
-                  "install tensorflow-gpu (`pip install tensorflow-gpu`).")
-
 # need to explicitly import these to trigger the builder registration
 from nengo_dl import (
     op_builders, neuron_builders, process_builders, learning_rule_builders)

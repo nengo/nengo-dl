@@ -46,6 +46,8 @@ root = os.path.dirname(os.path.realpath(__file__))
 version = runpy.run_path(os.path.join(
     root, 'nengo_dl', 'version.py'))['version']
 
+# TODO: set up extra requires
+
 setup(
     name="nengo-dl",
     version=version,

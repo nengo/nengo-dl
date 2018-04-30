@@ -191,3 +191,14 @@ def test_progress_bar():
     # check that closing the parent process closes the sub
     assert sub2.finished
     assert progress.finished
+
+
+def test_session_config(Simulator):
+    with Network() as net:
+        utils.configure_settings(session_config={
+            "graph_options.optimizer_options.opt_level": 21,
+            "gpu_options.allow_growth": True})
+
+    with Simulator(net) as sim:
+        assert sim.sess._config.graph_options.optimizer_options.opt_level == 21
+        assert sim.sess._config.gpu_options.allow_growth

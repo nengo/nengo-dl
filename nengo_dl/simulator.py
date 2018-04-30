@@ -9,7 +9,7 @@ import tempfile
 import time
 import warnings
 
-from nengo import Process, Ensemble, Connection, Probe
+from nengo import Process, Ensemble, Connection, Probe, Network
 from nengo import version as nengo_version
 from nengo.builder import Model
 from nengo.builder.connection import BuiltConnection
@@ -17,7 +17,7 @@ from nengo.builder.ensemble import BuiltEnsemble
 from nengo.ensemble import Neurons
 from nengo.exceptions import (
     ReadonlyError, SimulatorClosed, NengoWarning, SimulationError,
-    ValidationError)
+    ValidationError, ConfigError)
 from nengo.solvers import NoSolver
 import numpy as np
 import tensorflow as tf
@@ -141,7 +141,6 @@ class Simulator(object):
         # set up tensorflow graph plan
         with ProgressBar("Optimizing graph", "Optimization",
                          max_value=None) as progress:
-
             self.tensor_graph = TensorGraph(
                 self.model, self.dt, unroll_simulation, dtype,
                 self.minibatch_size, device, progress)
@@ -166,10 +165,24 @@ class Simulator(object):
             self.summary = None
 
         # start session
+
         config = tf.ConfigProto(
             allow_soft_placement=False,
             log_device_placement=False,
         )
+
+        # set any config options specified by user
+        try:
+            config_settings = network.config[Network].session_config
+        except (ConfigError, AttributeError):
+            config_settings = {}
+        for c, v in config_settings.items():
+            attrs = c.split(".")
+            x = config
+            for a in attrs[:-1]:
+                x = getattr(x, a)
+            setattr(x, attrs[-1], v)
+
         # TODO: XLA compiling doesn't seem to provide any benefit at the
         # moment, revisit later after tensorflow has developed it further
         # config.graph_options.optimizer_options.global_jit_level = (
@@ -437,6 +450,8 @@ class Simulator(object):
         :class:`.process_builders.SimProcessBuilder`/
         :class:`.neuron_builders.SimNeuronsBuilder`)
         """
+
+        # TODO: allow error to be passed instead of objective
 
         batch_size, n_steps = next(iter(inputs.values())).shape[:2]
 

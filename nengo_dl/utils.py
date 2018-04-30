@@ -463,7 +463,8 @@ def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
 
 
 def configure_settings(**kwargs):
-    """Pass settings to ``nengo_dl`` by setting them as parameters on the
+    """
+    Pass settings to ``nengo_dl`` by setting them as parameters on the
     top-level Network config.
 
     The settings are passed as keyword arguments to ``configure_settings``;
@@ -484,6 +485,11 @@ def configure_settings(**kwargs):
         Pass one of the `graph planners
         <https://www.nengo.ai/nengo-dl/graph_optimizer.html>`_ to change the
         default planner.
+    session_config: dict
+        Config options passed to ``tf.Session`` initialization (e.g., to change
+        the `GPU memory allocation method
+        <https://www.tensorflow.org/programmers_guide/using_gpu#allowing_gpu_memory_growth>`_
+        pass ``{"gpu_options.allow_growth": True}``).
     """
 
     # get the toplevel network
