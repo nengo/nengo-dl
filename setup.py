@@ -2,10 +2,10 @@
 import io
 import runpy
 import os
+import pkg_resources
 import sys
 
 try:
-    from pip import get_installed_distributions
     from setuptools import find_packages, setup
 except ImportError:
     raise ImportError(
@@ -23,7 +23,7 @@ else:
     # don't force tensorflow to be installed if e.g. tensorflow-gpu is already
     # there)
     tf_dists = ["tf-nightly-gpu", "tf-nightly", "tensorflow-gpu"]
-    installed_dists = [d.project_name for d in get_installed_distributions()]
+    installed_dists = [d.project_name for d in pkg_resources.working_set]
     for d in tf_dists:
         if d in installed_dists:
             tf_req = d
