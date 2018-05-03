@@ -107,7 +107,8 @@ class TensorGraph(object):
 
         with progress.sub("operator simplificaton", max_value=None):
             old_operators = []
-            while len(old_operators) != len(operators):
+            while len(old_operators) != len(operators) or any(
+                    x is not y for x, y in zip(operators, old_operators)):
                 old_operators = operators
                 for simp in simplifications:
                     operators = simp(operators)
