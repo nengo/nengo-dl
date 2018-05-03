@@ -64,19 +64,31 @@ def test_pre_build(Simulator):
         def __call__(self, t, x):
             return tf.matmul(x, tf.cast(self.weights, x.dtype))
 
+    class TestFunc2:
+        def pre_build(self, size_in, size_out):
+            assert size_in is None
+
+        def __call__(self, t):
+            return tf.reshape(t, (1, 1))
+
     with nengo.Network() as net:
         inp = nengo.Node([1, 1])
         test = TensorNode(TestFunc(), size_in=2, size_out=3)
         nengo.Connection(inp, test, synapse=None)
         p = nengo.Probe(test)
 
+        test2 = TensorNode(TestFunc2(), size_out=1)
+        p2 = nengo.Probe(test2)
+
     with Simulator(net) as sim:
         sim.step()
         assert np.allclose(sim.data[p], [[2, 2, 2]])
+        assert np.allclose(sim.data[p2], [[0.001]])
 
         sim.reset()
         sim.step()
         assert np.allclose(sim.data[p], [[2, 2, 2]])
+        assert np.allclose(sim.data[p2], [[0.001]])
 
 
 def test_post_build(Simulator):

@@ -207,7 +207,8 @@ class SimTensorNodeBuilder(OpBuilder):
 
         if hasattr(self.func, "pre_build"):
             self.func.pre_build(
-                (signals.minibatch_size,) + self.src_data.shape,
+                None if self.src_data is None else ((signals.minibatch_size,) +
+                                                    self.src_data.shape),
                 (signals.minibatch_size,) + self.dst_data.shape)
 
     def build_step(self, signals):

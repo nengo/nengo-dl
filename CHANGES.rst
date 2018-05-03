@@ -54,6 +54,8 @@ Release History
 - Updated PES implementation to work with generic synapse types
   (see https://github.com/nengo/nengo/pull/1095)
 - Fixed installation to work with ``pip>=10.0``
+- Fixed bug when using a TensorNode with a ``pre_build`` function and
+  ``size_in==0``
 
 0.6.1 (March 7, 2018)
 ---------------------
