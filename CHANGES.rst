@@ -32,6 +32,8 @@ Release History
   ``nengo_dl.configure_settings(session_config={"gpu_options.allow_growth": True})``)
 - The signal sorting/graph simplificaton functions can now be configured
   through ``nengo_dl.configure_settings``
+- Added ``extra_feeds`` parameter to ``sim.run/train/loss``, which can be
+  used to feed Tensor values directly into the TensorFlow session
 
 **Changed**
 

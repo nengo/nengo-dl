@@ -291,7 +291,7 @@ class Simulator(object):
             self.run_steps(steps, **kwargs)
 
     def run_steps(self, n_steps, input_feeds=None, profile=False,
-                  progress_bar=True):
+                  progress_bar=True, extra_feeds=None):
         """Simulate for the given number of steps.
 
         Parameters
@@ -310,6 +310,9 @@ class Simulator(object):
         progress_bar : bool, optional
             If True, print information about the simulation status to standard
             output.
+        extra_feeds : dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}
+            Can be used to feed a value for arbitrary Tensors in the simulation
+            (will be passed directly to the TensorFlow session)
 
         Notes
         -----
@@ -334,6 +337,11 @@ class Simulator(object):
             self._check_data(input_feeds, mode="input",
                              n_batch=self.minibatch_size, n_steps=n_steps)
 
+        feed = self._fill_feed(actual_steps, input_feeds,
+                               start=self.n_steps)
+        if extra_feeds is not None:
+            feed.update(extra_feeds)
+
         if profile:
             run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
             run_metadata = tf.RunMetadata()
@@ -351,9 +359,8 @@ class Simulator(object):
                 steps_run, probe_data = self.sess.run(
                     [self.tensor_graph.steps_run,
                      list(self.tensor_graph.probe_arrays.values())],
-                    feed_dict=self._fill_feed(actual_steps, input_feeds,
-                                              start=self.n_steps),
-                    options=run_options, run_metadata=run_metadata)
+                    feed_dict=feed, options=run_options,
+                    run_metadata=run_metadata)
             except (tf.errors.InternalError, tf.errors.UnknownError) as e:
                 if e.op.type == "PyFunc":
                     raise SimulationError(
@@ -385,7 +392,8 @@ class Simulator(object):
                 cmd="scope", options=options)
 
     def train(self, inputs, targets, optimizer, n_epochs=1, objective="mse",
-              shuffle=True, truncation=None, summaries=None, profile=False):
+              shuffle=True, truncation=None, summaries=None, profile=False,
+              extra_feeds=None):
         """Optimize the trainable parameters of the network using the given
         optimization method, minimizing the objective value over the given
         inputs and targets.
@@ -438,6 +446,9 @@ class Simulator(object):
             (this will slow down the training).  Can also pass a dict of
             `config options for the profiler
             <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/profiler/g3doc/options.md>`__.
+        extra_feeds : dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}
+            Can be used to feed a value for arbitrary Tensors in the simulation
+            (will be passed directly to the TensorFlow session)
 
         Notes
         -----
@@ -538,6 +549,8 @@ class Simulator(object):
 
                     steps = next(iter(inp.values())).shape[1]
                     feed = self._fill_feed(steps, inp, tar, start=offset)
+                    if extra_feeds is not None:
+                        feed.update(extra_feeds)
                     outputs = self.sess.run(
                         fetches, feed_dict=feed,
                         options=run_options, run_metadata=run_metadata)
@@ -565,7 +578,7 @@ class Simulator(object):
                 options.update(profile)
             profiler.profile_name_scope(options)
 
-    def loss(self, inputs, targets, objective):
+    def loss(self, inputs, targets, objective, extra_feeds=None):
         """Compute the loss value for the given objective and inputs/targets.
 
         Parameters
@@ -589,6 +602,9 @@ class Simulator(object):
             default the same objective will be used for all probes in
             ``targets``; a dictionary of ``{probe: obj, ...}`` can be passed
             for ``objective`` to specify a different objective for each probe.
+        extra_feeds : dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}
+            Can be used to feed a value for arbitrary Tensors in the simulation
+            (will be passed directly to the TensorFlow session)
         """
 
         batch_size, n_steps = next(iter(inputs.values())).shape[:2]
@@ -622,8 +638,10 @@ class Simulator(object):
         for i, (_, inp, tar) in enumerate(utils.minibatch_generator(
                 inputs, targets, self.minibatch_size, rng=self.rng)):
             self.soft_reset()
-            loss_val += self.sess.run(
-                loss, feed_dict=self._fill_feed(n_steps, inp, tar))
+            feed = self._fill_feed(n_steps, inp, tar)
+            if extra_feeds is not None:
+                feed.update(extra_feeds)
+            loss_val += self.sess.run(loss, feed_dict=feed)
         loss_val /= i + 1
 
         # restore internal state of simulator

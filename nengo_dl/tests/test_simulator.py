@@ -9,7 +9,8 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import configure_settings, tensor_layer, dists, DATA_DIR
+from nengo_dl import (configure_settings, tensor_layer, dists, TensorNode,
+                      DATA_DIR)
 from nengo_dl.simulator import SimulationData
 
 
@@ -1059,3 +1060,38 @@ def test_progress_bar(Simulator, progress):
     # check that the parameter works without error
     with Simulator(nengo.Network(), progress_bar=progress) as sim:
         sim.run_steps(10, progress_bar=progress)
+
+
+def test_extra_feeds(Simulator):
+    # set up a tensornode that will fail unless a value is fed in for the
+    # placeholder
+    class NodeFunc(object):
+        def pre_build(self, *_):
+            self.ph = tf.placeholder_with_default(False, ())
+
+        def __call__(self, t, x):
+            with tf.control_dependencies([tf.Assert(self.ph, [t])]):
+                y = tf.identity(x)
+            return y
+
+    with nengo.Network() as net:
+        a = nengo.Node([0])
+        b = TensorNode(NodeFunc(), size_in=1, size_out=1)
+        nengo.Connection(a, b)
+        p = nengo.Probe(b)
+
+    with Simulator(net) as sim:
+        with pytest.raises(tf.errors.InvalidArgumentError):
+            sim.run_steps(10)
+        sim.run_steps(10, extra_feeds={b.tensor_func.ph: True})
+
+        inputs = {a: np.zeros((1, 10, 1))}
+        targets = {p: np.zeros((1, 10, 1))}
+        with pytest.raises(tf.errors.InvalidArgumentError):
+            sim.train(inputs, targets, tf.train.GradientDescentOptimizer(1))
+        sim.train(inputs, targets, tf.train.GradientDescentOptimizer(1),
+                  extra_feeds={b.tensor_func.ph: True})
+
+        with pytest.raises(tf.errors.InvalidArgumentError):
+            sim.loss(inputs, targets, "mse")
+        sim.loss(inputs, targets, "mse", extra_feeds={b.tensor_func.ph: True})
