@@ -1070,7 +1070,9 @@ def test_extra_feeds(Simulator):
             self.ph = tf.placeholder_with_default(False, ())
 
         def __call__(self, t, x):
-            with tf.control_dependencies([tf.Assert(self.ph, [t])]):
+            with tf.device("/cpu:0"):
+                check = tf.Assert(self.ph, [t])
+            with tf.control_dependencies([check]):
                 y = tf.identity(x)
             return y
 
