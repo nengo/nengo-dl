@@ -29,6 +29,14 @@ Release History
   See `the documentation
   <https://www.nengo.ai/nengo-dl/training.html#objective>`__ for details.
 
+**Changed**
+
+- Extra requirements for documentation/testing are now stored in ``setup.py``'s
+  ``extra_requires`` instead of ``requirements-*.txt``.  For example, instead
+  of doing ``pip install -r requirements-test.txt``, instead use
+  ``pip install nengo-dl[tests]`` (or ``pip install -e .[tests]`` for a
+  developer installation).
+
 0.6.2 (May 4, 2018)
 -------------------
 

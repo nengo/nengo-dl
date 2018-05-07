@@ -60,12 +60,12 @@ install:
   - source activate test
   - pip install $TF_VERSION
   - pip install $NENGO_VERSION
-  - pip install -r requirements-test.txt
   - if [[ "$MODE" == "docs" || "$MODE" == "examples" ]]; then
-      pip install -r requirements-docs.txt;
+      pip install -e .[docs,tests];
       conda install pandoc;
+    else
+      pip install -e .[tests];
     fi
-  - pip install -e .
   - conda list -e
   - pip freeze
 

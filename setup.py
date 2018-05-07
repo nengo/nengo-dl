@@ -46,7 +46,34 @@ root = os.path.dirname(os.path.realpath(__file__))
 version = runpy.run_path(os.path.join(
     root, 'nengo_dl', 'version.py'))['version']
 
-# TODO: set up extra requires
+install_requires = [
+    "nengo>=2.7.0",
+    "numpy>=1.11",
+    "%s>=1.3.0" % tf_req,
+    "progressbar2>=3.37.1",
+    "backports.tempfile;python_version<'3.4'",
+]
+# TODO: drop sphinxcontrib-versioning?
+docs_require = [
+    "ghp-import>=0.5.5",
+    "jupyter>=1.0.0",
+    "matplotlib>=2.0.0",
+    "nbsphinx>=0.2.13",
+    "numpydoc>=0.6.0",
+    "Pillow>=4.1.1",
+    "sphinx>=1.5.2,<1.6.0",  # sphinxcontrib-versioning not compatible with 1.6
+    "sphinx_rtd_theme>=0.1.9",
+    "sphinxcontrib-versioning>=2.2.1",
+]
+tests_require = [
+    "codespell>=1.12.0",
+    "coverage>=4.3.4",
+    "flake8>=2.5.1",
+    "matplotlib>=2.0.0",
+    "nbval>=0.6",
+    "pytest>=3.0.4",
+    "pytest-xdist>=1.16.0",
+]
 
 setup(
     name="nengo-dl",
@@ -60,9 +87,12 @@ setup(
     license="Free for non-commercial use",
     description="Deep learning integration for Nengo",
     long_description=read('README.rst', 'CHANGES.rst'),
-    install_requires=["nengo>=2.7.0", "numpy>=1.11", "%s>=1.3.0" % tf_req,
-                      "progressbar2>=3.37.1",
-                      "backports.tempfile;python_version<'3.4'"],
+    install_requires=install_requires,
+    extras_require={
+        "all": docs_require + tests_require,
+        "docs": docs_require,
+        "tests": tests_require,
+    },
     entry_points={"nengo.backends": ["dl = nengo_dl:Simulator"]},
     classifiers=['Development Status :: 4 - Beta',
                  'Intended Audience :: Science/Research',
