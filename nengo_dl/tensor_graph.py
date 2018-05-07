@@ -430,20 +430,23 @@ class TensorGraph(object):
 
     @with_self
     def build_optimizer(self, optimizer, objective):
-        """Adds elements into the graph to execute the given optimizer.
+        """
+        Adds elements into the graph to execute the given optimizer.
 
         Parameters
         ----------
         optimizer : ``tf.train.Optimizer``
             Instance of a TensorFlow optimizer class
         objective : dict of {:class:`~nengo:nengo.Probe`: ``"mse"`` or \
-                                                          callable}
+                                                          callable or ``None``}
             The objective to be minimized for each probe. Passing
             ``"mse"`` will train with mean squared error. A custom function
             ``f(output, target) -> loss`` can be passed that consumes the
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
-            that Probe (loss will be averaged across Probes).
+            that Probe (loss will be summed across Probes).  ``None``
+            indicates that the error gradient is being directly specified
+            by the user.
 
         Returns
         -------
@@ -465,12 +468,31 @@ class TensorGraph(object):
         except KeyError:
             pass
 
+        agg_method = tf.AggregationMethod.EXPERIMENTAL_TREE
+
+        # compute gradients wrt loss
+        grads = []
+        if loss is not None:
+            grads.append(tf.gradients(loss, tf.trainable_variables(),
+                                      aggregation_method=agg_method))
+
+        # add in any gradients where the user directly specified the output
+        # error grad
+        for p, g in objective.items():
+            if g is None:
+                grads.append(tf.gradients(
+                    self.probe_arrays[p], tf.trainable_variables(),
+                    grad_ys=self.target_phs[p], aggregation_method=agg_method))
+
+        if len(grads) == 1:
+            grads = grads[0]
+        else:
+            grads = [tf.reduce_sum(gs, axis=0) for gs in zip(*grads)]
+
         with tf.variable_scope(optimizer.get_name()) as scope:
             # create optimizer operator
-            agg_method = tf.AggregationMethod.EXPERIMENTAL_TREE
-            opt_op = optimizer.minimize(
-                loss, var_list=tf.trainable_variables(),
-                aggregation_method=agg_method)
+            opt_op = optimizer.apply_gradients(
+                zip(grads, tf.trainable_variables()))
 
             # get any new variables created by the optimizer (so they
             # can be initialized)
@@ -486,12 +508,13 @@ class TensorGraph(object):
 
     @with_self
     def build_loss(self, objective):
-        """Adds elements into the graph to compute the given objective.
+        """
+        Adds elements into the graph to compute the given objective.
 
         Parameters
         ----------
         objective : dict of {:class:`~nengo:nengo.Probe`: ``"mse"`` or \
-                                                          callable}
+                                                          callable or ``None``}
             The objective used to compute loss for each probe. Passing
             ``"mse"`` will use mean squared error. A custom function
             ``f(output, target) -> loss`` can be passed that consumes the
@@ -529,17 +552,23 @@ class TensorGraph(object):
                                   self.probe_arrays[p],
                                   self.target_phs[p])
 
-                loss += [tf.reduce_mean(
-                    tf.square(target - self.probe_arrays[p]))]
+                loss.append(tf.reduce_mean(
+                    tf.square(target - self.probe_arrays[p])))
             elif callable(obj):
                 # move minibatch dimension back to the front
-                loss += [obj(self.probe_arrays[p], self.target_phs[p])]
+                loss.append(obj(self.probe_arrays[p], self.target_phs[p]))
+            elif obj is None:
+                # user is directly specifying error, not using objective
+                continue
             else:
                 raise NotImplementedError
 
-        # sum loss across probes (note: this will also sum across
-        # the output of `objective` if it doesn't return a scalar)
-        loss = tf.reduce_sum(loss)
+        if len(loss) > 0:
+            # sum loss across probes (note: this will also sum across
+            # the output of `objective` if it doesn't return a scalar)
+            loss = tf.reduce_sum(loss)
+        else:
+            loss = None
 
         self.losses[key] = loss
 

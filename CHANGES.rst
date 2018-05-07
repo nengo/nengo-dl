@@ -18,10 +18,16 @@ Release History
    - Removed
    - Fixed
 
-0.6.2 (unreleased)
+0.6.3 (unreleased)
 ------------------
 
+**Added**
 
+- User can now directly specify the output error gradient, rather than using
+  targets/objective (useful for when you have some external process for
+  computing error that is not easy to implement as an objective function).
+  See `the documentation
+  <https://www.nengo.ai/nengo-dl/training.html#objective>`__ for details.
 
 0.6.2 (May 4, 2018)
 -------------------

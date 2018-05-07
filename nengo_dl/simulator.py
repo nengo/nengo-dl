@@ -394,7 +394,8 @@ class Simulator(object):
     def train(self, inputs, targets, optimizer, n_epochs=1, objective="mse",
               shuffle=True, truncation=None, summaries=None, profile=False,
               extra_feeds=None):
-        """Optimize the trainable parameters of the network using the given
+        """
+        Optimize the trainable parameters of the network using the given
         optimization method, minimizing the objective value over the given
         inputs and targets.
 
@@ -415,16 +416,19 @@ class Simulator(object):
         n_epochs : int, optional
             Run training for the given number of epochs (complete passes
             through ``inputs``)
-        objective : ``"mse"`` or callable, optional
+        objective : ``"mse"`` or callable or ``None``, optional
             The objective to be minimized. Passing ``"mse"`` will train with
             mean squared error. A custom function
             ``f(output, target) -> loss`` can be passed that consumes the
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
-            that Probe (loss will be averaged across Probes).  Note that by
-            default the same objective will be used for all probes in
-            ``targets``; a dictionary of ``{probe: obj, ...}`` can be passed
-            for ``objective`` to specify a different objective for each probe.
+            that Probe (loss will be summed across Probes).  Passing ``None``
+            indicates that the error is being computed outside the simulation,
+            and the value passed to ``targets`` directly specifies the output
+            error gradient. Note that by default the same objective will be
+            used for all probes in ``targets``; a dictionary of
+            ``{probe: obj, ...}`` can be passed for ``objective`` to specify a
+            different objective for each probe.
         shuffle : bool, optional
             If True, randomize the data into different minibatches each epoch
         truncation: int, optional
@@ -461,8 +465,6 @@ class Simulator(object):
         :class:`.process_builders.SimProcessBuilder`/
         :class:`.neuron_builders.SimNeuronsBuilder`)
         """
-
-        # TODO: allow error to be passed instead of objective
 
         batch_size, n_steps = next(iter(inputs.values())).shape[:2]
 
@@ -501,9 +503,13 @@ class Simulator(object):
         if opt_slots_init is not None:
             self.sess.run(opt_slots_init)
 
+        # increment training step
+        fetches.append(self.tensor_graph.training_step_inc)
+
         # get loss op
         loss = self.tensor_graph.build_loss(objective)
-        fetches.append(loss)
+        if loss is not None:
+            fetches.append(loss)
 
         # add summaries
         summary_op = None
@@ -517,9 +523,6 @@ class Simulator(object):
                         summaries[i] = objective
                 summary_op = self.tensor_graph.build_summaries(summaries)
                 fetches.append(summary_op)
-
-        # increment training step
-        fetches.append(self.tensor_graph.training_step_inc)
 
         # save the internal state of the simulator
         tmpdir = tempfile.TemporaryDirectory()
@@ -556,13 +559,14 @@ class Simulator(object):
                         options=run_options, run_metadata=run_metadata)
 
                     if summary_op is not None:
-                        self.summary.add_summary(outputs[2], outputs[-1])
+                        self.summary.add_summary(outputs[-1], outputs[1])
 
                     if profile:
-                        profiler.add_step(int(outputs[-1]), run_metadata)
+                        profiler.add_step(int(outputs[1]), run_metadata)
 
                     if offset == 0:
-                        progress.step(loss="%.4f" % outputs[1])
+                        progress.step(loss="%.4f" % (
+                            np.nan if loss is None else outputs[2]))
 
         # restore internal state of simulator
         self.load_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
@@ -579,7 +583,8 @@ class Simulator(object):
             profiler.profile_name_scope(options)
 
     def loss(self, inputs, targets, objective, extra_feeds=None):
-        """Compute the loss value for the given objective and inputs/targets.
+        """
+        Compute the loss value for the given objective and inputs/targets.
 
         Parameters
         ----------
@@ -598,7 +603,7 @@ class Simulator(object):
             ``f(output, target) -> loss`` can be passed that consumes the
             actual output and target output for a probe in ``targets``
             and returns a ``tf.Tensor`` representing the scalar loss value for
-            that Probe (loss will be averaged across Probes). Note that by
+            that Probe (loss will be summed across Probes). Note that by
             default the same objective will be used for all probes in
             ``targets``; a dictionary of ``{probe: obj, ...}`` can be passed
             for ``objective`` to specify a different objective for each probe.

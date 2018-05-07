@@ -1097,3 +1097,40 @@ def test_extra_feeds(Simulator):
         with pytest.raises(tf.errors.InvalidArgumentError):
             sim.loss(inputs, targets, "mse")
         sim.loss(inputs, targets, "mse", extra_feeds={b.tensor_func.ph: True})
+
+
+@pytest.mark.parametrize("mixed", (False, True))
+def test_direct_grads(Simulator, mixed):
+    with nengo.Network() as net:
+        a = nengo.Node([1])
+        b = nengo.Node(size_in=1)
+        nengo.Connection(a, b, synapse=None)
+        p = nengo.Probe(b)
+
+        if mixed:
+            c = nengo.Node(size_in=1)
+            nengo.Connection(a, c, synapse=None)
+            p2 = nengo.Probe(c)
+
+    with Simulator(net, minibatch_size=1) as sim:
+        n_steps = 10
+        for i in range(10):
+            sim.run_steps(n_steps)
+
+            targets = {p: (2. / n_steps) * (sim.data[p] - 2)}
+            obj = {p: None}
+
+            if mixed:
+                targets[p2] = np.ones((1, n_steps, 1)) * 2
+                obj[p2] = "mse"
+                assert np.allclose(sim.data[p], sim.data[p2])
+
+            sim.train(
+                {a: np.ones((1, n_steps, 1))}, targets,
+                tf.train.GradientDescentOptimizer(0.45), objective=obj)
+            sim.soft_reset(include_probes=True)
+
+        sim.run_steps(n_steps)
+        assert np.allclose(sim.data[p], 2)
+        if mixed:
+            assert np.allclose(sim.data[p2], 2)

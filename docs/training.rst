@@ -166,6 +166,21 @@ rather than using the default:
     with nengo_dl.Simulator(net, ...) as sim:
         sim.train(objective=my_objective, ...)
 
+
+Finally, it is also possible to pass ``None`` as the objective.  This indicates
+that the error is being computed outside the simulation by the modeller.  In
+this case the modeller should directly specify the output error gradient as the
+``targets`` value.  For example, we could apply the same mean squared error
+update this way:
+
+.. code-block:: python
+
+    with nengo_dl.Simulator(net, ...) as sim:
+        sim.run(...)
+        error = 2 * (sim.data[p] - my_targets)
+        sim.train(targets=error, objective=None, ...)
+
+
 If there are multiple output Probes defined in ``targets`` then by default the
 same objective will be used for all probes.  This can be overridden by passing
 a dictionary with the form
