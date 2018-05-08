@@ -13,4 +13,4 @@ NengoDL
     project
 
 `Github <https://github.com/nengo/nengo-dl>`_ |
-`PyPI <https://pypi.python.org/pypi/nengo-dl>`_
+`PyPI <https://pypi.org/project/nengo-dl>`_

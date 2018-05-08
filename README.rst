@@ -1,5 +1,5 @@
 .. image:: https://img.shields.io/pypi/v/nengo-dl.svg
-  :target: https://pypi.python.org/pypi/nengo-dl
+  :target: https://pypi.org/project/nengo-dl
   :alt: Latest PyPI version
 
 .. image:: https://img.shields.io/travis/nengo/nengo-dl/master.svg
@@ -11,7 +11,7 @@
   :alt: AppVeyor build status
 
 .. image:: https://img.shields.io/codecov/c/github/nengo/nengo-dl/master.svg
-  :target: https://codecov.io/gh/nengo/nengo-dl/branch/master
+  :target: https://codecov.io/gh/nengo/nengo-dl
   :alt: Test coverage
 
 ********************************************
