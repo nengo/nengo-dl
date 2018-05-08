@@ -24,6 +24,8 @@ extensions = [
     'IPython.sphinxext.ipython_console_highlighting',
 ]
 
+templates_path = ["_templates"]
+
 # -- sphinx.ext.autodoc
 autoclass_content = 'both'  # class and __init__ docstrings are concatenated
 autodoc_default_flags = ['members']

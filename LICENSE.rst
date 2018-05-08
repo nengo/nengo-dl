@@ -53,8 +53,6 @@ To build the documentation, NengoDL uses:
   `BSD license <https://github.com/sphinx-doc/sphinx/blob/master/LICENSE>`__
 * `sphinx_rtd_theme <https://github.com/rtfd/sphinx_rtd_theme>`_ - Used under
   `MIT license <https://github.com/rtfd/sphinx_rtd_theme/blob/master/LICENSE>`__
-* `sphinxcontrib-versioning <https://github.com/Robpol86/sphinxcontrib-versioning>`_ - Used under
-  `MIT license <https://github.com/Robpol86/sphinxcontrib-versioning/blob/master/LICENSE>`__
 
 To run the unit tests, NengoDL uses:
 

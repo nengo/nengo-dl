@@ -37,6 +37,10 @@ Release History
   ``pip install nengo-dl[tests]`` (or ``pip install -e .[tests]`` for a
   developer installation).
 
+**Removed**
+
+- Removed ``sphinxcontrib-versioning`` dependency for building documentation
+
 0.6.2 (May 4, 2018)
 -------------------
 

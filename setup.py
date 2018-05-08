@@ -53,7 +53,6 @@ install_requires = [
     "progressbar2>=3.37.1",
     "backports.tempfile;python_version<'3.4'",
 ]
-# TODO: drop sphinxcontrib-versioning?
 docs_require = [
     "ghp-import>=0.5.5",
     "jupyter>=1.0.0",
@@ -61,9 +60,8 @@ docs_require = [
     "nbsphinx>=0.2.13",
     "numpydoc>=0.6.0",
     "Pillow>=4.1.1",
-    "sphinx>=1.5.2,<1.6.0",  # sphinxcontrib-versioning not compatible with 1.6
+    "sphinx>=1.5.2",
     "sphinx_rtd_theme>=0.1.9",
-    "sphinxcontrib-versioning>=2.2.1",
 ]
 tests_require = [
     "codespell>=1.12.0",
