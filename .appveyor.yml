@@ -29,12 +29,12 @@ install:
   - pip install %TF_VERSION%
   - conda install --force html5lib  # fixes a bug related to tensorflow and pip
   - pip install %NENGO_VERSION%
-  - pip install -r requirements-test.txt
   - if %MODE% == examples (
       conda install pandoc jupyter &
-      pip install -r requirements-docs.txt
+      pip install -e .[tests,docs]
+    ) else (
+      pip install -e .[tests]
     )
-  - pip install -e .
   - conda list -e
   - pip freeze
 
