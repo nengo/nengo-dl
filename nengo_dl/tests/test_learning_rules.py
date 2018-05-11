@@ -25,7 +25,11 @@ def test_merged_learning(Simulator, rule, weights, seed):
         a = nengo.Ensemble(3, dimensions, label="a")
         b = nengo.Ensemble(3, dimensions, label="b")
         c = nengo.Ensemble(5, dimensions, label="c")
-        d = nengo.Ensemble(10, dimensions, label="d")
+
+        # for PES rules the post (error) shape also has to match for the rules
+        # to be mergeable
+        d = nengo.Ensemble(5 if rule == nengo.PES else 10, dimensions,
+                           label="d")
 
         conn0 = nengo.Connection(
             a, c, learning_rule_type=rule(),

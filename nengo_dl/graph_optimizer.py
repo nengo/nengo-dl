@@ -139,6 +139,11 @@ def mergeable(op, chosen_ops):
         if getattr(op, attr).shape[0] != getattr(c, attr).shape[0]:
             return False
 
+        if isinstance(op, learning_rule_builders.SimPES):
+            # for pes the error signals also have to have the same shape
+            if op.error.shape[0] != c.error.shape[0]:
+                return False
+
     return True
 
 

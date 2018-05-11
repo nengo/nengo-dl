@@ -36,6 +36,7 @@ Release History
   of doing ``pip install -r requirements-test.txt``, instead use
   ``pip install nengo-dl[tests]`` (or ``pip install -e .[tests]`` for a
   developer installation).
+- Improved efficiency of PES implementation
 
 **Removed**
 

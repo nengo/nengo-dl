@@ -280,29 +280,21 @@ class SimPESBuilder(OpBuilder):
     def __init__(self, ops, signals):
         super(SimPESBuilder, self).__init__(ops, signals)
 
-        # we want to compute the outer product between pre_filtered, with shape
-        # (n_ops * pre_d, mini), and error, with shape (n_ops * error_d, mini).
-
-        # we tile the pre data to shape (n_ops * error_d * pre_d, mini), and
-        # then reshape to `(n_ops * error_d, pre_d, mini)`. then we reshape
-        # error to `(n_ops * error_d, 1, mini`). so then when we multiply
-        # them together we'll get the outer product error_d x pre_d that
-        # we want.
-
-        self.error_data = signals.combine([op.error for op in ops])
+        self.error_data = signals.combine(
+            [op.error for op in ops], load_indices=False)
+        self.error_data = self.error_data.reshape(
+            (len(ops), ops[0].error.shape[0], 1))
+        self.error_data.load_indices(constant=signals.constant)
 
         self.pre_data = signals.combine(
-            [op.pre_filtered for op in ops for _ in range(op.error.shape[0])],
-            load_indices=False)
+            [op.pre_filtered for op in ops], load_indices=False)
         self.pre_data = self.pre_data.reshape(
-            (self.error_data.shape[0], ops[0].pre_filtered.shape[0]))
+            (len(ops), 1, ops[0].pre_filtered.shape[0]))
         self.pre_data.load_indices(constant=signals.constant)
 
-        self.alpha = signals.constant(
-            [[[-op.learning_rate * signals.dt_val /
-               op.pre_filtered.shape[0]]]
-             for op in ops for _ in range(op.error.shape[0])],
-            dtype=signals.dtype)
+        self.alpha = signals.op_constant(
+            ops, [1 for _ in ops], "learning_rate", signals.dtype, ndims=4) * (
+                -signals.dt_val / ops[0].pre_filtered.shape[0])
 
         self.output_data = signals.combine([op.delta for op in ops])
 
@@ -310,8 +302,7 @@ class SimPESBuilder(OpBuilder):
         pre_filtered = signals.gather(self.pre_data)
         error = signals.gather(self.error_data)
 
-        error = tf.expand_dims(error, 1)
-
-        update = self.alpha * error * pre_filtered
+        error *= self.alpha
+        update = error * pre_filtered
 
         signals.scatter(self.output_data, update)
