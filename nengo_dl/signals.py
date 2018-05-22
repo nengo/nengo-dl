@@ -229,6 +229,10 @@ class SignalDict(object):
         self.internal_vars = OrderedDict()
         self.constant_phs = {}
 
+        # logging
+        self.read_types = defaultdict(int)
+        self.write_types = defaultdict(int)
+
     def scatter(self, dst, val, mode="update"):
         """Updates the base data corresponding to ``dst``.
 
@@ -305,14 +309,18 @@ class SignalDict(object):
                 len(dst.indices) == var.get_shape()[0]):
             if mode == "inc":
                 result = tf.assign_add(var, src, use_locking=False)
+                self.write_types["assign_add"] += 1
             else:
                 result = tf.assign(var, src, use_locking=False)
+                self.write_types["assign"] += 1
         elif mode == "inc":
             result = tf.scatter_add(var, dst.tf_indices, src,
                                     use_locking=False)
+            self.write_types["scatter_add"] += 1
         else:
             result = tf.scatter_update(var, dst.tf_indices, src,
                                        use_locking=False)
+            self.write_types["scatter_update"] += 1
 
         # result = gen_state_ops._destroy_temporary_variable(var, var_name)
 
@@ -352,12 +360,15 @@ class SignalDict(object):
         # possible, as it is more efficient
         if force_copy or src.as_slice is None:
             result = tf.gather(var, src.tf_indices)
+            self.read_types["gather"] += 1
         elif (src.indices[0] == 0 and
               src.indices[-1] == var.get_shape()[0].value - 1 and
               len(src.indices) == var.get_shape()[0]):
             result = var
+            self.read_types["identity"] += 1
         else:
             result = tf.strided_slice(var, *src.as_slice)
+            self.read_types["strided_slice"] += 1
 
         # for some reason the shape inference doesn't work in some cases
         result.set_shape(src.tf_indices.get_shape()[:1].concatenate(

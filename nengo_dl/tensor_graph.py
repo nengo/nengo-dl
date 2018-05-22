@@ -235,6 +235,16 @@ class TensorGraph(object):
         self.constant_init_op = tf.variables_initializer(
             tf.get_collection("constants"))
 
+        # logging
+        logger.info("Number of reads: %d" % sum(
+            x for x in self.signals.read_types.values()))
+        for x in self.signals.read_types.items():
+            logger.info("    %s: %d" % x)
+        logger.info("Number of writes: %d" % sum(
+            x for x in self.signals.write_types.values()))
+        for x in self.signals.write_types.items():
+            logger.info("    %s: %d" % x)
+
     def build_step(self):
         """Build the operators that execute a single simulation timestep
         into the graph.

@@ -456,26 +456,33 @@ def test_model_passing(Simulator, seed):
     model = nengo.builder.Model()
     model.build(net)
 
-    with nengo.Simulator(None, model=model) as sim:
+    ops = [op for op in model.operators]
+
+    with nengo.Simulator(None, model=model, optimize=False) as sim:
         sim.run_steps(10)
 
+    assert ops == model.operators
     canonical = sim.data[p]
 
     with Simulator(None, model=model) as sim:
         sim.run_steps(10)
 
+    assert ops == model.operators
     assert np.allclose(sim.data[p], canonical)
 
     # make sure that passing the same model to Simulator twice works
     with Simulator(None, model=model) as sim:
         sim.run_steps(10)
+        assert ops == model.operators
 
+    assert ops == model.operators
     assert np.allclose(sim.data[p], canonical)
 
     # make sure that passing that model back to the reference simulator works
-    with nengo.Simulator(None, model=model) as sim:
+    with nengo.Simulator(None, model=model, optimize=False) as sim:
         sim.run_steps(10)
 
+    assert ops == model.operators
     assert np.allclose(sim.data[p], canonical)
 
 
