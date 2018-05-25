@@ -56,8 +56,8 @@ To build the documentation, NengoDL uses:
 
 To run the unit tests, NengoDL uses:
 
-* `codespell` <https://github.com/lucasdemarchi/codespell>`_ - Used under
-  `GPL license <https://github.com/lucasdemarchi/codespell/blob/master/COPYING>`__
+* `codespell <https://github.com/codespell-project/codespell>`_ - Used under
+  `GPL license <https://github.com/codespell-project/codespell/blob/master/COPYING>`__
 * `Coverage.py <https://coverage.readthedocs.io/en/coverage-4.4.1/>`_ - Used under
   `Apache license <https://bitbucket.org/ned/coveragepy/src/default/NOTICE.txt?fileviewer=file-view-default>`__
 * `Flake8 <http://flake8.pycqa.org/en/latest/>`_ - Used under
