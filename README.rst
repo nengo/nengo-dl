@@ -14,9 +14,16 @@
   :target: https://codecov.io/gh/nengo/nengo-dl
   :alt: Test coverage
 
-********************************************
-NengoDL: Deep learning integration for Nengo
-********************************************
+|
+
+.. image:: https://www.nengo.ai/design/_images/full-light1.svg
+  :target: https://www.nengo.ai/nengo-dl
+  :alt: NengoDL
+  :width: 400px
+
+***********************************
+Deep learning integration for Nengo
+***********************************
 
 NengoDL is a simulator for `Nengo <https://www.nengo.ai/nengo/>`_ models.
 That means it takes a Nengo network as input, and allows the user to simulate
