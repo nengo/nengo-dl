@@ -12,7 +12,7 @@ environment:
   matrix:
     - MODE: test # default build
     # - MODE: examples  # TODO: some problem with nbval on windows (timeout)
-    - TF_VERSION: tf-nightly
+    - TF_VERSION: tensorflow --pre
       NENGO_VERSION: git+https://github.com/nengo/nengo.git
     - NUMPY_VERSION: numpy==1.11.0
       TF_VERSION: tensorflow==1.3.0
