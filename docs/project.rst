@@ -14,12 +14,12 @@ Citation
 If you would like to cite NengoDL in your research, please cite the `white
 paper <https://arxiv.org/abs/1805.11144>`_:
 
-::
+.. code-block:: text
 
-  Rasmussen, Daniel (2018). NengoDL: Combining deep learning and neuromorphic
+  Rasmussen, D. (2018). NengoDL: Combining deep learning and neuromorphic
   modelling methods. arXiv:1805.11144, 1–22.
 
-::
+.. code-block:: text
 
   @article{
     Rasmussen2018,
