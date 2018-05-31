@@ -78,10 +78,13 @@ def build_spaun(dimensions):
 @click.option("--show/--no-show", default=True, help="Show plots")
 @click.option("--device", default="/gpu:0",
               help="TensorFlow device to use for NengoDL")
-def main(ctx, load, reps, show, device):
+@click.option("--save", default=None, type=str,
+              help="Save figures with given file format")
+def main(ctx, load, reps, show, device, save):
     ctx.obj["load"] = load
     ctx.obj["reps"] = reps
     ctx.obj["device"] = device
+    ctx.obj["save"] = save
 
 
 @main.resultcallback()
@@ -99,6 +102,8 @@ def compare_backends(ctx, batch, n_neurons):
     load = ctx.obj["load"]
     reps = ctx.obj["reps"]
     device = ctx.obj["device"]
+    save = ctx.obj["save"]
+
     bench_names = ["integrator", "cconv", "basal_ganglia", "pes"]
     n_range = [n_neurons]
     d_range = [64, 128, 192]
@@ -221,7 +226,8 @@ def compare_backends(ctx, batch, n_neurons):
         if k % subplots == 0:
             axes[subplot_idx].set_ylabel("real time / simulated time")
 
-    plt.savefig("compare_backends_%d.pdf" % batch)
+    if save:
+        plt.savefig("compare_backends_%d.%s" % (batch, save))
 
 
 @main.command()
@@ -232,6 +238,7 @@ def compare_optimizations(ctx, dimensions):
     load = ctx.obj["load"]
     reps = ctx.obj["reps"]
     device = ctx.obj["device"]
+    save = ctx.obj["save"]
 
     # optimizations to apply (simplifications, merging, sorting, unroll)
     params = [
@@ -330,7 +337,8 @@ def compare_optimizations(ctx, dimensions):
 
     plt.tight_layout()
 
-    plt.savefig("compare_optimizations_%d.pdf" % dimensions)
+    if save:
+        plt.savefig("compare_optimizations_%d.%s" % (dimensions, save))
 
 
 @main.command()
@@ -527,6 +535,7 @@ def spiking_mnist(ctx, n_epochs):
 def spa_optimization(ctx, dimensions, n_epochs):
     load = ctx.obj["load"]
     reps = ctx.obj["reps"]
+    save = ctx.obj["save"]
 
     def get_binding_data(n_inputs, n_pairs, dims, seed, t_int, t_mem,
                          dt=0.001):
@@ -723,7 +732,8 @@ def spa_optimization(ctx, dimensions, n_epochs):
 
     plt.tight_layout()
 
-    plt.savefig("spa_optimization.pdf")
+    if save:
+        plt.savefig("spa_optimization.%s" % save)
 
 
 @main.command()
