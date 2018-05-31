@@ -27,7 +27,7 @@ install:
   - conda info -a
   - conda install %NUMPY_VERSION% matplotlib
   - pip install %TF_VERSION%
-  - conda install --force html5lib  # fixes a bug related to tensorflow and pip
+  - conda install --force html5lib -v  # fixes a bug related to tensorflow and pip
   - pip install %NENGO_VERSION%
   - if %MODE% == examples (
       conda install pandoc jupyter &
