@@ -21,6 +21,11 @@ Release History
 1.0.1 (unreleased)
 ------------------
 
+**Fixed**
+
+- Better handling of Simulator errors not associated with a specific op (fixes
+  `#41 <https://github.com/nengo/nengo-dl/issues/41>`_)
+
 
 1.0.0 (May 30, 2018)
 --------------------
