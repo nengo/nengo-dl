@@ -1116,6 +1116,7 @@ def test_direct_grads(Simulator, mixed):
 
     with Simulator(net, minibatch_size=1) as sim:
         n_steps = 10
+        opt = tf.train.GradientDescentOptimizer(0.45)
         for i in range(10):
             sim.run_steps(n_steps)
 
@@ -1129,7 +1130,7 @@ def test_direct_grads(Simulator, mixed):
 
             sim.train(
                 {a: np.ones((1, n_steps, 1))}, targets,
-                tf.train.GradientDescentOptimizer(0.45), objective=obj)
+                opt, objective=obj)
             sim.soft_reset(include_probes=True)
 
         sim.run_steps(n_steps)
