@@ -1,18 +1,8 @@
 # flake8: noqa
 
-import pkg_resources
-import warnings
-
 __copyright__ = "2015-2018, Applied Brain Research"
 __license__ = "Free for non-commercial use; see LICENSE.rst"
 from .version import version as __version__
-
-# check GPU support
-installed_dists = [d.project_name for d in pkg_resources.working_set]
-if ("tensorflow-gpu" not in installed_dists and
-        "tf-nightly-gpu" not in installed_dists):
-    warnings.warn("No GPU support detected. It is recommended that you "
-                  "install tensorflow-gpu (`pip install tensorflow-gpu`).")
 
 # need to explicitly import these to trigger the builder registration
 from nengo_dl import (

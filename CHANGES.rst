@@ -21,6 +21,11 @@ Release History
 1.0.1 (unreleased)
 ------------------
 
+**Changed**
+
+- Move ``tensorflow-gpu`` installation check to Simulator init, and only apply
+  if ``device=None``.
+
 **Fixed**
 
 - Better handling of Simulator errors not associated with a specific op (fixes

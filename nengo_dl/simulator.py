@@ -4,6 +4,7 @@ import collections
 import datetime
 import logging
 import os
+import pkg_resources
 import sys
 import tempfile
 import time
@@ -113,6 +114,16 @@ class Simulator(object):
                      else seed)
 
         # TODO: multi-GPU support
+
+        if device is None:
+            # check GPU support
+            installed_dists = [d.project_name for d in
+                               pkg_resources.working_set]
+            if ("tensorflow-gpu" not in installed_dists and
+                    "tf-nightly-gpu" not in installed_dists):
+                warnings.warn(
+                    "No GPU support detected. It is recommended that you "
+                    "install tensorflow-gpu (`pip install tensorflow-gpu`).")
 
         ProgressBar = (utils.ProgressBar if progress_bar else
                        utils.NullProgressBar)
