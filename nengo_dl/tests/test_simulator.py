@@ -9,8 +9,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import (configure_settings, tensor_layer, dists, TensorNode,
-                      DATA_DIR)
+from nengo_dl import configure_settings, tensor_layer, dists, TensorNode
 from nengo_dl.simulator import SimulationData
 
 
@@ -605,18 +604,14 @@ def test_profile(Simulator, mode, outfile):
         filename = "nengo_dl_profile.json%s" % suffix
     else:
         filename = outfile + suffix
-    filename = os.path.join(DATA_DIR, filename)
     if os.path.exists(filename):
         os.remove(filename)
-    elif not os.path.exists(os.path.dirname(filename)):
-        os.makedirs(os.path.dirname(filename))
 
     with Simulator(net) as sim:
         if outfile is None:
             prof = True
         else:
-            prof = {"output": "timeline:outfile=%s" % os.path.join(DATA_DIR,
-                                                                   outfile)}
+            prof = {"output": "timeline:outfile=%s" % outfile}
 
         if mode == "run":
             sim.run_steps(5, profile=prof)

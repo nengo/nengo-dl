@@ -23,7 +23,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops import gradient_checker
 
-from nengo_dl import utils, DATA_DIR
+from nengo_dl import utils
 from nengo_dl.builder import NengoBuilder
 from nengo_dl.tensor_graph import TensorGraph
 
@@ -381,7 +381,7 @@ class Simulator(object):
             self.time = self.n_steps * self.dt
 
         if profile:
-            filename = os.path.join(DATA_DIR, "nengo_dl_profile.json")
+            filename = "nengo_dl_profile.json"
             options = tf.profiler.ProfileOptionBuilder.time_and_memory()
             options["output"] = "timeline:outfile=%s" % filename
             options["min_bytes"] = 0
@@ -574,7 +574,7 @@ class Simulator(object):
         tmpdir.cleanup()
 
         if profile:
-            filename = os.path.join(DATA_DIR, "nengo_dl_profile.json")
+            filename = "nengo_dl_profile.json"
             options = tf.profiler.ProfileOptionBuilder.time_and_memory()
             options["output"] = "timeline:outfile=%s" % filename
             options["min_bytes"] = 0

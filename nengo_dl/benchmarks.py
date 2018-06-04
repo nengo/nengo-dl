@@ -8,7 +8,8 @@ import numpy as np
 import tensorflow as tf
 
 import nengo_dl
-from nengo_dl import DATA_DIR
+
+DATA_DIR = os.path.join(os.path.dirname(nengo_dl.__file__), "..", "data")
 
 
 def cconv(dimensions, neurons_per_d, neuron_type):
