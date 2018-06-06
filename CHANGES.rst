@@ -30,6 +30,8 @@ Release History
 
 - Better handling of Simulator errors not associated with a specific op (fixes
   `#41 <https://github.com/nengo/nengo-dl/issues/41>`_)
+- Fixed node outputs changing after simulator is built (fixes `#4
+  <https://github.com/nengo/nengo-dl/issues/4>`__)
 
 **Removed**
 

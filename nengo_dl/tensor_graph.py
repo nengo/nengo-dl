@@ -32,7 +32,8 @@ def with_self(func):
 
 
 class TensorGraph(object):
-    """Manages the construction of the TensorFlow symbolic computation graph.
+    """
+    Manages the construction of the TensorFlow symbolic computation graph.
 
     Parameters
     ----------
@@ -69,11 +70,12 @@ class TensorGraph(object):
         # than the simulation time). we'll compute these outside the simulation
         # and feed in the result.
         if self.model.toplevel is None:
-            self.invariant_inputs = []
+            self.invariant_inputs = OrderedDict()
         else:
-            self.invariant_inputs = [n for n in self.model.toplevel.all_nodes
-                                     if n.size_in == 0 and
-                                     not isinstance(n, tensor_node.TensorNode)]
+            self.invariant_inputs = OrderedDict(
+                (n, n.output) for n in self.model.toplevel.all_nodes
+                if n.size_in == 0 and
+                not isinstance(n, tensor_node.TensorNode))
 
         # filter unused operators
         # remove TimeUpdate because it is executed as part of the simulation
@@ -149,7 +151,8 @@ class TensorGraph(object):
 
     @with_self
     def build(self, progress):
-        """Constructs a new graph to simulate the model.
+        """
+        Constructs a new graph to simulate the model.
 
         progress : :class:`.utils.ProgressBar`
             Progress bar for construction stage
@@ -247,7 +250,8 @@ class TensorGraph(object):
             logger.info("    %s: %d" % x)
 
     def build_step(self):
-        """Build the operators that execute a single simulation timestep
+        """
+        Build the operators that execute a single simulation timestep
         into the graph.
 
         Returns
@@ -322,7 +326,8 @@ class TensorGraph(object):
         return probe_tensors, side_effects
 
     def build_loop(self, progress):
-        """Build simulation loop.
+        """
+        Build simulation loop.
 
         Parameters
         ----------
@@ -418,7 +423,8 @@ class TensorGraph(object):
             self.probe_arrays[p] = x
 
     def build_inputs(self, progress):
-        """Sets up the inputs in the model (which will be computed outside of
+        """
+        Sets up the inputs in the model (which will be computed outside of
         TensorFlow and fed in each simulation block).
 
         Parameters
@@ -587,7 +593,8 @@ class TensorGraph(object):
 
     @with_self
     def build_post(self, sess, rng):
-        """Executes post-build processes for operators (after the graph has
+        """
+        Executes post-build processes for operators (after the graph has
         been constructed and session/variables initialized).
 
         Note that unlike other build functions, this is called every time
@@ -601,12 +608,35 @@ class TensorGraph(object):
             Seeded random number generator
         """
 
+        # build input functions (we need to do this here, because in the case
+        # of processes these functions depend on the rng, and need to be be
+        # rebuilt on reset)
+        self.input_funcs = {}
+        for n, output in self.invariant_inputs.items():
+            if isinstance(output, np.ndarray):
+                self.input_funcs[n] = output
+            elif isinstance(output, Process):
+                self.input_funcs[n] = [
+                    output.make_step(
+                        (n.size_in,), (n.size_out,), self.dt,
+                        output.get_rng(rng))
+                    for _ in range(self.minibatch_size)]
+            elif n.size_out > 0:
+                self.input_funcs[n] = [
+                    utils.align_func((n.size_out,), self.dtype)(output)]
+            else:
+                # a node with no inputs and no outputs, but it can still
+                # have side effects
+                self.input_funcs[n] = [output]
+
+        # call build_post on all the op builders
         for ops, built_ops in self.op_builds.items():
             built_ops.build_post(ops, self.signals, sess, rng)
 
     @with_self
     def build_summaries(self, summaries):
-        """Adds ops to collect summary data for the given objects.
+        """
+        Adds ops to collect summary data for the given objects.
 
         Parameters
         ----------
@@ -668,7 +698,8 @@ class TensorGraph(object):
 
     @with_self
     def get_tensor(self, sig):
-        """Returns a Tensor corresponding to the given Signal.
+        """
+        Returns a Tensor corresponding to the given Signal.
 
         Parameters
         ----------
@@ -690,7 +721,8 @@ class TensorGraph(object):
         return tf.gather(base, tensor_sig.tf_indices)
 
     def mark_signals(self):
-        """Mark all the signals in ``self.model`` according to whether they
+        """
+        Mark all the signals in ``self.model`` according to whether they
         represent trainable parameters of the model (parameters that can be
         optimized by deep learning methods).
 

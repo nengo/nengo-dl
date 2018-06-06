@@ -664,9 +664,9 @@ def test_probe_data():
 
 
 @pytest.mark.parametrize(
-    "pre_val", [0, lambda t: 0, nengo.processes.WhiteNoise(seed=0)])
+    "pre_val", [1, lambda t: 1, nengo.processes.Piecewise({0: [1]})])
 @pytest.mark.parametrize(
-    "post_val", [1, lambda t: 1, nengo.processes.WhiteNoise(seed=1)])
+    "post_val", [2, lambda t: 2, nengo.processes.Piecewise({0: [2]})])
 def test_node_output_change(Simulator, pre_val, post_val, seed):
     with nengo.Network(seed=seed) as net:
         inp = nengo.Node(pre_val)
@@ -676,20 +676,13 @@ def test_node_output_change(Simulator, pre_val, post_val, seed):
         sim.step()
         inp.output = post_val
         sim.step()
-        inp.output = pre_val
+
+        assert np.allclose(sim.data[p], 1.0)
+
+        sim.reset()
         sim.step()
 
-    if isinstance(pre_val, nengo.Process):
-        step0, step2 = pre_val.run_steps(2)[:, 0]
-    else:
-        step0 = step2 = 0
-
-    if isinstance(post_val, nengo.Process):
-        step1 = post_val.run_steps(1)[0, 0]
-    else:
-        step1 = 1
-
-    assert np.allclose(sim.data[p][:, 0], (step0, step1, step2))
+        assert np.allclose(sim.data[p], 1.0)
 
 
 def test_check_gradients_error(Simulator):

@@ -10,7 +10,7 @@ import tempfile
 import time
 import warnings
 
-from nengo import Process, Ensemble, Connection, Probe, Network
+from nengo import Ensemble, Connection, Probe, Network
 from nengo import version as nengo_version
 from nengo.builder import Model
 from nengo.builder.connection import BuiltConnection
@@ -35,7 +35,8 @@ if sys.version_info < (3, 4):
 
 
 class Simulator(object):
-    """Simulate network using the ``nengo_dl`` backend.
+    """
+    Simulate network using the ``nengo_dl`` backend.
 
     Parameters
     ----------
@@ -205,7 +206,8 @@ class Simulator(object):
         self.reset(seed=seed)
 
     def reset(self, seed=None):
-        """Resets the simulator to initial conditions.
+        """
+        Resets the simulator to initial conditions.
 
         Parameters
         ----------
@@ -217,7 +219,6 @@ class Simulator(object):
         if self.closed:
             raise SimulatorClosed("Cannot reset closed Simulator.")
 
-        self.input_funcs = {}
         self.n_steps = 0
         self.time = 0.0
 
@@ -236,7 +237,8 @@ class Simulator(object):
         self.tensor_graph.build_post(self.sess, self.rng)
 
     def soft_reset(self, include_trainable=False, include_probes=False):
-        """Resets the internal state of the simulation, but doesn't
+        """
+        Resets the internal state of the simulation, but doesn't
         rebuild the graph.
 
         Parameters
@@ -261,7 +263,8 @@ class Simulator(object):
             self.n_steps = 0
 
     def step(self, **kwargs):
-        """Run the simulation for one time step.
+        """
+        Run the simulation for one time step.
 
         Parameters
         ----------
@@ -278,7 +281,8 @@ class Simulator(object):
         self.run_steps(1, **kwargs)
 
     def run(self, time_in_seconds, **kwargs):
-        """Simulate for the given length of time.
+        """
+        Simulate for the given length of time.
 
         Parameters
         ----------
@@ -303,7 +307,8 @@ class Simulator(object):
 
     def run_steps(self, n_steps, input_feeds=None, profile=False,
                   progress_bar=True, extra_feeds=None):
-        """Simulate for the given number of steps.
+        """
+        Simulate for the given number of steps.
 
         Parameters
         ----------
@@ -668,7 +673,8 @@ class Simulator(object):
         return loss_val
 
     def save_params(self, path, include_global=True, include_local=False):
-        """Save network parameters to the given ``path``.
+        """
+        Save network parameters to the given ``path``.
 
         Parameters
         ----------
@@ -703,7 +709,8 @@ class Simulator(object):
         logger.info("Model parameters saved to %s", path)
 
     def load_params(self, path, include_global=True, include_local=False):
-        """Load network parameters from the given ``path``.
+        """
+        Load network parameters from the given ``path``.
 
         Parameters
         ----------
@@ -738,7 +745,8 @@ class Simulator(object):
         logger.info("Model parameters loaded from %s", path)
 
     def get_nengo_params(self, nengo_objs, as_dict=False):
-        """Extract model parameters in a form that can be used to initialize
+        """
+        Extract model parameters in a form that can be used to initialize
         Nengo objects in a different model.
 
         For example:
@@ -832,7 +840,8 @@ class Simulator(object):
         return params
 
     def check_gradients(self, outputs=None, atol=1e-5, rtol=1e-3):
-        """Perform gradient checks for the network (used to verify that the
+        """
+        Perform gradient checks for the network (used to verify that the
         analytic gradients are correct).
 
         Raises a simulation error if the difference between analytic and
@@ -930,7 +939,8 @@ class Simulator(object):
         logger.info("Gradient check passed")
 
     def trange(self, dt=None):
-        """Create a vector of times matching probed data.
+        """
+        Create a vector of times matching probed data.
 
         Note that the range does not start at 0 as one might expect, but at
         the first timestep (i.e., ``dt``).
@@ -947,7 +957,8 @@ class Simulator(object):
         return dt * np.arange(1, n_steps + 1)
 
     def close(self):
-        """Close the simulation, freeing resources.
+        """
+        Close the simulation, freeing resources.
 
         Notes
         -----
@@ -969,7 +980,8 @@ class Simulator(object):
             self.closed = True
 
     def _fill_feed(self, n_steps, inputs, targets=None, start=0):
-        """Create a feed dictionary containing values for all the placeholder
+        """
+        Create a feed dictionary containing values for all the placeholder
         inputs in the network, which will be passed to ``tf.Session.run``.
 
         Parameters
@@ -1012,7 +1024,8 @@ class Simulator(object):
         return feed_dict
 
     def _generate_inputs(self, input_feeds, n_steps):
-        """Generate inputs for the network (the output values of each Node with
+        """
+        Generate inputs for the network (the output values of each Node with
         no incoming connections).
 
         Parameters
@@ -1034,66 +1047,39 @@ class Simulator(object):
             input_feeds = {}
 
         feed_vals = {}
-        for n in self.tensor_graph.invariant_inputs:
-            # if the output signal is not in sig map, that means no operators
-            # use the output of this node. similarly, if node.size_out is 0,
-            # the node isn't producing any output values.
-            using_output = (
-                self.model.sig[n]["out"] in self.tensor_graph.sig_map and
-                n.size_out > 0)
+        for n, output in self.tensor_graph.input_funcs.items():
+            if n in input_feeds:
+                # move minibatch dimension to the end
+                feed_val = np.moveaxis(input_feeds[n], 0, -1)
+            elif isinstance(output, np.ndarray):
+                # tile to n_steps/minibatch size
+                feed_val = np.tile(output[None, :, None],
+                                   (n_steps, 1, self.minibatch_size))
+            else:
+                # call output function to determine value
+                feed_val = np.zeros(
+                    (n_steps, n.size_out, self.minibatch_size),
+                    dtype=self.tensor_graph.dtype.as_numpy_dtype)
 
-            if (not isinstance(n.output, np.ndarray) and
-                    (n, n.output) not in self.input_funcs):
-                # note: we include n.output in the input_funcs hash to handle
-                # the case where the node output is changed after the model
-                # is constructed.  this isn't technically supported behaviour
-                # in nengo, but the gui does it.
+                for i in range(n_steps):
+                    # note: need to copy the output of func, as func
+                    # may mutate its outputs in-place on subsequent calls.
+                    # this assignment will broadcast the output along the
+                    # minibatch dimension if required.
+                    feed_val[i] = np.transpose([
+                        func((i + self.n_steps + 1) * self.dt)
+                        for func in output])
 
-                if isinstance(n.output, Process):
-                    self.input_funcs[(n, n.output)] = [
-                        n.output.make_step(
-                            (n.size_in,), (n.size_out,), self.dt,
-                            n.output.get_rng(self.rng))
-                        for _ in range(self.minibatch_size)]
-                elif n.size_out > 0:
-                    self.input_funcs[(n, n.output)] = [utils.align_func(
-                        (n.size_out,), self.tensor_graph.dtype)(n.output)]
-                else:
-                    # a node with no inputs and no outputs, but it can still
-                    # have side effects
-                    self.input_funcs[(n, n.output)] = [n.output]
-
-            if using_output:
-                if n in input_feeds:
-                    # move minibatch dimension to the end
-                    feed_val = np.moveaxis(input_feeds[n], 0, -1)
-                elif isinstance(n.output, np.ndarray):
-                    feed_val = np.tile(n.output[None, :, None],
-                                       (n_steps, 1, self.minibatch_size))
-                else:
-                    feed_val = np.zeros(
-                        (n_steps, n.size_out, self.minibatch_size),
-                        dtype=self.tensor_graph.dtype.as_numpy_dtype)
-
-                    for i in range(n_steps):
-                        # note: need to copy the output of func, as func
-                        # may mutate its outputs in-place on subsequent calls
-                        feed_val[i] = np.transpose([
-                            func((i + self.n_steps + 1) * self.dt)
-                            for func in self.input_funcs[(n, n.output)]])
-
+            # note: we still call the function (above) even if the output
+            # is not being used, because it may have side-effects
+            if n in self.tensor_graph.input_ph:
                 feed_vals[self.tensor_graph.input_ph[n]] = feed_val
-            elif not isinstance(n.output, np.ndarray):
-                # note: we still call the function even if the output
-                # is not being used, because it may have side-effects
-                for i in range(self.n_steps + 1, self.n_steps + n_steps + 1):
-                    for func in self.input_funcs[(n, n.output)]:
-                        func(i * self.dt)
 
         return feed_vals
 
     def _update_probe_data(self, probe_data, start, n_steps):
-        """Updates the stored probe data (since the last reset) with the data
+        """
+        Updates the stored probe data (since the last reset) with the data
         from the latest run.
 
         Downsamples the probe data returned from TensorFlow (from every
@@ -1124,7 +1110,8 @@ class Simulator(object):
             self.model.params[p].append(probe_data[i])
 
     def _check_data(self, data, mode="input", n_batch=None, n_steps=None):
-        """Performs error checking on simulation data.
+        """
+        Performs error checking on simulation data.
 
         Parameters
         ----------
@@ -1236,7 +1223,8 @@ class Simulator(object):
 
 
 class SimulationData(collections.Mapping):
-    """Data structure used to access simulation data from the model.
+    """
+    Data structure used to access simulation data from the model.
 
     The main use case for this is to access Probe data; for example,
     ``probe_data = sim.data[my_probe]``.  However, it is also
@@ -1324,7 +1312,8 @@ class SimulationData(collections.Mapping):
         return data
 
     def get_param(self, obj, attr):
-        """Returns the current parameter value for the given object.
+        """
+        Returns the current parameter value for the given object.
 
         Parameters
         ----------
@@ -1377,7 +1366,8 @@ class SimulationData(collections.Mapping):
         return param
 
     def _attr_map(self, obj, attr):
-        """Maps from ``sim.data[obj].attr`` to the equivalent
+        """
+        Maps from ``sim.data[obj].attr`` to the equivalent
         ``model.sig[obj][attr]``.
 
         Parameters
