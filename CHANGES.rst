@@ -36,6 +36,8 @@ Release History
 **Removed**
 
 - Removed ``nengo_dl.DATA_DIR`` constant
+- Removed ``benchmarks.compare_backends`` (use
+  ``whitepaper2018_plots.py:compare_backends`` instead)
 
 
 1.0.0 (May 30, 2018)

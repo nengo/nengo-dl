@@ -3,7 +3,6 @@ import time
 
 import matplotlib.pyplot as plt
 import nengo
-import nengo_ocl
 import numpy as np
 import tensorflow as tf
 
@@ -248,113 +247,6 @@ def mnist(use_tensor_layer=True):
     return net
 
 
-def compare_backends(raw=False):
-    """
-    Compare the run time of different backends across benchmarks and
-    a range of parameters.
-
-    Parameters
-    ----------
-    raw : bool
-        If True, run the benchmarks to collect data, otherwise load data from
-        file
-    """
-
-    benchmarks = [pes, integrator, cconv]
-    n_range = [32]
-    d_range = [64, 128, 256]
-    neuron_types = [nengo.RectifiedLinear, nengo.LIF]
-    backends = [nengo_dl, nengo_ocl, nengo]
-
-    if raw:
-        data = np.zeros((len(benchmarks), len(n_range), len(d_range),
-                         len(neuron_types), len(backends)))
-
-        for i, bench in enumerate(benchmarks):
-            for j, neurons in enumerate(n_range):
-                for k, dimensions in enumerate(d_range):
-                    for l, neuron_type in enumerate(neuron_types):
-                        print("-" * 30)
-                        print(bench, neurons, dimensions, neuron_type)
-
-                        net = bench(dimensions, neurons, neuron_type())
-                        model = nengo.builder.Model()
-                        model.build(net)
-
-                        for m, backend in enumerate(backends):
-                            print(backend)
-
-                            if backend is None:
-                                continue
-                            elif backend == nengo_dl:
-                                kwargs = {"unroll_simulation": 25,
-                                          "minibatch_size": None,
-                                          "device": "/gpu:0",
-                                          "dtype": tf.float32,
-                                          }
-                            elif backend == nengo:
-                                kwargs = {"progress_bar": None,
-                                          "optimize": True}
-                            elif backend == nengo_ocl:
-                                kwargs = {"progress_bar": None}
-
-                            try:
-                                # with backend.Simulator(net, **kwargs) as sim:
-                                with backend.Simulator(None, model=model,
-                                                       **kwargs) as sim:
-                                    # run once to eliminate startup overhead
-                                    sim.run(0.1)
-
-                                    start = time.time()
-                                    sim.run(5)
-                                    # reps = 1 if backend == nengo_dl else 50
-                                    # for r in range(reps):
-                                    #     sim.run(1.0)
-                                    data[i, j, k, l, m] = time.time() - start
-                                    print("time", data[i, j, k, l, m])
-                            except Exception as e:
-                                print(backend, "CRASHED")
-                                print(e)
-                                data[i, j, k, l, m] = np.nan
-
-                            # if backend == nengo:
-                            #     canonical = sim.data[net.p]
-                            # else:
-                            #     assert np.allclose(
-                            #         canonical, sim.data[net.p], atol=1e-3)
-
-        np.savez("%s/benchmark_data.npz" % DATA_DIR, data)
-    else:
-        data = np.load("%s/benchmark_data.npz" % DATA_DIR)["arr_0"]
-
-    bench_names = ["pes", "integrator", "cconv"]
-    neuron_names = ["relu", "lif"]
-
-    for j in range(len(neuron_types)):
-        f, axes = plt.subplots(1, 3)
-        for i in range(len(benchmarks)):
-            plt.figure()
-            plt.title("%s (%s)" % (bench_names[i], neuron_names[j]))
-            plt.plot(d_range, data[i, 0, :, j, 0] / data[i, 0, :, j, 2])
-            plt.xlabel("dimensions")
-            plt.ylabel("nengo_dl / nengo")
-
-            plt.figure()
-            plt.title("%s (%s)" % (bench_names[i], neuron_names[j]))
-            plt.plot(d_range, data[i, 0, :, j, 0] / data[i, 0, :, j, 1])
-            plt.xlabel("dimensions")
-            plt.ylabel("nengo_dl / nengo_ocl")
-
-            axes[i].set_title("%s (%s)" % (bench_names[i], neuron_names[j]))
-            axes[i].plot(d_range, data[i, 0, :, j, :])
-            axes[i].set_xlabel("dimensions")
-            axes[i].set_ylabel("seconds")
-            axes[i].legend(["nengo_dl", "nengo_ocl", "nengo"])
-            axes[i].set_ylim([0, 100])
-
-    plt.show()
-
-
 def profile(net, train=False, n_steps=150, **kwargs):
     """
     Run profiler on a benchmark network.
@@ -423,7 +315,7 @@ def matmul_vs_reduce():
     reduce_times = np.zeros_like(matmul_times)
 
     with tf.Session() as sess:
-        for i, n_ops in enumerate(n_ops_range):
+        for i, n_ops in enumerate(n_ops_range):  # pylint:disable=too-many-nested-blocks
             for j, mini in enumerate(mini_range):
                 print(n_ops, mini)
 
@@ -473,9 +365,8 @@ def matmul_vs_reduce():
 
 
 if __name__ == "__main__":
-    compare_backends(raw=True)
-    # profile(pes(128, 32, nengo.LIFRate()), train=True, n_steps=150,
-    #         minibatch_size=1, device="/gpu:0", unroll_simulation=50)
+    profile(pes(128, 32, nengo.LIFRate()), train=False, n_steps=150,
+            minibatch_size=1, device="/gpu:0", unroll_simulation=50)
     # profile(mnist(use_tensor_layer=True), train=True, n_steps=2,
     #         minibatch_size=128, device="/gpu:0")
     # matmul_vs_reduce()
