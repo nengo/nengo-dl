@@ -501,6 +501,11 @@ class TensorGraph(object):
                     self.probe_arrays[p], tf.trainable_variables(),
                     grad_ys=self.target_phs[p], aggregation_method=agg_method))
 
+        if any(g is None for x in grads for g in x):
+            raise SimulationError(
+                "Could not compute gradients; this usually means that there "
+                "are non-differentiable elements in the network")
+
         if len(grads) == 1:
             grads = grads[0]
         else:

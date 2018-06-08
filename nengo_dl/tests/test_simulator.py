@@ -524,7 +524,7 @@ def test_side_effects(Simulator):
 def test_tensorboard(Simulator, tmpdir):
     with nengo.Network() as net:
         a = nengo.Node([0])
-        b = nengo.Ensemble(10, 1)
+        b = nengo.Ensemble(10, 1, neuron_type=nengo.LIFRate())
         c = nengo.Connection(a, b)
         p = nengo.Probe(b)
         p2 = nengo.Probe(c)
@@ -945,7 +945,7 @@ def test_simulation_data(Simulator, seed):
 def test_learning_rate_schedule(Simulator):
     with nengo.Network() as net:
         a = nengo.Node([0])
-        b = nengo.Ensemble(10, 1)
+        b = nengo.Ensemble(10, 1, neuron_type=nengo.LIFRate())
         nengo.Connection(a, b)
         p = nengo.Probe(b)
 
@@ -1131,3 +1131,24 @@ def test_direct_grads(Simulator, mixed):
         assert np.allclose(sim.data[p], 2)
         if mixed:
             assert np.allclose(sim.data[p2], 2)
+
+
+def test_non_differentiable(Simulator):
+    with nengo.Network() as net:
+        a = nengo.Node([0])
+        b = nengo.Ensemble(10, 1, neuron_type=nengo.LIF())
+        c = nengo.Connection(a, b)
+        p = nengo.Probe(b)
+
+    with Simulator(net) as sim:
+        # prior to 1.9 tensorflow would give all-zero gradients instead of
+        # an error
+        if tf.__version__ < "1.9.0":
+            w0 = sim.data[c].weights
+            sim.train({a: np.ones((1, 10, 1))}, {p: np.ones((1, 10, 1))},
+                      tf.train.GradientDescentOptimizer(100))
+            assert np.allclose(sim.data[c].weights, w0)
+        else:
+            with pytest.raises(SimulationError):
+                sim.train({a: np.ones((1, 10, 1))}, {p: np.ones((1, 10, 1))},
+                          tf.train.GradientDescentOptimizer(100))

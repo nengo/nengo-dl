@@ -503,8 +503,7 @@ class Simulator(object):
         # check for non-differentiable elements in graph
         # utils.find_non_differentiable(
         #     [self.tensor_graph.input_ph[n] for n in inputs],
-        #     [self.tensor_graph.probe_arrays[self.model.probes.index(p)]
-        #      for p in targets])
+        #     [self.tensor_graph.probe_arrays[p] for p in targets])
 
         # apply objective to all probes if individual objectives weren't given
         if not isinstance(objective, dict):

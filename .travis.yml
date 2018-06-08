@@ -22,10 +22,12 @@ env:
     - MODE="docs"
     - # default build
     - MODE="coverage"
+      NENGO_VERSION="nengo==2.7.0"
+      TF_VERSION="tensorflow==1.3.0"
     - MODE="coverage"
       PYTHON_VERSION="2.7"
       NENGO_VERSION="git+https://github.com/nengo/nengo.git"
-      TF_VERSION="tensorflow==1.3.0"
+      TF_VERSION="tensorflow --pre"
     - MODE="examples"
     - NENGO_DL_TEST_PRECISION="64"
     - NENGO_DL_TEST_UNROLL="5"
