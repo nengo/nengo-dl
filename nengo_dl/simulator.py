@@ -4,7 +4,6 @@ import collections
 import datetime
 import logging
 import os
-import pkg_resources
 import sys
 import tempfile
 import time
@@ -21,6 +20,7 @@ from nengo.exceptions import (
     ValidationError, ConfigError)
 from nengo.solvers import NoSolver
 import numpy as np
+import pkg_resources
 import tensorflow as tf
 from tensorflow.python.ops import gradient_checker
 
@@ -31,7 +31,7 @@ from nengo_dl.tensor_graph import TensorGraph
 logger = logging.getLogger(__name__)
 
 if sys.version_info < (3, 4):
-    import backports.tempfile as tempfile  # noqa: F811
+    import backports.tempfile as tempfile
 
 
 class Simulator(object):
@@ -559,7 +559,7 @@ class Simulator(object):
 
         # run training
         with progress:
-            for n in range(n_epochs):
+            for _ in range(n_epochs):
                 for offset, inp, tar in utils.minibatch_generator(
                         inputs, targets, self.minibatch_size, rng=self.rng,
                         shuffle=shuffle, truncation=truncation):
@@ -663,7 +663,7 @@ class Simulator(object):
             if extra_feeds is not None:
                 feed.update(extra_feeds)
             loss_val += self.sess.run(loss, feed_dict=feed)
-        loss_val /= i + 1
+        loss_val /= i + 1  # pylint: disable=undefined-loop-variable
 
         # restore internal state of simulator
         self.load_params(os.path.join(tmpdir.name, "tmp"), include_local=True,
@@ -1190,7 +1190,7 @@ class Simulator(object):
         return self.model.dt
 
     @dt.setter
-    def dt(self, dummy):
+    def dt(self, _):
         raise ReadonlyError(attr='dt', obj=self)
 
     @property

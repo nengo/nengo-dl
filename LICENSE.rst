@@ -60,12 +60,12 @@ To run the unit tests, NengoDL uses:
   `GPL license <https://github.com/codespell-project/codespell/blob/master/COPYING>`__
 * `Coverage.py <https://coverage.readthedocs.io/en/coverage-4.4.1/>`_ - Used under
   `Apache license <https://bitbucket.org/ned/coveragepy/src/default/NOTICE.txt?fileviewer=file-view-default>`__
-* `Flake8 <http://flake8.pycqa.org/en/latest/>`_ - Used under
-  `MIT license <https://gitlab.com/pycqa/flake8/blob/master/LICENSE>`__
 * `matplotlib <https://matplotlib.org/>`_ - Used under
   `modified PSF license <https://matplotlib.org/users/license.html>`__
 * `nbval <https://github.com/computationalmodelling/nbval>`_ - Used under
   `BSD license <https://github.com/computationalmodelling/nbval/blob/master/LICENSE>`__
+* `pylint <https://www.pylint.org/>`_ - Used under
+  `GPL license <https://github.com/PyCQA/pylint/blob/master/COPYING>`__
 * `pytest <https://docs.pytest.org/en/latest/>`_ - Used under
   `MIT license <https://docs.pytest.org/en/latest/license.html>`__
 * `pytest-xdist <https://github.com/pytest-dev/pytest-xdist>`_ - Used under

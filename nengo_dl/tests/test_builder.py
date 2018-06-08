@@ -24,7 +24,7 @@ def test_custom_builder():
     # warning if builder doesn't subclass OpBuilder
     with pytest.warns(UserWarning):
         @Builder.register(TestOp)
-        class TestOpBuilder0:
+        class TestOpBuilder0:  # pylint: disable=unused-variable
             pass
 
     # warning when overwriting a registered builder
@@ -35,6 +35,7 @@ def test_custom_builder():
             post_built = False
 
             def __init__(self, ops, signals):
+                super(TestOpBuilder, self).__init__(ops, signals)
                 self.pre_built = True
 
             def build_step(self, signals):

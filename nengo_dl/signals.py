@@ -50,7 +50,7 @@ class TensorSignal(object):
         return self._indices
 
     @indices.setter
-    def indices(self, val):
+    def indices(self, _):
         raise BuildError("Indices are read only")
 
     @property
@@ -546,8 +546,8 @@ class SignalDict(object):
         val0 = getattr(ops[0], attr)
         if np.allclose([getattr(op, attr) for op in ops], val0):
             return tf.constant(val0, dtype=dtype)
-        else:
-            return self.constant(
-                [np.reshape(getattr(op, attr), [1] * (ndims - 1))
-                 for i, op in enumerate(ops) for _ in range(op_sizes[i])],
-                dtype=dtype)
+
+        return self.constant(
+            [np.reshape(getattr(op, attr), [1] * (ndims - 1))
+             for i, op in enumerate(ops) for _ in range(op_sizes[i])],
+            dtype=dtype)

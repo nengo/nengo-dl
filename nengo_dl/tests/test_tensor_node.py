@@ -67,6 +67,7 @@ def test_pre_build(Simulator):
     class TestFunc2:
         def pre_build(self, size_in, size_out):
             assert size_in is None
+            assert size_out == (1, 1)
 
         def __call__(self, t):
             return tf.reshape(t, (1, 1))
@@ -97,6 +98,7 @@ def test_post_build(Simulator):
             self.weights = tf.Variable(tf.zeros((size_in[1], size_out[1])))
 
         def post_build(self, sess, rng):
+            assert isinstance(rng, np.random.RandomState)
             init_op = tf.assign(self.weights, tf.ones((2, 3)))
             sess.run(init_op)
 
@@ -183,7 +185,7 @@ def test_tensor_layer(Simulator):
 
 
 def test_reuse_vars(Simulator):
-    def my_func(t, x):
+    def my_func(_, x):
         # note: the control dependencies thing is due to some weird tensorflow
         # issue with creating variables inside while loops
         with tf.control_dependencies(None):

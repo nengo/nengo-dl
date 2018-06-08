@@ -109,6 +109,7 @@ class TensorNode(Node):
 
     def __init__(self, tensor_func, size_in=Default, size_out=Default,
                  label=Default):
+        # pylint: disable=non-parent-init-called,super-init-not-called
         # note: we bypass the Node constructor, because we don't want to
         # perform validation on `output`
         NengoObject.__init__(self, label=label, seed=None)
@@ -147,7 +148,7 @@ def build_tensor_node(model, node):
                                          sig_out))
 
 
-class SimTensorNode(builder.Operator):
+class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
     """Operator for TensorNodes (constructed by :func:`.build_tensor_node`).
 
     Parameters
@@ -189,6 +190,8 @@ class SimTensorNodeBuilder(OpBuilder):
     """Builds a :class:`.SimTensorNode` operator into a NengoDL model."""
 
     def __init__(self, ops, signals):
+        super(SimTensorNodeBuilder, self).__init__(ops, signals)
+
         # SimTensorNodes should never be merged
         assert len(ops) == 1
         op = ops[0]

@@ -90,7 +90,7 @@ class GenericNeuronBuilder(OpBuilder):
             output = None
             J_offset = 0
             state_offset = [0 for _ in states]
-            for i, op in enumerate(ops):
+            for op in ops:
                 # slice out the individual state vectors from the overall
                 # array
                 op_J = J[J_offset:J_offset + op.J.shape[0]]

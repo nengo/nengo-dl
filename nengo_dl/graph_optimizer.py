@@ -219,7 +219,7 @@ def greedy_planner(operators):
             del successors_of[op]
 
     logger.debug("GREEDY PLAN")
-    logger.debug("\n" + "\n".join([str(x) for x in plan]))
+    logger.debug("\n%s" * len(plan), *plan)
 
     assert len(operators) == sum(len(ops) for ops in plan)
 
@@ -374,7 +374,7 @@ def tree_planner(op_list, max_depth=3):
     plan = [tuple(op_list[x] for x in g) for g in plan]
 
     logger.debug("TREE PLAN")
-    logger.debug("\n".join([str(x) for x in plan]))
+    logger.debug("\n%s" * len(plan), *plan)
 
     return plan
 
@@ -507,7 +507,7 @@ def transitive_planner(op_list):
     plan = [tuple(op_list[x] for x in merge_groups[group]) for group in plan]
 
     logger.debug("TRANSITIVE PLAN")
-    logger.debug("\n" + "\n".join([str(x) for x in plan]))
+    logger.debug("\n%s" * len(plan), *plan)
 
     return plan
 
@@ -592,7 +592,7 @@ def noop_planner(operators):
     plan = [(op,) for op in toposort(dependency_graph)]
 
     logger.debug("NOOP PLAN")
-    logger.debug("\n" + "\n".join([str(x) for x in plan]))
+    logger.debug("\n%s" * len(plan), *plan)
 
     return plan
 
@@ -724,7 +724,7 @@ def order_signals(plan, n_passes=10):
     sig_idxs = {s: i for i, s in enumerate(all_signals)}
 
     logger.debug("plan")
-    logger.debug("\n" + "\n".join([str(x) for x in new_plan.values()]))
+    logger.debug("\n%s" * len(new_plan), *new_plan.values())
     logger.debug("signal indices")
     logger.debug(sig_idxs)
 
@@ -744,7 +744,7 @@ def order_signals(plan, n_passes=10):
             reads)
 
         logger.debug("resorted ops")
-        logger.debug("\n" + "\n".join([str(x) for x in new_plan.values()]))
+        logger.debug("\n%s" * len(new_plan), *new_plan.values())
 
         logger.debug("reordered signal indices")
         logger.debug(sig_idxs)
@@ -775,9 +775,9 @@ def order_signals(plan, n_passes=10):
     logger.debug("final sorted signals")
     logger.debug(sorted_signals)
     logger.debug("new plan")
-    logger.debug("\n" + "\n".join([str(x) for x in new_plan.values()]))
+    logger.debug("\n%s" * len(new_plan), *new_plan.values())
     logger.debug("blocks")
-    logger.debug("\n" + display_signal_blocks(new_plan, sorted_signals))
+    logger.debug("\n%s", display_signal_blocks(new_plan, sorted_signals))
 
     return sorted_signals, [new_plan[ops] for ops in plan]
 
@@ -943,8 +943,9 @@ def sort_ops_by_signals(sorted_reads, sigs, sig_idxs, new_plan, blocks, reads):
         # sorted first by the order of the signals in the list, then by
         # the order of the views within each signal
         sorted_ops = sorted(
-            ops, key=lambda op: (sig_idxs[reads[op][read_block].base],
-                                 reads[op][read_block].elemoffset))
+            ops, key=lambda op, read_block=read_block: (
+                sig_idxs[reads[op][read_block].base],
+                reads[op][read_block].elemoffset))
 
         new_plan[old_ops] = tuple(sorted_ops)
 
@@ -1046,7 +1047,8 @@ def sort_signals_by_ops(sorted_reads, sigs, sig_idxs, new_plan, blocks, reads):
             curr_max = max(curr_max, idx)
         else:
             for i, s in enumerate(
-                    sorted(sort_vals, key=lambda s: sort_vals[s])):
+                    sorted(sort_vals,
+                           key=lambda x, sort_vals=sort_vals: sort_vals[x])):
                 sig_idxs[s] = min_index + i
 
             logger.log(logging.DEBUG - 1, "sorted indices %s", sig_idxs)
@@ -1054,7 +1056,7 @@ def sort_signals_by_ops(sorted_reads, sigs, sig_idxs, new_plan, blocks, reads):
     return sig_idxs
 
 
-def noop_order_signals(plan, **kwargs):
+def noop_order_signals(plan, **_):
     """A version of :func:`.graph_optimizer.order_signals` that doesn't do any
     reordering, for debugging."""
 
@@ -1117,8 +1119,8 @@ def create_signals(sigs, plan, float_type, minibatch_size):
             breaks += [i + 1]
 
     logging.debug("partitions")
-    logging.debug("\n" + "".join("|" if i in breaks else " "
-                                 for i in range(len(sigs))))
+    logging.debug("\n%s", "".join("|" if i in breaks else " "
+                                  for i in range(len(sigs))))
 
     # create all the base signals
     for i, sig in enumerate(sigs):
@@ -1467,8 +1469,8 @@ def remove_identity_muls(operators):
         d = x.shape[0]
         if sig.ndim == 1:
             return np.array_equal(x, np.ones(d))
-        else:
-            return np.array_equal(x, np.diag(np.ones(d)))
+
+        return np.array_equal(x, np.diag(np.ones(d)))
 
     new_operators = []
     for op in operators:

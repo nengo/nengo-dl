@@ -136,7 +136,7 @@ class SimVojaBuilder(OpBuilder):
         signals.scatter(self.output_data, update)
 
 
-class SimPES(Operator):
+class SimPES(Operator):  # pylint: disable=abstract-method
     r"""
     Calculate connection weight change according to the PES rule.
 

@@ -19,6 +19,7 @@ from nengo_dl.graph_optimizer import (
 from nengo_dl.tensor_node import SimTensorNode
 
 
+# pylint: disable=redefined-outer-name
 @pytest.fixture(params=[greedy_planner, tree_planner, transitive_planner])
 def planner(request):
     return request.param
@@ -45,7 +46,7 @@ class DummySignal(object):
     def initial_value(self):
         return np.full(self.base.shape, self.init, dtype=self.dtype)
 
-    def may_share_memory(self, other):
+    def may_share_memory(self, _):
         return False
 
     def __repr__(self):

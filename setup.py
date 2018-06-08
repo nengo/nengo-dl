@@ -66,9 +66,9 @@ docs_require = [
 tests_require = [
     "codespell>=1.12.0",
     "coverage>=4.3.4",
-    "flake8>=2.5.1",
     "matplotlib>=2.0.0",
     "nbval>=0.6",
+    "pylint>=1.9.2",
     "pytest>=3.0.4",
     "pytest-xdist>=1.16.0",
 ]

@@ -52,6 +52,7 @@ def test_signal_init_values(Simulator):
     array = Signal([1.0, 2.0, 3.0])
 
     class DummyProbe(nengo.Probe):
+        # pylint: disable=super-init-not-called
         def __init__(self, target):
             # bypass target validation
             nengo.Probe.target.data[self] = target
@@ -86,7 +87,7 @@ def test_unconnected_node(Simulator):
     hits = np.array(0)
     dt = 0.001
 
-    def f(t):
+    def f(_):
         hits[...] += 1
 
     model = nengo.Network()

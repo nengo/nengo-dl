@@ -257,6 +257,8 @@ class SparseDotIncBuilder(DotIncBuilder):
     operators."""
 
     def __init__(self, ops, signals):
+        # note: bypassing the DotIncBuilder init
+        # pylint: disable=bad-super-call
         super(DotIncBuilder, self).__init__(ops, signals)
 
         logger.debug("dst %s", [op.Y for op in ops])
@@ -362,7 +364,7 @@ class SimPyFuncBuilder(OpBuilder):
         def merged_func(time, inputs):  # pragma: no cover
             outputs = []
             offset = 0
-            for i, op in enumerate(ops):
+            for op in ops:
                 if op.output is None:
                     func = op.fn
                 else:
@@ -389,7 +391,7 @@ class SimPyFuncBuilder(OpBuilder):
             return np.concatenate(outputs, axis=0)
 
         self.merged_func = merged_func
-        self.merged_func.__name__ == "_".join(
+        self.merged_func.__name__ = "_".join(
             [utils.function_name(op.fn) for op in ops])
         self.output_shape = ((len(ops),) if self.output_data is None else
                              self.output_data.shape)

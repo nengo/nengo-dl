@@ -220,7 +220,7 @@ class MessageBar(progressbar.BouncingBar):
         return line[:offset] + msg + line[offset + len(msg):]
 
 
-class ProgressBar(progressbar.ProgressBar):
+class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestors
     """Handles progress bar display for some tracked process.
 
     Parameters
@@ -369,7 +369,7 @@ class ProgressBar(progressbar.ProgressBar):
     next = __next__  # for python 2.x
 
 
-class NullProgressBar(progressbar.NullBar):
+class NullProgressBar(progressbar.NullBar):  # pylint: disable=too-many-ancestors
     """A progress bar that does nothing.
 
     Used to replace ProgressBar when we want to disable output.
@@ -382,7 +382,7 @@ class NullProgressBar(progressbar.NullBar):
     def sub(self, *args, **kwargs):
         return self
 
-    def step(self):
+    def step(self, **kwargs):
         pass
 
 

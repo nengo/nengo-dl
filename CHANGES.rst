@@ -25,6 +25,7 @@ Release History
 
 - Move ``tensorflow-gpu`` installation check to Simulator init, and only apply
   if ``device=None``.
+- Switched to ``pylint`` for style checks.
 
 **Fixed**
 

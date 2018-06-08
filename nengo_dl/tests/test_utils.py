@@ -103,6 +103,7 @@ def test_truncation(truncation):
             assert np.allclose(x["a"], inputs["a"][:, o:o + duration])
             assert np.allclose(y["b"], targets["b"][:, o:o + duration])
 
+    # pylint: disable=undefined-loop-variable
     assert i == 10 // duration - (10 % duration == 0)
 
     assert len(w) == (1 if truncation == 3 else 0)

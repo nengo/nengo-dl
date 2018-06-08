@@ -80,7 +80,7 @@ def test_minibatch(Simulator, seed):
 
     with Simulator(net, minibatch_size=None) as sim:
         probe_data = [[] for _ in ps]
-        for i in range(5):
+        for _ in range(5):
             sim.run_steps(100)
 
             for j, p in enumerate(ps):
@@ -563,12 +563,12 @@ def test_tensorboard(Simulator, tmpdir):
         assert "loss/loss" in tags[0]
         assert "loss/Probe_None_loss" in tags[1]
         assert "loss/Probe_None_loss" in tags[2]
-        assert "Ensemble_None_encoders" == tags[3]
-        assert "Ensemble.neurons_None_bias" == tags[4]
-        assert "Connection_None_weights" == tags[5]
-        assert "step_var" == tags[6]
+        assert tags[3] == "Ensemble_None_encoders"
+        assert tags[4] == "Ensemble.neurons_None_bias"
+        assert tags[5] == "Connection_None_weights"
+        assert tags[6] == "step_var"
 
-    assert i == 5
+    assert i == 5  # pylint: disable=undefined-loop-variable
 
     # check for warning if user requests summaries with tensorboard=None
     with pytest.warns(UserWarning):
@@ -642,6 +642,7 @@ def test_probe_data():
         model.sig = defaultdict(lambda: defaultdict(lambda: DummySignal()))
 
     class DummyProbe(nengo.Probe):
+        # pylint: disable=super-init-not-called
         def __init__(self):
             pass
 
@@ -938,7 +939,7 @@ def test_simulation_data(Simulator, seed):
         assert np.allclose(sim.data[a].encoders, enc)
 
     with pytest.raises(ValidationError):
-        sim.data[nengo.Ensemble(10, 1, add_to_container=False)]
+        _ = sim.data[nengo.Ensemble(10, 1, add_to_container=False)]
 
 
 def test_learning_rate_schedule(Simulator):
@@ -1110,7 +1111,7 @@ def test_direct_grads(Simulator, mixed):
     with Simulator(net, minibatch_size=1) as sim:
         n_steps = 10
         opt = tf.train.GradientDescentOptimizer(0.45)
-        for i in range(10):
+        for _ in range(10):
             sim.run_steps(n_steps)
 
             targets = {p: (2. / n_steps) * (sim.data[p] - 2)}

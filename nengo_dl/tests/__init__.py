@@ -32,7 +32,7 @@ test_synapses.run_synapse = run_synapse
 
 
 # remove the correction probes from _test_pes
-def _test_pes(Simulator, nl, plt, seed,
+def _test_pes(NengoSimulator, nl, plt, seed,
               pre_neurons=False, post_neurons=False, weight_solver=False,
               vin=np.array([0.5, -0.5]), vout=None, n=200,
               function=None, transform=np.array(1.), rate=1e-3):
@@ -69,7 +69,7 @@ def _test_pes(Simulator, nl, plt, seed,
 
         weights_p = nengo.Probe(conn, 'weights', sample_every=0.01)
 
-    with Simulator(model) as sim:
+    with NengoSimulator(model) as sim:
         sim.run(0.5)
     t = sim.trange()
     weights = sim.data[weights_p]

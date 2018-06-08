@@ -25,6 +25,8 @@ class TruncatedNormal(Distribution):
     limit = NumberParam("limit", low=0, low_open=True)
 
     def __init__(self, mean=0, stddev=1, limit=None):
+        super(TruncatedNormal, self).__init__()
+
         self.mean = mean
         self.stddev = stddev
         self.limit = 2 * stddev if limit is None else limit
@@ -87,6 +89,8 @@ class VarianceScaling(Distribution):
     distribution = EnumParam("distribution", values=["uniform", "normal"])
 
     def __init__(self, scale=1, mode="fan_avg", distribution="uniform"):
+        super(VarianceScaling, self).__init__()
+
         self.scale = scale
         self.mode = mode
         self.distribution = distribution
@@ -132,6 +136,9 @@ class VarianceScaling(Distribution):
         elif self.distribution == "normal":
             stddev = np.sqrt(scale)
             return TruncatedNormal(stddev=stddev).sample(n, d)
+        else:
+            # note: this should be caught by the enumparam check
+            raise NotImplementedError
 
 
 class Glorot(VarianceScaling):

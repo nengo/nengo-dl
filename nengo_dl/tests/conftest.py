@@ -1,4 +1,4 @@
-from nengo.conftest import seed  # noqa
+from nengo.conftest import seed  # pylint: disable=unused-import
 import pytest
 
 from nengo_dl import tests
@@ -14,7 +14,7 @@ def Simulator(request):
 
 
 def pytest_runtest_setup(item):
-    if (getattr(item.obj, 'gpu', None) and not item.config.getvalue('--gpu')):
+    if getattr(item.obj, 'gpu', None) and not item.config.getvalue('--gpu'):
         pytest.skip("GPU tests not requested")
 
 

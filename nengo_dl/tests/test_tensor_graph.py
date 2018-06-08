@@ -260,7 +260,7 @@ def test_signal_order_deterministic(Simulator, seed):
         pass
 
     with Simulator(net, seed=seed) as sim2:
-        for (k, v), (k2, v2) in zip(
-                sim1.tensor_graph.base_arrays_init.items(),
-                sim2.tensor_graph.base_arrays_init.items()):
+        for v, v2 in zip(
+                sim1.tensor_graph.base_arrays_init.values(),
+                sim2.tensor_graph.base_arrays_init.values()):
             assert np.allclose(v[0], v2[0])

@@ -73,6 +73,7 @@ def patch_state_grads():
                 array_ops.expand_dims(indices, 1), updates_grad,
                 var.get_shape())
         else:
+            # pylint: disable=no-member
             if versions.__version__ < "1.7.0":
                 temp_var = gen_state_ops._temporary_variable
                 destroy_temp_var = gen_state_ops._destroy_temporary_variable
@@ -96,10 +97,10 @@ def patch_state_grads():
 
         return grad, None, updates_grad
 
-    def AssignGrads(op, grad):
+    def AssignGrads(_, grad):
         return array_ops.zeros_like(grad), grad
 
-    def AssignAddGrads(op, grad):
+    def AssignAddGrads(_, grad):
         return grad, grad
 
     ops._gradient_registry._registry["ScatterUpdate"] = {
