@@ -1202,9 +1202,11 @@ class Simulator(object):
             self.tensor_graph.device)
         self._graph_context.__enter__()
         self._device_context.__enter__()
+        self.sess.__enter__()
         return self
 
     def __exit__(self, *args):
+        self.sess.__exit__(*args)
         self._device_context.__exit__(*args)
         self._graph_context.__exit__(*args)
         self.close()

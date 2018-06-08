@@ -21,6 +21,11 @@ Release History
 1.0.1 (unreleased)
 ------------------
 
+**Added**
+
+- The default TensorFlow Session is now set to the underlying Simulator session
+  within the Simulator context.
+
 **Changed**
 
 - Move ``tensorflow-gpu`` installation check to Simulator init, and only apply
