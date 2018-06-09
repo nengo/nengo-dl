@@ -10,7 +10,7 @@ dist: trusty
 env:
   global:
     - MODE="test"
-    - PYTHON_VERSION="3.5"
+    - PYTHON_VERSION="3.6"
     - NENGO_DL_TEST_PRECISION="32"
     - NENGO_DL_TEST_UNROLL="1"
     - NUMPY_VERSION="numpy"
@@ -25,20 +25,19 @@ env:
       NENGO_VERSION="git+https://github.com/nengo/nengo.git"
       TF_VERSION="tensorflow --pre"
     - MODE="coverage"
-      PYTHON_VERSION="2.7"
       NENGO_VERSION="nengo==2.7.0"
       TF_VERSION="tensorflow==1.3.0"
+      PYTHON_VERSION="2.7"
     - MODE="examples"
     - NENGO_DL_TEST_PRECISION="64"
-    - NENGO_DL_TEST_UNROLL="5"
-    - NUMPY_VERSION="numpy==1.11.0"
+      NENGO_DL_TEST_UNROLL="5"
+    - NENGO_VERSION="git+https://github.com/nengo/nengo.git"
+      TF_VERSION="tensorflow --pre"
+    - NENGO_VERSION="nengo==2.7.0"
       TF_VERSION="tensorflow==1.3.0"
-      NENGO_VERSION="nengo==2.7.0"
-    - TF_VERSION="tensorflow --pre"
-      NENGO_VERSION="git+https://github.com/nengo/nengo.git"
+      NUMPY_VERSION="numpy==1.11.0"
+      PYTHON_VERSION="3.4"
     - PYTHON_VERSION="2.7"
-    - PYTHON_VERSION="3.4"
-    - PYTHON_VERSION="3.6"
 
 #matrix:
 #  include:
