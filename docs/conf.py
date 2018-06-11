@@ -19,7 +19,6 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'numpydoc',
-    'nengo.utils.docutils',
     'nbsphinx',
     'IPython.sphinxext.ipython_console_highlighting',
 ]
@@ -61,6 +60,7 @@ master_doc = 'index'
 suppress_warnings = ['image.nonlocal_uri']
 linkcheck_ignore = [r'http://localhost:\d+']
 linkcheck_anchors = True
+nitpicky = True
 
 project = u'NengoDL'
 authors = u'Applied Brain Research'

@@ -1,6 +1,14 @@
-Basic operators
-===============
+Operator build classes
+======================
 
-.. automodule:: nengo_dl.op_builders
+These are the classes that convert Nengo operators into TensorFlow graph
+elements.
 
-.. autoclass:: nengo_dl.tensor_node.SimTensorNodeBuilder
+.. toctree::
+    :maxdepth: 3
+
+    op_builders
+    neurons
+    learning_rules
+    processes
+    tensor_node_builders

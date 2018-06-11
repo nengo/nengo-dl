@@ -40,6 +40,7 @@ Release History
   <https://github.com/nengo/nengo-dl/issues/4>`__)
 - Better error message if user tries to train a network with non-differentiable
   elements
+- Fixed some broken cross references in the documentation
 
 **Removed**
 

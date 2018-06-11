@@ -187,7 +187,8 @@ class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
 
 @Builder.register(SimTensorNode)
 class SimTensorNodeBuilder(OpBuilder):
-    """Builds a :class:`.SimTensorNode` operator into a NengoDL model."""
+    """Builds a :class:`~.tensor_node.SimTensorNode` operator into a NengoDL
+    model."""
 
     def __init__(self, ops, signals):
         super(SimTensorNodeBuilder, self).__init__(ops, signals)
@@ -272,7 +273,7 @@ def tensor_layer(input, layer_func, shape_in=None, synapse=None,
 
     Parameters
     ----------
-    input : :class:`~nengo:nengo.base.NengoObject`
+    input : ``NengoObject``
         Object providing input to the layer
     layer_func : callable or :class:`~nengo:nengo.neurons.NeuronType`
         A function that takes the value from ``input`` (represented as a

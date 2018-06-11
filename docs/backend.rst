@@ -7,7 +7,7 @@ These objects are not relevant to front-end users, only NengoDL developers.
     :maxdepth: 3
 
     builder
-    op_builders
+    operators
     tensor_graph
     signals
     graph_optimizer

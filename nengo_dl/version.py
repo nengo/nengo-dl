@@ -19,7 +19,7 @@ try:
     import nengo.version
 
     minimum_nengo_version = (2, 7, 0)
-    latest_nengo_version = (2, 7, 1)
+    latest_nengo_version = (2, 8, 1)
     if nengo.version.version_info < minimum_nengo_version:  # pragma: no cover
         raise ValueError(
             "`nengo_dl` does not support `nengo` version %s. Upgrade "

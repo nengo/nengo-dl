@@ -313,7 +313,7 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
         ----------
         vars : dict of {str: str}
             Values for the extra variables displayed at the end of the progress
-            bar (defined in :meth:`.ProgressBar.__init__`)
+            bar (defined in ``__init__``)
         """
 
         if self.var_vals is not None:

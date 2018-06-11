@@ -528,7 +528,7 @@ def transitive_closure_recurse(dg, ops, trans, builder_type, builder_types,
         The transitive closure for the graph (will be filled in-place)
     builder_type : type
         One of the ``nengo_dl`` build classes (e.g.,
-        :class:`~.operators.CopyBuilder`), specifying the type of operators
+        :class:`~.op_builders.CopyBuilder`), specifying the type of operators
         to include in the transitive closure
     builder_types : list of type
         The build class for each operator
