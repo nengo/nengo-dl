@@ -25,6 +25,7 @@ Release History
 
 - The default TensorFlow Session is now set to the underlying Simulator session
   within the Simulator context.
+- Added CLI for benchmarks.py
 
 **Changed**
 

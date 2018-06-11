@@ -1,6 +1,9 @@
+import itertools
 import os
+import random
 import time
 
+import click
 import matplotlib.pyplot as plt
 import nengo
 import numpy as np
@@ -247,7 +250,54 @@ def mnist(use_tensor_layer=True):
     return net
 
 
-def profile(net, train=False, n_steps=150, **kwargs):
+def random_network(dimensions, neurons_per_d, neuron_type, n_ensembles,
+                   connections_per_ensemble):
+    """
+    Basal ganglia network benchmark.
+
+    Parameters
+    ----------
+    dimensions : int
+        Number of dimensions for vector values
+    neurons_per_d : int
+        Number of neurons to use per vector dimension
+    neuron_type : :class:`~nengo:nengo.neurons.NeuronType`
+        Simulation neuron type
+    n_ensembles : int
+        Number of ensembles in the network
+    connections_per_ensemble : int
+        Outgoing connections from each ensemble
+
+    Returns
+    -------
+    :class:`nengo:nengo.Network`
+        benchmark network
+    """
+
+    random.seed(0)
+    with nengo.Network(label="random", seed=0) as net:
+        net.inp = nengo.Node([0] * dimensions)
+        net.out = nengo.Node(size_in=dimensions)
+        net.p = nengo.Probe(net.out)
+        ensembles = [
+            nengo.Ensemble(neurons_per_d * dimensions, dimensions,
+                           neuron_type=neuron_type)
+            for _ in range(n_ensembles)]
+        dec = np.ones((neurons_per_d * dimensions, dimensions))
+        for ens in net.ensembles:
+            # add a connection to input and output node, so we never have
+            # any "orphan" ensembles
+            nengo.Connection(net.inp, ens)
+            nengo.Connection(ens, net.out, solver=nengo.solvers.NoSolver(dec))
+
+            posts = random.sample(ensembles, connections_per_ensemble)
+            for post in posts:
+                nengo.Connection(ens, post, solver=nengo.solvers.NoSolver(dec))
+
+    return net
+
+
+def run_profile(net, train=False, n_steps=150, do_profile=True, **kwargs):
     """
     Run profiler on a benchmark network.
 
@@ -260,11 +310,16 @@ def profile(net, train=False, n_steps=150, **kwargs):
         ``sim.run`` function.
     n_steps : int, optional
         The number of timesteps to run the simulation.
+    do_profile : bool, optional
+        Whether or not to run profiling
 
     Notes
     -----
     kwargs will be passed on to :class:`.Simulator`
     """
+
+    with net:
+        nengo_dl.configure_settings(trainable=None if train else False)
 
     with nengo_dl.Simulator(net, **kwargs) as sim:
         # note: we run a few times to try to eliminate startup overhead (only
@@ -274,15 +329,74 @@ def profile(net, train=False, n_steps=150, **kwargs):
             x = np.random.randn(sim.minibatch_size, n_steps, net.inp.size_out)
             y = np.random.randn(sim.minibatch_size, n_steps, net.p.size_in)
 
-            for _ in range(3):
+            for _ in range(2):
                 sim.train({net.inp: x}, {net.p: y}, optimizer=opt, n_epochs=1,
-                          profile=True)
+                          profile=do_profile)
+
+            start = time.time()
+            sim.train({net.inp: x}, {net.p: y}, optimizer=opt, n_epochs=1,
+                      profile=do_profile)
+            print("Execution time:", time.time() - start)
 
         else:
-            for _ in range(3):
-                sim.run_steps(n_steps, profile=True)
+            for _ in range(2):
+                sim.run_steps(n_steps, profile=do_profile)
+
+            start = time.time()
+            sim.run_steps(n_steps, profile=do_profile)
+            print("Execution time:", time.time() - start)
 
 
+@click.group(chain=True)
+def main():
+    pass
+
+
+@main.command()
+@click.pass_obj
+@click.option("--benchmark", default="cconv", help="Benchmark network")
+@click.option("--dimensions", default=128, help="Number of dimensions")
+@click.option("--neurons_per_d", default=64, help="Neurons per dimension")
+@click.option("--neuron_type", default="RectifiedLinear",
+              help="Nengo neuron model")
+@click.option("--kwarg", type=str, multiple=True)
+def build(obj, benchmark, dimensions, neurons_per_d, neuron_type,
+          kwarg):
+    """Builds one of the benchmark networks"""
+
+    benchmark = globals()[benchmark]
+    neuron_type = getattr(nengo, neuron_type)()
+    net = benchmark(
+        dimensions, neurons_per_d, neuron_type,
+        **dict((k, int(v)) for k, v in [a.split("=") for a in kwarg]))
+    obj["net"] = net
+
+
+@main.command()
+@click.pass_obj
+@click.option("--train/--no-train", default=False,
+              help="Whether to profile training (as opposed to running) "
+                   "the network")
+@click.option("--n_steps", default=150,
+              help="Number of steps for which to run the simulation")
+@click.option("--batch_size", default=1, help="Number of inputs to the model")
+@click.option("--device", default="/gpu:0",
+              help="TensorFlow device on which to run the simulation")
+@click.option("--unroll", default=25,
+              help="Number of steps for which to unroll the simulation")
+@click.option("--time-only", is_flag=True, default=False)
+def profile(obj, train, n_steps, batch_size, device, unroll, time_only):
+    """Runs profiling on a network (call after 'build')"""
+
+    if "net" not in obj:
+        raise ValueError("Must call `build` before `profile`")
+
+    run_profile(
+        obj["net"], do_profile=not time_only, train=train, n_steps=n_steps,
+        minibatch_size=batch_size, device=device, unroll_simulation=unroll)
+
+
+@main.command()
 def matmul_vs_reduce():
     """
     Compares two different approaches to batched matrix multiplication
@@ -314,31 +428,31 @@ def matmul_vs_reduce():
                              len(s1_range)))
     reduce_times = np.zeros_like(matmul_times)
 
+    params = itertools.product(
+        enumerate(n_ops_range), enumerate(mini_range), enumerate(s0_range),
+        enumerate(s1_range))
+
     with tf.Session() as sess:
-        for i, n_ops in enumerate(n_ops_range):  # pylint:disable=too-many-nested-blocks
-            for j, mini in enumerate(mini_range):
-                print(n_ops, mini)
+        for (i, n_ops), (j, mini), (k, s0), (l, s1) in params:
+            print(n_ops, mini, s0, s1)
 
-                for k, s0 in enumerate(s0_range):
-                    for l, s1 in enumerate(s1_range):
-                        a_val = np.random.randn(n_ops, s0, s1, 1)
-                        x_val = np.random.randn(n_ops, 1, s1, mini)
+            a_val = np.random.randn(n_ops, s0, s1, 1)
+            x_val = np.random.randn(n_ops, 1, s1, mini)
 
-                        for r in range(reps + 3):
-                            if r == 3:
-                                start = time.time()
-                            c_val = sess.run(c, feed_dict={a_c: a_val[..., 0],
-                                                           x_c: x_val[:, 0]})
-                        matmul_times[i, j, k, l] = (time.time() - start) / reps
+            for r in range(reps + 3):
+                if r == 3:
+                    start = time.time()
+                c_val = sess.run(c, feed_dict={a_c: a_val[..., 0],
+                                               x_c: x_val[:, 0]})
+            matmul_times[i, j, k, l] = (time.time() - start) / reps
 
-                        for r in range(reps + 3):
-                            if r == 3:
-                                start = time.time()
-                            d_val = sess.run(d, feed_dict={a_d: a_val,
-                                                           x_d: x_val})
-                        reduce_times[i, j, k, l] = (time.time() - start) / reps
+            for r in range(reps + 3):
+                if r == 3:
+                    start = time.time()
+                d_val = sess.run(d, feed_dict={a_d: a_val, x_d: x_val})
+            reduce_times[i, j, k, l] = (time.time() - start) / reps
 
-                        assert np.allclose(c_val, d_val)
+            assert np.allclose(c_val, d_val)
 
     fig, ax = plt.subplots(len(n_ops_range), len(mini_range), sharex=True,
                            sharey=True)
@@ -364,9 +478,7 @@ def matmul_vs_reduce():
     plt.show()
 
 
+# TODO: set up something to automatically run some basic ci performance tests
+
 if __name__ == "__main__":
-    profile(pes(128, 32, nengo.LIFRate()), train=False, n_steps=150,
-            minibatch_size=1, device="/gpu:0", unroll_simulation=50)
-    # profile(mnist(use_tensor_layer=True), train=True, n_steps=2,
-    #         minibatch_size=128, device="/gpu:0")
-    # matmul_vs_reduce()
+    main(obj={})

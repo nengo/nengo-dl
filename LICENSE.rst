@@ -54,6 +54,8 @@ To build the documentation, NengoDL uses:
 
 To run the unit tests, NengoDL uses:
 
+* `Click <http://click.pocoo.org/6/>`_ - Used under
+  `BSD license <http://click.pocoo.org/6/license/>`__
 * `codespell <https://github.com/codespell-project/codespell>`_ - Used under
   `GPL license <https://github.com/codespell-project/codespell/blob/master/COPYING>`__
 * `Coverage.py <https://coverage.readthedocs.io/en/coverage-4.4.1/>`_ - Used under

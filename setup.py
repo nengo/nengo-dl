@@ -48,10 +48,10 @@ version = runpy.run_path(os.path.join(
 
 install_requires = [
     "nengo>=2.7.0",
-    "numpy>=1.11",
+    "numpy>=1.11.0",
     "%s>=1.3.0" % tf_req,
     "progressbar2>=3.37.1",
-    "backports.tempfile;python_version<'3.4'",
+    "backports.tempfile>=1.0;python_version<'3.4'",
 ]
 docs_require = [
     "jupyter>=1.0.0",
@@ -63,10 +63,11 @@ docs_require = [
     "sphinx_rtd_theme>=0.1.9",
 ]
 tests_require = [
+    "click>=6.7",
     "codespell>=1.12.0",
     "coverage>=4.3.4",
     "matplotlib>=2.0.0",
-    "nbval>=0.6",
+    "nbval>=0.6.0",
     "pylint>=1.9.2",
     "pytest>=3.0.4",
     "pytest-xdist>=1.16.0",
