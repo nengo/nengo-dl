@@ -18,7 +18,7 @@ env:
     - NENGO_VERSION="nengo"
 
   matrix:
-    - MODE="pep8"
+    - MODE="static"
     - MODE="docs"
     - # default build
     - MODE="coverage"
@@ -44,8 +44,6 @@ env:
 #    - dist: xenial # gives us a more up-to-date glibc (required by tensorflow)
 #      env: TF_VERSION="tf-nightly" NENGO_VERSION="git+https://github.com/nengo/nengo.git"
 
-# TODO: separate out into scripts
-
 # set up miniconda
 before_install:
   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
@@ -54,6 +52,7 @@ before_install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
+  - chmod +x .ci/*.sh
 
 # install python requirements
 install:
@@ -61,53 +60,16 @@ install:
   - source activate test
   - pip install $TF_VERSION
   - pip install $NENGO_VERSION
-  - if [[ "$MODE" == "docs" || "$MODE" == "examples" ]]; then
-      pip install -e .[docs,tests];
-      conda install pandoc;
-    else
-      pip install -e .[tests];
-    fi
+  - pip install -e .[tests]
+  - .ci/$MODE.sh install
   - conda list -e
   - pip freeze
 
-# set up xvfb so we can test examples with matplotlib
 before_script:
-  - if [[ "$MODE" == "examples" ]]; then
-      export DISPLAY=:99.0;
-      sh -e /etc/init.d/xvfb start;
-      sleep 3;
-    fi
+  - .ci/$MODE.sh before_script
 
-# run the main script
 script:
-  - if [[ "$MODE" == "pep8" ]]; then
-      codespell -q 3 && pylint nengo_dl --rcfile=setup.cfg;
-    elif [[ "$MODE" == "docs" ]]; then
-      export LATEST_TAG="$(git describe --abbrev=0 --tags)";
-      sphinx-build -b linkcheck docs docs/_build -W -D nbsphinx_execute=never &&
-      sphinx-build -b html docs docs/_build -vW -A current_branch=$TRAVIS_BRANCH -A latest_release=$LATEST_TAG -A building_version=$TRAVIS_BRANCH &&
-      git checkout $LATEST_TAG &&
-      sphinx-build -b html docs docs/_build/$LATEST_TAG -vW -A current_branch=$TRAVIS_BRANCH -A latest_release=$LATEST_TAG -A building_version=$LATEST_TAG &&
-      git checkout $TRAVIS_BRANCH;
-    elif [[ "$MODE" == "coverage" ]]; then
-      coverage run -m pytest --pyargs nengo;
-      coverage run -a -m pytest nengo_dl;
-      coverage report -m;
-    elif [[ "$MODE" == "examples" ]]; then
-      python docs/whitepaper/whitepaper2018_code.py > /dev/null &&
-      pytest -v --durations 20 --nbval-lax docs/examples;
-    else
-      pytest -n 2 --pyargs nengo && pytest -n 2 --durations 20 nengo_dl;
-    fi
+  - .ci/$MODE.sh script
 
-# upload results
 after_success:
-  - if [[ "$MODE" == "docs" && "$TRAVIS_BRANCH" == "master" ]]; then
-      export DATE=$(date '+%Y-%m-%d %T');
-      git config --global user.email "travis@travis-ci.org";
-      git config --global user.name "TravisCI";
-      ghp-import -m "Last update at $DATE" -b gh-pages docs/_build &&
-      git push -fq "https://$GH_TOKEN@github.com/nengo/nengo-dl.git" gh-pages;
-    elif [[ "$MODE" == "coverage" ]]; then
-      eval "bash <(curl -s https://codecov.io/bash)";
-    fi
+  - .ci/$MODE.sh after_success

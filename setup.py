@@ -54,7 +54,6 @@ install_requires = [
     "backports.tempfile;python_version<'3.4'",
 ]
 docs_require = [
-    "ghp-import>=0.5.5",
     "jupyter>=1.0.0",
     "matplotlib>=2.0.0",
     "nbsphinx>=0.2.13",

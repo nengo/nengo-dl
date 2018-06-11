@@ -32,6 +32,7 @@ Release History
   if ``device=None``.
 - Switched to ``pylint`` for style checks.
 - TensorFlow INFO-level log messages are now disabled by default on import
+- All previous releases now tracked in documentation
 
 **Fixed**
 
@@ -48,6 +49,7 @@ Release History
 - Removed ``nengo_dl.DATA_DIR`` constant
 - Removed ``benchmarks.compare_backends`` (use
   ``whitepaper2018_plots.py:compare_backends`` instead)
+- Removed ``ghp-import`` dependency
 
 
 1.0.0 (May 30, 2018)
