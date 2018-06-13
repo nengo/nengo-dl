@@ -1,0 +1,738 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>DeepLab Demo &mdash; NengoDL documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+
+  
+  <script src="../../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../frontend.html">User API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../backend.html">Developer API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../index.html">Docs</a> &raquo;</li>
+        
+      <li>DeepLab Demo</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../../../_sources/examples/models/research/deeplab/deeplab_demo.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
+div.nboutput,
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput div.prompt pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput div.prompt pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput div.prompt,
+div.nboutput div.prompt {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput div.input_area,
+div.nboutput div.output_area {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput div.input_area {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="DeepLab-Demo">
+<h1>DeepLab Demo<a class="headerlink" href="#DeepLab-Demo" title="Permalink to this headline">¶</a></h1>
+<p>This demo will demostrate the steps to run deeplab semantic segmentation
+model on sample input images.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>#@title Imports
+
+import os
+from io import BytesIO
+import tarfile
+import tempfile
+from six.moves import urllib
+
+from matplotlib import gridspec
+from matplotlib import pyplot as plt
+import numpy as np
+from PIL import Image
+
+import tensorflow as tf
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>#@title Helper methods
+
+
+class DeepLabModel(object):
+  &quot;&quot;&quot;Class to load deeplab model and run inference.&quot;&quot;&quot;
+
+  INPUT_TENSOR_NAME = &#39;ImageTensor:0&#39;
+  OUTPUT_TENSOR_NAME = &#39;SemanticPredictions:0&#39;
+  INPUT_SIZE = 513
+  FROZEN_GRAPH_NAME = &#39;frozen_inference_graph&#39;
+
+  def __init__(self, tarball_path):
+    &quot;&quot;&quot;Creates and loads pretrained deeplab model.&quot;&quot;&quot;
+    self.graph = tf.Graph()
+
+    graph_def = None
+    # Extract frozen graph from tar archive.
+    tar_file = tarfile.open(tarball_path)
+    for tar_info in tar_file.getmembers():
+      if self.FROZEN_GRAPH_NAME in os.path.basename(tar_info.name):
+        file_handle = tar_file.extractfile(tar_info)
+        graph_def = tf.GraphDef.FromString(file_handle.read())
+        break
+
+    tar_file.close()
+
+    if graph_def is None:
+      raise RuntimeError(&#39;Cannot find inference graph in tar archive.&#39;)
+
+    with self.graph.as_default():
+      tf.import_graph_def(graph_def, name=&#39;&#39;)
+
+    self.sess = tf.Session(graph=self.graph)
+
+  def run(self, image):
+    &quot;&quot;&quot;Runs inference on a single image.
+
+    Args:
+      image: A PIL.Image object, raw input image.
+
+    Returns:
+      resized_image: RGB image resized from original input image.
+      seg_map: Segmentation map of `resized_image`.
+    &quot;&quot;&quot;
+    width, height = image.size
+    resize_ratio = 1.0 * self.INPUT_SIZE / max(width, height)
+    target_size = (int(resize_ratio * width), int(resize_ratio * height))
+    resized_image = image.convert(&#39;RGB&#39;).resize(target_size, Image.ANTIALIAS)
+    batch_seg_map = self.sess.run(
+        self.OUTPUT_TENSOR_NAME,
+        feed_dict={self.INPUT_TENSOR_NAME: [np.asarray(resized_image)]})
+    seg_map = batch_seg_map[0]
+    return resized_image, seg_map
+
+
+def create_pascal_label_colormap():
+  &quot;&quot;&quot;Creates a label colormap used in PASCAL VOC segmentation benchmark.
+
+  Returns:
+    A Colormap for visualizing segmentation results.
+  &quot;&quot;&quot;
+  colormap = np.zeros((256, 3), dtype=int)
+  ind = np.arange(256, dtype=int)
+
+  for shift in reversed(range(8)):
+    for channel in range(3):
+      colormap[:, channel] |= ((ind &gt;&gt; channel) &amp; 1) &lt;&lt; shift
+    ind &gt;&gt;= 3
+
+  return colormap
+
+
+def label_to_color_image(label):
+  &quot;&quot;&quot;Adds color defined by the dataset colormap to the label.
+
+  Args:
+    label: A 2D array with integer type, storing the segmentation label.
+
+  Returns:
+    result: A 2D array with floating type. The element of the array
+      is the color indexed by the corresponding element in the input label
+      to the PASCAL color map.
+
+  Raises:
+    ValueError: If label is not of rank 2 or its value is larger than color
+      map maximum entry.
+  &quot;&quot;&quot;
+  if label.ndim != 2:
+    raise ValueError(&#39;Expect 2-D input label&#39;)
+
+  colormap = create_pascal_label_colormap()
+
+  if np.max(label) &gt;= len(colormap):
+    raise ValueError(&#39;label value too large.&#39;)
+
+  return colormap[label]
+
+
+def vis_segmentation(image, seg_map):
+  &quot;&quot;&quot;Visualizes input image, segmentation map and overlay view.&quot;&quot;&quot;
+  plt.figure(figsize=(15, 5))
+  grid_spec = gridspec.GridSpec(1, 4, width_ratios=[6, 6, 6, 1])
+
+  plt.subplot(grid_spec[0])
+  plt.imshow(image)
+  plt.axis(&#39;off&#39;)
+  plt.title(&#39;input image&#39;)
+
+  plt.subplot(grid_spec[1])
+  seg_image = label_to_color_image(seg_map).astype(np.uint8)
+  plt.imshow(seg_image)
+  plt.axis(&#39;off&#39;)
+  plt.title(&#39;segmentation map&#39;)
+
+  plt.subplot(grid_spec[2])
+  plt.imshow(image)
+  plt.imshow(seg_image, alpha=0.7)
+  plt.axis(&#39;off&#39;)
+  plt.title(&#39;segmentation overlay&#39;)
+
+  unique_labels = np.unique(seg_map)
+  ax = plt.subplot(grid_spec[3])
+  plt.imshow(
+      FULL_COLOR_MAP[unique_labels].astype(np.uint8), interpolation=&#39;nearest&#39;)
+  ax.yaxis.tick_right()
+  plt.yticks(range(len(unique_labels)), LABEL_NAMES[unique_labels])
+  plt.xticks([], [])
+  ax.tick_params(width=0.0)
+  plt.grid(&#39;off&#39;)
+  plt.show()
+
+
+LABEL_NAMES = np.asarray([
+    &#39;background&#39;, &#39;aeroplane&#39;, &#39;bicycle&#39;, &#39;bird&#39;, &#39;boat&#39;, &#39;bottle&#39;, &#39;bus&#39;,
+    &#39;car&#39;, &#39;cat&#39;, &#39;chair&#39;, &#39;cow&#39;, &#39;diningtable&#39;, &#39;dog&#39;, &#39;horse&#39;, &#39;motorbike&#39;,
+    &#39;person&#39;, &#39;pottedplant&#39;, &#39;sheep&#39;, &#39;sofa&#39;, &#39;train&#39;, &#39;tv&#39;
+])
+
+FULL_LABEL_MAP = np.arange(len(LABEL_NAMES)).reshape(len(LABEL_NAMES), 1)
+FULL_COLOR_MAP = label_to_color_image(FULL_LABEL_MAP)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>#@title Select and download models {display-mode: &quot;form&quot;}
+
+MODEL_NAME = &#39;mobilenetv2_coco_voctrainaug&#39;  # @param [&#39;mobilenetv2_coco_voctrainaug&#39;, &#39;mobilenetv2_coco_voctrainval&#39;, &#39;xception_coco_voctrainaug&#39;, &#39;xception_coco_voctrainval&#39;]
+
+_DOWNLOAD_URL_PREFIX = &#39;http://download.tensorflow.org/models/&#39;
+_MODEL_URLS = {
+    &#39;mobilenetv2_coco_voctrainaug&#39;:
+        &#39;deeplabv3_mnv2_pascal_train_aug_2018_01_29.tar.gz&#39;,
+    &#39;mobilenetv2_coco_voctrainval&#39;:
+        &#39;deeplabv3_mnv2_pascal_trainval_2018_01_29.tar.gz&#39;,
+    &#39;xception_coco_voctrainaug&#39;:
+        &#39;deeplabv3_pascal_train_aug_2018_01_04.tar.gz&#39;,
+    &#39;xception_coco_voctrainval&#39;:
+        &#39;deeplabv3_pascal_trainval_2018_01_04.tar.gz&#39;,
+}
+_TARBALL_NAME = &#39;deeplab_model.tar.gz&#39;
+
+model_dir = tempfile.mkdtemp()
+tf.gfile.MakeDirs(model_dir)
+
+download_path = os.path.join(model_dir, _TARBALL_NAME)
+print(&#39;downloading model, this might take a while...&#39;)
+urllib.request.urlretrieve(_DOWNLOAD_URL_PREFIX + _MODEL_URLS[MODEL_NAME],
+                   download_path)
+print(&#39;download completed! loading DeepLab model...&#39;)
+
+MODEL = DeepLabModel(download_path)
+print(&#39;model loaded successfully!&#39;)
+</pre></div>
+</div>
+</div>
+<div class="section" id="Run-on-sample-images">
+<h2>Run on sample images<a class="headerlink" href="#Run-on-sample-images" title="Permalink to this headline">¶</a></h2>
+<p>Select one of sample images (leave <code class="docutils literal notranslate"><span class="pre">IMAGE_URL</span></code> empty) or feed any
+internet image url for inference.</p>
+<p>Note that we are using single scale inference in the demo for fast
+computation, so the results may slightly differ from the visualizations
+in
+<a class="reference external" href="https://github.com/tensorflow/models/blob/master/research/deeplab/README.md">README</a>,
+which uses multi-scale and left-right flipped inputs.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>#@title Run on sample images {display-mode: &quot;form&quot;}
+
+SAMPLE_IMAGE = &#39;image1&#39;  # @param [&#39;image1&#39;, &#39;image2&#39;, &#39;image3&#39;]
+IMAGE_URL = &#39;&#39;  #@param {type:&quot;string&quot;}
+
+_SAMPLE_URL = (&#39;https://github.com/tensorflow/models/blob/master/research/&#39;
+               &#39;deeplab/g3doc/img/%s.jpg?raw=true&#39;)
+
+
+def run_visualization(url):
+  &quot;&quot;&quot;Inferences DeepLab model and visualizes result.&quot;&quot;&quot;
+  try:
+    f = urllib.request.urlopen(url)
+    jpeg_str = f.read()
+    original_im = Image.open(BytesIO(jpeg_str))
+  except IOError:
+    print(&#39;Cannot retrieve image. Please check url: &#39; + url)
+    return
+
+  print(&#39;running deeplab on image %s...&#39; % url)
+  resized_im, seg_map = MODEL.run(original_im)
+
+  vis_segmentation(resized_im, seg_map)
+
+
+image_url = IMAGE_URL or _SAMPLE_URL % SAMPLE_IMAGE
+run_visualization(image_url)
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.4.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../../../../examples/models/research/deeplab/deeplab_demo.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../../../../../v1.0.0/examples/models/research/deeplab/deeplab_demo.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.6.2/examples/models/research/deeplab/deeplab_demo.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.6.1/examples/models/research/deeplab/deeplab_demo.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.6.0/examples/models/research/deeplab/deeplab_demo.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.5.2/examples/models/research/deeplab/deeplab_demo.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.5.1/examples/models/research/deeplab/deeplab_demo.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.5.0/examples/models/research/deeplab/deeplab_demo.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd>v0.4.0</dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.3.1/examples/models/research/deeplab/deeplab_demo.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.3.0/examples/models/research/deeplab/deeplab_demo.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.2.0/examples/models/research/deeplab/deeplab_demo.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../..//examples/models/research/deeplab/deeplab_demo.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../../',
+            VERSION:'0.4.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,2356 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>TFGAN Tutorial &mdash; NengoDL documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+
+  
+  <script src="../../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../frontend.html">User API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../backend.html">Developer API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../index.html">Docs</a> &raquo;</li>
+        
+      <li>TFGAN Tutorial</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../../../_sources/examples/models/research/gan/tutorial.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
+div.nboutput,
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput div.prompt pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput div.prompt pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput div.prompt,
+div.nboutput div.prompt {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput div.input_area,
+div.nboutput div.output_area {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput div.input_area {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="TFGAN-Tutorial">
+<h1>TFGAN Tutorial<a class="headerlink" href="#TFGAN-Tutorial" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="Authors:-Joel-Shor,-joel-shor">
+<h2>Authors: Joel Shor, joel-shor<a class="headerlink" href="#Authors:-Joel-Shor,-joel-shor" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="More-complex-examples,-see-`tensorflow/models/gan-&lt;https://github.com/tensorflow/models/tree/master/research/gan&gt;`__">
+<h3>More complex examples, see <code class="docutils literal notranslate"><span class="pre">`tensorflow/models/gan</span></code> &lt;<a class="reference external" href="https://github.com/tensorflow/models/tree/master/research/gan">https://github.com/tensorflow/models/tree/master/research/gan</a>&gt;`__<a class="headerlink" href="#More-complex-examples,-see-`tensorflow/models/gan-<https://github.com/tensorflow/models/tree/master/research/gan>`__" title="Permalink to this headline">¶</a></h3>
+<p>This notebook will walk you through the basics of using
+<a class="reference external" href="https://github.com/tensorflow/tensorflow/tree/master/tensorflow/contrib/gan">TFGAN</a>
+to define, train, and evaluate Generative Adversarial Networks. We
+describe the library’s core features as well as some extra features.
+This colab assumes a familiarity with TensorFlow’s Python API. For more
+on TensorFlow, please see <a class="reference external" href="https://www.tensorflow.org/tutorials/">TensorFlow
+tutorials</a>.</p>
+<p>Please note that running on GPU will significantly speed up the training
+steps, but is not required.</p>
+<p>Last update: 2018-02-10.</p>
+</div>
+</div>
+<div class="section" id="Table-of-Contents">
+<h2>Table of Contents<a class="headerlink" href="#Table-of-Contents" title="Permalink to this headline">¶</a></h2>
+<p>Installation and Setup &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Download Data Unconditional GAN example
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Input pipeline &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Model &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loss &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Train and evaluation
+GANEstimator example &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Input pipeline &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Train &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Eval
+Conditional GAN example &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Input pipeline &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Model &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loss
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Train and evaluation InfoGAN example &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Input pipeline
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Model &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loss &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Train and evaluation</p>
+<blockquote>
+<div>## Installation and setup</div></blockquote>
+<p>To make sure that your version of TensorFlow has TFGAN included, run</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">c</span> <span class="s2">&quot;import tensorflow.contrib.gan as tfgan&quot;</span>
+</pre></div>
+</div>
+<p>You also need to install the TFGAN models library.</p>
+<p>To check that these two steps work, execute the
+<code class="docutils literal notranslate"><span class="pre">`Imports</span></code> &lt;#imports&gt;`__ cell. If it complains about unknown modules,
+restart the notebook after moving to the TFGAN models directory.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+
+<span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">functools</span>
+<span class="kn">from</span> <span class="nn">six.moves</span> <span class="kn">import</span> <span class="nb">xrange</span>  <span class="c1"># pylint: disable=redefined-builtin</span>
+
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="c1"># Main TFGAN library.</span>
+<span class="n">tfgan</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">gan</span>
+
+<span class="c1"># TFGAN MNIST examples from `tensorflow/models`.</span>
+<span class="kn">from</span> <span class="nn">mnist</span> <span class="kn">import</span> <span class="n">data_provider</span>
+<span class="kn">from</span> <span class="nn">mnist</span> <span class="kn">import</span> <span class="n">util</span>
+
+<span class="c1"># TF-Slim data provider.</span>
+<span class="kn">from</span> <span class="nn">datasets</span> <span class="kn">import</span> <span class="n">download_and_convert_mnist</span>
+
+<span class="c1"># Shortcuts for later.</span>
+<span class="n">queues</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">slim</span><span class="o">.</span><span class="n">queues</span>
+<span class="n">layers</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">distributions</span>
+<span class="n">framework</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">framework</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="Common-functions">
+<h3>Common functions<a class="headerlink" href="#Common-functions" title="Permalink to this headline">¶</a></h3>
+<p>These functions are used by many examples, so we define them here.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">MNIST_DATA_DIR</span> <span class="o">=</span> <span class="s1">&#39;/tmp/mnist-data&#39;</span>
+
+<span class="k">if</span> <span class="ow">not</span> <span class="n">tf</span><span class="o">.</span><span class="n">gfile</span><span class="o">.</span><span class="n">Exists</span><span class="p">(</span><span class="n">MNIST_DATA_DIR</span><span class="p">):</span>
+    <span class="n">tf</span><span class="o">.</span><span class="n">gfile</span><span class="o">.</span><span class="n">MakeDirs</span><span class="p">(</span><span class="n">MNIST_DATA_DIR</span><span class="p">)</span>
+
+<span class="n">download_and_convert_mnist</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">MNIST_DATA_DIR</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<blockquote>
+<div><div class="highlight"><pre>
+Dataset files already exist. Exiting without re-creating them.
+</pre></div></div></blockquote>
+<p># Unconditional GAN Example</p>
+</div>
+</div>
+<p>With unconditional GANs, we want a generator network to produce
+realistic-looking digits. During training, the generator tries to
+produce realistic-enough digits to ‘fool’ a discriminator network, while
+the discriminator tries to distinguish real digits from generated ones.
+See the paper <a class="reference external" href="https://arxiv.org/pdf/1701.00160.pdf">‘NIPS 2016 Tutorial: Generative Adversarial
+Networks’</a> by Goodfellow or
+<a class="reference external" href="https://arxiv.org/abs/1406.2661">‘Generative Adversarial Networks’</a>
+by Goodfellow et al. for more details.</p>
+<p>The steps to using TFGAN to set up an unconditional GAN, in the simplest
+case, are as follows:</p>
+<ol class="arabic simple">
+<li><strong>Model</strong>: Set up the generator and discriminator graphs with a
+<code class="docutils literal notranslate"><span class="pre">`GANModel</span></code> &lt;<a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/namedtuples.py#L39">https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/namedtuples.py#L39</a>&gt;`__
+tuple. Use
+<code class="docutils literal notranslate"><span class="pre">`tfgan.gan_model</span></code> &lt;<a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/train.py#L64">https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/train.py#L64</a>&gt;`__
+or create one manually.</li>
+<li><strong>Losses</strong>: Set up the generator and discriminator losses with a
+<code class="docutils literal notranslate"><span class="pre">`GANLoss</span></code> &lt;<a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/namedtuples.py#L115">https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/namedtuples.py#L115</a>&gt;`__
+tuple. Use
+<code class="docutils literal notranslate"><span class="pre">`tfgan.gan_loss</span></code> &lt;<a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/train.py#L328">https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/train.py#L328</a>&gt;`__
+or create one manually.</li>
+<li><strong>Train ops</strong>: Set up TensorFlow ops that compute the loss, calculate
+the gradients, and update the weights with a
+<code class="docutils literal notranslate"><span class="pre">`GANTrainOps</span></code> &lt;<a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/namedtuples.py#L128">https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/namedtuples.py#L128</a>&gt;`__
+tuple. Use
+<code class="docutils literal notranslate"><span class="pre">`tfgan.gan_train_ops</span></code> &lt;<a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/train.py#L476">https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/train.py#L476</a>&gt;`__
+or create one manually.</li>
+<li><strong>Run alternating train loop</strong>: Run the training Ops. This can be
+done with
+<code class="docutils literal notranslate"><span class="pre">`tfgan.gan_train</span></code> &lt;<a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/train.py#L661">https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/train.py#L661</a>&gt;`__,
+or done manually.</li>
+</ol>
+<p>Each step can be performed by a TFGAN library call, or can be
+constructed manually for more control.</p>
+<blockquote>
+<div>## Data input pipeline</div></blockquote>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">tf</span><span class="o">.</span><span class="n">reset_default_graph</span><span class="p">()</span>
+
+<span class="c1"># Define our input pipeline. Pin it to the CPU so that the GPU can be reserved</span>
+<span class="c1"># for forward and backwards propogation.</span>
+<span class="n">batch_size</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;/cpu:0&#39;</span><span class="p">):</span>
+    <span class="n">real_images</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">data_provider</span><span class="o">.</span><span class="n">provide_data</span><span class="p">(</span>
+        <span class="s1">&#39;train&#39;</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">MNIST_DATA_DIR</span><span class="p">)</span>
+
+<span class="c1"># Sanity check that we&#39;re getting images.</span>
+<span class="n">check_real_digits</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">eval</span><span class="o">.</span><span class="n">image_reshaper</span><span class="p">(</span>
+    <span class="n">real_images</span><span class="p">[:</span><span class="mi">20</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="n">num_cols</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">visualize_digits</span><span class="p">(</span><span class="n">check_real_digits</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<blockquote>
+<div><img alt="../../../../_images/examples_models_research_gan_tutorial_12_0.png" src="../../../../_images/examples_models_research_gan_tutorial_12_0.png" />
+</div></blockquote>
+<p>## Model</p>
+</div>
+</div>
+<p>Set up a <a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/namedtuples.py#L39">GANModel
+tuple</a>,
+which defines everything we need to perform GAN training. You can create
+the tuple with the library functions, or you can manually create one.</p>
+<p>Define the GANModel tuple using the TFGAN library function. For the
+simplest case, we need the following:</p>
+<ol class="arabic simple">
+<li>A generator function that takes input noise and outputs generated
+MNIST digits</li>
+<li>A discriminator function that takes images and outputs a probability
+of being real or fake</li>
+<li>Real images</li>
+<li>A noise vector to pass to the generator</li>
+</ol>
+</div>
+<div class="section" id="Generator">
+<h3>Generator<a class="headerlink" href="#Generator" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">generator_fn</span><span class="p">(</span><span class="n">noise</span><span class="p">,</span> <span class="n">weight_decay</span><span class="o">=</span><span class="mf">2.5e-5</span><span class="p">,</span> <span class="n">is_training</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Simple generator to produce MNIST images.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        noise: A single Tensor representing noise.</span>
+<span class="sd">        weight_decay: The value of the l2 weight decay.</span>
+<span class="sd">        is_training: If `True`, batch norm uses batch statistics. If `False`, batch</span>
+<span class="sd">            norm uses the exponential moving average collected from population</span>
+<span class="sd">            statistics.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A generated image in the range [-1, 1].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">framework</span><span class="o">.</span><span class="n">arg_scope</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d_transpose</span><span class="p">],</span>
+        <span class="n">activation_fn</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">,</span> <span class="n">normalizer_fn</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">batch_norm</span><span class="p">,</span>
+        <span class="n">weights_regularizer</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">l2_regularizer</span><span class="p">(</span><span class="n">weight_decay</span><span class="p">)),</span>\
+    <span class="n">framework</span><span class="o">.</span><span class="n">arg_scope</span><span class="p">([</span><span class="n">layers</span><span class="o">.</span><span class="n">batch_norm</span><span class="p">],</span> <span class="n">is_training</span><span class="o">=</span><span class="n">is_training</span><span class="p">,</span>
+                        <span class="n">zero_debias_moving_mean</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span><span class="n">noise</span><span class="p">,</span> <span class="mi">1024</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">7</span> <span class="o">*</span> <span class="mi">7</span> <span class="o">*</span> <span class="mi">256</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">256</span><span class="p">])</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d_transpose</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d_transpose</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="c1"># Make sure that generator output is in the same range as `inputs`</span>
+        <span class="c1"># ie [-1, 1].</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">normalizer_fn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">activation_fn</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">tanh</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">net</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Discriminator">
+<h3>Discriminator<a class="headerlink" href="#Discriminator" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">discriminator_fn</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">unused_conditioning</span><span class="p">,</span> <span class="n">weight_decay</span><span class="o">=</span><span class="mf">2.5e-5</span><span class="p">,</span>
+                     <span class="n">is_training</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Discriminator network on MNIST digits.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        img: Real or generated MNIST digits. Should be in the range [-1, 1].</span>
+<span class="sd">        unused_conditioning: The TFGAN API can help with conditional GANs, which</span>
+<span class="sd">            would require extra `condition` information to both the generator and the</span>
+<span class="sd">            discriminator. Since this example is not conditional, we do not use this</span>
+<span class="sd">            argument.</span>
+<span class="sd">        weight_decay: The L2 weight decay.</span>
+<span class="sd">        is_training: If `True`, batch norm uses batch statistics. If `False`, batch</span>
+<span class="sd">            norm uses the exponential moving average collected from population</span>
+<span class="sd">            statistics.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Logits for the probability that the image is real.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">framework</span><span class="o">.</span><span class="n">arg_scope</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">],</span>
+        <span class="n">activation_fn</span><span class="o">=</span><span class="n">leaky_relu</span><span class="p">,</span> <span class="n">normalizer_fn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+        <span class="n">weights_regularizer</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">l2_regularizer</span><span class="p">(</span><span class="n">weight_decay</span><span class="p">),</span>
+        <span class="n">biases_regularizer</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">l2_regularizer</span><span class="p">(</span><span class="n">weight_decay</span><span class="p">)):</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">net</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">framework</span><span class="o">.</span><span class="n">arg_scope</span><span class="p">([</span><span class="n">layers</span><span class="o">.</span><span class="n">batch_norm</span><span class="p">],</span> <span class="n">is_training</span><span class="o">=</span><span class="n">is_training</span><span class="p">):</span>
+            <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="n">normalizer_fn</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">batch_norm</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">layers</span><span class="o">.</span><span class="n">linear</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="GANModel-Tuple">
+<h3>GANModel Tuple<a class="headerlink" href="#GANModel-Tuple" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">noise_dims</span> <span class="o">=</span> <span class="mi">64</span>
+<span class="n">gan_model</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">gan_model</span><span class="p">(</span>
+    <span class="n">generator_fn</span><span class="p">,</span>
+    <span class="n">discriminator_fn</span><span class="p">,</span>
+    <span class="n">real_data</span><span class="o">=</span><span class="n">real_images</span><span class="p">,</span>
+    <span class="n">generator_inputs</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">random_normal</span><span class="p">([</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">noise_dims</span><span class="p">]))</span>
+
+<span class="c1"># Sanity check that generated images before training are garbage.</span>
+<span class="n">check_generated_digits</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">eval</span><span class="o">.</span><span class="n">image_reshaper</span><span class="p">(</span>
+    <span class="n">gan_model</span><span class="o">.</span><span class="n">generated_data</span><span class="p">[:</span><span class="mi">20</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="n">num_cols</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">visualize_digits</span><span class="p">(</span><span class="n">check_generated_digits</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<blockquote>
+<div><img alt="../../../../_images/examples_models_research_gan_tutorial_19_0.png" src="../../../../_images/examples_models_research_gan_tutorial_19_0.png" />
+</div></blockquote>
+<p>## Losses</p>
+</div>
+</div>
+<p>We next set up the GAN model losses.</p>
+<p>Loss functions are currently an active area of research. The <a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/losses/python/losses_impl.py">losses
+library</a>
+provides some well-known or successful loss functions, such as the
+<a class="reference external" href="https://arxiv.org/abs/1406.2661">original minimax</a>,
+<a class="reference external" href="https://arxiv.org/abs/1701.07875">Wasserstein</a> (by Arjovsky et al),
+and <a class="reference external" href="https://arxiv.org/abs/1704.00028">improved Wasserstein</a> (by
+Gulrajani et al) losses. It is easy to add loss functions to the library
+as they are developed, and you can also pass in a custom loss function.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># We can use the minimax loss from the original paper.</span>
+<span class="n">vanilla_gan_loss</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">gan_loss</span><span class="p">(</span>
+    <span class="n">gan_model</span><span class="p">,</span>
+    <span class="n">generator_loss_fn</span><span class="o">=</span><span class="n">tfgan</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">minimax_generator_loss</span><span class="p">,</span>
+    <span class="n">discriminator_loss_fn</span><span class="o">=</span><span class="n">tfgan</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">minimax_discriminator_loss</span><span class="p">)</span>
+
+<span class="c1"># We can use the Wasserstein loss (https://arxiv.org/abs/1701.07875) with the</span>
+<span class="c1"># gradient penalty from the improved Wasserstein loss paper</span>
+<span class="c1"># (https://arxiv.org/abs/1704.00028).</span>
+<span class="n">improved_wgan_loss</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">gan_loss</span><span class="p">(</span>
+    <span class="n">gan_model</span><span class="p">,</span>
+    <span class="c1"># We make the loss explicit for demonstration, even though the default is</span>
+    <span class="c1"># Wasserstein loss.</span>
+    <span class="n">generator_loss_fn</span><span class="o">=</span><span class="n">tfgan</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">wasserstein_generator_loss</span><span class="p">,</span>
+    <span class="n">discriminator_loss_fn</span><span class="o">=</span><span class="n">tfgan</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">wasserstein_discriminator_loss</span><span class="p">,</span>
+    <span class="n">gradient_penalty_weight</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+
+<span class="c1"># We can also define custom losses to use with the rest of the TFGAN framework.</span>
+<span class="k">def</span> <span class="nf">silly_custom_generator_loss</span><span class="p">(</span><span class="n">gan_model</span><span class="p">,</span> <span class="n">add_summaries</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">gan_model</span><span class="o">.</span><span class="n">discriminator_gen_outputs</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">silly_custom_discriminator_loss</span><span class="p">(</span><span class="n">gan_model</span><span class="p">,</span> <span class="n">add_summaries</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">gan_model</span><span class="o">.</span><span class="n">discriminator_gen_outputs</span><span class="p">)</span> <span class="o">-</span>
+            <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">gan_model</span><span class="o">.</span><span class="n">discriminator_real_outputs</span><span class="p">))</span>
+<span class="n">custom_gan_loss</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">gan_loss</span><span class="p">(</span>
+    <span class="n">gan_model</span><span class="p">,</span>
+    <span class="n">generator_loss_fn</span><span class="o">=</span><span class="n">silly_custom_generator_loss</span><span class="p">,</span>
+    <span class="n">discriminator_loss_fn</span><span class="o">=</span><span class="n">silly_custom_discriminator_loss</span><span class="p">)</span>
+
+<span class="c1"># Sanity check that we can evaluate our losses.</span>
+<span class="k">for</span> <span class="n">gan_loss</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">[(</span><span class="n">vanilla_gan_loss</span><span class="p">,</span> <span class="s1">&#39;vanilla loss&#39;</span><span class="p">),</span>
+                       <span class="p">(</span><span class="n">improved_wgan_loss</span><span class="p">,</span> <span class="s1">&#39;improved wgan loss&#39;</span><span class="p">),</span>
+                       <span class="p">(</span><span class="n">custom_gan_loss</span><span class="p">,</span> <span class="s1">&#39;custom loss&#39;</span><span class="p">)]:</span>
+    <span class="n">evaluate_tfgan_loss</span><span class="p">(</span><span class="n">gan_loss</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<blockquote>
+<div><div class="highlight"><pre>
+vanilla loss generator loss: -1.304018
+vanilla loss discriminator loss: 1.597559
+improved wgan loss generator loss: 0.169809
+improved wgan loss discriminator loss: -0.012215
+custom loss generator loss: -0.538480
+custom loss discriminator loss: 0.080095
+</pre></div></div></blockquote>
+<p>## Training and Evaluation</p>
+</div>
+</div>
+</div>
+<div class="section" id="Train-Ops">
+<h3>Train Ops<a class="headerlink" href="#Train-Ops" title="Permalink to this headline">¶</a></h3>
+<p>In order to train a GAN, we need to train both generator and
+discriminator networks using some variant of the alternating training
+paradigm. To do this, we construct a <a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/namedtuples.py#L128">GANTrainOps
+tuple</a>
+either manually or with a library call. We pass it the optimizers that
+we want to use, as well as any extra arguments that we’d like passed to
+slim’s <code class="docutils literal notranslate"><span class="pre">create_train_op</span></code> function.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">generator_optimizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">beta1</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">discriminator_optimizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="mf">0.0001</span><span class="p">,</span> <span class="n">beta1</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">gan_train_ops</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">gan_train_ops</span><span class="p">(</span>
+    <span class="n">gan_model</span><span class="p">,</span>
+    <span class="n">improved_wgan_loss</span><span class="p">,</span>
+    <span class="n">generator_optimizer</span><span class="p">,</span>
+    <span class="n">discriminator_optimizer</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:update_ops in create_train_op does not contain all the  update_ops in GraphKeys.UPDATE_OPS
+WARNING:tensorflow:update_ops in create_train_op does not contain all the  update_ops in GraphKeys.UPDATE_OPS
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Evaluation">
+<h3>Evaluation<a class="headerlink" href="#Evaluation" title="Permalink to this headline">¶</a></h3>
+<p>TFGAN provides some standard methods of evaluating generative models. In
+this example, we use a pre-trained classifier to calculate what is
+called the ‘Inception Score’ from <a class="reference external" href="https://arxiv.org/abs/1606.03498">Improved Techniques for Training
+GANs</a> (by Salimans et al), which is
+a combined score of quality and diversity. We also calculate the
+‘Frechet Inception distance’ from <a class="reference external" href="https://arxiv.org/abs/1706.08500">GANs Trained by a Two Time-Scale
+Update Rule Converge to a Local Nash
+Equilibrium</a> (by Heusel et al),
+which measures how close the generated image distribution is to the real
+image distribution.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">num_images_to_eval</span> <span class="o">=</span> <span class="mi">500</span>
+<span class="n">MNIST_CLASSIFIER_FROZEN_GRAPH</span> <span class="o">=</span> <span class="s1">&#39;./mnist/data/classify_mnist_graph_def.pb&#39;</span>
+
+<span class="c1"># For variables to load, use the same variable scope as in the train job.</span>
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;Generator&#39;</span><span class="p">,</span> <span class="n">reuse</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="n">eval_images</span> <span class="o">=</span> <span class="n">gan_model</span><span class="o">.</span><span class="n">generator_fn</span><span class="p">(</span>
+        <span class="n">tf</span><span class="o">.</span><span class="n">random_normal</span><span class="p">([</span><span class="n">num_images_to_eval</span><span class="p">,</span> <span class="n">noise_dims</span><span class="p">]),</span>
+        <span class="n">is_training</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+<span class="c1"># Calculate Inception score.</span>
+<span class="n">eval_score</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">mnist_score</span><span class="p">(</span><span class="n">eval_images</span><span class="p">,</span> <span class="n">MNIST_CLASSIFIER_FROZEN_GRAPH</span><span class="p">)</span>
+
+<span class="c1"># Calculate Frechet Inception distance.</span>
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;/cpu:0&#39;</span><span class="p">):</span>
+    <span class="n">real_images</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">data_provider</span><span class="o">.</span><span class="n">provide_data</span><span class="p">(</span>
+        <span class="s1">&#39;train&#39;</span><span class="p">,</span> <span class="n">num_images_to_eval</span><span class="p">,</span> <span class="n">MNIST_DATA_DIR</span><span class="p">)</span>
+<span class="n">frechet_distance</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">mnist_frechet_distance</span><span class="p">(</span>
+    <span class="n">real_images</span><span class="p">,</span> <span class="n">eval_images</span><span class="p">,</span> <span class="n">MNIST_CLASSIFIER_FROZEN_GRAPH</span><span class="p">)</span>
+
+<span class="c1"># Reshape eval images for viewing.</span>
+<span class="n">generated_data_to_visualize</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">eval</span><span class="o">.</span><span class="n">image_reshaper</span><span class="p">(</span>
+    <span class="n">eval_images</span><span class="p">[:</span><span class="mi">20</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="n">num_cols</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Train-Steps">
+<h3>Train Steps<a class="headerlink" href="#Train-Steps" title="Permalink to this headline">¶</a></h3>
+<p>Now we’re ready to train. TFGAN handles the alternating training scheme
+that arises from the GAN minmax game. It also gives you the option of
+changing the ratio of discriminator updates to generator updates. Most
+applications (distributed setting, borg, etc) will use the
+<code class="docutils literal notranslate"><span class="pre">`gan_train</span></code> &lt;<a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/train.py#L661">https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/gan/python/train.py#L661</a>&gt;`__
+function, but we will use a different TFGAN utility and manually run the
+train ops so we can introspect more.</p>
+<p>This code block should take about <strong>1 minute</strong> to run on a GPU kernel,
+and about <strong>8 minutes</strong> on CPU.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># We have the option to train the discriminator more than one step for every</span>
+<span class="c1"># step of the generator. In order to do this, we use a `GANTrainSteps` with</span>
+<span class="c1"># desired values. For this example, we use the default 1 generator train step</span>
+<span class="c1"># for every discriminator train step.</span>
+<span class="n">train_step_fn</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">get_sequential_train_steps</span><span class="p">()</span>
+
+<span class="n">global_step</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">get_or_create_global_step</span><span class="p">()</span>
+<span class="n">loss_values</span><span class="p">,</span> <span class="n">mnist_scores</span><span class="p">,</span> <span class="n">frechet_distances</span>  <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">SingularMonitoredSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">1601</span><span class="p">):</span>
+        <span class="n">cur_loss</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">train_step_fn</span><span class="p">(</span>
+            <span class="n">sess</span><span class="p">,</span> <span class="n">gan_train_ops</span><span class="p">,</span> <span class="n">global_step</span><span class="p">,</span> <span class="n">train_step_kwargs</span><span class="o">=</span><span class="p">{})</span>
+        <span class="n">loss_values</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">cur_loss</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">200</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">mnist_score</span><span class="p">,</span> <span class="n">f_distance</span><span class="p">,</span> <span class="n">digits_np</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">eval_score</span><span class="p">,</span> <span class="n">frechet_distance</span><span class="p">,</span> <span class="n">generated_data_to_visualize</span><span class="p">])</span>
+            <span class="n">mnist_scores</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">mnist_score</span><span class="p">))</span>
+            <span class="n">frechet_distances</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">f_distance</span><span class="p">))</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Current loss: </span><span class="si">%f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">cur_loss</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Current MNIST score: </span><span class="si">%f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">mnist_scores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Current Frechet distance: </span><span class="si">%f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">frechet_distances</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">visualize_training_generator</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">start_time</span><span class="p">,</span> <span class="n">digits_np</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: 0.329137
+Current MNIST score: 1.000079
+Current Frechet distance: 344.763275
+Training step: 0
+Time since start: 0.033110 m
+Steps per min: 0.000000
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_27_1.png" src="../../../../_images/examples_models_research_gan_tutorial_27_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -2.758185
+Current MNIST score: 1.797050
+Current Frechet distance: 213.724701
+Training step: 200
+Time since start: 1.144458 m
+Steps per min: 174.755270
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_27_3.png" src="../../../../_images/examples_models_research_gan_tutorial_27_3.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -2.340148
+Current MNIST score: 5.376083
+Current Frechet distance: 64.949997
+Training step: 400
+Time since start: 2.269744 m
+Steps per min: 176.231304
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_27_5.png" src="../../../../_images/examples_models_research_gan_tutorial_27_5.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -2.127394
+Current MNIST score: 6.997816
+Current Frechet distance: 33.048138
+Training step: 600
+Time since start: 3.387114 m
+Steps per min: 177.141966
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_27_7.png" src="../../../../_images/examples_models_research_gan_tutorial_27_7.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -2.486658
+Current MNIST score: 6.905512
+Current Frechet distance: 30.577679
+Training step: 800
+Time since start: 4.515208 m
+Steps per min: 177.178974
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_27_9.png" src="../../../../_images/examples_models_research_gan_tutorial_27_9.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -2.295616
+Current MNIST score: 6.899487
+Current Frechet distance: 38.447990
+Training step: 1000
+Time since start: 5.646992 m
+Steps per min: 177.085421
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_27_11.png" src="../../../../_images/examples_models_research_gan_tutorial_27_11.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -2.570406
+Current MNIST score: 7.240756
+Current Frechet distance: 40.736855
+Training step: 1200
+Time since start: 6.773234 m
+Steps per min: 177.167951
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_27_13.png" src="../../../../_images/examples_models_research_gan_tutorial_27_13.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -3.571910
+Current MNIST score: 7.097467
+Current Frechet distance: 47.269943
+Training step: 1400
+Time since start: 7.891089 m
+Steps per min: 177.415304
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_27_15.png" src="../../../../_images/examples_models_research_gan_tutorial_27_15.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -4.605023
+Current MNIST score: 7.695475
+Current Frechet distance: 22.835312
+Training step: 1600
+Time since start: 9.010625 m
+Steps per min: 177.568157
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_27_17.png" src="../../../../_images/examples_models_research_gan_tutorial_27_17.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Plot the eval metrics over time.</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;MNIST Frechet distance per step&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">*</span><span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">frechet_distances</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;MNIST Score per step&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">*</span><span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">mnist_scores</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Training loss per step&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">*</span><span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">loss_values</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>Out[13]:
+</pre></div>
+</div>
+<div class="output_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>[&lt;matplotlib.lines.Line2D at 0x7f63d0817cd0&gt;]
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_28_1.png" src="../../../../_images/examples_models_research_gan_tutorial_28_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_28_2.png" src="../../../../_images/examples_models_research_gan_tutorial_28_2.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<blockquote>
+<div><img alt="../../../../_images/examples_models_research_gan_tutorial_28_3.png" src="../../../../_images/examples_models_research_gan_tutorial_28_3.png" />
+</div></blockquote>
+<p># GANEstimator TensorFlow offers a tf.Estimators API that makes it easy</p>
+</div>
+</div>
+<p>to train models. TFGAN offers a tf.Estimators compatible
+<code class="docutils literal notranslate"><span class="pre">GANEstimator</span></code>.</p>
+<blockquote>
+<div>## Data input pipeline <code class="docutils literal notranslate"><span class="pre">tf.Estimators</span></code> use <code class="docutils literal notranslate"><span class="pre">input_fn</span></code> to pass data</div></blockquote>
+<p>to the estimators. We need one data source for training and one for
+inference.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">BATCH_SIZE</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="n">NOISE_DIMS</span> <span class="o">=</span> <span class="mi">64</span>
+<span class="n">NUM_STEPS</span> <span class="o">=</span> <span class="mi">2000</span>
+
+<span class="c1"># Initialize GANEstimator with options and hyperparameters.</span>
+<span class="n">gan_estimator</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">estimator</span><span class="o">.</span><span class="n">GANEstimator</span><span class="p">(</span>
+    <span class="n">generator_fn</span><span class="o">=</span><span class="n">generator_fn</span><span class="p">,</span>
+    <span class="n">discriminator_fn</span><span class="o">=</span><span class="n">discriminator_fn</span><span class="p">,</span>
+    <span class="n">generator_loss_fn</span><span class="o">=</span><span class="n">tfgan</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">wasserstein_generator_loss</span><span class="p">,</span>
+    <span class="n">discriminator_loss_fn</span><span class="o">=</span><span class="n">tfgan</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">wasserstein_discriminator_loss</span><span class="p">,</span>
+    <span class="n">generator_optimizer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">),</span>
+    <span class="n">discriminator_optimizer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="mf">0.0001</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">),</span>
+    <span class="n">add_summaries</span><span class="o">=</span><span class="n">tfgan</span><span class="o">.</span><span class="n">estimator</span><span class="o">.</span><span class="n">SummaryType</span><span class="o">.</span><span class="n">IMAGES</span><span class="p">)</span>
+
+<span class="c1"># Train estimator.</span>
+<span class="n">train_input_fn</span> <span class="o">=</span> <span class="n">_get_train_input_fn</span><span class="p">(</span><span class="n">BATCH_SIZE</span><span class="p">,</span> <span class="n">NOISE_DIMS</span><span class="p">)</span>
+<span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="n">gan_estimator</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">train_input_fn</span><span class="p">,</span> <span class="n">max_steps</span><span class="o">=</span><span class="n">NUM_STEPS</span><span class="p">)</span>
+<span class="n">time_since_start</span> <span class="o">=</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span> <span class="o">/</span> <span class="mf">60.0</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Time since start: </span><span class="si">%f</span><span class="s1"> m&#39;</span> <span class="o">%</span> <span class="n">time_since_start</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Steps per min: </span><span class="si">%f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">NUM_STEPS</span> <span class="o">/</span> <span class="n">time_since_start</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<blockquote>
+<div><div class="highlight"><pre>
+INFO:tensorflow:Using default config.
+WARNING:tensorflow:Using temporary folder as model directory: /tmp/tmpg4AdEb
+INFO:tensorflow:Using config: {&#39;_save_checkpoints_secs&#39;: 600, &#39;_session_config&#39;: None, &#39;_keep_checkpoint_max&#39;: 5, &#39;_task_type&#39;: &#39;worker&#39;, &#39;_is_chief&#39;: True, &#39;_cluster_spec&#39;: &lt;tensorflow.python.training.server_lib.ClusterSpec object at 0x7f638a1dbf90&gt;, &#39;_save_checkpoints_steps&#39;: None, &#39;_keep_checkpoint_every_n_hours&#39;: 10000, &#39;_service&#39;: None, &#39;_num_ps_replicas&#39;: 0, &#39;_tf_random_seed&#39;: 1, &#39;_master&#39;: &#39;&#39;, &#39;_num_worker_replicas&#39;: 1, &#39;_task_id&#39;: 0, &#39;_log_step_count_steps&#39;: 100, &#39;_model_dir&#39;: &#39;/tmp/tmpg4AdEb&#39;, &#39;_save_summary_steps&#39;: 100}
+INFO:tensorflow:Summary name Generator/fully_connected/weights:0 is illegal; using Generator/fully_connected/weights_0 instead.
+INFO:tensorflow:Summary name Generator/fully_connected/BatchNorm/beta:0 is illegal; using Generator/fully_connected/BatchNorm/beta_0 instead.
+INFO:tensorflow:Summary name Generator/fully_connected_1/weights:0 is illegal; using Generator/fully_connected_1/weights_0 instead.
+INFO:tensorflow:Summary name Generator/fully_connected_1/BatchNorm/beta:0 is illegal; using Generator/fully_connected_1/BatchNorm/beta_0 instead.
+INFO:tensorflow:Summary name Generator/Conv2d_transpose/weights:0 is illegal; using Generator/Conv2d_transpose/weights_0 instead.
+INFO:tensorflow:Summary name Generator/Conv2d_transpose/BatchNorm/beta:0 is illegal; using Generator/Conv2d_transpose/BatchNorm/beta_0 instead.
+INFO:tensorflow:Summary name Generator/Conv2d_transpose_1/weights:0 is illegal; using Generator/Conv2d_transpose_1/weights_0 instead.
+INFO:tensorflow:Summary name Generator/Conv2d_transpose_1/BatchNorm/beta:0 is illegal; using Generator/Conv2d_transpose_1/BatchNorm/beta_0 instead.
+INFO:tensorflow:Summary name Generator/Conv/weights:0 is illegal; using Generator/Conv/weights_0 instead.
+INFO:tensorflow:Summary name Generator/Conv/biases:0 is illegal; using Generator/Conv/biases_0 instead.
+INFO:tensorflow:Summary name Discriminator/Conv/weights:0 is illegal; using Discriminator/Conv/weights_0 instead.
+INFO:tensorflow:Summary name Discriminator/Conv/biases:0 is illegal; using Discriminator/Conv/biases_0 instead.
+INFO:tensorflow:Summary name Discriminator/Conv_1/weights:0 is illegal; using Discriminator/Conv_1/weights_0 instead.
+INFO:tensorflow:Summary name Discriminator/Conv_1/biases:0 is illegal; using Discriminator/Conv_1/biases_0 instead.
+INFO:tensorflow:Summary name Discriminator/fully_connected/weights:0 is illegal; using Discriminator/fully_connected/weights_0 instead.
+INFO:tensorflow:Summary name Discriminator/fully_connected/BatchNorm/beta:0 is illegal; using Discriminator/fully_connected/BatchNorm/beta_0 instead.
+INFO:tensorflow:Summary name Discriminator/fully_connected_1/weights:0 is illegal; using Discriminator/fully_connected_1/weights_0 instead.
+INFO:tensorflow:Summary name Discriminator/fully_connected_1/biases:0 is illegal; using Discriminator/fully_connected_1/biases_0 instead.
+WARNING:tensorflow:update_ops in create_train_op does not contain all the  update_ops in GraphKeys.UPDATE_OPS
+WARNING:tensorflow:update_ops in create_train_op does not contain all the  update_ops in GraphKeys.UPDATE_OPS
+INFO:tensorflow:Create CheckpointSaverHook.
+INFO:tensorflow:Saving checkpoints for 1 into /tmp/tmpg4AdEb/model.ckpt.
+INFO:tensorflow:loss = -0.492021, step = 1
+INFO:tensorflow:global_step/sec: 3.10231
+INFO:tensorflow:loss = -2.58632, step = 101 (32.223 sec)
+INFO:tensorflow:global_step/sec: 3.0688
+INFO:tensorflow:loss = -2.53612, step = 201 (32.586 sec)
+INFO:tensorflow:global_step/sec: 3.11178
+INFO:tensorflow:loss = -2.61272, step = 301 (32.136 sec)
+INFO:tensorflow:global_step/sec: 3.06442
+INFO:tensorflow:loss = -2.87477, step = 401 (32.633 sec)
+INFO:tensorflow:global_step/sec: 3.09906
+INFO:tensorflow:loss = -2.0928, step = 501 (32.268 sec)
+INFO:tensorflow:global_step/sec: 3.09819
+INFO:tensorflow:loss = -2.49558, step = 601 (32.277 sec)
+INFO:tensorflow:global_step/sec: 3.09766
+INFO:tensorflow:loss = -2.6964, step = 701 (32.282 sec)
+INFO:tensorflow:global_step/sec: 3.09992
+INFO:tensorflow:loss = -2.25868, step = 801 (32.259 sec)
+INFO:tensorflow:global_step/sec: 3.102
+INFO:tensorflow:loss = -2.59776, step = 901 (32.237 sec)
+INFO:tensorflow:global_step/sec: 3.11788
+INFO:tensorflow:loss = -2.98097, step = 1001 (32.073 sec)
+INFO:tensorflow:global_step/sec: 3.09916
+INFO:tensorflow:loss = -2.42849, step = 1101 (32.267 sec)
+INFO:tensorflow:global_step/sec: 3.10695
+INFO:tensorflow:loss = -2.0718, step = 1201 (32.186 sec)
+INFO:tensorflow:global_step/sec: 3.08804
+INFO:tensorflow:loss = -2.3412, step = 1301 (32.383 sec)
+INFO:tensorflow:global_step/sec: 3.08785
+INFO:tensorflow:loss = -2.65558, step = 1401 (32.385 sec)
+INFO:tensorflow:global_step/sec: 3.11728
+INFO:tensorflow:loss = -2.94126, step = 1501 (32.079 sec)
+INFO:tensorflow:global_step/sec: 3.11366
+INFO:tensorflow:loss = -2.15374, step = 1601 (32.117 sec)
+INFO:tensorflow:global_step/sec: 3.10287
+INFO:tensorflow:loss = -2.74035, step = 1701 (32.228 sec)
+INFO:tensorflow:global_step/sec: 3.09625
+INFO:tensorflow:loss = -2.60946, step = 1801 (32.297 sec)
+INFO:tensorflow:Saving checkpoints for 1856 into /tmp/tmpg4AdEb/model.ckpt.
+INFO:tensorflow:global_step/sec: 2.94229
+INFO:tensorflow:loss = -2.44058, step = 1901 (33.987 sec)
+INFO:tensorflow:Saving checkpoints for 2000 into /tmp/tmpg4AdEb/model.ckpt.
+INFO:tensorflow:Loss for final step: -2.18134.
+Time since start: 11.023208 m
+Steps per min: 181.435391
+</pre></div></div></blockquote>
+<p>## Evaluation Visualize some sample images.</p>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">_get_next</span><span class="p">(</span><span class="n">iterable</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">iterable</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>  <span class="c1"># Python 2.x.x</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">iterable</span><span class="o">.</span><span class="n">__next__</span><span class="p">()</span>  <span class="c1"># Python 3.x.x</span>
+
+<span class="c1"># Run inference.</span>
+<span class="n">predict_input_fn</span> <span class="o">=</span> <span class="n">_get_predict_input_fn</span><span class="p">(</span><span class="mi">36</span><span class="p">,</span> <span class="n">NOISE_DIMS</span><span class="p">)</span>
+<span class="n">prediction_iterable</span> <span class="o">=</span> <span class="n">gan_estimator</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span>
+    <span class="n">predict_input_fn</span><span class="p">,</span> <span class="n">hooks</span><span class="o">=</span><span class="p">[</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">StopAtStepHook</span><span class="p">(</span><span class="n">last_step</span><span class="o">=</span><span class="mi">1</span><span class="p">)])</span>
+<span class="n">predictions</span> <span class="o">=</span> <span class="p">[</span><span class="n">_get_next</span><span class="p">(</span><span class="n">prediction_iterable</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">36</span><span class="p">)]</span>
+
+<span class="k">try</span><span class="p">:</span> <span class="c1"># Close the predict session.</span>
+    <span class="n">_get_next</span><span class="p">(</span><span class="n">prediction_iterable</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+<span class="c1"># Nicely tile output and visualize.</span>
+<span class="n">image_rows</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">predictions</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">6</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span>
+              <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">36</span><span class="p">,</span> <span class="mi">6</span><span class="p">)]</span>
+<span class="n">tiled_images</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">image_rows</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># Visualize.</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">tiled_images</span><span class="p">),</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:Input graph does not contain a QueueRunner. That means predict yields forever. This is probably a mistake.
+INFO:tensorflow:Restoring parameters from /tmp/tmpg4AdEb/model.ckpt-2000
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>Out[16]:
+</pre></div>
+</div>
+<div class="output_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.image.AxesImage at 0x7f6371869750&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<blockquote>
+<div><img alt="../../../../_images/examples_models_research_gan_tutorial_35_2.png" src="../../../../_images/examples_models_research_gan_tutorial_35_2.png" />
+</div></blockquote>
+<p># Conditional GAN Example</p>
+</div>
+</div>
+<p>In the conditional GAN setting on MNIST, we wish to train a generator to
+produce realistic-looking digits <strong>of a particular type</strong>. For example,
+we want to be able to produce as many ‘3’s as we want without producing
+other digits. In contrast, in the unconditional case, we have no control
+over what digit the generator produces. In order to train a conditional
+generator, we pass the digit’s identity to the generator and
+discriminator in addition to the noise vector. See <a class="reference external" href="https://arxiv.org/abs/1411.1784">Conditional
+Generative Adversarial Nets</a> by
+Mirza and Osindero for more details.</p>
+</div>
+</div>
+<div class="section" id="Data-input-pipeline">
+<h2>Data input pipeline<a class="headerlink" href="#Data-input-pipeline" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">tf</span><span class="o">.</span><span class="n">reset_default_graph</span><span class="p">()</span>
+
+<span class="c1"># Define our input pipeline. Pin it to the CPU so that the GPU can be reserved</span>
+<span class="c1"># for forward and backwards propogation.</span>
+<span class="n">batch_size</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;/cpu:0&#39;</span><span class="p">):</span>
+    <span class="n">real_images</span><span class="p">,</span> <span class="n">one_hot_labels</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">data_provider</span><span class="o">.</span><span class="n">provide_data</span><span class="p">(</span>
+        <span class="s1">&#39;train&#39;</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">MNIST_DATA_DIR</span><span class="p">)</span>
+
+<span class="c1"># Sanity check that we&#39;re getting images.</span>
+<span class="n">check_real_digits</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">eval</span><span class="o">.</span><span class="n">image_reshaper</span><span class="p">(</span><span class="n">real_images</span><span class="p">[:</span><span class="mi">20</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="n">num_cols</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">visualize_digits</span><span class="p">(</span><span class="n">check_real_digits</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<blockquote>
+<div><img alt="../../../../_images/examples_models_research_gan_tutorial_38_0.png" src="../../../../_images/examples_models_research_gan_tutorial_38_0.png" />
+</div></blockquote>
+<p>## Model</p>
+</div>
+</div>
+<p>We perform the same procedure as in the unconditional case, but pass the
+digit label to the generator and discriminator as well as a random noise
+vector.</p>
+<div class="section" id="Generator">
+<h3>Generator<a class="headerlink" href="#Generator" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">conditional_generator_fn</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">weight_decay</span><span class="o">=</span><span class="mf">2.5e-5</span><span class="p">,</span> <span class="n">is_training</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generator to produce MNIST images.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        inputs: A 2-tuple of Tensors (noise, one_hot_labels).</span>
+<span class="sd">        weight_decay: The value of the l2 weight decay.</span>
+<span class="sd">        is_training: If `True`, batch norm uses batch statistics. If `False`, batch</span>
+<span class="sd">            norm uses the exponential moving average collected from population</span>
+<span class="sd">            statistics.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A generated image in the range [-1, 1].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">noise</span><span class="p">,</span> <span class="n">one_hot_labels</span> <span class="o">=</span> <span class="n">inputs</span>
+
+    <span class="k">with</span> <span class="n">framework</span><span class="o">.</span><span class="n">arg_scope</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d_transpose</span><span class="p">],</span>
+        <span class="n">activation_fn</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">,</span> <span class="n">normalizer_fn</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">batch_norm</span><span class="p">,</span>
+        <span class="n">weights_regularizer</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">l2_regularizer</span><span class="p">(</span><span class="n">weight_decay</span><span class="p">)),</span>\
+    <span class="n">framework</span><span class="o">.</span><span class="n">arg_scope</span><span class="p">([</span><span class="n">layers</span><span class="o">.</span><span class="n">batch_norm</span><span class="p">],</span> <span class="n">is_training</span><span class="o">=</span><span class="n">is_training</span><span class="p">,</span>
+                        <span class="n">zero_debias_moving_mean</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span><span class="n">noise</span><span class="p">,</span> <span class="mi">1024</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">condition_tensor_from_onehot</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">one_hot_labels</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">7</span> <span class="o">*</span> <span class="mi">7</span> <span class="o">*</span> <span class="mi">128</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">128</span><span class="p">])</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d_transpose</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d_transpose</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="c1"># Make sure that generator output is in the same range as `inputs`</span>
+        <span class="c1"># ie [-1, 1].</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">normalizer_fn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">activation_fn</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">tanh</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">net</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Discriminator">
+<h3>Discriminator<a class="headerlink" href="#Discriminator" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">conditional_discriminator_fn</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">conditioning</span><span class="p">,</span> <span class="n">weight_decay</span><span class="o">=</span><span class="mf">2.5e-5</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Conditional discriminator network on MNIST digits.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        img: Real or generated MNIST digits. Should be in the range [-1, 1].</span>
+<span class="sd">        conditioning: A 2-tuple of Tensors representing (noise, one_hot_labels).</span>
+<span class="sd">        weight_decay: The L2 weight decay.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Logits for the probability that the image is real.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">one_hot_labels</span> <span class="o">=</span> <span class="n">conditioning</span>
+    <span class="k">with</span> <span class="n">framework</span><span class="o">.</span><span class="n">arg_scope</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">],</span>
+        <span class="n">activation_fn</span><span class="o">=</span><span class="n">leaky_relu</span><span class="p">,</span> <span class="n">normalizer_fn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+        <span class="n">weights_regularizer</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">l2_regularizer</span><span class="p">(</span><span class="n">weight_decay</span><span class="p">),</span>
+        <span class="n">biases_regularizer</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">l2_regularizer</span><span class="p">(</span><span class="n">weight_decay</span><span class="p">)):</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">condition_tensor_from_onehot</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">one_hot_labels</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">net</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="n">normalizer_fn</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">batch_norm</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">layers</span><span class="o">.</span><span class="n">linear</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="GANModel-Tuple">
+<h3>GANModel Tuple<a class="headerlink" href="#GANModel-Tuple" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">noise_dims</span> <span class="o">=</span> <span class="mi">64</span>
+<span class="n">conditional_gan_model</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">gan_model</span><span class="p">(</span>
+    <span class="n">generator_fn</span><span class="o">=</span><span class="n">conditional_generator_fn</span><span class="p">,</span>
+    <span class="n">discriminator_fn</span><span class="o">=</span><span class="n">conditional_discriminator_fn</span><span class="p">,</span>
+    <span class="n">real_data</span><span class="o">=</span><span class="n">real_images</span><span class="p">,</span>
+    <span class="n">generator_inputs</span><span class="o">=</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">random_normal</span><span class="p">([</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">noise_dims</span><span class="p">]),</span>
+                      <span class="n">one_hot_labels</span><span class="p">))</span>
+
+<span class="c1"># Sanity check that currently generated images are garbage.</span>
+<span class="n">cond_generated_data_to_visualize</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">eval</span><span class="o">.</span><span class="n">image_reshaper</span><span class="p">(</span>
+    <span class="n">conditional_gan_model</span><span class="o">.</span><span class="n">generated_data</span><span class="p">[:</span><span class="mi">20</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="n">num_cols</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">visualize_digits</span><span class="p">(</span><span class="n">cond_generated_data_to_visualize</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<blockquote>
+<div><img alt="../../../../_images/examples_models_research_gan_tutorial_45_0.png" src="../../../../_images/examples_models_research_gan_tutorial_45_0.png" />
+</div></blockquote>
+<p>## Losses</p>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">gan_loss</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">gan_loss</span><span class="p">(</span>
+    <span class="n">conditional_gan_model</span><span class="p">,</span> <span class="n">gradient_penalty_weight</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+
+<span class="c1"># Sanity check that we can evaluate our losses.</span>
+<span class="n">evaluate_tfgan_loss</span><span class="p">(</span><span class="n">gan_loss</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<blockquote>
+<div><div class="highlight"><pre>
+Generator loss: -0.314357
+Discriminator loss: 0.044576
+</pre></div></div></blockquote>
+<p>## Training and Evaluation</p>
+</div>
+</div>
+<p>We use a slightly different learning rate schedule that involves decay.</p>
+</div>
+<div class="section" id="Train-Ops">
+<h3>Train Ops<a class="headerlink" href="#Train-Ops" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">generator_optimizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="mf">0.0009</span><span class="p">,</span> <span class="n">beta1</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">discriminator_optimizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="mf">0.00009</span><span class="p">,</span> <span class="n">beta1</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">gan_train_ops</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">gan_train_ops</span><span class="p">(</span>
+    <span class="n">conditional_gan_model</span><span class="p">,</span>
+    <span class="n">gan_loss</span><span class="p">,</span>
+    <span class="n">generator_optimizer</span><span class="p">,</span>
+    <span class="n">discriminator_optimizer</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:update_ops in create_train_op does not contain all the  update_ops in GraphKeys.UPDATE_OPS
+WARNING:tensorflow:update_ops in create_train_op does not contain all the  update_ops in GraphKeys.UPDATE_OPS
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Evaluation">
+<h3>Evaluation<a class="headerlink" href="#Evaluation" title="Permalink to this headline">¶</a></h3>
+<p>Since quantitative metrics for generators are sometimes tricky (see <a class="reference external" href="https://arxiv.org/abs/1511.01844">A
+note on the evaluation of generative
+models</a> for some surprising ones),
+we also want to visualize our progress.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Set up class-conditional visualization. We feed class labels to the generator</span>
+<span class="c1"># so that the the first column is `0`, the second column is `1`, etc.</span>
+<span class="n">images_to_eval</span> <span class="o">=</span> <span class="mi">500</span>
+<span class="k">assert</span> <span class="n">images_to_eval</span> <span class="o">%</span> <span class="mi">10</span> <span class="o">==</span> <span class="mi">0</span>
+
+<span class="n">random_noise</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">random_normal</span><span class="p">([</span><span class="n">images_to_eval</span><span class="p">,</span> <span class="mi">64</span><span class="p">])</span>
+<span class="n">one_hot_labels</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">one_hot</span><span class="p">(</span>
+    <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">images_to_eval</span> <span class="o">//</span> <span class="mi">10</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">10</span><span class="p">)],</span> <span class="n">depth</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;Generator&#39;</span><span class="p">,</span> <span class="n">reuse</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="n">eval_images</span> <span class="o">=</span> <span class="n">conditional_gan_model</span><span class="o">.</span><span class="n">generator_fn</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">random_noise</span><span class="p">,</span> <span class="n">one_hot_labels</span><span class="p">),</span> <span class="n">is_training</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="n">reshaped_eval_imgs</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">eval</span><span class="o">.</span><span class="n">image_reshaper</span><span class="p">(</span>
+    <span class="n">eval_images</span><span class="p">[:</span><span class="mi">20</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">num_cols</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+<span class="c1"># We will use a pretrained classifier to measure the progress of our generator.</span>
+<span class="c1"># Specifically, the cross-entropy loss between the generated image and the target</span>
+<span class="c1"># label will be the metric we track.</span>
+<span class="n">MNIST_CLASSIFIER_FROZEN_GRAPH</span> <span class="o">=</span> <span class="s1">&#39;./mnist/data/classify_mnist_graph_def.pb&#39;</span>
+<span class="n">xent_score</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">mnist_cross_entropy</span><span class="p">(</span>
+    <span class="n">eval_images</span><span class="p">,</span> <span class="n">one_hot_labels</span><span class="p">,</span> <span class="n">MNIST_CLASSIFIER_FROZEN_GRAPH</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Train-Steps">
+<h3>Train Steps<a class="headerlink" href="#Train-Steps" title="Permalink to this headline">¶</a></h3>
+<p>In this example, we train the generator and discriminator while keeping
+track of our important metric, the cross entropy loss with the real
+labels.</p>
+<p>This code block should take about <strong>2 minutes</strong> on GPU and <strong>10
+minutes</strong> on CPU.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [24]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">global_step</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">get_or_create_global_step</span><span class="p">()</span>
+<span class="n">train_step_fn</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">get_sequential_train_steps</span><span class="p">()</span>
+<span class="n">loss_values</span><span class="p">,</span> <span class="n">xent_score_values</span>  <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">SingularMonitoredSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">2001</span><span class="p">):</span>
+        <span class="n">cur_loss</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">train_step_fn</span><span class="p">(</span>
+            <span class="n">sess</span><span class="p">,</span> <span class="n">gan_train_ops</span><span class="p">,</span> <span class="n">global_step</span><span class="p">,</span> <span class="n">train_step_kwargs</span><span class="o">=</span><span class="p">{})</span>
+        <span class="n">loss_values</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">cur_loss</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">400</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">xent_val</span><span class="p">,</span> <span class="n">digits_np</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">xent_score</span><span class="p">,</span> <span class="n">reshaped_eval_imgs</span><span class="p">])</span>
+            <span class="n">xent_score_values</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">xent_val</span><span class="p">))</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Current loss: </span><span class="si">%f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">cur_loss</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Current cross entropy score: </span><span class="si">%f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">xent_score_values</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">visualize_training_generator</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">start_time</span><span class="p">,</span> <span class="n">digits_np</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: 1.288447
+Current cross entropy score: 2.326701
+Training step: 0
+Time since start: 0.021370 m
+Steps per min: 0.000000
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_54_1.png" src="../../../../_images/examples_models_research_gan_tutorial_54_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -1.197917
+Current cross entropy score: 2.008666
+Training step: 400
+Time since start: 2.045402 m
+Steps per min: 195.560562
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_54_3.png" src="../../../../_images/examples_models_research_gan_tutorial_54_3.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -0.148910
+Current cross entropy score: 2.055502
+Training step: 800
+Time since start: 4.077344 m
+Steps per min: 196.206171
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_54_5.png" src="../../../../_images/examples_models_research_gan_tutorial_54_5.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: 1.437691
+Current cross entropy score: 0.656794
+Training step: 1200
+Time since start: 6.129460 m
+Steps per min: 195.775811
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_54_7.png" src="../../../../_images/examples_models_research_gan_tutorial_54_7.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: 1.147804
+Current cross entropy score: 0.324483
+Training step: 1600
+Time since start: 8.179397 m
+Steps per min: 195.613445
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_54_9.png" src="../../../../_images/examples_models_research_gan_tutorial_54_9.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: 0.442172
+Current cross entropy score: 0.430340
+Training step: 2000
+Time since start: 10.233876 m
+Steps per min: 195.429384
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_54_11.png" src="../../../../_images/examples_models_research_gan_tutorial_54_11.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Plot the eval metrics over time.</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Cross entropy score per step&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">*</span><span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">xent_score_values</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Training loss per step&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">*</span><span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">loss_values</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_55_0.png" src="../../../../_images/examples_models_research_gan_tutorial_55_0.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<blockquote>
+<div><img alt="../../../../_images/examples_models_research_gan_tutorial_55_1.png" src="../../../../_images/examples_models_research_gan_tutorial_55_1.png" />
+</div></blockquote>
+<p># InfoGAN Example</p>
+</div>
+</div>
+<p>InfoGAN is a technique to induce semantic meaning in the latent space of
+a GAN generator in an unsupervised way. In this example, the generator
+learns how to generate a specific digit <strong>without ever seeing labels</strong>.
+This is achieved by maximizing the mutual information between some
+subset of the noise vector and the generated images, while also trying
+to generate realistic images. See <a class="reference external" href="https://arxiv.org/abs/1606.03657">InfoGAN: Interpretable Representation
+Learning by Information Maximizing Generative Adversarial
+Nets</a> by Chen at al for more
+details.</p>
+<blockquote>
+<div>## Data input pipeline</div></blockquote>
+<p>This is the same as the unconditional case (we don’t need labels).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">tf</span><span class="o">.</span><span class="n">reset_default_graph</span><span class="p">()</span>
+
+<span class="c1"># Define our input pipeline. Pin it to the CPU so that the GPU can be reserved</span>
+<span class="c1"># for forward and backwards propogation.</span>
+<span class="n">batch_size</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;/cpu:0&#39;</span><span class="p">):</span>
+    <span class="n">real_images</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">data_provider</span><span class="o">.</span><span class="n">provide_data</span><span class="p">(</span>
+        <span class="s1">&#39;train&#39;</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">MNIST_DATA_DIR</span><span class="p">)</span>
+
+<span class="c1"># Sanity check that we&#39;re getting images.</span>
+<span class="n">check_real_digits</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">eval</span><span class="o">.</span><span class="n">image_reshaper</span><span class="p">(</span><span class="n">real_images</span><span class="p">[:</span><span class="mi">20</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="n">num_cols</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">visualize_digits</span><span class="p">(</span><span class="n">check_real_digits</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<blockquote>
+<div><img alt="../../../../_images/examples_models_research_gan_tutorial_58_0.png" src="../../../../_images/examples_models_research_gan_tutorial_58_0.png" />
+</div></blockquote>
+<p>## Model</p>
+</div>
+</div>
+</div>
+<div class="section" id="Generator">
+<h3>Generator<a class="headerlink" href="#Generator" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">infogan_generator</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">categorical_dim</span><span class="p">,</span> <span class="n">weight_decay</span><span class="o">=</span><span class="mf">2.5e-5</span><span class="p">,</span>
+                      <span class="n">is_training</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;InfoGAN discriminator network on MNIST digits.</span>
+
+<span class="sd">    Based on a paper https://arxiv.org/abs/1606.03657 and their code</span>
+<span class="sd">    https://github.com/openai/InfoGAN.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        inputs: A 3-tuple of Tensors (unstructured_noise, categorical structured</span>
+<span class="sd">            noise, continuous structured noise). `inputs[0]` and `inputs[2]` must be</span>
+<span class="sd">            2D, and `inputs[1]` must be 1D. All must have the same first dimension.</span>
+<span class="sd">        categorical_dim: Dimensions of the incompressible categorical noise.</span>
+<span class="sd">        weight_decay: The value of the l2 weight decay.</span>
+<span class="sd">        is_training: If `True`, batch norm uses batch statistics. If `False`, batch</span>
+<span class="sd">            norm uses the exponential moving average collected from population</span>
+<span class="sd">            statistics.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A generated image in the range [-1, 1].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">unstructured_noise</span><span class="p">,</span> <span class="n">cat_noise</span><span class="p">,</span> <span class="n">cont_noise</span> <span class="o">=</span> <span class="n">inputs</span>
+    <span class="n">cat_noise_onehot</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">one_hot</span><span class="p">(</span><span class="n">cat_noise</span><span class="p">,</span> <span class="n">categorical_dim</span><span class="p">)</span>
+    <span class="n">all_noise</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">unstructured_noise</span><span class="p">,</span> <span class="n">cat_noise_onehot</span><span class="p">,</span> <span class="n">cont_noise</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">framework</span><span class="o">.</span><span class="n">arg_scope</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d_transpose</span><span class="p">],</span>
+        <span class="n">activation_fn</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">,</span> <span class="n">normalizer_fn</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">batch_norm</span><span class="p">,</span>
+        <span class="n">weights_regularizer</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">l2_regularizer</span><span class="p">(</span><span class="n">weight_decay</span><span class="p">)),</span>\
+    <span class="n">framework</span><span class="o">.</span><span class="n">arg_scope</span><span class="p">([</span><span class="n">layers</span><span class="o">.</span><span class="n">batch_norm</span><span class="p">],</span> <span class="n">is_training</span><span class="o">=</span><span class="n">is_training</span><span class="p">):</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span><span class="n">all_noise</span><span class="p">,</span> <span class="mi">1024</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">7</span> <span class="o">*</span> <span class="mi">7</span> <span class="o">*</span> <span class="mi">128</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">128</span><span class="p">])</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d_transpose</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d_transpose</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="c1"># Make sure that generator output is in the same range as `inputs`</span>
+        <span class="c1"># ie [-1, 1].</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">normalizer_fn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">activation_fn</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">tanh</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">net</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Discriminator">
+<h3>Discriminator<a class="headerlink" href="#Discriminator" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">infogan_discriminator</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">unused_conditioning</span><span class="p">,</span> <span class="n">weight_decay</span><span class="o">=</span><span class="mf">2.5e-5</span><span class="p">,</span>
+                          <span class="n">categorical_dim</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">continuous_dim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">is_training</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;InfoGAN discriminator network on MNIST digits.</span>
+
+<span class="sd">    Based on a paper https://arxiv.org/abs/1606.03657 and their code</span>
+<span class="sd">    https://github.com/openai/InfoGAN.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        img: Real or generated MNIST digits. Should be in the range [-1, 1].</span>
+<span class="sd">        unused_conditioning: The TFGAN API can help with conditional GANs, which</span>
+<span class="sd">            would require extra `condition` information to both the generator and the</span>
+<span class="sd">            discriminator. Since this example is not conditional, we do not use this</span>
+<span class="sd">            argument.</span>
+<span class="sd">        weight_decay: The L2 weight decay.</span>
+<span class="sd">        categorical_dim: Dimensions of the incompressible categorical noise.</span>
+<span class="sd">        continuous_dim: Dimensions of the incompressible continuous noise.</span>
+<span class="sd">        is_training: If `True`, batch norm uses batch statistics. If `False`, batch</span>
+<span class="sd">            norm uses the exponential moving average collected from population</span>
+<span class="sd">            statistics.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Logits for the probability that the image is real, and a list of posterior</span>
+<span class="sd">        distributions for each of the noise vectors.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">framework</span><span class="o">.</span><span class="n">arg_scope</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">],</span>
+        <span class="n">activation_fn</span><span class="o">=</span><span class="n">leaky_relu</span><span class="p">,</span> <span class="n">normalizer_fn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+        <span class="n">weights_regularizer</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">l2_regularizer</span><span class="p">(</span><span class="n">weight_decay</span><span class="p">),</span>
+        <span class="n">biases_regularizer</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">l2_regularizer</span><span class="p">(</span><span class="n">weight_decay</span><span class="p">)):</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">net</span><span class="p">)</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="n">normalizer_fn</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">layer_norm</span><span class="p">)</span>
+
+        <span class="n">logits_real</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">activation_fn</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+
+        <span class="c1"># Recognition network for latent variables has an additional layer</span>
+        <span class="k">with</span> <span class="n">framework</span><span class="o">.</span><span class="n">arg_scope</span><span class="p">([</span><span class="n">layers</span><span class="o">.</span><span class="n">batch_norm</span><span class="p">],</span> <span class="n">is_training</span><span class="o">=</span><span class="n">is_training</span><span class="p">):</span>
+            <span class="n">encoder</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span>
+                <span class="n">net</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="n">normalizer_fn</span><span class="o">=</span><span class="n">layers</span><span class="o">.</span><span class="n">batch_norm</span><span class="p">)</span>
+
+        <span class="c1"># Compute logits for each category of categorical latent.</span>
+        <span class="n">logits_cat</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span>
+            <span class="n">encoder</span><span class="p">,</span> <span class="n">categorical_dim</span><span class="p">,</span> <span class="n">activation_fn</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+        <span class="n">q_cat</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">Categorical</span><span class="p">(</span><span class="n">logits_cat</span><span class="p">)</span>
+
+        <span class="c1"># Compute mean for Gaussian posterior of continuous latents.</span>
+        <span class="n">mu_cont</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span>
+            <span class="n">encoder</span><span class="p">,</span> <span class="n">continuous_dim</span><span class="p">,</span> <span class="n">activation_fn</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+        <span class="n">sigma_cont</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">mu_cont</span><span class="p">)</span>
+        <span class="n">q_cont</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="n">mu_cont</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">sigma_cont</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">logits_real</span><span class="p">,</span> <span class="p">[</span><span class="n">q_cat</span><span class="p">,</span> <span class="n">q_cont</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="InfoGANModel-Tuple">
+<h3>InfoGANModel Tuple<a class="headerlink" href="#InfoGANModel-Tuple" title="Permalink to this headline">¶</a></h3>
+<p>The InfoGAN model requires some extra information, so we use a
+subclassed tuple.</p>
+<p>The loss will be the same as before, with the addition of the mutual
+information loss.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">infogan_loss</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">gan_loss</span><span class="p">(</span>
+    <span class="n">infogan_model</span><span class="p">,</span>
+    <span class="n">gradient_penalty_weight</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">mutual_information_penalty_weight</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+
+<span class="c1"># Sanity check that we can evaluate our losses.</span>
+<span class="n">evaluate_tfgan_loss</span><span class="p">(</span><span class="n">infogan_loss</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<blockquote>
+<div><div class="highlight"><pre>
+Generator loss: 3.383600
+Discriminator loss: 2.162185
+</pre></div></div></blockquote>
+<p>## Training and Evaluation</p>
+</div>
+</div>
+<p>This is also the same as in the unconditional case.</p>
+</div>
+<div class="section" id="Train-Ops">
+<h3>Train Ops<a class="headerlink" href="#Train-Ops" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">generator_optimizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">beta1</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">discriminator_optimizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="mf">0.00009</span><span class="p">,</span> <span class="n">beta1</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">gan_train_ops</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">gan_train_ops</span><span class="p">(</span>
+    <span class="n">infogan_model</span><span class="p">,</span>
+    <span class="n">infogan_loss</span><span class="p">,</span>
+    <span class="n">generator_optimizer</span><span class="p">,</span>
+    <span class="n">discriminator_optimizer</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:update_ops in create_train_op does not contain all the  update_ops in GraphKeys.UPDATE_OPS
+WARNING:tensorflow:update_ops in create_train_op does not contain all the  update_ops in GraphKeys.UPDATE_OPS
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Evaluation">
+<h3>Evaluation<a class="headerlink" href="#Evaluation" title="Permalink to this headline">¶</a></h3>
+<p>Generate some images to evaluate MNIST score.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Set up images to evaluate MNIST score.</span>
+<span class="n">images_to_eval</span> <span class="o">=</span> <span class="mi">500</span>
+<span class="k">assert</span> <span class="n">images_to_eval</span> <span class="o">%</span> <span class="n">cat_dim</span> <span class="o">==</span> <span class="mi">0</span>
+
+<span class="n">unstructured_inputs</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">random_normal</span><span class="p">([</span><span class="n">images_to_eval</span><span class="p">,</span> <span class="n">noise_dims</span><span class="o">-</span><span class="n">cont_dim</span><span class="p">])</span>
+<span class="n">cat_noise</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">cat_dim</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span><span class="n">images_to_eval</span> <span class="o">//</span> <span class="n">cat_dim</span><span class="p">))</span>
+<span class="n">cont_noise</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">random_uniform</span><span class="p">([</span><span class="n">images_to_eval</span><span class="p">,</span> <span class="n">cont_dim</span><span class="p">],</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="n">infogan_model</span><span class="o">.</span><span class="n">generator_scope</span><span class="p">,</span> <span class="n">reuse</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="n">eval_images</span> <span class="o">=</span> <span class="n">infogan_model</span><span class="o">.</span><span class="n">generator_fn</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">unstructured_inputs</span><span class="p">,</span> <span class="n">cat_noise</span><span class="p">,</span> <span class="n">cont_noise</span><span class="p">))</span>
+
+<span class="n">MNIST_CLASSIFIER_FROZEN_GRAPH</span> <span class="o">=</span> <span class="s1">&#39;./mnist/data/classify_mnist_graph_def.pb&#39;</span>
+<span class="n">eval_score</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">mnist_score</span><span class="p">(</span>
+    <span class="n">eval_images</span><span class="p">,</span> <span class="n">MNIST_CLASSIFIER_FROZEN_GRAPH</span><span class="p">)</span>
+
+<span class="c1"># Generate three sets of images to visualize the effect of each of the structured noise</span>
+<span class="c1"># variables on the output.</span>
+<span class="n">rows</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">categorical_sample_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="n">continuous_sample_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="n">noise_args</span> <span class="o">=</span> <span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">categorical_sample_points</span><span class="p">,</span> <span class="n">continuous_sample_points</span><span class="p">,</span>
+              <span class="n">noise_dims</span><span class="o">-</span><span class="n">cont_dim</span><span class="p">,</span> <span class="n">cont_dim</span><span class="p">)</span>
+
+<span class="n">display_noises</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">display_noises</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">util</span><span class="o">.</span><span class="n">get_eval_noise_categorical</span><span class="p">(</span><span class="o">*</span><span class="n">noise_args</span><span class="p">))</span>
+<span class="n">display_noises</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">util</span><span class="o">.</span><span class="n">get_eval_noise_continuous_dim1</span><span class="p">(</span><span class="o">*</span><span class="n">noise_args</span><span class="p">))</span>
+<span class="n">display_noises</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">util</span><span class="o">.</span><span class="n">get_eval_noise_continuous_dim2</span><span class="p">(</span><span class="o">*</span><span class="n">noise_args</span><span class="p">))</span>
+
+<span class="n">display_images</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">noise</span> <span class="ow">in</span> <span class="n">display_noises</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;Generator&#39;</span><span class="p">,</span> <span class="n">reuse</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="n">display_images</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">infogan_model</span><span class="o">.</span><span class="n">generator_fn</span><span class="p">(</span><span class="n">noise</span><span class="p">,</span> <span class="n">is_training</span><span class="o">=</span><span class="bp">False</span><span class="p">))</span>
+
+<span class="n">display_img</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">eval</span><span class="o">.</span><span class="n">image_reshaper</span><span class="p">(</span>
+    <span class="n">tf</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">display_images</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">num_cols</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Train-steps">
+<h3>Train steps<a class="headerlink" href="#Train-steps" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [33]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">global_step</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">get_or_create_global_step</span><span class="p">()</span>
+<span class="n">train_step_fn</span> <span class="o">=</span> <span class="n">tfgan</span><span class="o">.</span><span class="n">get_sequential_train_steps</span><span class="p">()</span>
+<span class="n">loss_values</span><span class="p">,</span> <span class="n">mnist_score_values</span>  <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">SingularMonitoredSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">6001</span><span class="p">):</span>
+        <span class="n">cur_loss</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">train_step_fn</span><span class="p">(</span>
+            <span class="n">sess</span><span class="p">,</span> <span class="n">gan_train_ops</span><span class="p">,</span> <span class="n">global_step</span><span class="p">,</span> <span class="n">train_step_kwargs</span><span class="o">=</span><span class="p">{})</span>
+        <span class="n">loss_values</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">cur_loss</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">1000</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">mnist_score_np</span><span class="p">,</span> <span class="n">display_img_np</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">eval_score</span><span class="p">,</span> <span class="n">display_img</span><span class="p">])</span>
+            <span class="n">mnist_score_values</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">mnist_score_np</span><span class="p">))</span>
+            <span class="n">visualize_training_generator</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">start_time</span><span class="p">,</span> <span class="n">display_img_np</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Current loss: </span><span class="si">%f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">cur_loss</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Current MNIST score: </span><span class="si">%f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">mnist_score_values</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Training step: 0
+Time since start: 0.025766 m
+Steps per min: 0.000000
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_74_1.png" src="../../../../_images/examples_models_research_gan_tutorial_74_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: 5.815053
+Current MNIST score: 1.084848
+Training step: 1000
+Time since start: 4.819182 m
+Steps per min: 207.504112
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_74_3.png" src="../../../../_images/examples_models_research_gan_tutorial_74_3.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -10.885268
+Current MNIST score: 6.105103
+Training step: 2000
+Time since start: 9.603889 m
+Steps per min: 208.248977
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_74_5.png" src="../../../../_images/examples_models_research_gan_tutorial_74_5.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -2.954233
+Current MNIST score: 7.171986
+Training step: 3000
+Time since start: 14.378457 m
+Steps per min: 208.645476
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_74_7.png" src="../../../../_images/examples_models_research_gan_tutorial_74_7.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -8.133733
+Current MNIST score: 7.012982
+Training step: 4000
+Time since start: 19.170171 m
+Steps per min: 208.657508
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_74_9.png" src="../../../../_images/examples_models_research_gan_tutorial_74_9.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -4.360440
+Current MNIST score: 7.883360
+Training step: 5000
+Time since start: 23.939930 m
+Steps per min: 208.856087
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_74_11.png" src="../../../../_images/examples_models_research_gan_tutorial_74_11.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -13.686996
+Current MNIST score: 7.210840
+Training step: 6000
+Time since start: 28.708190 m
+Steps per min: 208.999591
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_74_13.png" src="../../../../_images/examples_models_research_gan_tutorial_74_13.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Current loss: -15.399969
+Current MNIST score: 8.610293
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [34]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Plot the eval metrics over time.</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;MNIST Score per step&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">*</span><span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">mnist_score_values</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Training loss per step&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">*</span><span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">loss_values</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>Out[34]:
+</pre></div>
+</div>
+<div class="output_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>[&lt;matplotlib.lines.Line2D at 0x7f635fdca0d0&gt;]
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_75_1.png" src="../../../../_images/examples_models_research_gan_tutorial_75_1.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_75_2.png" src="../../../../_images/examples_models_research_gan_tutorial_75_2.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Skip-training-and-load-from-checkpoint">
+<h3>Skip training and load from checkpoint<a class="headerlink" href="#Skip-training-and-load-from-checkpoint" title="Permalink to this headline">¶</a></h3>
+<p>Training a model to good results in a colab takes about 10 minutes. You
+can train a model below, but for now let’s load a pretrained model and
+inspect the output.</p>
+<p>The first two rows show the effect of the categorical noise. The second
+two rows show the effect of the first continuous variable, and the last
+two rows show the effect of the second continuous variable. Note that
+the categorical variable controls the digit value, while the continuous
+variable controls line thickness and orientation.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># ADAM variables are causing the checkpoint reload to choke, so omit them when</span>
+<span class="c1"># doing variable remapping.</span>
+<span class="n">var_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">x</span><span class="o">.</span><span class="n">op</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span>
+            <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">framework</span><span class="o">.</span><span class="n">get_variables</span><span class="p">(</span><span class="s1">&#39;Generator/&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s1">&#39;Adam&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">name</span><span class="p">}</span>
+<span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">framework</span><span class="o">.</span><span class="n">init_from_checkpoint</span><span class="p">(</span>
+    <span class="s1">&#39;./mnist/data/infogan_model.ckpt&#39;</span><span class="p">,</span> <span class="n">var_dict</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+    <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">global_variables_initializer</span><span class="p">())</span>
+    <span class="n">display_img_np</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">display_img</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">display_img_np</span><span class="p">),</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+INFO:tensorflow:Initialize variable Generator/Conv/weights:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/Conv/weights
+INFO:tensorflow:Initialize variable Generator/fully_connected/BatchNorm/moving_mean:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/fully_connected/BatchNorm/moving_mean
+INFO:tensorflow:Initialize variable Generator/fully_connected/BatchNorm/moving_variance:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/fully_connected/BatchNorm/moving_variance
+INFO:tensorflow:Initialize variable Generator/fully_connected_1/BatchNorm/beta:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/fully_connected_1/BatchNorm/beta
+INFO:tensorflow:Initialize variable Generator/fully_connected/weights:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/fully_connected/weights
+INFO:tensorflow:Initialize variable Generator/fully_connected/BatchNorm/beta:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/fully_connected/BatchNorm/beta
+INFO:tensorflow:Initialize variable Generator/fully_connected_1/weights:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/fully_connected_1/weights
+INFO:tensorflow:Initialize variable Generator/Conv2d_transpose_1/BatchNorm/moving_mean:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/Conv2d_transpose_1/BatchNorm/moving_mean
+INFO:tensorflow:Initialize variable Generator/fully_connected_1/BatchNorm/moving_variance:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/fully_connected_1/BatchNorm/moving_variance
+INFO:tensorflow:Initialize variable Generator/Conv2d_transpose/BatchNorm/moving_mean:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/Conv2d_transpose/BatchNorm/moving_mean
+INFO:tensorflow:Initialize variable Generator/Conv2d_transpose_1/weights:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/Conv2d_transpose_1/weights
+INFO:tensorflow:Initialize variable Generator/Conv/biases:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/Conv/biases
+INFO:tensorflow:Initialize variable Generator/Conv2d_transpose_1/BatchNorm/beta:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/Conv2d_transpose_1/BatchNorm/beta
+INFO:tensorflow:Initialize variable Generator/Conv2d_transpose/weights:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/Conv2d_transpose/weights
+INFO:tensorflow:Initialize variable Generator/Conv2d_transpose/BatchNorm/beta:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/Conv2d_transpose/BatchNorm/beta
+INFO:tensorflow:Initialize variable Generator/Conv2d_transpose/BatchNorm/moving_variance:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/Conv2d_transpose/BatchNorm/moving_variance
+INFO:tensorflow:Initialize variable Generator/Conv2d_transpose_1/BatchNorm/moving_variance:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/Conv2d_transpose_1/BatchNorm/moving_variance
+INFO:tensorflow:Initialize variable Generator/fully_connected_1/BatchNorm/moving_mean:0 from checkpoint ./mnist/data/infogan_model.ckpt with Generator/fully_connected_1/BatchNorm/moving_mean
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../_images/examples_models_research_gan_tutorial_77_1.png" src="../../../../_images/examples_models_research_gan_tutorial_77_1.png" />
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.4.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../../../../examples/models/research/gan/tutorial.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../../../../../v1.0.0/examples/models/research/gan/tutorial.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.6.2/examples/models/research/gan/tutorial.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.6.1/examples/models/research/gan/tutorial.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.6.0/examples/models/research/gan/tutorial.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.5.2/examples/models/research/gan/tutorial.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.5.1/examples/models/research/gan/tutorial.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.5.0/examples/models/research/gan/tutorial.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd>v0.4.0</dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.3.1/examples/models/research/gan/tutorial.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.3.0/examples/models/research/gan/tutorial.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.2.0/examples/models/research/gan/tutorial.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../..//examples/models/research/gan/tutorial.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../../',
+            VERSION:'0.4.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

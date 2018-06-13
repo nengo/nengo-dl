@@ -1,0 +1,311 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Optimizing the parameters of a Nengo model\n",
+    "\n",
+    "Nengo uses the [Neural Engineering Framework](http://compneuro.uwaterloo.ca/research/nef.html) to optimize the parameters of a model.  NengoDL adds a new set of optimization tools (deep learning training methods) to that toolkit, which can be used instead of or in addition to the NEF optimization.\n",
+    "\n",
+    "Which techniques work best will depend on the particular model being developed.  However, as a general rule of thumb, the gradient-descent based deep learning optimizations will tend to provide more accurate network output, but take longer to optimize and require the network to be differentiable.\n",
+    "\n",
+    "Here we'll go through an example showing how a Nengo model can be optimized using these training tools.  We'll build a network to compute the arbitrarily chosen function $f(x, y, z) = (x+1)*y^2 + \\sin(z)^2$."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "\n",
+    "import nengo\n",
+    "import nengo_dl\n",
+    "import matplotlib.pyplot as plt\n",
+    "import numpy as np\n",
+    "import tensorflow as tf"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We'll begin by setting some default parameters for our network.  These parameters have been chosen to make the training easier/faster for this example."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "net = nengo.Network()\n",
+    "net.config[nengo.Ensemble].neuron_type = nengo.RectifiedLinear()\n",
+    "net.config[nengo.Ensemble].max_rates = nengo.dists.Uniform(0, 1)\n",
+    "net.config[nengo.Connection].synapse = None"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Next we'll define the inputs for our network.  These could be whatever we want, but for this example we'll use band-limited white noise."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "with net:\n",
+    "    x, y, z = [nengo.Node(output=nengo.processes.WhiteSignal(1, 5, rms=0.3, seed=i))\n",
+    "               for i in range(3)]\n",
+    "    \n",
+    "plt.figure()\n",
+    "plt.plot(np.linspace(0, 1, 1000), x.output.run(1.0), label=\"x\")\n",
+    "plt.plot(np.linspace(0, 1, 1000), y.output.run(1.0), label=\"y\")\n",
+    "plt.plot(np.linspace(0, 1, 1000), z.output.run(1.0), label=\"z\")\n",
+    "plt.xlabel(\"time\")\n",
+    "plt.ylabel(\"value\")\n",
+    "plt.legend();"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now we're ready to define the structure of our network.  We'll create three ensembles; one will compute $(x+1)*y^2$, another will compute $\\sin(z)$, and the third will square the output of the previous population to compute $\\sin(z)^2$.  Again, there are various different network structures we could have chosen to compute this function, this is just one of them."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "with net:\n",
+    "    # neural ensembles\n",
+    "    ens0 = nengo.Ensemble(100, 2)\n",
+    "    ens1 = nengo.Ensemble(50, 1)\n",
+    "    ens2 = nengo.Ensemble(50, 1)\n",
+    "\n",
+    "    # connect the input signals to ensemble inputs\n",
+    "    nengo.Connection(x, ens0[0])\n",
+    "    nengo.Connection(y, ens0[1])\n",
+    "    nengo.Connection(z, ens1)\n",
+    "    \n",
+    "    # output node\n",
+    "    f = nengo.Node(size_in=1)\n",
+    "\n",
+    "     # create a connection to compute (x+1)*y^2\n",
+    "    nengo.Connection(ens0, f, function=lambda x: (x[0] + 1) * x[1] ** 2)\n",
+    "    \n",
+    "    # create a connection to compute sin(z)\n",
+    "    nengo.Connection(ens1, ens2, function=np.sin)\n",
+    "    \n",
+    "    # create a connection to compute sin(z)^2\n",
+    "    nengo.Connection(ens2, f, function=np.square)\n",
+    "\n",
+    "    # collect data on the inputs/outputs\n",
+    "    x_p = nengo.Probe(x)\n",
+    "    y_p = nengo.Probe(y)\n",
+    "    z_p = nengo.Probe(z)\n",
+    "    f_p = nengo.Probe(f)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "When we build this network the NEF optimization will be used to compute the weights on each connection, based on the functions we specified.  If we run the network we can see that the network does a pretty good job of approximating the target function."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "def target_func(x, y, z):\n",
+    "    return (x + 1) * y ** 2 + np.sin(z) ** 2\n",
+    "\n",
+    "with nengo_dl.Simulator(net) as sim:\n",
+    "    sim.run(1.0)\n",
+    "    \n",
+    "    plt.figure()\n",
+    "    plt.plot(sim.trange(), sim.data[f_p], label=\"output\")\n",
+    "    plt.plot(sim.trange(), target_func(sim.data[x_p], sim.data[y_p],\n",
+    "                                       sim.data[z_p]), label=\"target\")\n",
+    "    plt.legend()\n",
+    "    plt.xlabel(\"time\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "To apply further optimization, using deep learning methods, we first need to specify a training data set.  This defines the input values (for $x$, $y$, and $z$), and the output value we expect for each set of input values.  Each input should have shape `(number of training examples, number of simulation timesteps, input dimensionality)`; in this case we'll create a dataset with 1024 training examples, each of our inputs are 1D, and we only need to train for one timestep at a time (since our network doesn't have any temporal dynamics).  The inputs are specified as a dictionary mapping Nodes to input values, and the targets as a dictionary mapping Probes to target values.  We'll use random uniform numbers from -1 to 1 as our input data, so our inputs and targets will look like"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "inputs = {x: np.random.uniform(-1, 1, size=(1024, 1, 1)),\n",
+    "          y: np.random.uniform(-1, 1, size=(1024, 1, 1)),\n",
+    "          z: np.random.uniform(-1, 1, size=(1024, 1, 1))}\n",
+    "\n",
+    "targets = {f_p: target_func(inputs[x], inputs[y], inputs[z])}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can use the `sim.loss` function to check the initial error for our network on this data.  We'll use mean-squared-error (MSE) as our error measure (see [the documentation](https://www.nengo.ai/nengo-dl/training.html#objective) for more detail on specifying different error functions).  Note that we'll also re-build the model with `minibatch_size=32` (so that we can process the 1024 inputs in chunks of 32 rather than one at a time)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "sim.close()\n",
+    "sim = nengo_dl.Simulator(net, minibatch_size=32, device=\"/cpu:0\")\n",
+    "\n",
+    "print(\"pre-training mse:\", sim.loss(inputs, targets, \"mse\"))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Next we need to define the optimization method we'll use to train the model.  Any [TensorFlow optimizer](https://www.tensorflow.org/api_guides/python/train#Optimizers) can be used; here we'll use gradient descent with Nesterov momentum."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "opt = tf.train.MomentumOptimizer(learning_rate=0.002, momentum=0.9, use_nesterov=True)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We're now ready to train the model.  The last thing we need to specify is the number of epochs we want to train for, where each epoch is one complete pass through the training data."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "sim.train(inputs, targets, opt, n_epochs=100)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "If we check the error after the training, we can see that it has improved significantly."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "print(\"post-training mse:\", sim.loss(inputs, targets, \"mse\"))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "And we can confirm this by running the model again and plotting the results:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "sim.run(1.0)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[f_p][0], label=\"output\")\n",
+    "plt.plot(sim.trange(), target_func(sim.data[x_p][0], sim.data[y_p][0],\n",
+    "                                   sim.data[z_p][0]), label=\"target\")\n",
+    "plt.legend()\n",
+    "plt.xlabel(\"time\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "sim.close()"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.5.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

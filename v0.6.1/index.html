@@ -1,0 +1,427 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>NengoDL &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="NengoDL: Deep learning integration for Nengo" href="introduction.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="#" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frontend.html">User documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backend.html">Developer documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#">Docs</a> &raquo;</li>
+        
+      <li>NengoDL</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="nengodl">
+<h1>NengoDL<a class="headerlink" href="#nengodl" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#documentation">Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installing-nengodl">Installing NengoDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#developer-installation">Developer installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installing-tensorflow">Installing TensorFlow</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="frontend.html">User documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="simulator.html">NengoDL Simulator</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="simulator.html#simulator-arguments">Simulator arguments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="simulator.html#simulator-run-arguments">Simulator.run arguments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="simulator.html#api">API</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tensor_node.html">TensorNodes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tensor_node.html#examples">Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tensor_node.html#api">API</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="training.html">Optimizing a NengoDL model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="training.html#simulator-train-arguments">Simulator.train arguments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="training.html#choosing-which-elements-to-optimize">Choosing which elements to optimize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="training.html#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="extra_objects.html">Extra Nengo objects</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="extra_objects.html#neuron-types">Neuron types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="extra_objects.html#distributions">Distributions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples/nef_init.html">Optimizing the parameters of a Nengo model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/pretrained_model.html">Inserting a TensorFlow network into a Nengo model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/spiking_mnist.html">Optimizing spiking neural networks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/spa_retrieval.html">Optimizing a structured semantic pointer model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/spa_memory.html">Optimizing a structured semantic pointer model with temporal dynamics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples/spa_memory.html#Optimizing-a-semantic-pointer-memory-network">Optimizing a semantic pointer memory network</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/spa_memory.html#Optimizing-a-semantic-pointer-retrieval-network-with-memory">Optimizing a semantic pointer retrieval network with memory</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backend.html">Developer documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="builder.html">Builder</a></li>
+<li class="toctree-l2"><a class="reference internal" href="op_builders.html">Operator build classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="operators.html">Basic operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="neurons.html">Neuron types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="learning_rules.html">Learning rules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="processes.html">Processes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tensor_graph.html">TensorFlow graph construction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="signals.html">Signals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="graph_optimizer.html">Operator graph optimization tools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html">Miscellaneous utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="project.html#release-history">Release History</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="project.html#march-7-2018">0.6.1 (March 7, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#december-13-2017">0.6.0 (December 13, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#october-11-2017">0.5.2 (October 11, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#august-28-2017">0.5.1 (August 28, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#july-11-2017">0.5.0 (July 11, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#june-8-2017">0.4.0 (June 8, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#may-12-2017">0.3.1 (May 12, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#april-25-2017">0.3.0 (April 25, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#march-13-2017">0.2.0 (March 13, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#june-12-2016">0.1.0 (June 12, 2016)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="project.html#contributing-to-nengodl">Contributing to NengoDL</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="project.html#filing-issues">Filing issues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#making-pull-requests">Making pull requests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#contributor-agreement">Contributor agreement</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="project.html#nengodl-license">NengoDL license</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="project.html#licensed-code">Licensed code</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<p><a class="reference external" href="https://github.com/nengo/nengo_dl">Github</a> |
+<a class="reference external" href="https://pypi.python.org/pypi/nengo_dl">PyPI</a></p>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="introduction.html" class="btn btn-neutral float-right" title="NengoDL: Deep learning integration for Nengo" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015-2018, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.6.1
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../index.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../v1.0.0/index.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.2/index.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd>v0.6.1</dd>
+                
+            
+                
+                    <dd><a href="../v0.6.0/index.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.2/index.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.1/index.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.0/index.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.4.0/index.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.1/index.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.0/index.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.2.0/index.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="..//index.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.6.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

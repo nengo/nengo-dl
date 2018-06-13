@@ -1,0 +1,902 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>nengo_dl.tensor_graph &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../frontend.html">User documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.html">Developer documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>nengo_dl.tensor_graph</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for nengo_dl.tensor_graph</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">nengo</span> <span class="k">import</span> <span class="n">Connection</span><span class="p">,</span> <span class="n">Process</span>
+<span class="kn">from</span> <span class="nn">nengo.builder.operator</span> <span class="k">import</span> <span class="n">TimeUpdate</span><span class="p">,</span> <span class="n">SimPyFunc</span>
+<span class="kn">from</span> <span class="nn">nengo.builder.processes</span> <span class="k">import</span> <span class="n">SimProcess</span>
+<span class="kn">from</span> <span class="nn">nengo.config</span> <span class="k">import</span> <span class="n">ConfigError</span>
+<span class="kn">from</span> <span class="nn">nengo.neurons</span> <span class="k">import</span> <span class="n">Direct</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+
+<span class="kn">from</span> <span class="nn">nengo_dl</span> <span class="k">import</span> <span class="n">builder</span><span class="p">,</span> <span class="n">graph_optimizer</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">utils</span><span class="p">,</span> <span class="n">tensor_node</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">backports.print_function</span> <span class="k">import</span> <span class="n">print_</span> <span class="k">as</span> <span class="nb">print</span>
+
+
+<div class="viewcode-block" id="TensorGraph"><a class="viewcode-back" href="../../tensor_graph.html#nengo_dl.tensor_graph.TensorGraph">[docs]</a><span class="k">class</span> <span class="nc">TensorGraph</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Manages the construction of the TensorFlow symbolic computation graph.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model : :class:`~nengo:nengo.builder.Model`</span>
+<span class="sd">        pre-built Nengo model describing the network to be simulated</span>
+<span class="sd">    dt : float</span>
+<span class="sd">        length of a simulator timestep, in seconds</span>
+<span class="sd">    unroll_simulation : int</span>
+<span class="sd">        unroll simulation loop by explicitly building ``unroll_simulation``</span>
+<span class="sd">        iterations into the computation graph</span>
+<span class="sd">    dtype : ``tf.DType``</span>
+<span class="sd">        floating point precision to use for simulation</span>
+<span class="sd">    minibatch_size : int</span>
+<span class="sd">        the number of simultaneous inputs that will be passed through the</span>
+<span class="sd">        network</span>
+<span class="sd">    device : None or ``&quot;/cpu:0&quot;`` or ``&quot;/gpu:[0-n]&quot;``</span>
+<span class="sd">        device on which to execute computations (if None then uses the</span>
+<span class="sd">        default device as determined by Tensorflow)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">unroll_simulation</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span>
+                 <span class="n">minibatch_size</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dt</span> <span class="o">=</span> <span class="n">dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unroll</span> <span class="o">=</span> <span class="n">unroll_simulation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span> <span class="o">=</span> <span class="n">minibatch_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
+
+        <span class="c1"># find invariant inputs (nodes that don&#39;t receive any input other</span>
+        <span class="c1"># than the simulation time). we&#39;ll compute these outside the simulation</span>
+        <span class="c1"># and feed in the result.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">toplevel</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">invariant_inputs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">invariant_inputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">toplevel</span><span class="o">.</span><span class="n">all_nodes</span>
+                                     <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">size_in</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span>
+                                     <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">tensor_node</span><span class="o">.</span><span class="n">TensorNode</span><span class="p">)]</span>
+
+        <span class="c1"># filter unused operators</span>
+        <span class="c1"># remove TimeUpdate because it is executed as part of the simulation</span>
+        <span class="c1"># loop, not part of the step plan. remove input nodes because they</span>
+        <span class="c1"># are executed outside the simulation.</span>
+        <span class="n">node_processes</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span><span class="o">.</span><span class="n">output</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">invariant_inputs</span>
+                          <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="n">Process</span><span class="p">)]</span>
+        <span class="n">operators</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">op</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">operators</span> <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">TimeUpdate</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">SimPyFunc</span><span class="p">)</span> <span class="ow">and</span> <span class="n">op</span><span class="o">.</span><span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">SimProcess</span><span class="p">)</span> <span class="ow">and</span> <span class="n">op</span><span class="o">.</span><span class="n">input</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span>
+                 <span class="n">op</span><span class="o">.</span><span class="n">process</span> <span class="ow">in</span> <span class="n">node_processes</span><span class="p">))]</span>
+
+        <span class="c1"># mark trainable signals</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mark_signals</span><span class="p">()</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Initial plan length: </span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">operators</span><span class="p">))</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Optimizing graph&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="c1"># apply graph simplification functions</span>
+        <span class="n">old_operators</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">old_operators</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">operators</span><span class="p">):</span>
+            <span class="n">old_operators</span> <span class="o">=</span> <span class="n">operators</span>
+            <span class="n">operators</span> <span class="o">=</span> <span class="n">graph_optimizer</span><span class="o">.</span><span class="n">remove_constant_copies</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span>
+            <span class="n">operators</span> <span class="o">=</span> <span class="n">graph_optimizer</span><span class="o">.</span><span class="n">remove_unmodified_resets</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span>
+            <span class="n">operators</span> <span class="o">=</span> <span class="n">graph_optimizer</span><span class="o">.</span><span class="n">remove_zero_incs</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span>
+            <span class="n">operators</span> <span class="o">=</span> <span class="n">graph_optimizer</span><span class="o">.</span><span class="n">remove_identity_muls</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span>
+
+        <span class="c1"># group mergeable operators</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">planner</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">toplevel</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">model</span><span class="o">.</span><span class="n">toplevel</span><span class="p">]</span><span class="o">.</span><span class="n">planner</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">ConfigError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">):</span>
+            <span class="n">planner</span> <span class="o">=</span> <span class="n">graph_optimizer</span><span class="o">.</span><span class="n">tree_planner</span>
+        <span class="n">plan</span> <span class="o">=</span> <span class="n">planner</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span>
+
+        <span class="c1"># TODO: we could also merge operators sequentially (e.g., combine</span>
+        <span class="c1"># a copy and dotinc into one op), as long as the intermediate signal</span>
+        <span class="c1"># is only written to by one op and read by one op</span>
+
+        <span class="c1"># order signals/operators to promote contiguous reads</span>
+        <span class="n">sigs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">plan</span> <span class="o">=</span> <span class="n">graph_optimizer</span><span class="o">.</span><span class="n">order_signals</span><span class="p">(</span><span class="n">plan</span><span class="p">,</span> <span class="n">n_passes</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+        <span class="c1"># create base arrays and map Signals to TensorSignals (views on those</span>
+        <span class="c1"># base arrays)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base_arrays_init</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sig_map</span> <span class="o">=</span> <span class="n">graph_optimizer</span><span class="o">.</span><span class="n">create_signals</span><span class="p">(</span>
+            <span class="n">sigs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">plan</span><span class="p">,</span> <span class="n">float_type</span><span class="o">=</span><span class="n">dtype</span><span class="o">.</span><span class="n">as_numpy_dtype</span><span class="p">,</span>
+            <span class="n">minibatch_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">Optimization completed in </span><span class="si">%s</span><span class="s2"> &quot;</span> <span class="o">%</span>
+              <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)))</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Optimized plan length: </span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plan</span><span class="p">))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Number of base arrays: </span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_arrays_init</span><span class="p">))</span>
+
+<div class="viewcode-block" id="TensorGraph.build"><a class="viewcode-back" href="../../tensor_graph.html#nengo_dl.tensor_graph.TensorGraph.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rng</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Constructs a new graph to simulate the model.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        rng : :class:`~numpy:numpy.random.RandomState`</span>
+<span class="sd">            the Simulator&#39;s random number generator</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Graph</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">SignalDict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_map</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+                                          <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_phs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">losses</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimizers</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">as_default</span><span class="p">(),</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">):</span>
+            <span class="c1"># make sure indices are loaded for all probe signals (they won&#39;t</span>
+            <span class="c1"># have been loaded if this signal is only accessed as part of a</span>
+            <span class="c1"># larger block during the simulation)</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">probes</span><span class="p">:</span>
+                <span class="n">probe_sig</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="s2">&quot;in&quot;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">probe_sig</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sig_map</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">sig_map</span><span class="p">[</span><span class="n">probe_sig</span><span class="p">]</span><span class="o">.</span><span class="n">load_indices</span><span class="p">()</span>
+
+            <span class="c1"># create this constant once here so we don&#39;t end up creating a new</span>
+            <span class="c1"># dt constant in each operator</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">dt</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">dt_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span>  <span class="c1"># store the actual value as well</span>
+
+            <span class="c1"># create base arrays</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">base_vars</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">trainable</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_arrays_init</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">unique_idx</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">duplicate</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">while</span> <span class="n">duplicate</span><span class="p">:</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                        <span class="n">v</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span> <span class="n">trainable</span><span class="p">,</span>
+                        <span class="n">unique_idx</span><span class="p">)</span>
+
+                    <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="n">name</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">(</span>
+                            <span class="n">tf</span><span class="o">.</span><span class="n">trainable_variables</span><span class="p">()</span> <span class="k">if</span> <span class="n">trainable</span> <span class="k">else</span>
+                            <span class="n">tf</span><span class="o">.</span><span class="n">local_variables</span><span class="p">())]):</span>
+                        <span class="n">unique_idx</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">duplicate</span> <span class="o">=</span> <span class="kc">False</span>
+
+                <span class="k">if</span> <span class="n">trainable</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s2">&quot;trainable_vars&quot;</span><span class="p">,</span> <span class="n">reuse</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+                        <span class="n">var</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span>
+                            <span class="n">name</span><span class="p">,</span> <span class="n">initializer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">constant_initializer</span><span class="p">(</span><span class="n">v</span><span class="p">),</span>
+                            <span class="n">dtype</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s2">&quot;local_vars&quot;</span><span class="p">,</span> <span class="n">reuse</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+                        <span class="n">var</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_local_variable</span><span class="p">(</span>
+                            <span class="n">name</span><span class="p">,</span> <span class="n">initializer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">constant_initializer</span><span class="p">(</span><span class="n">v</span><span class="p">),</span>
+                            <span class="n">dtype</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">base_vars</span> <span class="o">+=</span> <span class="p">[</span><span class="n">var</span><span class="p">]</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;created base arrays&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_vars</span><span class="p">])</span>
+
+            <span class="c1"># set up invariant inputs</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">build_inputs</span><span class="p">()</span>
+
+            <span class="c1"># pre-build stage</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">op_builds</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">ops</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plan</span><span class="p">:</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">name_scope</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">sanitize_name</span><span class="p">(</span>
+                        <span class="n">builder</span><span class="o">.</span><span class="n">Builder</span><span class="o">.</span><span class="n">builders</span><span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)):</span>
+                    <span class="n">builder</span><span class="o">.</span><span class="n">Builder</span><span class="o">.</span><span class="n">pre_build</span><span class="p">(</span><span class="n">ops</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">,</span> <span class="n">rng</span><span class="p">,</span>
+                                              <span class="bp">self</span><span class="o">.</span><span class="n">op_builds</span><span class="p">)</span>
+
+            <span class="c1"># build stage</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">build_loop</span><span class="p">()</span>
+
+            <span class="c1"># ops for initializing variables (will be called by simulator)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trainable_init_op</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">variables_initializer</span><span class="p">(</span>
+                <span class="n">tf</span><span class="o">.</span><span class="n">trainable_variables</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">local_init_op</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">local_variables_initializer</span><span class="p">()</span>
+            <span class="c1"># note: the only non-trainable global variables should be those</span>
+            <span class="c1"># created inside TensorNodes</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">global_init_op</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">variables_initializer</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">tf</span><span class="o">.</span><span class="n">global_variables</span><span class="p">()</span>
+                 <span class="k">if</span> <span class="n">v</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tf</span><span class="o">.</span><span class="n">trainable_variables</span><span class="p">()])</span></div>
+
+<div class="viewcode-block" id="TensorGraph.build_step"><a class="viewcode-back" href="../../tensor_graph.html#nengo_dl.tensor_graph.TensorGraph.build_step">[docs]</a>    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build the operators that execute a single simulation timestep</span>
+<span class="sd">        into the graph.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        probe_tensors : list of ``tf.Tensor``</span>
+<span class="sd">            the Tensor objects representing the data required for each model</span>
+<span class="sd">            Probe</span>
+<span class="sd">        side_effects : list of ``tf.Tensor``</span>
+<span class="sd">            the output Tensors of computations that may have side-effects</span>
+<span class="sd">            (e.g., :class:`~nengo:nengo.Node` functions), meaning that they</span>
+<span class="sd">            must be executed each time step even if their output doesn&#39;t appear</span>
+<span class="sd">            to be used in the simulation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># build operators</span>
+        <span class="n">side_effects</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># manually build TimeUpdate. we don&#39;t include this in the plan,</span>
+        <span class="c1"># because loop variables (`step`) are (semi?) pinned to the CPU, which</span>
+        <span class="c1"># causes the whole variable to get pinned to the CPU if we include</span>
+        <span class="c1"># `step` as part of the normal planning process.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">step</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">dt</span>
+
+        <span class="c1"># build operators</span>
+        <span class="k">for</span> <span class="n">ops</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plan</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">name_scope</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">sanitize_name</span><span class="p">(</span>
+                    <span class="n">builder</span><span class="o">.</span><span class="n">Builder</span><span class="o">.</span><span class="n">builders</span><span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)):</span>
+                <span class="n">outputs</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">Builder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">ops</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">,</span>
+                                                <span class="bp">self</span><span class="o">.</span><span class="n">op_builds</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">outputs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">side_effects</span> <span class="o">+=</span> <span class="n">outputs</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;collecting probe tensors&quot;</span><span class="p">)</span>
+        <span class="n">probe_tensors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">probes</span><span class="p">:</span>
+            <span class="n">probe_sig</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="s2">&quot;in&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">probe_sig</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sig_map</span><span class="p">:</span>
+                <span class="c1"># TODO: better solution to avoid the forced_copy</span>
+                <span class="c1"># we need to make sure that probe reads occur before the</span>
+                <span class="c1"># probe value is overwritten on the next timestep. however,</span>
+                <span class="c1"># just blocking on the sliced value (probe_tensor) doesn&#39;t</span>
+                <span class="c1"># work, because slices of variables don&#39;t perform a</span>
+                <span class="c1"># copy, so the slice can be &quot;executed&quot; and then the value</span>
+                <span class="c1"># overwritten before the tensorarray write occurs. what we</span>
+                <span class="c1"># really want to do is block until the probe_arrays.write</span>
+                <span class="c1"># happens, but you can&#39;t block on probe_arrays (and blocking on</span>
+                <span class="c1"># probe_array.flow doesn&#39;t work, although I think it should).</span>
+                <span class="c1"># so by adding the copy here and then blocking on the copy, we</span>
+                <span class="c1"># make sure that the probe value is read before it can be</span>
+                <span class="c1"># overwritten.</span>
+                <span class="n">probe_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">sig_map</span><span class="p">[</span><span class="n">probe_sig</span><span class="p">],</span> <span class="n">force_copy</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># if a probe signal isn&#39;t in sig_map, that means that it isn&#39;t</span>
+                <span class="c1"># involved in any simulator ops.  so we know its value never</span>
+                <span class="c1"># changes, and we&#39;ll just return a constant containing the</span>
+                <span class="c1"># initial value.</span>
+                <span class="k">if</span> <span class="n">probe_sig</span><span class="o">.</span><span class="n">minibatched</span><span class="p">:</span>
+                    <span class="n">init_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">probe_sig</span><span class="o">.</span><span class="n">initial_value</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
+                                       <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">init_val</span> <span class="o">=</span> <span class="n">probe_sig</span><span class="o">.</span><span class="n">initial_value</span>
+                <span class="n">probe_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="n">init_val</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">30</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;build_step complete&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;probe_tensors </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">probe_tensors</span><span class="p">])</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;side_effects </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">side_effects</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">probe_tensors</span><span class="p">,</span> <span class="n">side_effects</span></div>
+
+<div class="viewcode-block" id="TensorGraph.build_loop"><a class="viewcode-back" href="../../tensor_graph.html#nengo_dl.tensor_graph.TensorGraph.build_loop">[docs]</a>    <span class="k">def</span> <span class="nf">build_loop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build simulation loop.</span>
+
+<span class="sd">        Loop can be constructed using the ``tf.while_loop`` architecture, or</span>
+<span class="sd">        explicitly unrolled.  Unrolling increases graph construction time</span>
+<span class="sd">        and memory usage, but increases simulation speed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">loop_condition</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">step</span> <span class="o">&lt;</span> <span class="n">stop</span>
+
+        <span class="k">def</span> <span class="nf">loop_body</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">loop_i</span><span class="p">,</span> <span class="n">probe_arrays</span><span class="p">,</span> <span class="n">base_vars</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">bases</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">(</span>
+                <span class="p">[(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_arrays_init</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
+                                        <span class="n">base_vars</span><span class="p">)])</span>
+
+            <span class="k">for</span> <span class="nb">iter</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unroll</span><span class="p">):</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;BUILDING ITERATION </span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">iter</span><span class="p">)</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">name_scope</span><span class="p">(</span><span class="s2">&quot;iteration_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">iter</span><span class="p">):</span>
+                    <span class="c1"># note: nengo step counter is incremented at the beginning</span>
+                    <span class="c1"># of the timestep</span>
+                    <span class="n">step</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="n">step</span>
+
+                    <span class="c1"># fill in invariant input data</span>
+                    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">invariant_ph</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">sig_map</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;out&quot;</span><span class="p">]],</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">invariant_ph</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="n">loop_i</span><span class="p">])</span>
+
+                    <span class="c1"># build the operators for a single step</span>
+                    <span class="c1"># note: we tie things to the `loop_i` variable so that we</span>
+                    <span class="c1"># can be sure the other things we&#39;re tying to the</span>
+                    <span class="c1"># simulation step (side effects and probes) from the</span>
+                    <span class="c1"># previous timestep are executed before the next step</span>
+                    <span class="c1"># starts</span>
+                    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">control_dependencies</span><span class="p">([</span><span class="n">loop_i</span><span class="p">]):</span>
+                        <span class="c1"># note: we use the variable scope to make sure that we</span>
+                        <span class="c1"># aren&#39;t accidentally creating new variables for</span>
+                        <span class="c1"># unrolled iterations (this is really only a concern</span>
+                        <span class="c1"># with TensorNodes)</span>
+                        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">reuse</span><span class="o">=</span><span class="nb">iter</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+                            <span class="n">probe_tensors</span><span class="p">,</span> <span class="n">side_effects</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_step</span><span class="p">()</span>
+
+                    <span class="c1"># copy probe data to array</span>
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">probe_tensors</span><span class="p">):</span>
+                        <span class="n">probe_arrays</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">probe_arrays</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">loop_i</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
+
+                    <span class="c1"># need to make sure that any operators that could have side</span>
+                    <span class="c1"># effects run each timestep, so we tie them to the loop</span>
+                    <span class="c1"># increment. we also need to make sure that all the probe</span>
+                    <span class="c1"># reads happen before those values get overwritten on the</span>
+                    <span class="c1"># next timestep</span>
+                    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">control_dependencies</span><span class="p">(</span><span class="n">side_effects</span> <span class="o">+</span>
+                                                         <span class="n">probe_tensors</span><span class="p">):</span>
+                        <span class="n">loop_i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="n">base_vars</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">bases</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+
+            <span class="k">return</span> <span class="n">step</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">loop_i</span><span class="p">,</span> <span class="n">probe_arrays</span><span class="p">,</span> <span class="n">base_vars</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">step_var</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;step&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stop_var</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;stop&quot;</span><span class="p">)</span>
+        <span class="n">loop_i</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">probe_arrays</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">tf</span><span class="o">.</span><span class="n">TensorArray</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">clear_after_read</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                <span class="n">dynamic_size</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">probes</span><span class="p">]</span>
+
+        <span class="c1"># build simulation loop</span>
+        <span class="n">loop_vars</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">step_var</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop_var</span><span class="p">,</span> <span class="n">loop_i</span><span class="p">,</span> <span class="n">probe_arrays</span><span class="p">,</span>
+            <span class="nb">tuple</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">_ref</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">)</span> <span class="k">else</span> <span class="n">x</span>
+                  <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_vars</span><span class="p">))</span>
+
+        <span class="c1"># TODO: add option to disable backprop through loop, for when users</span>
+        <span class="c1"># want to train a network running over time, but optimize on a</span>
+        <span class="c1"># timestep-by-timestep basis</span>
+        <span class="n">loop_vars</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">while_loop</span><span class="p">(</span>
+            <span class="n">loop_condition</span><span class="p">,</span> <span class="n">loop_body</span><span class="p">,</span> <span class="n">loop_vars</span><span class="o">=</span><span class="n">loop_vars</span><span class="p">,</span>
+            <span class="n">parallel_iterations</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">back_prop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">steps_run</span> <span class="o">=</span> <span class="n">loop_vars</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">probe_arrays</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">loop_vars</span><span class="p">[</span><span class="mi">3</span><span class="p">]:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">stack</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">probe_arrays</span> <span class="o">+=</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="TensorGraph.build_inputs"><a class="viewcode-back" href="../../tensor_graph.html#nengo_dl.tensor_graph.TensorGraph.build_inputs">[docs]</a>    <span class="k">def</span> <span class="nf">build_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Sets up the inputs in the model (which will be computed outside of</span>
+<span class="sd">        Tensorflow and fed in each simulation block).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_ph</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">invariant_inputs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;out&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sig_map</span><span class="p">:</span>
+                <span class="c1"># make sure the indices for this input are loaded into</span>
+                <span class="c1"># TensorFlow (they may not be, if the output of this node is</span>
+                <span class="c1"># only read as part of a larger block during the simulation)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sig_map</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;out&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">load_indices</span><span class="p">()</span>
+
+                <span class="c1"># set up a placeholder input for this node</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">invariant_ph</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">n</span><span class="o">.</span><span class="n">size_out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="TensorGraph.build_optimizer"><a class="viewcode-back" href="../../tensor_graph.html#nengo_dl.tensor_graph.TensorGraph.build_optimizer">[docs]</a>    <span class="k">def</span> <span class="nf">build_optimizer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">objective</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Adds elements into the graph to execute the given optimizer.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        optimizer : ``tf.train.Optimizer``</span>
+<span class="sd">            instance of a Tensorflow optimizer class</span>
+<span class="sd">        targets : tuple of :class:`~nengo:nengo.Probe`</span>
+<span class="sd">            the Probes corresponding to the output signals being optimized</span>
+<span class="sd">        objective : ``&quot;mse&quot;`` or callable</span>
+<span class="sd">            the objective to be minimized. passing ``&quot;mse&quot;`` will train with</span>
+<span class="sd">            mean squared error. a custom function</span>
+<span class="sd">            ``f(output, target) -&gt; loss`` can be passed that consumes the</span>
+<span class="sd">            actual output and target output for a probe in ``targets``</span>
+<span class="sd">            and returns a ``tf.Tensor`` representing the scalar loss value for</span>
+<span class="sd">            that Probe (loss will be averaged across Probes).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">as_default</span><span class="p">(),</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">):</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_loss</span><span class="p">(</span><span class="n">objective</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span>
+
+            <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">objective</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizers</span><span class="p">:</span>
+                <span class="c1"># create optimizer operator</span>
+                <span class="n">opt_op</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span>
+                    <span class="n">loss</span><span class="p">,</span> <span class="n">var_list</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">trainable_variables</span><span class="p">())</span>
+
+                <span class="c1"># get any new variables created by optimizer (so they can be</span>
+                <span class="c1"># initialized)</span>
+                <span class="n">opt_slots_init</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">variables_initializer</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">optimizer</span><span class="o">.</span><span class="n">get_slot</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+                     <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">tf</span><span class="o">.</span><span class="n">trainable_variables</span><span class="p">()</span>
+                     <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">get_slot_names</span><span class="p">()])</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">optimizers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">opt_op</span><span class="p">,</span> <span class="n">opt_slots_init</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="TensorGraph.build_loss"><a class="viewcode-back" href="../../tensor_graph.html#nengo_dl.tensor_graph.TensorGraph.build_loss">[docs]</a>    <span class="k">def</span> <span class="nf">build_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">objective</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Adds elements into the graph to compute the given objective.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        objective : ``&quot;mse&quot;`` or callable</span>
+<span class="sd">            the objective used to compute loss. passing ``&quot;mse&quot;`` will use</span>
+<span class="sd">            mean squared error. a custom function</span>
+<span class="sd">            ``f(output, target) -&gt; loss`` can be passed that consumes the</span>
+<span class="sd">            actual output and target output for a probe in ``targets``</span>
+<span class="sd">            and returns a ``tf.Tensor`` representing the scalar loss value for</span>
+<span class="sd">            that Probe (loss will be averaged across Probes).</span>
+<span class="sd">        targets : tuple of :class:`~nengo:nengo.Probe`</span>
+<span class="sd">            the Probes corresponding to target values in objective</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">objective</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">losses</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">losses</span><span class="p">[(</span><span class="n">objective</span><span class="p">,</span> <span class="n">targets</span><span class="p">)]</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">as_default</span><span class="p">(),</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">):</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">targets</span><span class="p">:</span>
+                <span class="n">probe_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">probes</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+                <span class="c1"># create a placeholder for the target values</span>
+                <span class="k">if</span> <span class="n">p</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_phs</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">target_phs</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">size_in</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">),</span>
+                        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;targets&quot;</span><span class="p">)</span>
+
+                <span class="c1"># compute loss</span>
+                <span class="k">if</span> <span class="n">objective</span> <span class="o">==</span> <span class="s2">&quot;mse&quot;</span><span class="p">:</span>
+                    <span class="n">loss</span> <span class="o">+=</span> <span class="p">[</span><span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">square</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">target_phs</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">probe_arrays</span><span class="p">[</span><span class="n">probe_index</span><span class="p">]))]</span>
+                <span class="k">elif</span> <span class="n">callable</span><span class="p">(</span><span class="n">objective</span><span class="p">):</span>
+                    <span class="c1"># move minibatch dimension back to the front</span>
+                    <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">probe_arrays</span><span class="p">[</span><span class="n">probe_index</span><span class="p">],</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+                    <span class="n">t</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">target_phs</span><span class="p">[</span><span class="n">p</span><span class="p">],</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+                    <span class="n">loss</span> <span class="o">+=</span> <span class="p">[</span><span class="n">objective</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">t</span><span class="p">)]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+            <span class="c1"># average loss across probes (note: this will also average across</span>
+            <span class="c1"># the output of `objective` if it doesn&#39;t return a scalar)</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">losses</span><span class="p">[(</span><span class="n">objective</span><span class="p">,</span> <span class="n">targets</span><span class="p">)]</span> <span class="o">=</span> <span class="n">loss</span>
+
+        <span class="k">return</span> <span class="n">loss</span></div>
+
+<div class="viewcode-block" id="TensorGraph.mark_signals"><a class="viewcode-back" href="../../tensor_graph.html#nengo_dl.tensor_graph.TensorGraph.mark_signals">[docs]</a>    <span class="k">def</span> <span class="nf">mark_signals</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Mark all the signals in ``self.model`` according to whether they</span>
+<span class="sd">        represent trainable parameters of the model (parameters that can be</span>
+<span class="sd">        optimized by deep learning methods).</span>
+
+<span class="sd">        Trainable parameters include connection weights, ensemble encoders, and</span>
+<span class="sd">        neuron biases.  Unless one of those signals is targeted by a Nengo</span>
+<span class="sd">        learning rule (otherwise the learning rule update conflicts with the</span>
+<span class="sd">        deep learning optimization).</span>
+
+<span class="sd">        Users can manually specify whether signals are trainable or not using</span>
+<span class="sd">        the config system (e.g.,</span>
+<span class="sd">        ``net.config[nengo.Ensemble].trainable = False``)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">get_trainable</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">network_trainable</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;Looks up the current value of ``obj.trainable``.&quot;&quot;&quot;</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">params</span><span class="p">:</span>
+                    <span class="c1"># priority #1: instance config</span>
+                    <span class="n">trainable</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span>
+                <span class="k">elif</span> <span class="n">network_trainable</span> <span class="ow">is</span> <span class="ow">not</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="c1"># priority #2: network setting</span>
+                    <span class="n">trainable</span> <span class="o">=</span> <span class="n">network_trainable</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># priority #3: class config</span>
+                    <span class="n">trainable</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span>
+            <span class="k">except</span> <span class="p">(</span><span class="n">ConfigError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">):</span>
+                <span class="n">trainable</span> <span class="o">=</span> <span class="n">network_trainable</span>
+
+            <span class="c1"># we return 1 if trainable isn&#39;t configured, since the default is</span>
+            <span class="c1"># for everything to be trainable but we want to be able to</span>
+            <span class="c1"># distinguish whether something was specifically set to be</span>
+            <span class="c1"># trainable (True) or just defaulting to trainable (1)</span>
+            <span class="k">return</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">trainable</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">trainable</span>
+
+        <span class="k">def</span> <span class="nf">mark_network</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">net</span><span class="p">,</span> <span class="n">network_trainable</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;Recursively marks the signals for objects within each</span>
+<span class="sd">            subnetwork.&quot;&quot;&quot;</span>
+
+            <span class="k">for</span> <span class="n">subnet</span> <span class="ow">in</span> <span class="n">net</span><span class="o">.</span><span class="n">networks</span><span class="p">:</span>
+                <span class="n">mark_network</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">subnet</span><span class="p">,</span>
+                             <span class="n">get_trainable</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">subnet</span><span class="p">,</span> <span class="n">network_trainable</span><span class="p">))</span>
+
+            <span class="c1"># encoders and biases are trainable</span>
+            <span class="k">for</span> <span class="n">ens</span> <span class="ow">in</span> <span class="n">net</span><span class="o">.</span><span class="n">ensembles</span><span class="p">:</span>
+                <span class="n">ens_trainable</span> <span class="o">=</span> <span class="n">get_trainable</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">ens</span><span class="p">,</span> <span class="n">network_trainable</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">ens</span><span class="p">][</span><span class="s2">&quot;encoders&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="n">ens_trainable</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">ens</span><span class="p">][</span><span class="s2">&quot;encoders&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">minibatched</span> <span class="o">=</span> <span class="kc">False</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ens</span><span class="o">.</span><span class="n">neuron_type</span><span class="p">,</span> <span class="n">Direct</span><span class="p">):</span>
+                    <span class="n">neurons_trainable</span> <span class="o">=</span> <span class="n">get_trainable</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">ens</span><span class="o">.</span><span class="n">neurons</span><span class="p">,</span>
+                                                      <span class="n">network_trainable</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">neurons_trainable</span> <span class="ow">is</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">neurons_trainable</span> <span class="o">=</span> <span class="n">ens_trainable</span>
+
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">ens</span><span class="o">.</span><span class="n">neurons</span><span class="p">][</span><span class="s2">&quot;bias&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">neurons_trainable</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">ens</span><span class="o">.</span><span class="n">neurons</span><span class="p">][</span><span class="s2">&quot;bias&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">minibatched</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="c1"># connection weights are trainable</span>
+            <span class="k">for</span> <span class="n">conn</span> <span class="ow">in</span> <span class="n">net</span><span class="o">.</span><span class="n">connections</span><span class="p">:</span>
+                <span class="c1"># note: this doesn&#39;t include probe connections, since they</span>
+                <span class="c1"># aren&#39;t added to the network</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">conn</span><span class="p">][</span><span class="s2">&quot;weights&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="n">get_trainable</span><span class="p">(</span>
+                    <span class="n">config</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">network_trainable</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">conn</span><span class="p">][</span><span class="s2">&quot;weights&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">minibatched</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="c1"># parameters can&#39;t be modified by an online Nengo learning rule</span>
+            <span class="c1"># and offline training at the same time. (it is possible in</span>
+            <span class="c1"># theory, but it complicates things a lot and is probably not a</span>
+            <span class="c1"># common use case). we also make those signals minibatched</span>
+            <span class="c1"># (they wouldn&#39;t be normally), because we want to be able to</span>
+            <span class="c1"># learn independently in each minibatch</span>
+            <span class="k">for</span> <span class="n">conn</span> <span class="ow">in</span> <span class="n">net</span><span class="o">.</span><span class="n">connections</span><span class="p">:</span>
+                <span class="n">rule</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">learning_rule</span>
+                <span class="k">if</span> <span class="n">rule</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rule</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                        <span class="n">rule</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">rule</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+                    <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rule</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                        <span class="n">rule</span> <span class="o">=</span> <span class="p">[</span><span class="n">rule</span><span class="p">]</span>
+
+                    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rule</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">modifies</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;weights&quot;</span><span class="p">,</span> <span class="s2">&quot;decoders&quot;</span><span class="p">):</span>
+                            <span class="n">obj</span> <span class="o">=</span> <span class="n">conn</span>
+                            <span class="n">attr</span> <span class="o">=</span> <span class="s2">&quot;weights&quot;</span>
+                        <span class="k">elif</span> <span class="n">r</span><span class="o">.</span><span class="n">modifies</span> <span class="o">==</span> <span class="s2">&quot;encoders&quot;</span><span class="p">:</span>
+                            <span class="n">obj</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">post_obj</span>
+                            <span class="n">attr</span> <span class="o">=</span> <span class="s2">&quot;encoders&quot;</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="n">attr</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                                <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> has a learning rule and is also set &quot;</span>
+                                <span class="s2">&quot;to be trainable; this is likely to &quot;</span>
+                                <span class="s2">&quot;produce strange training behaviour.&quot;</span> <span class="o">%</span>
+                                <span class="n">obj</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="n">attr</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="kc">False</span>
+
+                        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="n">attr</span><span class="p">]</span><span class="o">.</span><span class="n">minibatched</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">toplevel</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;No top-level network in model; assuming no trainable &quot;</span>
+                <span class="s2">&quot;parameters&quot;</span><span class="p">,</span> <span class="ne">UserWarning</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">toplevel</span><span class="o">.</span><span class="n">config</span>
+            <span class="n">mark_network</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">toplevel</span><span class="p">,</span>
+                         <span class="n">get_trainable</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">toplevel</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+            <span class="c1"># the connections to connection probes are not trainable, but</span>
+            <span class="c1"># also not minibatched</span>
+            <span class="n">probe_seeds</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">seeds</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">probes</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">obj</span><span class="p">,</span> <span class="n">seed</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">seeds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Connection</span><span class="p">)</span> <span class="ow">and</span> <span class="n">seed</span> <span class="ow">in</span> <span class="n">probe_seeds</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="s2">&quot;weights&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="s2">&quot;weights&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">minibatched</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># fill in defaults for all other signals</span>
+        <span class="c1"># signals are not trainable by default, and views take on the</span>
+        <span class="c1"># properties of their bases</span>
+        <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">operators</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">sig</span> <span class="ow">in</span> <span class="n">op</span><span class="o">.</span><span class="n">all_signals</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sig</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="s2">&quot;trainable&quot;</span><span class="p">):</span>
+                    <span class="n">sig</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="kc">False</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sig</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="s2">&quot;minibatched&quot;</span><span class="p">):</span>
+                    <span class="n">sig</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">minibatched</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">sig</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">trainable</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="s2">&quot;trainable&quot;</span><span class="p">):</span>
+                    <span class="n">sig</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="n">sig</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">trainable</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="s2">&quot;minibatched&quot;</span><span class="p">):</span>
+                    <span class="n">sig</span><span class="o">.</span><span class="n">minibatched</span> <span class="o">=</span> <span class="n">sig</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">minibatched</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.5.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../../_modules/nengo_dl/tensor_graph.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../../../v1.0.0/_modules/nengo_dl/tensor_graph.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.2/_modules/nengo_dl/tensor_graph.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.1/_modules/nengo_dl/tensor_graph.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.0/_modules/nengo_dl/tensor_graph.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.2/_modules/nengo_dl/tensor_graph.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.1/_modules/nengo_dl/tensor_graph.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd>v0.5.0</dd>
+                
+            
+                
+                    <dd><a href="../../../v0.4.0/_modules/nengo_dl/tensor_graph.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.3.1/_modules/nengo_dl/tensor_graph.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.3.0/_modules/nengo_dl/tensor_graph.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.2.0/_modules/nengo_dl/tensor_graph.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../..//_modules/nengo_dl/tensor_graph.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'0.5.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

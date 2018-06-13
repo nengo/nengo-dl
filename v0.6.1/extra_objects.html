@@ -1,0 +1,611 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Extra Nengo objects &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Examples" href="examples.html" />
+    <link rel="prev" title="Optimizing the parameters of a Nengo model" href="examples/nef_init.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="frontend.html">User documentation</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="simulator.html">NengoDL Simulator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tensor_node.html">TensorNodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="training.html">Optimizing a NengoDL model</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Extra Nengo objects</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#neuron-types">Neuron types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#distributions">Distributions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backend.html">Developer documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="frontend.html">User documentation</a> &raquo;</li>
+        
+      <li>Extra Nengo objects</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/extra_objects.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="extra-nengo-objects">
+<h1>Extra Nengo objects<a class="headerlink" href="#extra-nengo-objects" title="Permalink to this headline">¶</a></h1>
+<p>NengoDL adds some new Nengo objects that can be used during model construction.
+These could be used with any Simulator, not just <code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code>, but they tend to
+be useful for deep learning applications.</p>
+<div class="section" id="neuron-types">
+<h2>Neuron types<a class="headerlink" href="#neuron-types" title="Permalink to this headline">¶</a></h2>
+<p>Additions to the <a class="reference external" href="https://www.nengo.ai/nengo/frontend_api.html#neuron-types">neuron types included with Nengo</a>.</p>
+<span class="target" id="module-nengo_dl.neurons"></span><dl class="class">
+<dt id="nengo_dl.neurons.SoftLIFRate">
+<em class="property">class </em><code class="descclassname">nengo_dl.neurons.</code><code class="descname">SoftLIFRate</code><span class="sig-paren">(</span><em>sigma=1.0</em>, <em>**lif_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/neurons.html#SoftLIFRate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.neurons.SoftLIFRate" title="Permalink to this definition">¶</a></dt>
+<dd><p>LIF neuron with smoothing around the firing threshold.</p>
+<p>This is a rate version of the LIF neuron whose tuning curve has a
+continuous first derivative, due to the smoothing around the firing
+threshold. It can be used as a substitute for LIF neurons in deep networks
+during training, and then replaced with LIF neurons when running
+the network <a class="reference internal" href="#r31ac3a189156-1" id="id1">[1]</a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>sigma</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">Amount of smoothing around the firing threshold. Larger values mean
+more smoothing.</p>
+</dd>
+<dt><strong>tau_rc</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">Membrane RC time constant, in seconds. Affects how quickly the membrane
+voltage decays to zero in the absence of input (larger = slower decay).</p>
+</dd>
+<dt><strong>tau_ref</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">Absolute refractory period, in seconds. This is how long the
+membrane voltage is held at zero after a spike.</p>
+</dd>
+<dt><strong>amplitude</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">Scaling factor on the neuron output. Corresponds to the relative
+amplitude of the output spikes of the neuron.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Adapted from
+<a class="reference external" href="https://github.com/nengo/nengo_extras/blob/master/nengo_extras/neurons.py">https://github.com/nengo/nengo_extras/blob/master/nengo_extras/neurons.py</a></p>
+<p class="rubric">References</p>
+<table class="docutils citation" frame="void" id="r31ac3a189156-1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[1]</td><td><em>(<a class="fn-backref" href="#id1">1</a>, <a class="fn-backref" href="#id2">2</a>)</em> Eric Hunsberger and Chris Eliasmith (2015): Spiking deep networks
+with LIF neurons. <a class="reference external" href="https://arxiv.org/abs/1510.08829">https://arxiv.org/abs/1510.08829</a>.</td></tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="nengo_dl.neurons.SoftLIFRate.rates">
+<code class="descname">rates</code><span class="sig-paren">(</span><em>x</em>, <em>gain</em>, <em>bias</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/neurons.html#SoftLIFRate.rates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.neurons.SoftLIFRate.rates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Always use LIFRate to determine rates.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.neurons.SoftLIFRate.step_math">
+<code class="descname">step_math</code><span class="sig-paren">(</span><em>dt</em>, <em>J</em>, <em>output</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/neurons.html#SoftLIFRate.step_math"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.neurons.SoftLIFRate.step_math" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute rates in Hz for input current (incl. bias)</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="distributions">
+<h2>Distributions<a class="headerlink" href="#distributions" title="Permalink to this headline">¶</a></h2>
+<p>Additions to the <a class="reference external" href="https://www.nengo.ai/nengo/frontend_api.html#distributions">distributions included with Nengo</a>.  These
+distributions are usually used to initialize weight matrices, e.g.
+<code class="docutils literal notranslate"><span class="pre">nengo.Connection(a.neurons,</span> <span class="pre">b.neurons,</span> <span class="pre">transform=nengo_dl.dists.Glorot())</span></code>.</p>
+<span class="target" id="module-nengo_dl.dists"></span><dl class="class">
+<dt id="nengo_dl.dists.TruncatedNormal">
+<em class="property">class </em><code class="descclassname">nengo_dl.dists.</code><code class="descname">TruncatedNormal</code><span class="sig-paren">(</span><em>mean=0</em>, <em>stddev=1</em>, <em>limit=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/dists.html#TruncatedNormal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.dists.TruncatedNormal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normal distribution where any values more than some distance from the
+mean are resampled.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>mean</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd><p class="first last">Mean of the normal distribution</p>
+</dd>
+<dt><strong>stddev</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd><p class="first last">Standard deviation of the normal distribution</p>
+</dd>
+<dt><strong>limit</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd><p class="first last">Resample any values more than this distance from the mean. If None,
+then limit will be set to 2 standard deviations.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="nengo_dl.dists.TruncatedNormal.sample">
+<code class="descname">sample</code><span class="sig-paren">(</span><em>n</em>, <em>d=None</em>, <em>rng=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/dists.html#TruncatedNormal.sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.dists.TruncatedNormal.sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Samples the distribution.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>n</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">Number samples to take.</p>
+</dd>
+<dt><strong>d</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int or None, optional</span></dt>
+<dd><p class="first last">The number of dimensions to return. If this is an int, the return
+value will be of shape <code class="docutils literal notranslate"><span class="pre">(n,</span> <span class="pre">d)</span></code>. If None, the return
+value will be of shape <code class="docutils literal notranslate"><span class="pre">(n,)</span></code>.</p>
+</dd>
+<dt><strong>rng</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.random.RandomState.html#numpy.random.RandomState" title="(in NumPy v1.14)"><code class="docutils literal notranslate"><span class="pre">numpy.random.RandomState</span></code></a>, optional</span></dt>
+<dd><p class="first last">Random number generator state (if None, will use the default
+numpy random number generator).</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>samples</strong> <span class="classifier-delimiter">:</span> <span class="classifier">(n,) or (n, d) array_like</span></dt>
+<dd><p class="first last">Samples as a 1d or 2d array depending on <code class="docutils literal notranslate"><span class="pre">d</span></code>. The second
+dimension enumerates the dimensions of the process.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.dists.VarianceScaling">
+<em class="property">class </em><code class="descclassname">nengo_dl.dists.</code><code class="descname">VarianceScaling</code><span class="sig-paren">(</span><em>scale=1</em>, <em>mode='fan_avg'</em>, <em>distribution='uniform'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/dists.html#VarianceScaling"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.dists.VarianceScaling" title="Permalink to this definition">¶</a></dt>
+<dd><p>Variance scaling distribution for weight initialization (analogous to
+TensorFlow <code class="docutils literal notranslate"><span class="pre">init_ops.VarianceScaling</span></code>).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>scale</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd><p class="first last">Overall scale on values</p>
+</dd>
+<dt><strong>mode</strong> <span class="classifier-delimiter">:</span> <span class="classifier">“fan_in” or “fan_out” or “fan_avg”, optional</span></dt>
+<dd><p class="first last">Whether to scale based on input or output dimensionality, or average of
+the two</p>
+</dd>
+<dt><strong>distribution: “uniform” or “normal”, optional</strong></dt>
+<dd><p class="first last">Whether to use a uniform or normal distribution for weights</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="nengo_dl.dists.VarianceScaling.sample">
+<code class="descname">sample</code><span class="sig-paren">(</span><em>n</em>, <em>d=None</em>, <em>rng=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/dists.html#VarianceScaling.sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.dists.VarianceScaling.sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Samples the distribution.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>n</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">Number samples to take.</p>
+</dd>
+<dt><strong>d</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int or None, optional</span></dt>
+<dd><p class="first last">The number of dimensions to return. If this is an int, the return
+value will be of shape <code class="docutils literal notranslate"><span class="pre">(n,</span> <span class="pre">d)</span></code>. If None, the return
+value will be of shape <code class="docutils literal notranslate"><span class="pre">(n,)</span></code>.</p>
+</dd>
+<dt><strong>rng</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.random.RandomState.html#numpy.random.RandomState" title="(in NumPy v1.14)"><code class="docutils literal notranslate"><span class="pre">numpy.random.RandomState</span></code></a>, optional</span></dt>
+<dd><p class="first last">Random number generator state (if None, will use the default
+numpy random number generator).</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>samples</strong> <span class="classifier-delimiter">:</span> <span class="classifier">(n,) or (n, d) array_like</span></dt>
+<dd><p class="first last">Samples as a 1d or 2d array depending on <code class="docutils literal notranslate"><span class="pre">d</span></code>. The second
+dimension enumerates the dimensions of the process.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.dists.Glorot">
+<em class="property">class </em><code class="descclassname">nengo_dl.dists.</code><code class="descname">Glorot</code><span class="sig-paren">(</span><em>scale=1</em>, <em>distribution='uniform'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/dists.html#Glorot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.dists.Glorot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Weight initialization method from <a class="reference internal" href="#rf86a2b6f55ba-1" id="id3">[1]</a> (also known as Xavier
+initialization).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>scale</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd><p class="first last">Scale on weight distribution. For rectified linear units this should
+be sqrt(2), otherwise usually 1.</p>
+</dd>
+<dt><strong>distribution: “uniform” or “normal”, optional</strong></dt>
+<dd><p class="first last">Whether to use a uniform or normal distribution for weights</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">References</p>
+<table class="docutils citation" frame="void" id="rf86a2b6f55ba-1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[1]</td><td><em>(<a class="fn-backref" href="#id3">1</a>, <a class="fn-backref" href="#id4">2</a>)</em> Xavier Glorot and Yoshua Bengio (2010): Understanding the difficulty
+of training deep feedforward neural networks. International conference
+on artificial intelligence and statistics.
+<a class="reference external" href="http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf">http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf</a>.</td></tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.dists.He">
+<em class="property">class </em><code class="descclassname">nengo_dl.dists.</code><code class="descname">He</code><span class="sig-paren">(</span><em>scale=1</em>, <em>distribution='normal'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/dists.html#He"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.dists.He" title="Permalink to this definition">¶</a></dt>
+<dd><p>Weight initialization method from <a class="reference internal" href="#rba1e7275749a-1" id="id5">[1]</a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>scale</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd><p class="first last">Scale on weight distribution. For rectified linear units this should
+be sqrt(2), otherwise usually 1.</p>
+</dd>
+<dt><strong>distribution: “uniform” or “normal”, optional</strong></dt>
+<dd><p class="first last">Whether to use a uniform or normal distribution for weights</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">References</p>
+<table class="docutils citation" frame="void" id="rba1e7275749a-1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[1]</td><td><em>(<a class="fn-backref" href="#id5">1</a>, <a class="fn-backref" href="#id6">2</a>)</em> Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. (2015):
+Delving deep into rectifiers: Surpassing human-level performance on
+ImageNet classification. <a class="reference external" href="https://arxiv.org/abs/1502.01852">https://arxiv.org/abs/1502.01852</a>.</td></tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="examples.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="examples/nef_init.html" class="btn btn-neutral" title="Optimizing the parameters of a Nengo model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015-2018, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.6.1
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../extra_objects.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../v1.0.0/extra_objects.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.2/extra_objects.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd>v0.6.1</dd>
+                
+            
+                
+                    <dd><a href="../v0.6.0/extra_objects.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.2/extra_objects.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.1/extra_objects.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.0/extra_objects.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.4.0/extra_objects.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.1/extra_objects.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.0/extra_objects.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.2.0/extra_objects.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="..//extra_objects.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.6.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

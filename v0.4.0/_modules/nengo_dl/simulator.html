@@ -1,0 +1,1202 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>nengo_dl.simulator &mdash; NengoDL documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../frontend.html">User API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.html">Developer API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>nengo_dl.simulator</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for nengo_dl.simulator</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">Mapping</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">nengo.builder</span> <span class="k">import</span> <span class="n">Model</span>
+<span class="kn">from</span> <span class="nn">nengo.exceptions</span> <span class="k">import</span> <span class="p">(</span><span class="n">ReadonlyError</span><span class="p">,</span> <span class="n">SimulatorClosed</span><span class="p">,</span> <span class="n">NengoWarning</span><span class="p">,</span>
+                              <span class="n">SimulationError</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">from</span> <span class="nn">tensorflow.python.client.timeline</span> <span class="k">import</span> <span class="n">Timeline</span>
+<span class="kn">from</span> <span class="nn">tensorflow.python.ops</span> <span class="k">import</span> <span class="n">gradient_checker</span>
+
+<span class="kn">from</span> <span class="nn">nengo_dl</span> <span class="k">import</span> <span class="n">utils</span><span class="p">,</span> <span class="n">DATA_DIR</span>
+<span class="kn">from</span> <span class="nn">nengo_dl.tensor_graph</span> <span class="k">import</span> <span class="n">TensorGraph</span>
+<span class="kn">from</span> <span class="nn">nengo_dl.utils</span> <span class="k">import</span> <span class="n">print_and_flush</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Simulator"><a class="viewcode-back" href="../../simulator.html#nengo_dl.simulator.Simulator">[docs]</a><span class="k">class</span> <span class="nc">Simulator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Simulate network using the ``nengo_dl`` backend.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    network : :class:`~nengo:nengo.Network` or None</span>
+<span class="sd">        a network object to be built and then simulated. If None,</span>
+<span class="sd">        then a built model must be passed to ``model`` instead</span>
+<span class="sd">    dt : float, optional</span>
+<span class="sd">        length of a simulator timestep, in seconds</span>
+<span class="sd">    seed : int, optional</span>
+<span class="sd">        seed for all stochastic operators used in this simulator</span>
+<span class="sd">    model : :class:`~nengo:nengo.builder.Model`, optional</span>
+<span class="sd">        pre-built model object</span>
+<span class="sd">    dtype : ``tf.DType``, optional</span>
+<span class="sd">        floating point precision to use for simulation</span>
+<span class="sd">    device : None or ``&quot;/cpu:0&quot;`` or ``&quot;/gpu:[0-n]&quot;``, optional</span>
+<span class="sd">        device on which to execute computations (if None then uses the</span>
+<span class="sd">        default device as determined by Tensorflow)</span>
+<span class="sd">    unroll_simulation : int, optional</span>
+<span class="sd">        unroll simulation loop by explicitly building the given number of</span>
+<span class="sd">        iterations into the computation graph (improves simulation speed</span>
+<span class="sd">        but increases build time)</span>
+<span class="sd">    minibatch_size : int, optional</span>
+<span class="sd">        the number of simultaneous inputs that will be passed through the</span>
+<span class="sd">        network</span>
+<span class="sd">    tensorboard : bool, optional</span>
+<span class="sd">        if True, save network output in the Tensorflow summary format,</span>
+<span class="sd">        which can be loaded into Tensorboard</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># unsupported unit tests</span>
+    <span class="n">unsupported</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;nengo/tests/test_simulator.py:test_warn_on_opensim_del&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;nengo_dl raises a different (more visible) warning (see &quot;</span>
+         <span class="s2">&quot;tests/test_nengo_tests.py:test_warn_on_opensim_del&quot;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s2">&quot;nengo/tests/test_simulator.py:test_signal_init_values&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;different method required to manually step simulator (see &quot;</span>
+         <span class="s2">&quot;tests/test_nengo_tests.py:test_signal_init_values&quot;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s2">&quot;nengo/tests/test_simulator.py:test_entry_point&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;overridden so we can pass custom test simulators (see &quot;</span>
+         <span class="s2">&quot;tests/test_nengo_tests.py:test_entry_point&quot;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s2">&quot;nengo/tests/test_node.py:test_args&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;time is passed as np.float32, not a float (see &quot;</span>
+         <span class="s2">&quot;tests/test_nengo_tests.py:test_args&quot;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s2">&quot;nengo/tests/test_node.py:test_unconnected_node&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;need to set `unroll_simulation` to ensure node runs the correct &quot;</span>
+         <span class="s2">&quot;number of times (see &quot;</span>
+         <span class="s2">&quot;tests/test_nengo_tests.py:test_unconnected_node&quot;</span><span class="p">),</span>
+    <span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">network</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">dtype</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">unroll_simulation</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                 <span class="n">minibatch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tensorboard</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">step_blocks</span><span class="o">=</span><span class="s2">&quot;deprecated&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">closed</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sess</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tensorboard</span> <span class="o">=</span> <span class="n">tensorboard</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unroll</span> <span class="o">=</span> <span class="n">unroll_simulation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">minibatch_size</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">minibatch_size</span>
+
+        <span class="k">if</span> <span class="n">step_blocks</span> <span class="o">!=</span> <span class="s2">&quot;deprecated&quot;</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">unroll_simulation</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="c1"># TODO: remove this in 0.5</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;`step_blocks` has been deprecated and will be ignored; &quot;</span>
+                <span class="s2">&quot;`Simulator(..., unroll_simulation=n)` is now equivalent to &quot;</span>
+                <span class="s2">&quot;`Simulator(..., unroll_simulation=True, step_blocks=n).&quot;</span><span class="p">,</span>
+                <span class="ne">DeprecationWarning</span><span class="p">)</span>
+
+        <span class="c1"># TODO: allow the simulator to be called flexibly with/without</span>
+        <span class="c1"># minibatching</span>
+        <span class="c1"># TODO: multi-GPU support</span>
+
+        <span class="c1"># build model (uses default nengo builder)</span>
+        <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">dt</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">, dt=</span><span class="si">%f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="n">dt</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">dt</span> <span class="o">!=</span> <span class="n">model</span><span class="o">.</span><span class="n">dt</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Model dt (</span><span class="si">%g</span><span class="s2">) does not match Simulator &quot;</span>
+                              <span class="s2">&quot;dt (</span><span class="si">%g</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span> <span class="n">dt</span><span class="p">),</span> <span class="n">NengoWarning</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+
+        <span class="k">if</span> <span class="n">network</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">print_and_flush</span><span class="p">(</span><span class="s2">&quot;Building network&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="n">progress_bar</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">Building completed in </span><span class="si">%s</span><span class="s2"> &quot;</span> <span class="o">%</span>
+                  <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)))</span>
+
+        <span class="c1"># set up tensorflow graph plan</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span> <span class="o">=</span> <span class="n">TensorGraph</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span> <span class="n">unroll_simulation</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,</span>
+            <span class="n">device</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">ProbeDict</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">,</span>
+            <span class="p">{</span><span class="n">p</span><span class="p">:</span> <span class="p">(</span><span class="n">minibatch_size</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="s2">&quot;in&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">minibatched</span>
+                 <span class="k">else</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">probes</span><span class="p">})</span>
+
+        <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">seed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Simulator.reset"><a class="viewcode-back" href="../../simulator.html#nengo_dl.simulator.Simulator.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Resets the simulator to initial conditions.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        seed : int, optional</span>
+<span class="sd">            if not None, overwrite the default simulator seed with this value</span>
+<span class="sd">            (note: this becomes the new default simulator seed)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SimulatorClosed</span><span class="p">(</span><span class="s2">&quot;Cannot reset closed Simulator.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># close old session</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">seed</span> <span class="o">=</span> <span class="n">seed</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+        <span class="c1"># TODO: why is setting the tensorflow seed necessary to make</span>
+        <span class="c1"># gradient descent training deterministic?</span>
+        <span class="n">tf</span><span class="o">.</span><span class="n">set_random_seed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+
+        <span class="c1"># (re)build graph</span>
+        <span class="n">print_and_flush</span><span class="p">(</span><span class="s2">&quot;Constructing graph&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">Construction completed in </span><span class="si">%s</span><span class="s2"> &quot;</span> <span class="o">%</span>
+              <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)))</span>
+
+        <span class="c1"># output graph description to tensorboard summary</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensorboard</span><span class="p">:</span>
+            <span class="n">directory</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">/</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">DATA_DIR</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">toplevel</span><span class="o">.</span><span class="n">label</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">directory</span><span class="p">):</span>
+                <span class="n">run_number</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span>
+                    <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">4</span><span class="p">:])</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+                     <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;run&quot;</span><span class="p">)])</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">run_number</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">summary</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">summary</span><span class="o">.</span><span class="n">FileWriter</span><span class="p">(</span>
+                <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">/run_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">run_number</span><span class="p">),</span>
+                <span class="n">graph</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+
+        <span class="c1"># start session</span>
+        <span class="c1"># note: we need to allow soft placement when using tf.while_loop,</span>
+        <span class="c1"># because tensorflow pins loop variables to the CPU</span>
+        <span class="c1"># TODO: switch allow_soft_placement to False once tensorflow</span>
+        <span class="c1"># adds the RefExit GPU kernel</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">ConfigProto</span><span class="p">(</span>
+            <span class="n">allow_soft_placement</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">log_device_placement</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="c1"># TODO: XLA compiling doesn&#39;t seem to provide any benefit at the</span>
+        <span class="c1"># moment, revisit later after tensorflow has developed it further</span>
+        <span class="c1"># config.graph_options.optimizer_options.global_jit_level = (</span>
+        <span class="c1">#     tf.OptimizerOptions.ON_1)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sess</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">(</span><span class="n">graph</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">closed</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># initialize variables</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">soft_reset</span><span class="p">(</span><span class="n">include_trainable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">include_probes</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">final_bases</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">base_arrays_init</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span></div>
+
+<div class="viewcode-block" id="Simulator.soft_reset"><a class="viewcode-back" href="../../simulator.html#nengo_dl.simulator.Simulator.soft_reset">[docs]</a>    <span class="k">def</span> <span class="nf">soft_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">include_trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">include_probes</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Resets the internal state of the simulation, but doesn&#39;t</span>
+<span class="sd">        rebuild the graph.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        include_trainable : bool, optional</span>
+<span class="sd">            if True, also reset any training that has been performed on</span>
+<span class="sd">            network parameters (e.g., connection weights)</span>
+<span class="sd">        include_probes : bool, optional</span>
+<span class="sd">            if True, also clear probe data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">init_ops</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">local_init_op</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">global_init_op</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">include_trainable</span><span class="p">:</span>
+            <span class="n">init_ops</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">trainable_init_op</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">init_ops</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">include_probes</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">probes</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span> <span class="o">=</span> <span class="mi">0</span></div>
+
+<div class="viewcode-block" id="Simulator.step"><a class="viewcode-back" href="../../simulator.html#nengo_dl.simulator.Simulator.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Run the simulation for one time step.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        kwargs : dict</span>
+<span class="sd">            see :meth:`.run_steps`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">run_steps</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Simulator.run"><a class="viewcode-back" href="../../simulator.html#nengo_dl.simulator.Simulator.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_in_seconds</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Simulate for the given length of time.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        time_in_seconds : float</span>
+<span class="sd">            amount of time to run the simulation for</span>
+<span class="sd">        kwargs : dict</span>
+<span class="sd">            see :meth:`.run_steps`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">time_in_seconds</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run_steps</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Simulator.run_steps"><a class="viewcode-back" href="../../simulator.html#nengo_dl.simulator.Simulator.run_steps">[docs]</a>    <span class="k">def</span> <span class="nf">run_steps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="n">input_feeds</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Simulate for the given number of steps.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_steps : int</span>
+<span class="sd">            the number of simulation steps to be executed</span>
+<span class="sd">        input_feeds : dict of {:class:`~nengo:nengo.Node`: \</span>
+<span class="sd">                               :class:`~numpy:numpy.ndarray`}</span>
+<span class="sd">            override the values of input Nodes with the given data.  arrays</span>
+<span class="sd">            should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.</span>
+<span class="sd">        profile : bool, optional</span>
+<span class="sd">            if True, collect TensorFlow profiling information while the</span>
+<span class="sd">            simulation is running (this will slow down the simulation)</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        If ``unroll_simulation=x`` is specified, and ``n_steps &gt; x``, this will</span>
+<span class="sd">        repeatedly execute ``x`` timesteps until the the number of steps</span>
+<span class="sd">        executed is &gt;= ``n_steps``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SimulatorClosed</span><span class="p">(</span><span class="s2">&quot;Simulator cannot run because it is closed.&quot;</span><span class="p">)</span>
+
+        <span class="n">actual_steps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unroll</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">n_steps</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">unroll</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">actual_steps</span> <span class="o">!=</span> <span class="n">n_steps</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;Number of steps (</span><span class="si">%d</span><span class="s2">) is not an even multiple of &quot;</span>
+                <span class="s2">&quot;`unroll_simulation` (</span><span class="si">%d</span><span class="s2">).  Simulation will run for </span><span class="si">%d</span><span class="s2"> steps, &quot;</span>
+                <span class="s2">&quot;which may have unintended side effects.&quot;</span> <span class="o">%</span>
+                <span class="p">(</span><span class="n">n_steps</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">unroll</span><span class="p">,</span> <span class="n">actual_steps</span><span class="p">),</span> <span class="ne">RuntimeWarning</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">input_feeds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_check_data</span><span class="p">(</span><span class="n">input_feeds</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;out&quot;</span><span class="p">,</span> <span class="n">check_mini</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                             <span class="n">n_steps</span><span class="o">=</span><span class="n">n_steps</span><span class="p">)</span>
+
+        <span class="n">print_and_flush</span><span class="p">(</span><span class="s2">&quot;Simulation started&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">profile</span><span class="p">:</span>
+            <span class="n">run_options</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">RunOptions</span><span class="p">(</span><span class="n">trace_level</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">RunOptions</span><span class="o">.</span><span class="n">FULL_TRACE</span><span class="p">)</span>
+            <span class="n">run_metadata</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">RunMetadata</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">run_options</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">run_metadata</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># execute the simulation loop</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">steps_run</span><span class="p">,</span> <span class="n">probe_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+                <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">steps_run</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">probe_arrays</span><span class="p">],</span>
+                <span class="n">feed_dict</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_fill_feed</span><span class="p">(</span><span class="n">actual_steps</span><span class="p">,</span> <span class="n">input_feeds</span><span class="p">,</span>
+                                          <span class="n">start</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span><span class="p">),</span>
+                <span class="n">options</span><span class="o">=</span><span class="n">run_options</span><span class="p">,</span> <span class="n">run_metadata</span><span class="o">=</span><span class="n">run_metadata</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">InternalError</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">UnknownError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">op</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;PyFunc&quot;</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
+                    <span class="s2">&quot;Function &#39;</span><span class="si">%s</span><span class="s2">&#39; caused an error (see error log above)&quot;</span> <span class="o">%</span>
+                    <span class="n">e</span><span class="o">.</span><span class="n">op</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">e</span>  <span class="c1"># pragma: no cover</span>
+
+        <span class="c1"># update probe data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_probe_data</span><span class="p">(</span><span class="n">probe_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">)</span>
+
+        <span class="c1"># update n_steps</span>
+        <span class="c1"># note: we update n_steps according to the number of steps that the</span>
+        <span class="c1"># user asked for, not the number of steps that were actually run (</span>
+        <span class="c1"># in the case of uneven unroll_simulation)</span>
+        <span class="k">assert</span> <span class="n">steps_run</span> <span class="o">==</span> <span class="n">actual_steps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span> <span class="o">+=</span> <span class="n">n_steps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span>
+
+        <span class="k">if</span> <span class="n">profile</span><span class="p">:</span>
+            <span class="n">timeline</span> <span class="o">=</span> <span class="n">Timeline</span><span class="p">(</span><span class="n">run_metadata</span><span class="o">.</span><span class="n">step_stats</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">/nengo_dl_profile.json&quot;</span> <span class="o">%</span> <span class="n">DATA_DIR</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">timeline</span><span class="o">.</span><span class="n">generate_chrome_trace_format</span><span class="p">())</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">Simulation completed in </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span>
+              <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)))</span></div>
+
+<div class="viewcode-block" id="Simulator.train"><a class="viewcode-back" href="../../simulator.html#nengo_dl.simulator.Simulator.train">[docs]</a>    <span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="n">n_epochs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">objective</span><span class="o">=</span><span class="s2">&quot;mse&quot;</span><span class="p">,</span>
+              <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Optimize the trainable parameters of the network using the given</span>
+<span class="sd">        optimization method, minimizing the objective value over the given</span>
+<span class="sd">        inputs and targets.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        inputs : dict of {:class:`~nengo:nengo.Node`: \</span>
+<span class="sd">                          :class:`~numpy:numpy.ndarray`}</span>
+<span class="sd">            input values for Nodes in the network; arrays should have shape</span>
+<span class="sd">            ``(batch_size, n_steps, node.size_out)``</span>
+<span class="sd">        targets : dict of {:class:`~nengo:nengo.Probe`: \</span>
+<span class="sd">                           :class:`~numpy:numpy.ndarray`}</span>
+<span class="sd">            desired output value at Probes, corresponding to each value in</span>
+<span class="sd">            ``inputs``; arrays should have shape</span>
+<span class="sd">            ``(batch_size, n_steps, probe.size_in)``</span>
+<span class="sd">        optimizer : ``tf.train.Optimizer``</span>
+<span class="sd">            Tensorflow optimizer, e.g.</span>
+<span class="sd">            ``tf.train.GradientDescentOptimizer(learning_rate=0.1)``</span>
+<span class="sd">        n_epochs : int, optional</span>
+<span class="sd">            run training for the given number of epochs (complete passes</span>
+<span class="sd">            through ``inputs``)</span>
+<span class="sd">        objective : ``&quot;mse&quot;`` or callable, optional</span>
+<span class="sd">            the objective to be minimized. passing ``&quot;mse&quot;`` will train with</span>
+<span class="sd">            mean squared error. a custom function</span>
+<span class="sd">            ``f(output, target) -&gt; loss`` can be passed that consumes the</span>
+<span class="sd">            actual output and target output for a probe in ``targets``</span>
+<span class="sd">            and returns a ``tf.Tensor`` representing the scalar loss value for</span>
+<span class="sd">            that Probe (loss will be averaged across Probes).</span>
+<span class="sd">        shuffle : bool, optional</span>
+<span class="sd">            if True, randomize the data into different minibatches each epoch</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        - Deep learning methods require the network to be differentiable, which</span>
+<span class="sd">          means that trying to train a network with non-differentiable elements</span>
+<span class="sd">          will result in an error.  Examples of common non-differentiable</span>
+<span class="sd">          elements include :class:`~nengo:nengo.LIF`,</span>
+<span class="sd">          :class:`~nengo:nengo.Direct`, or processes/neurons that don&#39;t have a</span>
+<span class="sd">          custom TensorFlow implementation (see</span>
+<span class="sd">          :class:`.processes.SimProcessBuilder`/</span>
+<span class="sd">          :class:`.neurons.SimNeuronsBuilder`)</span>
+
+<span class="sd">        - Most TensorFlow optimizers do not have GPU support for networks with</span>
+<span class="sd">          sparse reads, which are a common element in Nengo models.  If your</span>
+<span class="sd">          network contains sparse reads then training will have to be</span>
+<span class="sd">          executed on the CPU (by creating the simulator via</span>
+<span class="sd">          ``nengo_dl.Simulator(..., device=&quot;/cpu:0&quot;)``), or is limited to</span>
+<span class="sd">          optimizers with GPU support (currently this is only</span>
+<span class="sd">          ``tf.train.GradientDescentOptimizer``). Follow `this issue</span>
+<span class="sd">          &lt;https://github.com/tensorflow/tensorflow/issues/2314&gt;`_ for updates</span>
+<span class="sd">          on Tensorflow GPU support.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">n_steps</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># error checking</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SimulatorClosed</span><span class="p">(</span><span class="s2">&quot;Simulator cannot be trained because it is &quot;</span>
+                                  <span class="s2">&quot;closed.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_data</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;out&quot;</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="n">n_steps</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_data</span><span class="p">(</span><span class="n">targets</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;in&quot;</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="n">n_steps</span><span class="p">)</span>
+
+        <span class="c1"># check for non-differentiable elements in graph</span>
+        <span class="c1"># utils.find_non_differentiable(</span>
+        <span class="c1">#     [self.tensor_graph.invariant_ph[n] for n in inputs],</span>
+        <span class="c1">#     [self.tensor_graph.probe_arrays[self.model.probes.index(p)]</span>
+        <span class="c1">#      for p in targets])</span>
+
+        <span class="c1"># build optimizer op</span>
+        <span class="n">opt_op</span><span class="p">,</span> <span class="n">opt_slots_init</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">build_optimizer</span><span class="p">(</span>
+            <span class="n">optimizer</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">targets</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span> <span class="n">objective</span><span class="p">)</span>
+
+        <span class="c1"># initialize any variables that were created by the optimizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">opt_slots_init</span><span class="p">)</span>
+
+        <span class="n">progress</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">ProgressBar</span><span class="p">(</span><span class="n">n_epochs</span><span class="p">,</span> <span class="s2">&quot;Training&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_epochs</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">inp</span><span class="p">,</span> <span class="n">tar</span> <span class="ow">in</span> <span class="n">utils</span><span class="o">.</span><span class="n">minibatch_generator</span><span class="p">(</span>
+                    <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="p">,</span>
+                    <span class="n">shuffle</span><span class="o">=</span><span class="n">shuffle</span><span class="p">):</span>
+                <span class="c1"># TODO: set up queue to feed in data more efficiently</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">soft_reset</span><span class="p">()</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">opt_op</span><span class="p">],</span> <span class="n">feed_dict</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_fill_feed</span><span class="p">(</span>
+                        <span class="n">n_steps</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">tar</span><span class="p">))</span>
+                <span class="k">except</span> <span class="n">tf</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">InvalidArgumentError</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
+                        <span class="s2">&quot;TensorFlow does not yet support this optimizer on &quot;</span>
+                        <span class="s2">&quot;the GPU; try `Simulator(..., device=&#39;/cpu:0&#39;)`&quot;</span><span class="p">)</span>
+            <span class="n">progress</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">soft_reset</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Simulator.loss"><a class="viewcode-back" href="../../simulator.html#nengo_dl.simulator.Simulator.loss">[docs]</a>    <span class="k">def</span> <span class="nf">loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">objective</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the loss value for the given objective and inputs/targets.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        inputs : dict of {:class:`~nengo:nengo.Node`: \</span>
+<span class="sd">                          :class:`~numpy:numpy.ndarray`}</span>
+<span class="sd">            input values for Nodes in the network; arrays should have shape</span>
+<span class="sd">            ``(batch_size, n_steps, node.size_out)``</span>
+<span class="sd">        targets : dict of {:class:`~nengo:nengo.Probe`: \</span>
+<span class="sd">                           :class:`~numpy:numpy.ndarray`}</span>
+<span class="sd">            desired output value at Probes, corresponding to each value in</span>
+<span class="sd">            ``inputs``; arrays should have shape</span>
+<span class="sd">            ``(batch_size, n_steps, probe.size_in)``</span>
+<span class="sd">        objective : ``&quot;mse&quot;`` or callable</span>
+<span class="sd">            the objective used to compute loss. passing ``&quot;mse&quot;`` will use</span>
+<span class="sd">            mean squared error. a custom function</span>
+<span class="sd">            ``f(output, target) -&gt; loss`` can be passed that consumes the</span>
+<span class="sd">            actual output and target output for a probe in ``targets``</span>
+<span class="sd">            and returns a ``tf.Tensor`` representing the scalar loss value for</span>
+<span class="sd">            that Probe (loss will be averaged across Probes)</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Calling this function will reset all values in the network, so it</span>
+<span class="sd">        should not be intermixed with calls to :meth:`.Simulator.run`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">n_steps</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># error checking</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SimulatorClosed</span><span class="p">(</span><span class="s2">&quot;Loss cannot be computed after simulator is &quot;</span>
+                                  <span class="s2">&quot;closed.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_data</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;out&quot;</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="n">n_steps</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_data</span><span class="p">(</span><span class="n">targets</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;in&quot;</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="n">n_steps</span><span class="p">)</span>
+
+        <span class="c1"># get loss op</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">build_loss</span><span class="p">(</span><span class="n">objective</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">targets</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+
+        <span class="c1"># compute loss on data</span>
+        <span class="n">loss_val</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="n">tar</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">minibatch_generator</span><span class="p">(</span>
+                <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">soft_reset</span><span class="p">()</span>
+            <span class="n">loss_val</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+                <span class="n">loss</span><span class="p">,</span> <span class="n">feed_dict</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_fill_feed</span><span class="p">(</span><span class="n">n_steps</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">tar</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">soft_reset</span><span class="p">()</span>
+        <span class="n">loss_val</span> <span class="o">/=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">loss_val</span></div>
+
+    <span class="k">def</span> <span class="nf">_fill_feed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a feed dictionary containing values for all the placeholder</span>
+<span class="sd">        inputs in the network, which will be passed to ``tf.Session.run``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_steps : int</span>
+<span class="sd">            the number of execution steps</span>
+<span class="sd">        input_feeds : dict of {:class:`~nengo:nengo.Node`: \</span>
+<span class="sd">                               :class:`~numpy:numpy.ndarray`}</span>
+<span class="sd">            override the values of input Nodes with the given data.  arrays</span>
+<span class="sd">            should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.</span>
+<span class="sd">        targets : dict of {:class:`~nengo:nengo.Probe`: \</span>
+<span class="sd">                           :class:`~numpy:numpy.ndarray`}, optional</span>
+<span class="sd">            values for target placeholders (only necessary if loss is being</span>
+<span class="sd">            computed, e.g. when training the network)</span>
+<span class="sd">        start : int, optional</span>
+<span class="sd">            initial value of simulator timestep</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}</span>
+<span class="sd">            feed values for placeholder tensors in the network</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># fill in loop variables</span>
+        <span class="n">feed_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">step_var</span><span class="p">:</span> <span class="n">start</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">stop_var</span><span class="p">:</span> <span class="n">start</span> <span class="o">+</span> <span class="n">n_steps</span>
+        <span class="p">}</span>
+
+        <span class="c1"># fill in values for base variables from previous run</span>
+        <span class="c1"># TODO: remove this if we&#39;re sure we&#39;re not going back to the tensor</span>
+        <span class="c1"># approach</span>
+        <span class="n">feed_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">base_vars</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">final_bases</span><span class="p">)</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">op</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;Placeholder&quot;</span><span class="p">})</span>
+
+        <span class="c1"># fill in input values</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_inputs</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">)</span>
+        <span class="n">feed_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+
+        <span class="c1"># fill in target values</span>
+        <span class="k">if</span> <span class="n">targets</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">feed_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">target_phs</span><span class="p">[</span><span class="n">p</span><span class="p">]:</span> <span class="n">np</span><span class="o">.</span><span class="n">moveaxis</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">targets</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+
+        <span class="k">return</span> <span class="n">feed_dict</span>
+
+    <span class="k">def</span> <span class="nf">_generate_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_feeds</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate inputs for the network (the output values of each Node with</span>
+<span class="sd">        no incoming connections).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        input_feeds : dict of {:class:`~nengo:nengo.Node`: \</span>
+<span class="sd">                               :class:`~numpy:numpy.ndarray`}</span>
+<span class="sd">            override the values of input Nodes with the given data.  arrays</span>
+<span class="sd">            should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.</span>
+<span class="sd">        n_steps : int</span>
+<span class="sd">            number of simulation timesteps for which to generate input data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">input_feeds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">input_feeds</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">feed_vals</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">invariant_inputs</span><span class="p">:</span>
+            <span class="c1"># if the output signal is not in sig map, that means no operators</span>
+            <span class="c1"># use the output of this node. similarly, if node.size_out is 0,</span>
+            <span class="c1"># the node isn&#39;t producing any output values.</span>
+            <span class="n">using_output</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;out&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">sig_map</span> <span class="ow">and</span>
+                <span class="n">n</span><span class="o">.</span><span class="n">size_out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">using_output</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">input_feeds</span><span class="p">:</span>
+                    <span class="c1"># move minibatch dimension to the end</span>
+                    <span class="n">feed_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">moveaxis</span><span class="p">(</span><span class="n">input_feeds</span><span class="p">[</span><span class="n">n</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+                    <span class="n">feed_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">output</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">],</span>
+                                       <span class="p">(</span><span class="n">n_steps</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">invariant_funcs</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
+
+                    <span class="n">feed_val</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span> <span class="o">+</span> <span class="n">n_steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                        <span class="c1"># note: need to copy the output of func, as func</span>
+                        <span class="c1"># may mutate its outputs in-place on subsequent calls</span>
+                        <span class="n">feed_val</span> <span class="o">+=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span><span class="p">))]</span>
+
+                    <span class="n">feed_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">feed_val</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                    <span class="n">feed_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">feed_val</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
+                                       <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">))</span>
+
+                <span class="n">feed_vals</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">invariant_ph</span><span class="p">[</span><span class="n">n</span><span class="p">]]</span> <span class="o">=</span> <span class="n">feed_val</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span>
+                  <span class="n">n</span><span class="o">.</span><span class="n">output</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">invariant_funcs</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+                <span class="c1"># note: we still call the function even if the output</span>
+                <span class="c1"># is not being used, because it may have side-effects</span>
+                <span class="n">func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">invariant_funcs</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span> <span class="o">+</span> <span class="n">n_steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                    <span class="n">func</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">feed_vals</span>
+
+    <span class="k">def</span> <span class="nf">_update_probe_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">probe_data</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Updates the stored probe data (since the last reset) with the data</span>
+<span class="sd">        from the latest run.</span>
+
+<span class="sd">        Downsamples the probe data returned from tensorflow (from every</span>
+<span class="sd">        simulation timestep) according to probe `sample_every` and the number</span>
+<span class="sd">        of steps run.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        probe_data : list of `np.ndarray`</span>
+<span class="sd">            probe data from every timestep</span>
+<span class="sd">        start : int</span>
+<span class="sd">            the simulation timestep at which probe data starts</span>
+<span class="sd">        n_steps : int</span>
+<span class="sd">            the number of timesteps over which we want to collect data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># remove any extra timesteps (due to `unroll_simulation` mismatch)</span>
+        <span class="n">probe_data</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="p">[:</span><span class="n">n_steps</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">probe_data</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">probes</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">sample_every</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># downsample probe according to `sample_every`</span>
+                <span class="n">period</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">sample_every</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span>
+                <span class="n">steps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">start</span> <span class="o">+</span> <span class="n">n_steps</span><span class="p">)</span>
+                <span class="n">probe_data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">probe_data</span><span class="p">[</span><span class="n">i</span><span class="p">][(</span><span class="n">steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">period</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">]</span>
+
+            <span class="c1"># update stored probe data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">+=</span> <span class="p">[</span><span class="n">probe_data</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
+
+<div class="viewcode-block" id="Simulator.save_params"><a class="viewcode-back" href="../../simulator.html#nengo_dl.simulator.Simulator.save_params">[docs]</a>    <span class="k">def</span> <span class="nf">save_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Save trainable network parameters to the given ``path``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : str</span>
+<span class="sd">            filepath of parameter output file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span><span class="s2">&quot;Simulation has been closed, cannot save &quot;</span>
+                                  <span class="s2">&quot;parameters&quot;</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">as_default</span><span class="p">():</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Saver</span><span class="p">()</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Model parameters saved to </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Simulator.load_params"><a class="viewcode-back" href="../../simulator.html#nengo_dl.simulator.Simulator.load_params">[docs]</a>    <span class="k">def</span> <span class="nf">load_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Load trainable network parameters from the given ``path``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : str</span>
+<span class="sd">            filepath of parameter input file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span><span class="s2">&quot;Simulation has been closed, cannot load &quot;</span>
+                                  <span class="s2">&quot;parameters&quot;</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">as_default</span><span class="p">():</span>
+            <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Saver</span><span class="p">()</span><span class="o">.</span><span class="n">restore</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Simulator.print_params"><a class="viewcode-back" href="../../simulator.html#nengo_dl.simulator.Simulator.print_params">[docs]</a>    <span class="k">def</span> <span class="nf">print_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Print current values of trainable network parameters.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        msg : str, optional</span>
+<span class="sd">            title for print output, useful to differentiate multiple print</span>
+<span class="sd">            calls</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span><span class="s2">&quot;Simulation has been closed, cannot print &quot;</span>
+                                  <span class="s2">&quot;parameters&quot;</span><span class="p">)</span>
+
+        <span class="n">param_sigs</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">sig_map</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                      <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">trainable</span><span class="p">}</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">bases</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="o">.</span><span class="n">key</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">base_vars</span><span class="p">[</span><span class="n">keys</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">key</span><span class="p">)]</span>
+                  <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">param_sigs</span><span class="o">.</span><span class="n">values</span><span class="p">()}</span>
+
+        <span class="n">param_vals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">:&quot;</span> <span class="o">%</span> <span class="s2">&quot;Parameters&quot;</span> <span class="k">if</span> <span class="n">msg</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">msg</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">sig</span><span class="p">,</span> <span class="n">tens</span> <span class="ow">in</span> <span class="n">param_sigs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">param_vals</span><span class="p">[</span><span class="n">tens</span><span class="o">.</span><span class="n">key</span><span class="p">][</span><span class="n">tens</span><span class="o">.</span><span class="n">indices</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="Simulator.close"><a class="viewcode-back" href="../../simulator.html#nengo_dl.simulator.Simulator.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Close the simulation, freeing resources.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The simulation cannot be restarted after it is closed.  This is not a</span>
+<span class="sd">        technical limitation, just a design decision made for all Nengo</span>
+<span class="sd">        simulators.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">closed</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sess</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="c1"># note: we use getattr in case it crashes before the summary</span>
+            <span class="c1"># object is created</span>
+            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;summary&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">summary</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">,</span> <span class="n">exc_value</span><span class="p">,</span> <span class="n">traceback</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dt</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;(float) The time step of the simulator.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">dt</span>
+
+    <span class="nd">@dt</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">dt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dummy</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">ReadonlyError</span><span class="p">(</span><span class="n">attr</span><span class="o">=</span><span class="s1">&#39;dt&#39;</span><span class="p">,</span> <span class="n">obj</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Raise a RuntimeWarning if the Simulator is deallocated while open.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;Simulator with model=</span><span class="si">%s</span><span class="s2"> was deallocated while open. &quot;</span>
+                <span class="s2">&quot;Simulators should be closed manually to ensure resources &quot;</span>
+                <span class="s2">&quot;are properly freed.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="ne">RuntimeWarning</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Simulator.trange"><a class="viewcode-back" href="../../simulator.html#nengo_dl.simulator.Simulator.trange">[docs]</a>    <span class="k">def</span> <span class="nf">trange</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a vector of times matching probed data.</span>
+
+<span class="sd">        Note that the range does not start at 0 as one might expect, but at</span>
+<span class="sd">        the first timestep (i.e., ``dt``).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dt : float, optional</span>
+<span class="sd">            the sampling period of the probe to create a range for;</span>
+<span class="sd">            if None, the simulator&#39;s ``dt`` will be used.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span> <span class="k">if</span> <span class="n">dt</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">dt</span>
+        <span class="n">n_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dt</span> <span class="o">/</span> <span class="n">dt</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">dt</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Simulator.check_gradients"><a class="viewcode-back" href="../../simulator.html#nengo_dl.simulator.Simulator.check_gradients">[docs]</a>    <span class="k">def</span> <span class="nf">check_gradients</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outputs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Perform gradient checks for the network (used to verify that the</span>
+<span class="sd">        analytic gradients are correct).</span>
+
+<span class="sd">        Raises a simulation error if the difference between analytic and</span>
+<span class="sd">        numeric gradient is greater than ``atol + rtol * numeric_grad``</span>
+<span class="sd">        (elementwise).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        outputs : ``tf.Tensor`` or list of ``tf.Tensor``</span>
+<span class="sd">            compute gradients wrt this output (if None, computes wrt each</span>
+<span class="sd">            output probe)</span>
+<span class="sd">        atol : float, optional</span>
+<span class="sd">            absolute error tolerance</span>
+<span class="sd">        rtol : float, optional</span>
+<span class="sd">            relative (to numeric grad) error tolerance</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Calling this function will reset all values in the network, so it</span>
+<span class="sd">        should not be intermixed with calls to :meth:`.Simulator.run`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">delta</span> <span class="o">=</span> <span class="mf">1e-3</span>
+        <span class="n">n_steps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unroll</span> <span class="o">*</span> <span class="mi">2</span>
+
+        <span class="n">feed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fill_feed</span><span class="p">(</span>
+            <span class="n">n_steps</span><span class="p">,</span> <span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="n">n</span><span class="o">.</span><span class="n">size_out</span><span class="p">))</span>
+                      <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">invariant_inputs</span><span class="p">},</span>
+            <span class="p">{</span><span class="n">p</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">size_in</span><span class="p">))</span>
+             <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">target_phs</span><span class="p">})</span>
+
+        <span class="k">if</span> <span class="n">outputs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># note: the x + 0 is necessary because `gradient_checker`</span>
+            <span class="c1"># doesn&#39;t work properly if the output variable is a tensorarray</span>
+            <span class="n">outputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="o">+</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">probe_arrays</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="n">outputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">outputs</span><span class="p">]</span>
+
+        <span class="c1"># check gradient wrt inp</span>
+        <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">inp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">invariant_ph</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">inp_shape</span> <span class="o">=</span> <span class="n">inp</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()</span><span class="o">.</span><span class="n">as_list</span><span class="p">()</span>
+            <span class="n">inp_shape</span> <span class="o">=</span> <span class="p">[</span><span class="n">n_steps</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">inp_shape</span><span class="p">]</span>
+            <span class="n">inp_tens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">invariant_ph</span><span class="p">[</span><span class="n">node</span><span class="p">]</span>
+            <span class="n">feed</span><span class="p">[</span><span class="n">inp_tens</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">feed</span><span class="p">[</span><span class="n">inp_tens</span><span class="p">])</span>
+            <span class="n">inp_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">feed</span><span class="p">[</span><span class="n">inp_tens</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">out</span> <span class="ow">in</span> <span class="n">outputs</span><span class="p">:</span>
+                <span class="n">out_shape</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()</span><span class="o">.</span><span class="n">as_list</span><span class="p">()</span>
+                <span class="n">out_shape</span> <span class="o">=</span> <span class="p">[</span><span class="n">n_steps</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">out_shape</span><span class="p">]</span>
+
+                <span class="c1"># we need to compute the numeric jacobian manually, to</span>
+                <span class="c1"># correctly handle variables (tensorflow doesn&#39;t expect</span>
+                <span class="c1"># state ops in `compute_gradient`, because it doesn&#39;t define</span>
+                <span class="c1"># gradients for them)</span>
+                <span class="n">numeric</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">inp_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span>
+                                    <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">out_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)))</span>
+
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numeric</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">soft_reset</span><span class="p">()</span>
+                    <span class="n">inp_val</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span>
+                    <span class="n">plus</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">feed_dict</span><span class="o">=</span><span class="n">feed</span><span class="p">)</span>
+
+                    <span class="bp">self</span><span class="o">.</span><span class="n">soft_reset</span><span class="p">()</span>
+                    <span class="n">inp_val</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">delta</span>
+                    <span class="n">minus</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">feed_dict</span><span class="o">=</span><span class="n">feed</span><span class="p">)</span>
+
+                    <span class="n">numeric</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">((</span><span class="n">plus</span> <span class="o">-</span> <span class="n">minus</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">delta</span><span class="p">))</span>
+
+                    <span class="n">inp_val</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">soft_reset</span><span class="p">()</span>
+
+                <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span> <span class="o">=</span> <span class="n">gradient_checker</span><span class="o">.</span><span class="n">_compute_dx_and_dy</span><span class="p">(</span>
+                    <span class="n">inp</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">out_shape</span><span class="p">)</span>
+
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">as_default</span><span class="p">():</span>
+                    <span class="n">analytic</span> <span class="o">=</span> <span class="n">gradient_checker</span><span class="o">.</span><span class="n">_compute_theoretical_jacobian</span><span class="p">(</span>
+                        <span class="n">inp</span><span class="p">,</span> <span class="n">inp_shape</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">inp_shape</span><span class="p">),</span> <span class="n">dy</span><span class="p">,</span> <span class="n">out_shape</span><span class="p">,</span> <span class="n">dx</span><span class="p">,</span>
+                        <span class="n">extra_feed_dict</span><span class="o">=</span><span class="n">feed</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">analytic</span><span class="p">))</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">numeric</span><span class="p">)):</span>
+                    <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span><span class="s2">&quot;NaNs detected in gradient&quot;</span><span class="p">)</span>
+                <span class="n">fail</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">analytic</span> <span class="o">-</span> <span class="n">numeric</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">atol</span> <span class="o">+</span> <span class="n">rtol</span> <span class="o">*</span> <span class="nb">abs</span><span class="p">(</span><span class="n">numeric</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">fail</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
+                        <span class="s2">&quot;Gradient check failed for input </span><span class="si">%s</span><span class="s2"> and output </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span>
+                        <span class="s2">&quot;numeric values:</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span>
+                        <span class="s2">&quot;analytic values:</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">numeric</span><span class="p">[</span><span class="n">fail</span><span class="p">],</span>
+                                                    <span class="n">analytic</span><span class="p">[</span><span class="n">fail</span><span class="p">]))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">soft_reset</span><span class="p">()</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Gradient check passed&quot;</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_check_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;out&quot;</span><span class="p">,</span> <span class="n">check_mini</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Performs error checking on simulation data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : dict of {``nengo object``: :class:`~numpy:numpy.ndarray`}</span>
+<span class="sd">            array of data associated with given object in model</span>
+<span class="sd">        mode : &quot;in&quot; or &quot;out&quot;, optional</span>
+<span class="sd">            whether this data corresponds to the input or output of the</span>
+<span class="sd">            nengo object</span>
+<span class="sd">        check_mini : bool, optional</span>
+<span class="sd">            if True, also validate minibatch_size</span>
+<span class="sd">        n_steps : int, optional</span>
+<span class="sd">            number of simulation steps (if None, will use sim.unroll)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span> <span class="k">if</span> <span class="n">check_mini</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">unroll</span> <span class="k">if</span> <span class="n">n_steps</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">n_steps</span><span class="p">,</span>
+                     <span class="n">n</span><span class="o">.</span><span class="n">size_out</span> <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;out&quot;</span> <span class="k">else</span> <span class="n">n</span><span class="o">.</span><span class="n">size_in</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">x</span> <span class="o">!=</span> <span class="n">y</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
+                    <span class="s2">&quot;Shape of data array </span><span class="si">%s</span><span class="s2"> does not match expected shape &quot;</span>
+                    <span class="s2">&quot;(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">.size_</span><span class="si">%s</span><span class="s2">) -&gt; </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span>
+                    <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+                     <span class="s2">&quot;sim.minibatch_size&quot;</span> <span class="k">if</span> <span class="n">check_mini</span> <span class="k">else</span> <span class="s2">&quot;_&quot;</span><span class="p">,</span>
+                     <span class="s2">&quot;sim.unroll&quot;</span> <span class="k">if</span> <span class="n">n_steps</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;n_steps&quot;</span><span class="p">,</span>
+                     <span class="n">n</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">shape</span><span class="p">))</span></div>
+
+
+<span class="k">class</span> <span class="nc">ProbeDict</span><span class="p">(</span><span class="n">Mapping</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Map from :class:`~nengo:nengo.Probe` -&gt; :class:`~numpy:numpy.ndarray`,</span>
+<span class="sd">    used to access output of the model after simulation.</span>
+
+<span class="sd">    This is more like a view on the dict that the simulator manipulates.</span>
+<span class="sd">    However, for speed reasons, the simulator uses Python lists,</span>
+<span class="sd">    and we want to return NumPy arrays. Additionally, this mapping</span>
+<span class="sd">    is readonly, which is more appropriate for its purpose.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    raw : dict of {:class:`~nengo:nengo.Probe`: \</span>
+<span class="sd">                   list of :class:`~numpy:numpy.ndarray`}</span>
+<span class="sd">        the raw probe output from the simulator (a list of arrays containing</span>
+<span class="sd">        the output from each ``run_steps`` execution segment)</span>
+<span class="sd">    minibatches : dict of {:class:`~nengo:nengo.Probe`: int or None}</span>
+<span class="sd">        the minibatch size for each probe in the dictionary (or -1 if the</span>
+<span class="sd">        probed signal does not have a minibatch dimension)</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    ProbeDict should never be created/accessed directly by the user, but rather</span>
+<span class="sd">    via ``sim.data`` (which is an instance of ProbeDict).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw</span><span class="p">,</span> <span class="n">minibatches</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">raw</span> <span class="o">=</span> <span class="n">raw</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">minibatches</span> <span class="o">=</span> <span class="n">minibatches</span>
+
+        <span class="c1"># TODO: add cache back in?</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">rval</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rval</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="c1"># combine data from run_steps iterations</span>
+            <span class="n">rval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">rval</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">minibatches</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">minibatches</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># get rid of batch dimension</span>
+                    <span class="n">rval</span> <span class="o">=</span> <span class="n">rval</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># move batch dimension to front</span>
+                    <span class="n">rval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">moveaxis</span><span class="p">(</span><span class="n">rval</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+            <span class="n">rval</span><span class="o">.</span><span class="n">setflags</span><span class="p">(</span><span class="n">write</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">rval</span>
+
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">raw</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">raw</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.4.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../../_modules/nengo_dl/simulator.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../../../v1.0.0/_modules/nengo_dl/simulator.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.2/_modules/nengo_dl/simulator.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.1/_modules/nengo_dl/simulator.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.0/_modules/nengo_dl/simulator.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.2/_modules/nengo_dl/simulator.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.1/_modules/nengo_dl/simulator.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.0/_modules/nengo_dl/simulator.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd>v0.4.0</dd>
+                
+            
+                
+                    <dd><a href="../../../v0.3.1/_modules/nengo_dl/simulator.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.3.0/_modules/nengo_dl/simulator.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.2.0/_modules/nengo_dl/simulator.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../..//_modules/nengo_dl/simulator.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'0.4.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

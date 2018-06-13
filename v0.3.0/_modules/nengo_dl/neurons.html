@@ -1,0 +1,554 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>nengo_dl.neurons &mdash; NengoDL 0.3.0 docs</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../frontend.html">User API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.html">Developer API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>nengo_dl.neurons</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for nengo_dl.neurons</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">from</span> <span class="nn">nengo.neurons</span> <span class="k">import</span> <span class="n">RectifiedLinear</span><span class="p">,</span> <span class="n">Sigmoid</span><span class="p">,</span> <span class="n">LIF</span><span class="p">,</span> <span class="n">LIFRate</span>
+<span class="kn">from</span> <span class="nn">nengo.builder.neurons</span> <span class="k">import</span> <span class="n">SimNeurons</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+
+<span class="kn">from</span> <span class="nn">nengo_dl</span> <span class="k">import</span> <span class="n">utils</span>
+<span class="kn">from</span> <span class="nn">nengo_dl.builder</span> <span class="k">import</span> <span class="n">Builder</span><span class="p">,</span> <span class="n">OpBuilder</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="SimNeuronsBuilder"><a class="viewcode-back" href="../../neurons.html#nengo_dl.neurons.SimNeuronsBuilder">[docs]</a><span class="nd">@Builder</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">SimNeurons</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">SimNeuronsBuilder</span><span class="p">(</span><span class="n">OpBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Builds a group of :class:`~nengo:nengo.builder.neurons.SimNeurons`</span>
+<span class="sd">    operators.</span>
+
+<span class="sd">    Calls the appropriate sub-build class for the different neuron types.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    TF_NEURON_IMPL : list of :class:`~nengo:nengo.neurons.NeuronType`</span>
+<span class="sd">        the neuron types that have a custom implementation</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">TF_NEURON_IMPL</span> <span class="o">=</span> <span class="p">(</span><span class="n">RectifiedLinear</span><span class="p">,</span> <span class="n">Sigmoid</span><span class="p">,</span> <span class="n">LIF</span><span class="p">,</span> <span class="n">LIFRate</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;sim_neurons&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">([</span><span class="n">op</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;J </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">J</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+
+        <span class="n">neuron_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">neurons</span><span class="p">)</span>
+
+        <span class="c1"># if we have a custom tensorflow implementation for this neuron type,</span>
+        <span class="c1"># then we build that. otherwise we&#39;ll just execute the neuron step</span>
+        <span class="c1"># function externally (using `tf.py_func`), so we just need to set up</span>
+        <span class="c1"># the inputs/outputs for that.</span>
+        <span class="k">if</span> <span class="n">neuron_type</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">TF_NEURON_IMPL</span><span class="p">:</span>
+            <span class="c1"># note: we do this two-step check (even though it&#39;s redundant) to</span>
+            <span class="c1"># make sure that TF_NEURON_IMPL is kept up to date</span>
+
+            <span class="k">if</span> <span class="n">neuron_type</span> <span class="o">==</span> <span class="n">RectifiedLinear</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">built_neurons</span> <span class="o">=</span> <span class="n">RectifiedLinearBuilder</span><span class="p">(</span><span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">neuron_type</span> <span class="o">==</span> <span class="n">Sigmoid</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">built_neurons</span> <span class="o">=</span> <span class="n">SigmoidBuilder</span><span class="p">(</span><span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">neuron_type</span> <span class="o">==</span> <span class="n">LIFRate</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">built_neurons</span> <span class="o">=</span> <span class="n">LIFRateBuilder</span><span class="p">(</span><span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">neuron_type</span> <span class="o">==</span> <span class="n">LIF</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">built_neurons</span> <span class="o">=</span> <span class="n">LIFBuilder</span><span class="p">(</span><span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">built_neurons</span> <span class="o">=</span> <span class="n">GenericNeuronBuilder</span><span class="p">(</span><span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SimNeuronsBuilder.build_step"><a class="viewcode-back" href="../../neurons.html#nengo_dl.neurons.SimNeuronsBuilder.build_step">[docs]</a>    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">built_neurons</span><span class="o">.</span><span class="n">build_step</span><span class="p">(</span><span class="n">signals</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="GenericNeuronBuilder"><a class="viewcode-back" href="../../neurons.html#nengo_dl.neurons.GenericNeuronBuilder">[docs]</a><span class="k">class</span> <span class="nc">GenericNeuronBuilder</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Builds all neuron types for which there is no custom Tensorflow</span>
+<span class="sd">    implementation.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    These will be executed as native Python functions, requiring execution to</span>
+<span class="sd">    move in and out of Tensorflow.  This can significantly slow down the</span>
+<span class="sd">    simulation, so any performance-critical neuron models should consider</span>
+<span class="sd">    adding a custom Tensorflow implementation for their neuron type instead.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">J_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">J</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">output</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state_data</span> <span class="o">=</span> <span class="p">[</span><span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">states</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+                           <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">states</span><span class="p">))]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">prev_result</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">def</span> <span class="nf">neuron_step_math</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="o">*</span><span class="n">states</span><span class="p">):</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">J_offset</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">state_offset</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">states</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">op</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ops</span><span class="p">):</span>
+                <span class="c1"># slice out the individual state vectors from the overall</span>
+                <span class="c1"># array</span>
+                <span class="n">op_J</span> <span class="o">=</span> <span class="n">J</span><span class="p">[</span><span class="n">J_offset</span><span class="p">:</span><span class="n">J_offset</span> <span class="o">+</span> <span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                <span class="n">J_offset</span> <span class="o">+=</span> <span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                <span class="n">op_states</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">states</span><span class="p">):</span>
+                    <span class="n">op_states</span> <span class="o">+=</span> <span class="p">[</span><span class="n">states</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">state_offset</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span>
+                                  <span class="n">state_offset</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]]</span>
+                    <span class="n">state_offset</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                <span class="c1"># call step_math function</span>
+                <span class="c1"># note: `op_states` are views into `states`, which will</span>
+                <span class="c1"># be updated in-place</span>
+                <span class="n">mini_out</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">signals</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">):</span>
+                    <span class="c1"># blank output variable</span>
+                    <span class="n">neuron_output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+                        <span class="n">op</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                    <span class="n">op</span><span class="o">.</span><span class="n">neurons</span><span class="o">.</span><span class="n">step_math</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">op_J</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">j</span><span class="p">],</span> <span class="n">neuron_output</span><span class="p">,</span>
+                                         <span class="o">*</span><span class="p">[</span><span class="n">s</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">op_states</span><span class="p">])</span>
+                    <span class="n">mini_out</span> <span class="o">+=</span> <span class="p">[</span><span class="n">neuron_output</span><span class="p">]</span>
+                <span class="n">neuron_output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">mini_out</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+                <span class="c1"># concatenate outputs</span>
+                <span class="k">if</span> <span class="n">output</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">output</span> <span class="o">=</span> <span class="n">neuron_output</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">output</span><span class="p">,</span> <span class="n">neuron_output</span><span class="p">),</span>
+                                            <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="p">(</span><span class="n">output</span><span class="p">,)</span> <span class="o">+</span> <span class="n">states</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">neuron_step_math</span> <span class="o">=</span> <span class="n">neuron_step_math</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">neuron_step_math</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">sanitize_name</span><span class="p">(</span>
+            <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">repr</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span><span class="p">)</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">]))</span>
+
+    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="n">J</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">J_data</span><span class="p">)</span>
+        <span class="n">states</span> <span class="o">=</span> <span class="p">[</span><span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_data</span><span class="p">]</span>
+        <span class="n">states_dtype</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_data</span><span class="p">]</span>
+
+        <span class="c1"># note: we need to make sure that the previous call to this function</span>
+        <span class="c1"># has completed before the next starts, since we don&#39;t know that the</span>
+        <span class="c1"># functions are thread safe</span>
+        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">control_dependencies</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prev_result</span><span class="p">),</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;/cpu:0&quot;</span><span class="p">):</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">py_func</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">neuron_step_math</span><span class="p">,</span> <span class="p">[</span><span class="n">signals</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span> <span class="n">J</span><span class="p">]</span> <span class="o">+</span> <span class="n">states</span><span class="p">,</span>
+                <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="o">.</span><span class="n">dtype</span><span class="p">]</span> <span class="o">+</span> <span class="n">states_dtype</span><span class="p">,</span>
+                <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">neuron_step_math</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+            <span class="n">neuron_out</span><span class="p">,</span> <span class="n">state_out</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ret</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prev_result</span> <span class="o">=</span> <span class="p">[</span><span class="n">neuron_out</span><span class="p">]</span>
+
+        <span class="n">neuron_out</span><span class="o">.</span><span class="n">set_shape</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="n">signals</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,))</span>
+        <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="p">,</span> <span class="n">neuron_out</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_data</span><span class="p">):</span>
+            <span class="n">state_out</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_shape</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="n">signals</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,))</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">state_out</span><span class="p">[</span><span class="n">i</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="RectifiedLinearBuilder"><a class="viewcode-back" href="../../neurons.html#nengo_dl.neurons.RectifiedLinearBuilder">[docs]</a><span class="k">class</span> <span class="nc">RectifiedLinearBuilder</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of :class:`~nengo:nengo.RectifiedLinear`</span>
+<span class="sd">    neuron operators.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">J_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">J</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">output</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="n">J</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">J_data</span><span class="p">)</span>
+        <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">J</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="SigmoidBuilder"><a class="viewcode-back" href="../../neurons.html#nengo_dl.neurons.SigmoidBuilder">[docs]</a><span class="k">class</span> <span class="nc">SigmoidBuilder</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of :class:`~nengo:nengo.Sigmoid`</span>
+<span class="sd">    neuron operators.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">J_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">J</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">output</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau_ref</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span>
+            <span class="p">[[</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span><span class="o">.</span><span class="n">tau_ref</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span>
+             <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="n">J</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">J_data</span><span class="p">)</span>
+        <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">J</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_ref</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LIFRateBuilder"><a class="viewcode-back" href="../../neurons.html#nengo_dl.neurons.LIFRateBuilder">[docs]</a><span class="k">class</span> <span class="nc">LIFRateBuilder</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of :class:`~nengo:nengo.LIFRate`</span>
+<span class="sd">    neuron operators.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau_ref</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span>
+            <span class="p">[[</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span><span class="o">.</span><span class="n">tau_ref</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span>
+             <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau_rc</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span>
+            <span class="p">[[</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span><span class="o">.</span><span class="n">tau_rc</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span>
+             <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">J_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">J</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">output</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zeros</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">J_data</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="n">signals</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,),</span>
+                              <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="n">J</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">J_data</span><span class="p">)</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">J</span> <span class="o">-</span> <span class="mi">1</span>
+
+        <span class="c1"># indices = tf.cast(tf.where(j &gt; 0), tf.int32)</span>
+        <span class="c1"># tau_ref = tf.gather_nd(</span>
+        <span class="c1">#     self.tau_ref, tf.expand_dims(indices[:, 0], 1))</span>
+        <span class="c1"># tau_rc = tf.gather_nd(self.tau_rc, tf.expand_dims(indices[:, 0], 1))</span>
+        <span class="c1"># j = tf.gather_nd(j, indices)</span>
+        <span class="c1">#</span>
+        <span class="c1"># signals.scatter(</span>
+        <span class="c1">#     self.output_data,</span>
+        <span class="c1">#     tf.scatter_nd(indices, 1 / (tau_ref + tau_rc * tf.log1p(1 / j)),</span>
+        <span class="c1">#                   tf.shape(J)))</span>
+
+        <span class="n">rates</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tau_ref</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_rc</span> <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">j</span><span class="p">))</span>
+        <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">j</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">rates</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">zeros</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="LIFBuilder"><a class="viewcode-back" href="../../neurons.html#nengo_dl.neurons.LIFBuilder">[docs]</a><span class="k">class</span> <span class="nc">LIFBuilder</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of :class:`~nengo:nengo.LIF`</span>
+<span class="sd">    neuron operators.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau_ref</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span>
+            <span class="p">[[</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span><span class="o">.</span><span class="n">tau_ref</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span>
+             <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau_rc</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span>
+            <span class="p">[[</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span><span class="o">.</span><span class="n">tau_rc</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span>
+             <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_voltage</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span>
+            <span class="p">[[</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span><span class="o">.</span><span class="n">min_voltage</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span>
+             <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">J_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">J</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">output</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">voltage_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">states</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refractory_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">states</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zeros</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">J_data</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="n">signals</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,),</span>
+                              <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="n">J</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">J_data</span><span class="p">)</span>
+        <span class="n">voltage</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">voltage_data</span><span class="p">)</span>
+        <span class="n">refractory</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">refractory_data</span><span class="p">)</span>
+
+        <span class="n">refractory</span> <span class="o">-=</span> <span class="n">signals</span><span class="o">.</span><span class="n">dt</span>
+        <span class="n">delta_t</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">clip_by_value</span><span class="p">(</span><span class="n">signals</span><span class="o">.</span><span class="n">dt</span> <span class="o">-</span> <span class="n">refractory</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">signals</span><span class="o">.</span><span class="n">dt</span><span class="p">)</span>
+
+        <span class="n">voltage</span> <span class="o">-=</span> <span class="p">(</span><span class="n">J</span> <span class="o">-</span> <span class="n">voltage</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">delta_t</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_rc</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">spiked</span> <span class="o">=</span> <span class="n">voltage</span> <span class="o">&gt;</span> <span class="mi">1</span>
+        <span class="n">spikes</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">spiked</span><span class="p">,</span> <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">/</span> <span class="n">signals</span><span class="o">.</span><span class="n">dt</span>
+        <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="p">,</span> <span class="n">spikes</span><span class="p">)</span>
+
+        <span class="c1"># note: this scatter/gather approach is slower than just doing the</span>
+        <span class="c1"># computation on the whole array (even though we&#39;re not using the</span>
+        <span class="c1"># result for any of the neurons that didn&#39;t spike).</span>
+        <span class="c1"># this is because there is no GPU kernel for scatter/gather_nd. so if</span>
+        <span class="c1"># that gets implemented in the future, this may be faster.</span>
+        <span class="c1"># indices = tf.cast(tf.where(spiked), tf.int32)</span>
+        <span class="c1"># indices0 = tf.expand_dims(indices[:, 0], 1)</span>
+        <span class="c1"># tau_rc = tf.gather_nd(self.tau_rc, indices0)</span>
+        <span class="c1"># tau_ref = tf.gather_nd(self.tau_ref, indices0)</span>
+        <span class="c1"># t_spike = tau_ref + signals.dt + tau_rc * tf.log1p(</span>
+        <span class="c1">#     -(tf.gather_nd(voltage, indices) - 1) /</span>
+        <span class="c1">#     (tf.gather_nd(J, indices) - 1))</span>
+        <span class="c1"># refractory = tf.where(</span>
+        <span class="c1">#     spiked, tf.scatter_nd(indices, t_spike, tf.shape(refractory)),</span>
+        <span class="c1">#     refractory)</span>
+
+        <span class="n">t_spike</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tau_ref</span> <span class="o">+</span> <span class="n">signals</span><span class="o">.</span><span class="n">dt</span> <span class="o">+</span>
+                   <span class="bp">self</span><span class="o">.</span><span class="n">tau_rc</span> <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">log1p</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">voltage</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">J</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)))</span>
+        <span class="n">refractory</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">spiked</span><span class="p">,</span> <span class="n">t_spike</span><span class="p">,</span> <span class="n">refractory</span><span class="p">)</span>
+
+        <span class="n">signals</span><span class="o">.</span><span class="n">mark_gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">J_data</span><span class="p">)</span>
+        <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">refractory_data</span><span class="p">,</span> <span class="n">refractory</span><span class="p">)</span>
+
+        <span class="n">voltage</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">spiked</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">zeros</span><span class="p">,</span>
+                           <span class="n">tf</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">voltage</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_voltage</span><span class="p">))</span>
+        <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">voltage_data</span><span class="p">,</span> <span class="n">voltage</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.3.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../../_modules/nengo_dl/neurons.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../../../v1.0.0/_modules/nengo_dl/neurons.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.2/_modules/nengo_dl/neurons.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.1/_modules/nengo_dl/neurons.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.0/_modules/nengo_dl/neurons.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.2/_modules/nengo_dl/neurons.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.1/_modules/nengo_dl/neurons.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.0/_modules/nengo_dl/neurons.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.4.0/_modules/nengo_dl/neurons.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.3.1/_modules/nengo_dl/neurons.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd>v0.3.0</dd>
+                
+            
+                
+                    <dd><a href="../../../v0.2.0/_modules/nengo_dl/neurons.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../..//_modules/nengo_dl/neurons.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'0.3.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

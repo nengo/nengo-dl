@@ -1,0 +1,723 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Miscellaneous utilities &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Project information" href="project.html" />
+    <link rel="prev" title="Operator graph optimization tools" href="graph_optimizer.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frontend.html">User documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="backend.html">Developer documentation</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="builder.html">Builder</a></li>
+<li class="toctree-l2"><a class="reference internal" href="op_builders.html">Operator build classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tensor_graph.html">TensorFlow graph construction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="signals.html">Signals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="graph_optimizer.html">Operator graph optimization tools</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Miscellaneous utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="backend.html">Developer documentation</a> &raquo;</li>
+        
+      <li>Miscellaneous utilities</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/utils.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="module-nengo_dl.utils">
+<span id="miscellaneous-utilities"></span><h1>Miscellaneous utilities<a class="headerlink" href="#module-nengo_dl.utils" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="nengo_dl.utils.sanitize_name">
+<code class="descclassname">nengo_dl.utils.</code><code class="descname">sanitize_name</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/utils.html#sanitize_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.utils.sanitize_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove illegal TensorFlow name characters from string.</p>
+<p>Valid TensorFlow name characters are <code class="docutils literal notranslate"><span class="pre">[A-Za-z0-9_.\-/]</span></code></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>name</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">Name to be sanitized</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>str</strong></dt>
+<dd><p class="first last">Sanitized name</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.utils.function_name">
+<code class="descclassname">nengo_dl.utils.</code><code class="descname">function_name</code><span class="sig-paren">(</span><em>func</em>, <em>sanitize=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/utils.html#function_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.utils.function_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the name of the callable object <code class="docutils literal notranslate"><span class="pre">func</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>func</strong> <span class="classifier-delimiter">:</span> <span class="classifier">callable</span></dt>
+<dd><p class="first last">Callable object (e.g., function, callable class)</p>
+</dd>
+<dt><strong>sanitize</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, remove any illegal TensorFlow name characters from name</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>str</strong></dt>
+<dd><p class="first last">Name of <code class="docutils literal notranslate"><span class="pre">func</span></code> (optionally sanitized)</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.utils.align_func">
+<code class="descclassname">nengo_dl.utils.</code><code class="descname">align_func</code><span class="sig-paren">(</span><em>output_shape</em>, <em>output_dtype</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/utils.html#align_func"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.utils.align_func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator that ensures the output of <code class="docutils literal notranslate"><span class="pre">func</span></code> is an
+<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a> with the given shape and dtype.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>output_shape</strong> <span class="classifier-delimiter">:</span> <span class="classifier">tuple of int</span></dt>
+<dd><p class="first last">Desired shape for function output (must have the same size as actual
+function output)</p>
+</dd>
+<dt><strong>output_dtype</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="docutils literal notranslate"><span class="pre">tf.DType</span></code> or <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code></a></span></dt>
+<dd><p class="first last">Desired dtype of function output</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>:class:`~nengo:nengo.exceptions.SimulationError`</strong></dt>
+<dd><p class="first last">If the function returns <code class="docutils literal notranslate"><span class="pre">None</span></code> or a non-finite value.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.utils.print_op">
+<code class="descclassname">nengo_dl.utils.</code><code class="descname">print_op</code><span class="sig-paren">(</span><em>input</em>, <em>message</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/utils.html#print_op"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.utils.print_op" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inserts a print statement into the TensorFlow graph.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>input</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code></span></dt>
+<dd><p class="first last">The value of this tensor will be printed whenever it is computed
+in the graph</p>
+</dd>
+<dt><strong>message</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">String prepended to the value of <code class="docutils literal notranslate"><span class="pre">input</span></code>, to help with logging</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>``tf.Tensor``</strong></dt>
+<dd><p class="first last">New tensor representing the print operation applied to <code class="docutils literal notranslate"><span class="pre">input</span></code></p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>This is what <code class="docutils literal notranslate"><span class="pre">tf.Print</span></code> is supposed to do, but it doesn’t seem to work
+consistently.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.utils.cast_dtype">
+<code class="descclassname">nengo_dl.utils.</code><code class="descname">cast_dtype</code><span class="sig-paren">(</span><em>dtype</em>, <em>target</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/utils.html#cast_dtype"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.utils.cast_dtype" title="Permalink to this definition">¶</a></dt>
+<dd><p>Changes float dtypes to the target dtype, leaves others unchanged.</p>
+<p>Used to map all float values to a target precision.  Also casts numpy
+dtypes to TensorFlow dtypes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>dtype</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="docutils literal notranslate"><span class="pre">tf.DType</span></code> or <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code></a></span></dt>
+<dd><p class="first last">Input dtype to be converted</p>
+</dd>
+<dt><strong>target</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="docutils literal notranslate"><span class="pre">tf.DType</span></code></span></dt>
+<dd><p class="first last">Floating point dtype to which all floating types should be converted</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>``tf.DType``</strong></dt>
+<dd><p class="first last">Input dtype, converted to <code class="docutils literal notranslate"><span class="pre">target</span></code> type if necessary</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.utils.find_non_differentiable">
+<code class="descclassname">nengo_dl.utils.</code><code class="descname">find_non_differentiable</code><span class="sig-paren">(</span><em>inputs</em>, <em>outputs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/utils.html#find_non_differentiable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.utils.find_non_differentiable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Searches through a TensorFlow graph to find non-differentiable elements
+between <code class="docutils literal notranslate"><span class="pre">inputs</span></code> and <code class="docutils literal notranslate"><span class="pre">outputs</span></code> (elements that would prevent us from
+computing <code class="docutils literal notranslate"><span class="pre">d_outputs</span> <span class="pre">/</span> <span class="pre">d_inputs</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>inputs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code></span></dt>
+<dd><p class="first last">Input tensors</p>
+</dd>
+<dt><strong>outputs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code></span></dt>
+<dd><p class="first last">Output tensors</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.utils.MessageBar">
+<em class="property">class </em><code class="descclassname">nengo_dl.utils.</code><code class="descname">MessageBar</code><span class="sig-paren">(</span><em>msg=''</em>, <em>finish_msg=''</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/utils.html#MessageBar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.utils.MessageBar" title="Permalink to this definition">¶</a></dt>
+<dd><p>ProgressBar widget for progress bars with possibly unknown duration.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>msg</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">A message to be displayed in the middle of the progress bar</p>
+</dd>
+<dt><strong>finish_msg</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">A message to be displayed when the progress bar is finished</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.utils.ProgressBar">
+<em class="property">class </em><code class="descclassname">nengo_dl.utils.</code><code class="descname">ProgressBar</code><span class="sig-paren">(</span><em>present</em>, <em>past=None</em>, <em>max_value=1</em>, <em>vars=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/utils.html#ProgressBar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.utils.ProgressBar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handles progress bar display for some tracked process.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>present</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">Description of process in present (e.g., “Simulating”)</p>
+</dd>
+<dt><strong>past</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">Description of process in past (e.g., “Simulation”)</p>
+</dd>
+<dt><strong>max_value</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int or None, optional</span></dt>
+<dd><p class="first last">The maximum number of steps in the tracked process (or <code class="docutils literal notranslate"><span class="pre">None</span></code> if
+the maximum number of steps is unknown)</p>
+</dd>
+<dt><strong>vars</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of str, optional</span></dt>
+<dd><p class="first last">Extra variables that will be displayed at the end of the progress bar</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Launches a separate thread to handle the progress bar display updates.</p>
+<dl class="method">
+<dt id="nengo_dl.utils.ProgressBar.start">
+<code class="descname">start</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/utils.html#ProgressBar.start"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.utils.ProgressBar.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start tracking process, initialize display.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.utils.ProgressBar.finish">
+<code class="descname">finish</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/utils.html#ProgressBar.finish"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.utils.ProgressBar.finish" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stop tracking process, finish display.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.utils.ProgressBar.step">
+<code class="descname">step</code><span class="sig-paren">(</span><em>**vars</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/utils.html#ProgressBar.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.utils.ProgressBar.step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Advance the progress bar one step.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>vars</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {str: str}</span></dt>
+<dd><p class="first last">Values for the extra variables displayed at the end of the progress
+bar (defined in <code class="xref py py-meth docutils literal notranslate"><span class="pre">ProgressBar.__init__()</span></code>)</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.utils.ProgressBar.sub">
+<code class="descname">sub</code><span class="sig-paren">(</span><em>msg=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/utils.html#ProgressBar.sub"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.utils.ProgressBar.sub" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new progress bar for tracking a sub-process.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>msg</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">Description of sub-process</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.utils.ProgressBar.next">
+<code class="descname">next</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#nengo_dl.utils.ProgressBar.next" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wraps an iterable using this progress bar.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.utils.NullProgressBar">
+<em class="property">class </em><code class="descclassname">nengo_dl.utils.</code><code class="descname">NullProgressBar</code><span class="sig-paren">(</span><em>min_value=0</em>, <em>max_value=None</em>, <em>widgets=None</em>, <em>left_justify=True</em>, <em>initial_value=0</em>, <em>poll_interval=None</em>, <em>widget_kwargs=None</em>, <em>custom_len=&lt;built-in function len&gt;</em>, <em>max_error=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/utils.html#NullProgressBar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.utils.NullProgressBar" title="Permalink to this definition">¶</a></dt>
+<dd><p>A progress bar that does nothing.</p>
+<p>Used to replace ProgressBar when we want to disable output.</p>
+<p>Initializes a progress bar with sane defaults</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.utils.minibatch_generator">
+<code class="descclassname">nengo_dl.utils.</code><code class="descname">minibatch_generator</code><span class="sig-paren">(</span><em>inputs</em>, <em>targets</em>, <em>minibatch_size</em>, <em>shuffle=True</em>, <em>truncation=None</em>, <em>rng=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/utils.html#minibatch_generator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.utils.minibatch_generator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generator to yield <code class="docutils literal notranslate"><span class="pre">minibatch_sized</span></code> subsets from <code class="docutils literal notranslate"><span class="pre">inputs</span></code> and
+<code class="docutils literal notranslate"><span class="pre">targets</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>inputs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<a class="reference external" href="https://www.nengo.ai/nengo/frontend_api.html#nengo.Node" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a>:                       <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>}</span></dt>
+<dd><p class="first last">Input values for Nodes in the network</p>
+</dd>
+<dt><strong>targets</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<a class="reference external" href="https://www.nengo.ai/nengo/frontend_api.html#nengo.Probe" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Probe</span></code></a>:                        <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>}</span></dt>
+<dd><p class="first last">Desired output value at Probes, corresponding to each value in
+<code class="docutils literal notranslate"><span class="pre">inputs</span></code></p>
+</dd>
+<dt><strong>minibatch_size</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">The number of items in each minibatch</p>
+</dd>
+<dt><strong>shuffle</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If True, the division of items into minibatches will be randomized each
+time the generator is created</p>
+</dd>
+<dt><strong>truncation</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">If not None, divide the data up into sequences of <code class="docutils literal notranslate"><span class="pre">truncation</span></code>
+timesteps.</p>
+</dd>
+<dt><strong>rng</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.random.RandomState.html#numpy.random.RandomState" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">RandomState</span></code></a>, optional</span></dt>
+<dd><p class="first last">Seeded random number generator</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Yields:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>offset</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">The simulation step at which the returned data begins (will only be
+nonzero if <code class="docutils literal notranslate"><span class="pre">truncation</span></code> is not <code class="docutils literal notranslate"><span class="pre">None</span></code>).</p>
+</dd>
+<dt><strong>inputs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<a class="reference external" href="https://www.nengo.ai/nengo/frontend_api.html#nengo.Node" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a>:                       <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>}</span></dt>
+<dd><p class="first last">The same structure as <code class="docutils literal notranslate"><span class="pre">inputs</span></code>, but with each array reduced to
+<code class="docutils literal notranslate"><span class="pre">minibatch_size</span></code> elements along the first dimension</p>
+</dd>
+<dt><strong>targets</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<a class="reference external" href="https://www.nengo.ai/nengo/frontend_api.html#nengo.Probe" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Probe</span></code></a>:                        <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>}</span></dt>
+<dd><p class="first last">The same structure as <code class="docutils literal notranslate"><span class="pre">targets</span></code>, but with each array reduced to
+<code class="docutils literal notranslate"><span class="pre">minibatch_size</span></code> elements along the first dimension</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.utils.configure_settings">
+<code class="descclassname">nengo_dl.utils.</code><code class="descname">configure_settings</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/utils.html#configure_settings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.utils.configure_settings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pass settings to <code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code> by setting them as parameters on the
+top-level Network config.</p>
+<p>The settings are passed as keyword arguments to <code class="docutils literal notranslate"><span class="pre">configure_settings</span></code>;
+e.g., to set <code class="docutils literal notranslate"><span class="pre">trainable</span></code> use <code class="docutils literal notranslate"><span class="pre">configure_settings(trainable=True)</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>trainable</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool or None</span></dt>
+<dd><p class="first last">Adds a parameter to Nengo Ensembles/Connections/Networks that controls
+whether or not they will be optimized by <a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.train()</span></code></a>.
+Passing <code class="docutils literal notranslate"><span class="pre">None</span></code> will use the default <code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code> trainable settings,
+or True/False will override the default for all objects.  In either
+case trainability can be further configured on a per-object basis (e.g.
+<code class="docutils literal notranslate"><span class="pre">net.config[my_ensemble].trainable</span> <span class="pre">=</span> <span class="pre">True</span></code>.  See <a class="reference external" href="https://www.nengo.ai/nengo_dl/training.html#choosing-which-elements-to-optimize">the documentation</a>
+for more details.</p>
+</dd>
+<dt><strong>planner</strong> <span class="classifier-delimiter">:</span> <span class="classifier">graph planning algorithm</span></dt>
+<dd><p class="first last">Pass one of the <a class="reference external" href="https://www.nengo.ai/nengo_dl/graph_optimizer.html">graph planners</a> to change the
+default planner.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="project.html" class="btn btn-neutral float-right" title="Project information" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="graph_optimizer.html" class="btn btn-neutral" title="Operator graph optimization tools" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.6.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../utils.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../v1.0.0/utils.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.2/utils.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.1/utils.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd>v0.6.0</dd>
+                
+            
+                
+                    <dd><a href="../v0.5.2/utils.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.1/utils.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.0/utils.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.4.0/utils.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.1/utils.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.0/utils.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.2.0/utils.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="..//utils.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.6.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

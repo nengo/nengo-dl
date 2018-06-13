@@ -1,0 +1,1275 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Copyright 2018 The TensorFlow Authors. &mdash; NengoDL documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../../_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+
+  
+  <script src="../../../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../../../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../frontend.html">User API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../backend.html">Developer API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../../index.html">Docs</a> &raquo;</li>
+        
+      <li>Copyright 2018 The TensorFlow Authors.</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../../../../_sources/examples/models/samples/outreach/demos/eager_execution.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
+div.nboutput,
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput div.prompt pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput div.prompt pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput div.prompt,
+div.nboutput div.prompt {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput div.input_area,
+div.nboutput div.output_area {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput div.input_area {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Copyright-2018-The-TensorFlow-Authors.">
+<h1>Copyright 2018 The TensorFlow Authors.<a class="headerlink" href="#Copyright-2018-The-TensorFlow-Authors." title="Permalink to this headline">¶</a></h1>
+<p>Licensed under the Apache License, Version 2.0 (the “License”);</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+</pre></div>
+</div>
+</div>
+<div class="section" id="Eager-execution">
+<h2>Eager execution<a class="headerlink" href="#Eager-execution" title="Permalink to this headline">¶</a></h2>
+<p>Note: you can run <strong>`this notebook, live in Google
+Colab &lt;https://colab.research.google.com/github/tensorflow/models/blob/master/samples/outreach/demos/eager_execution.ipynb&gt;`__</strong>
+with zero setup.</p>
+<p><strong>TensorFlow Dev Summit, 2018.</strong></p>
+<p>This interactive notebook demonstrates <strong>eager execution</strong>, TensorFlow’s
+imperative, NumPy-like front-end for machine learning.</p>
+<blockquote>
+<div><div class="figure" id="id1">
+<img alt="alt text" src="https://lh3.googleusercontent.com/QOvy0clmg7siaVKzwmSPAjicWWNQ0OeyaB16plDjSJMf35WD3vLjF6mz4CGrhSHw60HnlZPJjkyDCBzw5XOI0oBGSewyYw=s688" />
+<p class="caption"><span class="caption-text">alt text</span></p>
+</div>
+</div></blockquote>
+<p><strong>Table of Contents.</strong> 1. <em>Enabling eager execution!</em> 2. <em>A NumPy-like
+library for numerical computation and machine learning. Case study:
+Fitting a huber regression</em>. 3. <em>Neural networks. Case study: Training a
+multi-layer RNN.</em> 4. <em>Exercises: Batching; debugging.</em> 5. <em>Further
+reading</em></p>
+</div>
+<div class="section" id="1.-Enabling-eager-execution!">
+<h2>1. Enabling eager execution!<a class="headerlink" href="#1.-Enabling-eager-execution!" title="Permalink to this headline">¶</a></h2>
+<p>A single function call is all you need to enable eager execution:
+<code class="docutils literal notranslate"><span class="pre">tf.enable_eager_execution()</span></code>. You should invoke this function before
+calling into any other TensorFlow APIs — the simplest way to satisfy
+this requirement is to make <code class="docutils literal notranslate"><span class="pre">tf.enable_eager_execution()</span></code> the first
+line of your <code class="docutils literal notranslate"><span class="pre">main</span></code> function.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>!pip install -q -U tf-nightly
+
+import tensorflow as tf
+
+tf.enable_eager_execution()
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="2.-A-NumPy-like-library-for-numerical-computation-and-machine-learning">
+<h2>2. A NumPy-like library for numerical computation and machine learning<a class="headerlink" href="#2.-A-NumPy-like-library-for-numerical-computation-and-machine-learning" title="Permalink to this headline">¶</a></h2>
+<p>Enabling eager execution transforms TensorFlow into an <strong>imperative</strong>
+library for numerical computation, automatic differentiation, and
+machine learning. When executing eagerly, <em>TensorFlow no longer behaves
+like a dataflow graph engine</em>: Tensors are backed by NumPy arrays
+(goodbye, placeholders!), and TensorFlow operations execute
+<em>immediately</em> via Python (goodbye, sessions!).</p>
+<div class="section" id="Numpy-like-usage">
+<h3>Numpy-like usage<a class="headerlink" href="#Numpy-like-usage" title="Permalink to this headline">¶</a></h3>
+<p>Tensors are backed by numpy arrays, which are accessible via their
+<code class="docutils literal notranslate"><span class="pre">.numpy()</span></code> method.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>A = tf.constant([[2.0, 0.0], [0.0, 3.0]])
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>import numpy as np
+
+print(&quot;Tensors are backed by NumPy arrays, which are accessible through their &quot;
+      &quot;`.numpy()` method:\n&quot;, A)
+assert(type(A.numpy()) == np.ndarray)
+print(&quot;\nOperations (like `tf.matmul(A, A)`) execute &quot;
+      &quot;immediately (no more Sessions!):\n&quot;, tf.matmul(A, A))
+</pre></div>
+</div>
+</div>
+<p>Tensors behave similarly to NumPy arrays, but they don’t behave exactly
+the same.</p>
+<p>For example, the equals operator on Tensors compares objects. Use
+<code class="docutils literal notranslate"><span class="pre">tf.equal</span></code> to compare values.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>print(&quot;\nTensors behave like NumPy arrays: you can iterate over them and &quot;
+      &quot;supply them as inputs to most functions that expect NumPy arrays:&quot;)
+for i, row in enumerate(A):
+  for j, entry in enumerate(row):
+    print(&quot;A[%d, %d]^2 == %d&quot; % (i, j, np.square(entry)))
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Variables-and-Gradients">
+<h3>Variables and Gradients<a class="headerlink" href="#Variables-and-Gradients" title="Permalink to this headline">¶</a></h3>
+<p>Create variables with <code class="docutils literal notranslate"><span class="pre">tf.contrib.eager.Variable</span></code>, and use
+<code class="docutils literal notranslate"><span class="pre">tf.GradientTape</span></code> to compute gradients with respect to them.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>import tensorflow.contrib.eager as tfe
+w = tfe.Variable(3.0)
+with tf.GradientTape() as tape:
+  loss = w ** 2
+dw, = tape.gradient(loss, [w])
+print(&quot;\nYou can use `tf.GradientTape` to compute the gradient of a &quot;
+      &quot;computation with respect to a list of `tf.contrib.eager.Variable`s;\n&quot;
+      &quot;for example, `tape.gradient(loss, [w])`, where `loss` = w ** 2 and &quot;
+      &quot;`w` == 3.0, yields`&quot;, dw,&quot;`.&quot;)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="GPU-usage">
+<h3>GPU usage<a class="headerlink" href="#GPU-usage" title="Permalink to this headline">¶</a></h3>
+<p>Eager execution lets you offload computation to hardware accelerators
+like GPUs, if you have any available.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>if tf.test.is_gpu_available():
+  with tf.device(tf.test.gpu_device_name()):
+    B = tf.constant([[2.0, 0.0], [0.0, 3.0]])
+    print(tf.matmul(B, B))
+</pre></div>
+</div>
+</div>
+<div class="section" id="Fitting-a-Huber-regression">
+<h4>Fitting a Huber regression<a class="headerlink" href="#Fitting-a-Huber-regression" title="Permalink to this headline">¶</a></h4>
+<p>If you come from a scientific or numerical computing background, eager
+execution should feel natural to you. Not only does it stand on its own
+as an accelerator-compatible library for numerical computation, it also
+interoperates with popular Python packages like NumPy and Matplotlib. To
+demonstrate this fact, in this section, we fit and evaluate a regression
+using a <a class="reference external" href="https://en.wikipedia.org/wiki/Huber_loss">Huber regression</a>,
+writing our code in a NumPy-like way and making use of Python control
+flow.</p>
+</div>
+</div>
+<div class="section" id="Data-generation">
+<h3>Data generation<a class="headerlink" href="#Data-generation" title="Permalink to this headline">¶</a></h3>
+<p>Our dataset for this example has many outliers — least-squares would be
+a poor choice.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>import matplotlib.pyplot as plt
+
+def gen_regression_data(num_examples=1000, p=0.2):
+  X = tf.random_uniform(shape=(num_examples,), maxval=50)
+  w_star = tf.random_uniform(shape=(), maxval=10)
+  b_star = tf.random_uniform(shape=(), maxval=10)
+  noise = tf.random_normal(shape=(num_examples,), mean=0.0, stddev=10.0)
+  # With probability 1 - p, y := y * -1.
+  sign = 2 * np.random.binomial(1, 1 - p, size=(num_examples,)) - 1
+  # You can freely mix Tensors and NumPy arrays in your computations:
+  # `sign` is a NumPy array, but the other symbols below are Tensors.
+  Y = sign * (w_star * X + b_star + noise)
+  return X, Y
+
+X, Y = gen_regression_data()
+plt.plot(X, Y, &quot;go&quot;)  # You can plot Tensors!
+plt.title(&quot;Observed data&quot;)
+plt.show()
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Huber-loss">
+<h3>Huber loss<a class="headerlink" href="#Huber-loss" title="Permalink to this headline">¶</a></h3>
+<p>The Huber loss function is piecewise function that is quadratic for
+small inputs and linear otherwise; for that reason, using a Huber loss
+gives considerably less weight to outliers than least-squares does. When
+eager execution is enabled, we can implement the Huber function in the
+natural way, using <strong>Python control flow</strong>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>def huber_loss(y, y_hat, m=1.0):
+  # Enabling eager execution lets you use Python control flow.
+  delta = tf.abs(y - y_hat)
+  return delta ** 2 if delta &lt;= m else m * (2 * delta - m)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="A-simple-class-for-regressions">
+<h3>A simple class for regressions<a class="headerlink" href="#A-simple-class-for-regressions" title="Permalink to this headline">¶</a></h3>
+<p>The next cell encapsulates a linear regression model in a Python class
+and defines a function that fits the model using a stochastic optimizer.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>import time
+
+from google.colab import widgets
+import tensorflow.contrib.eager as tfe  # Needed to create tfe.Variable objects.
+
+
+class Regression(object):
+  def __init__(self, loss_fn):
+    super(Regression, self).__init__()
+    self.w = tfe.Variable(0.0)
+    self.b = tfe.Variable(0.0)
+    self.variables = [self.w, self.b]
+    self.loss_fn = loss_fn
+
+  def predict(self, x):
+    return x * self.w + self.b
+
+def regress(model, optimizer, dataset, epochs=5, log_every=1, num_examples=1000):
+  plot = log_every is not None
+  if plot:
+    # Colab provides several widgets for interactive visualization.
+    tb = widgets.TabBar([str(i) for i in range(epochs) if i % log_every == 0])
+    X, Y = dataset.batch(num_examples).make_one_shot_iterator().get_next()
+    X = tf.reshape(X, (num_examples,))
+    Y = tf.reshape(Y, (num_examples,))
+
+  for epoch in range(epochs):
+    iterator = dataset.make_one_shot_iterator()
+    epoch_loss = 0.0
+    start = time.time()
+    for x_i, y_i in iterator:
+      batch_loss_fn = lambda: model.loss_fn(y_i, model.predict(x_i))
+      optimizer.minimize(batch_loss_fn, var_list=model.variables)
+      epoch_loss += batch_loss_fn()
+    duration = time.time() - start
+    if plot and epoch % log_every == 0:
+      with tb.output_to(str(epoch)):
+        print(&quot;Epoch %d took %0.2f seconds, resulting in a loss of %0.4f.&quot; % (
+            epoch, duration, epoch_loss))
+        plt.plot(X, Y, &quot;go&quot;, label=&quot;data&quot;)
+        plt.plot(X, model.predict(X), &quot;b&quot;, label=&quot;regression&quot;)
+        plt.legend()
+</pre></div>
+</div>
+</div>
+<p>Run the following cell to fit the model! Note that enabling eager
+execution makes it easy to visualize your model while training it, using
+familiar tools like Matplotlib.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>huber_regression = Regression(huber_loss)
+dataset = tf.data.Dataset.from_tensor_slices((X, Y))
+regress(huber_regression,
+        optimizer=tf.train.GradientDescentOptimizer(learning_rate=0.0001),
+        dataset=dataset)
+</pre></div>
+</div>
+</div>
+<div class="section" id="Debugging-and-profiling">
+<h4>Debugging and profiling<a class="headerlink" href="#Debugging-and-profiling" title="Permalink to this headline">¶</a></h4>
+</div>
+</div>
+<div class="section" id="Enabling-eager-execution-lets-you-debug-your-code-on-the-fly;-use-pdb-and-print-statements-to-your-heart's-content.">
+<h3>Enabling eager execution lets you debug your code on-the-fly; use <code class="docutils literal notranslate"><span class="pre">pdb</span></code> and print statements to your heart’s content.<a class="headerlink" href="#Enabling-eager-execution-lets-you-debug-your-code-on-the-fly;-use-pdb-and-print-statements-to-your-heart's-content." title="Permalink to this headline">¶</a></h3>
+<p>Check out exercise 2 towards the bottom of this notebook for a hands-on
+look at how eager simplifies model debugging.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>import pdb
+
+def buggy_loss(y, y_hat):
+  pdb.set_trace()
+  huber_loss(y, y_hat)
+
+print(&quot;Type &#39;exit&#39; to stop the debugger, or &#39;s&#39; to step into `huber_loss` and &quot;
+      &quot;&#39;n&#39; to step through it.&quot;)
+try:
+  buggy_loss(1.0, 2.0)
+except:
+  pass
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Leverage-the-Python-profiler-to-dig-into-the-relative-costs-of-training-your-model.">
+<h3>Leverage the Python profiler to dig into the relative costs of training your model.<a class="headerlink" href="#Leverage-the-Python-profiler-to-dig-into-the-relative-costs-of-training-your-model." title="Permalink to this headline">¶</a></h3>
+<p>If you run the below cell, you’ll see that most of the time is spent
+computing gradients and binary operations, which is sensible considering
+our loss function.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>import cProfile
+import pstats
+
+huber_regression = Regression(huber_loss)
+cProfile.run(
+    &quot;regress(model=huber_regression, &quot;
+    &quot;optimizer=tf.train.GradientDescentOptimizer(learning_rate=0.001), &quot;
+    &quot;dataset=dataset, log_every=None)&quot;, &quot;prof&quot;)
+pstats.Stats(&quot;prof&quot;).strip_dirs().sort_stats(&quot;cumulative&quot;).print_stats(10)
+print(&quot;Most of the time is spent during backpropagation and binary operations.&quot;)
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="3.-Neural-networks">
+<h2>3. Neural networks<a class="headerlink" href="#3.-Neural-networks" title="Permalink to this headline">¶</a></h2>
+<p>While eager execution can certainly be used as a library for numerical
+computation, it shines as a library for deep learning: TensorFlow
+provides a suite of tools for deep learning research and development,
+most of which are compatible with eager execution. In this section, we
+put some of these tools to use to build <em>RNNColorbot</em>, an RNN that takes
+as input names of colors and predicts their corresponding RGB tuples.</p>
+<p><strong>```tf.data`` &lt;https://www.tensorflow.org/api_guides/python/reading_data#_tf_data_API&gt;`__
+is TensorFlow’s canonical API for constructing input pipelines.</strong>
+<code class="docutils literal notranslate"><span class="pre">tf.data</span></code> lets you easily construct multi-stage pipelines that supply
+data to your networks during training and inference. The following cells
+defines methods that download and format the data needed for
+RNNColorbot; the details aren’t important (read them in the privacy of
+your own home if you so wish), but make sure to run the cells before
+proceeding.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>import os
+import six
+from six.moves import urllib
+
+
+def parse(line):
+  &quot;&quot;&quot;Parse a line from the colors dataset.&quot;&quot;&quot;
+  # `items` is a list [color_name, r, g, b].
+  items = tf.string_split([line], &quot;,&quot;).values
+  rgb = tf.string_to_number(items[1:], out_type=tf.float32) / 255.
+  color_name = items[0]
+  chars = tf.one_hot(tf.decode_raw(color_name, tf.uint8), depth=256)
+  length = tf.cast(tf.shape(chars)[0], dtype=tf.int64)
+  return rgb, chars, length
+
+def load_dataset(data_dir, url, batch_size):
+  &quot;&quot;&quot;Loads the colors data at path into a PaddedDataset.&quot;&quot;&quot;
+  path = tf.keras.utils.get_file(os.path.basename(url), url, cache_dir=data_dir)
+  dataset = tf.data.TextLineDataset(path).skip(1).map(parse).shuffle(
+      buffer_size=10000).padded_batch(batch_size,
+                                      padded_shapes=([None], [None, None], []))
+  return dataset, path
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>train_url = &quot;https://raw.githubusercontent.com/random-forests/tensorflow-workshop/master/extras/colorbot/data/train.csv&quot;
+test_url = &quot;https://raw.githubusercontent.com/random-forests/tensorflow-workshop/master/extras/colorbot/data/test.csv&quot;
+data_dir = &quot;/tmp/rnn/data&quot;
+
+train_data, train_path = load_dataset(data_dir, train_url, batch_size=64)
+eval_data, _ = load_dataset(data_dir, test_url, batch_size=64)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>import pandas
+pandas.read_csv(train_path).head(10)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>colors, one_hot_chars, lengths = tfe.Iterator(train_data).next()
+colors[:10].numpy()
+</pre></div>
+</div>
+</div>
+<p>TensorFlow packages several APIs for creating neural networks in a
+modular fashion. <strong>The canonical way to define neural networks in
+TensorFlow is to encapsulate your model in a class that inherits from
+``tf.keras.Model``</strong>. You should think of <code class="docutils literal notranslate"><span class="pre">tf.keras.Model</span></code> as a
+container of <strong>`object-oriented
+layers &lt;https://www.tensorflow.org/api_docs/python/tf/layers&gt;`__</strong>,
+TensorFlow’s building blocks for constructing neural networks (<em>e.g.</em>,
+<code class="docutils literal notranslate"><span class="pre">tf.layers.Dense</span></code>, <code class="docutils literal notranslate"><span class="pre">tf.layers.Conv2D</span></code>). Every <code class="docutils literal notranslate"><span class="pre">Layer</span></code> object that
+is set as an attribute of a <code class="docutils literal notranslate"><span class="pre">Model</span></code> is automatically tracked by the
+latter, letting you access <code class="docutils literal notranslate"><span class="pre">Layer</span></code>-contained variables by invoking
+<code class="docutils literal notranslate"><span class="pre">Model</span></code>’s <code class="docutils literal notranslate"><span class="pre">.variables()</span></code> method. Most important, <strong>inheriting from
+``tf.keras.Model`` makes it easy to checkpoint your model and to
+subsequently restore it</strong> — more on that later.</p>
+<p>The following cell exemplifies our high-level neural network APIs. Note
+that <code class="docutils literal notranslate"><span class="pre">RNNColorbot</span></code> encapsulates only the model definition and
+prediction generation logic. The loss, training, and evaluation
+functions exist outside the class definition: conceptually, the model
+doesn’t need know how to train and benchmark itself.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>class RNNColorbot(tf.keras.Model):
+  &quot;&quot;&quot;Multi-layer RNN that predicts RGB tuples given color names.
+  &quot;&quot;&quot;
+
+  def __init__(self):
+    super(RNNColorbot, self).__init__()
+    self.keep_prob = 0.5
+    self.lower_cell = tf.contrib.rnn.LSTMBlockCell(256)
+    self.upper_cell = tf.contrib.rnn.LSTMBlockCell(128)
+    self.relu = tf.layers.Dense(3, activation=tf.nn.relu, name=&quot;relu&quot;)
+
+  def call(self, inputs, training=False):
+    &quot;&quot;&quot;Generates RGB tuples from `inputs`, a tuple (`chars`, `sequence_length`).
+    &quot;&quot;&quot;
+    (chars, sequence_length) = inputs
+    chars = tf.transpose(chars, [1, 0, 2])  # make `chars` time-major
+    batch_size = int(chars.shape[1])
+    for cell in [self.lower_cell, self.upper_cell]:
+      outputs = []
+      state = cell.zero_state(batch_size, tf.float32)
+      for ch in chars:
+        output, state = cell(ch, state)
+        outputs.append(output)
+      chars = outputs
+      if training:
+        chars = tf.nn.dropout(chars, self.keep_prob)
+    batch_range = [i for i in range(batch_size)]
+    indices = tf.stack([sequence_length - 1, batch_range], axis=1)
+    hidden_states = tf.gather_nd(chars, indices)
+    return self.relu(hidden_states)
+
+
+def loss_fn(labels, predictions):
+  return tf.reduce_mean((predictions - labels) ** 2)
+
+def train_one_epoch(model, optimizer, train_data, log_every=10):
+  iterator = tfe.Iterator(train_data)
+  for batch,(labels, chars, sequence_length) in enumerate(iterator):
+    with tf.GradientTape() as tape:
+      predictions = model((chars, sequence_length), training=True)
+      loss = loss_fn(labels, predictions)
+    variables = model.variables
+    grad = tape.gradient(loss, variables)
+    optimizer.apply_gradients([(g, v) for g, v in zip(grad, variables)])
+    if log_every and batch % log_every == 0:
+      print(&quot;train/batch #%d\tloss: %.6f&quot; % (batch, loss))
+    batch += 1
+
+def test(model, eval_data):
+  total_loss = 0.0
+  iterator = eval_data.make_one_shot_iterator()
+  for labels, chars, sequence_length in tfe.Iterator(eval_data):
+    predictions = model((chars, sequence_length), training=False)
+    total_loss += loss_fn(labels, predictions)
+  print(&quot;eval/loss: %.6f\n&quot; % total_loss)
+</pre></div>
+</div>
+</div>
+<p>The next cell <strong>trains</strong> our <code class="docutils literal notranslate"><span class="pre">RNNColorbot</span></code>, <strong>restoring and saving
+checkpoints</strong> of the learned variables along the way. Thanks to
+checkpointing, every run of the below cell will resume training from
+wherever the previous run left off. For more on checkpointing, take a
+look at our <a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/eager/python/g3doc/guide.md#checkpointing-trained-variables">user
+guide</a>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>model = RNNColorbot()
+optimizer = tf.train.AdamOptimizer(learning_rate=.01)
+
+# Create a `Checkpoint` for saving and restoring state; the keywords
+# supplied `Checkpoint`&#39;s constructor are the names of the objects to be saved
+# and restored, and their corresponding values are the actual objects. Note
+# that we&#39;re saving `optimizer` in addition to `model`, since `AdamOptimizer`
+# maintains state.
+import tensorflow.contrib.eager as tfe
+checkpoint = tfe.Checkpoint(model=model, optimizer=optimizer)
+checkpoint_prefix = &quot;/tmp/rnn/ckpt&quot;
+# The next line loads the most recent checkpoint, if any.
+checkpoint.restore(tf.train.latest_checkpoint(&quot;/tmp/rnn&quot;))
+for epoch in range(4):
+  train_one_epoch(model, optimizer, train_data)
+  test(model, eval_data)
+  checkpoint.save(checkpoint_prefix)
+print(&quot;Colorbot is ready to generate colors!&quot;)
+</pre></div>
+</div>
+</div>
+<div class="section" id="Paint-me-a-color,-Colorbot!">
+<h3>Paint me a color, Colorbot!<a class="headerlink" href="#Paint-me-a-color,-Colorbot!" title="Permalink to this headline">¶</a></h3>
+<p>We can interact with RNNColorbot in a natural way; no need to thread
+NumPy arrays into placeholders through feed dicts. So go ahead and ask
+RNNColorbot to paint you some colors. If they’re not to your liking,
+re-run the previous cell to resume training from where we left off, and
+then re-run the next one for updated results.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>tb = widgets.TabBar([&quot;RNN Colorbot&quot;])
+while True:
+  with tb.output_to(0):
+    try:
+      color_name = six.moves.input(
+          &quot;Give me a color name (or press &#39;enter&#39; to exit): &quot;)
+    except (EOFError, KeyboardInterrupt):
+      break
+  if not color_name:
+    break
+  _, chars, length = parse(color_name)
+  preds, = model((np.expand_dims(chars, 0), np.expand_dims(length, 0)),
+                 training=False)
+  clipped_preds = tuple(min(float(p), 1.0) for p in preds)
+  rgb = tuple(int(p * 255) for p in clipped_preds)
+  with tb.output_to(0):
+    tb.clear_tab()
+    print(&quot;Predicted RGB tuple:&quot;, rgb)
+    plt.imshow([[clipped_preds]])
+    plt.title(color_name)
+    plt.show()
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="4.-Exercises">
+<h2>4. Exercises<a class="headerlink" href="#4.-Exercises" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="Exercise-1:-Batching">
+<h3>Exercise 1: Batching<a class="headerlink" href="#Exercise-1:-Batching" title="Permalink to this headline">¶</a></h3>
+<p>Executing operations eagerly incurs small overheads; these overheads
+become neglible when amortized over batched operations. In this
+exercise, we explore the relationship between batching and performance
+by revisiting our Huber regression example.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span># Our original implementation of `huber_loss` is not compatible with non-scalar
+# data. Your task is to fix that. For your convenience, the original
+# implementation is reproduced below.
+#
+#   def huber_loss(y, y_hat, m=1.0):
+#     delta = tf.abs(y - y_hat)
+#     return delta ** 2 if delta &lt;= m else m * (2 * delta - m)
+#
+def batched_huber_loss(y, y_hat, m=1.0):
+  # TODO: Uncomment out the below code and replace `...` with your solution.
+  # Hint: Tensors are immutable.
+  # Hint: `tf.where` might be useful.
+  delta = tf.abs(y - y_hat)
+  # ...
+  # ...
+  # return ...
+
+regression = Regression(batched_huber_loss)
+
+num_epochs = 4
+batch_sizes = [1, 10, 20, 100, 200, 500, 1000]
+times = []
+
+X, Y = gen_regression_data(num_examples=1000)
+dataset = tf.data.Dataset.from_tensor_slices((X, Y))
+optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.0001)
+for size in batch_sizes:
+  batched_dataset = dataset.batch(size)
+  start = time.time()
+  regress(model=regression, optimizer=optimizer, dataset=batched_dataset,
+          epochs=num_epochs, log_every=None)
+  end = time.time()
+  times.append((end - start) / num_epochs)
+  regression.w.assign(0.0)
+  regression.b.assign(0.0)
+
+plt.figure()
+plt.plot(batch_sizes, times, &quot;bo&quot;)
+plt.xlabel(&quot;batch size&quot;)
+plt.ylabel(&quot;time (seconds)&quot;)
+plt.semilogx()
+plt.semilogy()
+plt.title(&quot;Time per Epoch vs. Batch Size&quot;)
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>def batched_huber_loss(y, y_hat, m=1.0):
+  delta = tf.abs(y - y_hat)
+  quadratic = delta ** 2
+  linear =  m * (2 * delta - m)
+  return tf.reduce_mean(tf.where(delta &lt;= m, quadratic, linear))
+
+regression = Regression(batched_huber_loss)
+
+num_epochs = 4
+batch_sizes = [2, 10, 20, 100, 200, 500, 1000]
+times = []
+
+X, Y = gen_regression_data(num_examples=1000)
+dataset = tf.data.Dataset.from_tensor_slices((X, Y))
+optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.0001)
+for size in batch_sizes:
+  batched_dataset = dataset.batch(size)
+  start = time.time()
+  regress(model=regression, optimizer=optimizer, dataset=batched_dataset,
+          epochs=num_epochs, log_every=None)
+  end = time.time()
+  times.append((end - start) / num_epochs)
+  regression.w.assign(0.0)
+  regression.b.assign(0.0)
+
+plt.figure()
+plt.plot(batch_sizes, times, &quot;bo&quot;)
+plt.xlabel(&quot;batch size&quot;)
+plt.ylabel(&quot;time (seconds)&quot;)
+plt.semilogx()
+plt.semilogy()
+plt.title(&quot;Time per Epoch vs. Batch Size&quot;)
+plt.show()
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Exercise-2:-Model-Debugging">
+<h3>Exercise 2: Model Debugging<a class="headerlink" href="#Exercise-2:-Model-Debugging" title="Permalink to this headline">¶</a></h3>
+<p>We’ve heard you loud and clear: TensorFlow programs that construct and
+execute graphs are difficult to debug. By design, enabling eager
+execution vastly simplifies the process of debugging TensorFlow
+programs. Once eager execution is enabled, you can step through your
+models using <code class="docutils literal notranslate"><span class="pre">pdb</span></code> and bisect them with <code class="docutils literal notranslate"><span class="pre">print</span></code> statements. The best
+way to understand the extent to which eager execution simplifies
+debugging is to debug a model yourself. <code class="docutils literal notranslate"><span class="pre">BuggyModel</span></code> below has two
+bugs lurking in it. Execute the following cell, read the error message,
+and go hunt some bugs!</p>
+<p><em>Hint: As is often the case with TensorFlow programs, both bugs are
+related to the shapes of Tensors.</em></p>
+<p><em>Hint: You might find ``tf.layers.flatten`` useful.</em></p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>class BuggyModel(tf.keras.Model):
+   def __init__(self):
+    super(BuggyModel, self).__init__()
+    self._input_shape = [-1, 28, 28, 1]
+    self.conv = tf.layers.Conv2D(filters=32, kernel_size=5, padding=&quot;same&quot;,
+                                 data_format=&quot;channels_last&quot;)
+    self.fc = tf.layers.Dense(10)
+    self.max_pool2d = tf.layers.MaxPooling2D(
+        (2, 2), (2, 2), padding=&quot;same&quot;, data_format=&quot;channels_last&quot;)
+
+  def call(self, inputs):
+    y = inputs
+    y = self.conv(y)
+    y = self.max_pool2d(y)
+    return self.fc(y)
+
+buggy_model = BuggyModel()
+inputs = tf.random_normal(shape=(100, 28, 28))
+outputs = buggy_model(inputs)
+assert outputs.shape == (100, 10), &quot;invalid output shape: %s&quot; % outputs.shape
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>class BuggyModel(tf.keras.Model):
+  def __init__(self):
+    super(BuggyModel, self).__init__()
+    self._input_shape = [-1, 28, 28, 1]
+    self.conv = tf.layers.Conv2D(filters=32, kernel_size=5, padding=&quot;same&quot;,
+                                 data_format=&quot;channels_last&quot;)
+    self.fc = tf.layers.Dense(10)
+    self.max_pool2d = tf.layers.MaxPooling2D(
+        (2, 2), (2, 2), padding=&quot;same&quot;, data_format=&quot;channels_last&quot;)
+
+  def call(self, inputs):
+    y = tf.reshape(inputs, self._input_shape)
+    y = self.conv(y)
+    y = self.max_pool2d(y)
+    y = tf.layers.flatten(y)
+    return self.fc(y)
+
+buggy_model = BuggyModel()
+inputs = tf.random_normal(shape=(100, 28, 28))
+outputs = buggy_model(inputs)
+assert outputs.shape == (100, 10), &quot;invalid output shape: %s&quot; % outputs.shape
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="5.-Further-reading">
+<h2>5. Further reading<a class="headerlink" href="#5.-Further-reading" title="Permalink to this headline">¶</a></h2>
+<p>If you’d like to learn more about eager execution, consider reading …</p>
+<ul class="simple">
+<li>our <a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/eager/python/g3doc/guide.md">user
+guide</a>;</li>
+<li>our <a class="reference external" href="https://github.com/tensorflow/tensorflow/tree/master/tensorflow/contrib/eager/python/examples">collection of example
+models</a>,
+which includes a convolutional model for
+<a class="reference external" href="https://github.com/tensorflow/tensorflow/tree/master/tensorflow/contrib/eager/python/examples/mnist">MNIST</a>
+classification, a
+<a class="reference external" href="https://github.com/tensorflow/tensorflow/tree/master/tensorflow/contrib/eager/python/examples/gan">GAN</a>,
+a <a class="reference external" href="https://github.com/tensorflow/tensorflow/tree/master/tensorflow/contrib/eager/python/examples/spinn">recursive neural
+network</a>,
+and more;</li>
+<li><a class="reference external" href="https://colab.research.google.com/github/tensorflow/tensorflow/blob/master/tensorflow/contrib/autograph/examples/notebooks/dev_summit_2018_demo.ipynb">this advanced
+notebook</a>,
+which explains how to build and execute graphs while eager execution
+is enabled and how to call into eager execution while constructing a
+graph, and which also introduces Autograph, a source-code translation
+tool that automatically generates graph-construction code from
+dynamic eager code.</li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.4.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../../../../../examples/models/samples/outreach/demos/eager_execution.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../../../../../../v1.0.0/examples/models/samples/outreach/demos/eager_execution.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.6.2/examples/models/samples/outreach/demos/eager_execution.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.6.1/examples/models/samples/outreach/demos/eager_execution.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.6.0/examples/models/samples/outreach/demos/eager_execution.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.5.2/examples/models/samples/outreach/demos/eager_execution.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.5.1/examples/models/samples/outreach/demos/eager_execution.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.5.0/examples/models/samples/outreach/demos/eager_execution.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd>v0.4.0</dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.3.1/examples/models/samples/outreach/demos/eager_execution.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.3.0/examples/models/samples/outreach/demos/eager_execution.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.2.0/examples/models/samples/outreach/demos/eager_execution.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../..//examples/models/samples/outreach/demos/eager_execution.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../../../',
+            VERSION:'0.4.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../../../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

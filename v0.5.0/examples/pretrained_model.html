@@ -1,0 +1,784 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Inserting a TensorFlow network into a Nengo model &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Optimizing spiking neural networks" href="spiking_mnist.html" />
+    <link rel="prev" title="TensorNodes" href="../tensor_node.html" /> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../frontend.html">User documentation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="nef_init.html">Optimizing the parameters of a Nengo model</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Inserting a TensorFlow network into a Nengo model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spiking_mnist.html">Optimizing spiking neural networks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backend.html">Developer documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../frontend.html">User documentation</a> &raquo;</li>
+        
+          <li><a href="../tensor_node.html">TensorNodes</a> &raquo;</li>
+        
+      <li>Inserting a TensorFlow network into a Nengo model</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/examples/pretrained_model.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
+div.nboutput,
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput div.prompt pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput div.prompt pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput div.prompt,
+div.nboutput div.prompt {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput div.input_area,
+div.nboutput div.output_area {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput div.input_area {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Inserting-a-TensorFlow-network-into-a-Nengo-model">
+<h1>Inserting a TensorFlow network into a Nengo model<a class="headerlink" href="#Inserting-a-TensorFlow-network-into-a-Nengo-model" title="Permalink to this headline">¶</a></h1>
+<p>TensorFlow comes with a wide range of pre-defined deep learning models,
+which we might want to incorporate into a Nengo model. For example,
+suppose we are building a biological reinforcement learning model, but
+we’d like the inputs to our model to be natural images rather than
+artificial vectors. We could load a vision network from TensorFlow,
+insert it into our model using NengoDL, and then build the rest of our
+model using normal Nengo syntax.</p>
+<p>In this example we’ll show how to use TensorNodes to insert a
+pre-trained TensorFlow model (Inception-v1) into Nengo.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">urllib.request</span> <span class="kn">import</span> <span class="n">urlopen</span>
+<span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">stat</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">tensorflow.contrib.slim</span> <span class="kn">as</span> <span class="nn">slim</span><span class="p">;</span>
+
+<span class="kn">import</span> <span class="nn">nengo</span>
+<span class="kn">import</span> <span class="nn">nengo_dl</span>
+</pre></div>
+</div>
+</div>
+<p>TensorFlow provides a number of pre-defined models in the
+<a class="reference external" href="https://github.com/tensorflow/models">tensorflow/models</a> repository.
+These are not included when you install TensorFlow, so we need to
+separately clone that repository and import the components we need.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="o">!</span>git clone https://github.com/tensorflow/models
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;models&quot;</span><span class="p">,</span> <span class="s2">&quot;slim&quot;</span><span class="p">))</span>
+<span class="kn">from</span> <span class="nn">datasets</span> <span class="kn">import</span> <span class="n">dataset_utils</span><span class="p">,</span> <span class="n">imagenet</span>
+<span class="kn">from</span> <span class="nn">nets</span> <span class="kn">import</span> <span class="n">inception</span>
+<span class="kn">from</span> <span class="nn">preprocessing</span> <span class="kn">import</span> <span class="n">inception_preprocessing</span>
+</pre></div>
+</div>
+</div>
+<p>We will use a
+<a class="reference external" href="http://www.nengo.ai/nengo_dl/tensor_node.html">TensorNode</a> to insert
+our TensorFlow code into Nengo. <code class="docutils literal notranslate"><span class="pre">nengo_dl.TensorNode</span></code> works very
+similarly to <code class="docutils literal notranslate"><span class="pre">nengo.Node</span></code>, except instead of using the node to insert
+Python code into our model we will use it to insert TensorFlow code.</p>
+<p>The first thing we need to do is define our TensorNode output. This
+should be a function that accepts the current simulation time (and,
+optionally, a batch of vectors) as input, and produces a batch of
+vectors as output. All of these variables will be represented as
+<code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> objects, and the internal operations of the TensorNode
+will be implemented with TensorFlow operations. For example, we could
+use a TensorNode to output a <code class="docutils literal notranslate"><span class="pre">sin</span></code> function:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">TensorNode</span><span class="p">(</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="mf">5.0</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">p</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<p>However, outputing a <code class="docutils literal notranslate"><span class="pre">sin</span></code> function is something we could do more
+easily with a regular <code class="docutils literal notranslate"><span class="pre">nengo.Node</span></code>. The main use case for
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.TensorNode</span></code> is to work with artificial neural networks that
+are not easily defined in Nengo.</p>
+<p>In this case we’re going to build a TensorNode that encapsulates the
+<a class="reference external" href="https://arxiv.org/abs/1409.4842">Inception-v1</a> network. Inception-v1
+isn’t state-of-the-art anymore (we’re up to Inception-v4 now), but it is
+relatively small so it will be quick to download/run in this example.
+However, this same approach could be used for any TensorFlow network.</p>
+<p>Inception-v1 performs image classification; if we show it an image, it
+will output a set of probabilities for the 1000 different object types
+it is trained to classify. So if we show it an image of a tree it should
+output a high probability for the “tree” class and a low probability for
+the “car” class.</p>
+<p>The first thing we’ll do is download a sample image to test our network
+with (you could use a different image if you want).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;https://upload.wikimedia.org/wikipedia/commons/7/70/EnglishCockerSpaniel_simon.jpg&#39;</span>
+<span class="n">image_string</span> <span class="o">=</span> <span class="n">urlopen</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">image_string</span><span class="p">)))</span>
+<span class="n">image_shape</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span>
+
+<span class="c1"># display the test image</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<p>Now we’re ready to create our TensorNode. Instead of using a function
+for our TensorNode output, in this case we’ll use a callable class. This
+allows us to include a <code class="docutils literal notranslate"><span class="pre">pre_build</span></code> function in our TensorNode. NengoDL
+will call this function once when the model is first constructed, so we
+can use this function to perform any initial setup required for our
+node.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">checkpoints_dir</span> <span class="o">=</span> <span class="s1">&#39;/tmp/checkpoints&#39;</span>
+
+<span class="k">class</span> <span class="nc">InceptionNode</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">pre_build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="c1"># the shape of the inputs to the inception network</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_shape</span> <span class="o">=</span> <span class="n">inception</span><span class="o">.</span><span class="n">inception_v1</span><span class="o">.</span><span class="n">default_image_size</span>
+
+        <span class="c1"># download model checkpoint file</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">tf</span><span class="o">.</span><span class="n">gfile</span><span class="o">.</span><span class="n">Exists</span><span class="p">(</span><span class="n">checkpoints_dir</span><span class="p">):</span>
+            <span class="n">tf</span><span class="o">.</span><span class="n">gfile</span><span class="o">.</span><span class="n">MakeDirs</span><span class="p">(</span><span class="n">checkpoints_dir</span><span class="p">)</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;http://download.tensorflow.org/models/inception_v1_2016_08_28.tar.gz&quot;</span>
+        <span class="n">dataset_utils</span><span class="o">.</span><span class="n">download_and_uncompress_tarball</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">checkpoints_dir</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="c1"># this is the function that will be executed each timestep while the</span>
+        <span class="c1"># network is running</span>
+
+        <span class="c1"># convert our input vector to the shape/dtype of the input image</span>
+        <span class="n">image</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span> <span class="n">image_shape</span><span class="p">)</span>
+
+        <span class="c1"># reshape the image to the shape expected by the inception network</span>
+        <span class="n">processed_image</span> <span class="o">=</span> <span class="n">inception_preprocessing</span><span class="o">.</span><span class="n">preprocess_image</span><span class="p">(</span>
+            <span class="n">image</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_shape</span><span class="p">,</span> <span class="n">is_training</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">processed_images</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">processed_image</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># create inception network</span>
+        <span class="k">with</span> <span class="n">slim</span><span class="o">.</span><span class="n">arg_scope</span><span class="p">(</span><span class="n">inception</span><span class="o">.</span><span class="n">inception_v1_arg_scope</span><span class="p">()):</span>
+            <span class="n">logits</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">inception</span><span class="o">.</span><span class="n">inception_v1</span><span class="p">(</span><span class="n">processed_images</span><span class="p">,</span>
+                                               <span class="n">num_classes</span><span class="o">=</span><span class="mi">1001</span><span class="p">,</span>
+                                               <span class="n">is_training</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">probabilities</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">softmax</span><span class="p">(</span><span class="n">logits</span><span class="p">)</span>
+
+        <span class="c1"># return our classification probabilites</span>
+        <span class="k">return</span> <span class="n">probabilities</span>
+</pre></div>
+</div>
+</div>
+<p>Next we create a Nengo Network, containing our TensorNode.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="c1"># create a normal input node to feed in our test image</span>
+    <span class="n">input_node</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">output</span><span class="o">=</span><span class="n">image</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+
+    <span class="c1"># create our TensorNode containing the InceptionNode() we defined</span>
+    <span class="c1"># above.  we also need to specify size_in (the dimensionality of</span>
+    <span class="c1"># our input vectors, the flattened images) and size_out (the number</span>
+    <span class="c1"># of classification classes output by the inception network)</span>
+    <span class="n">incep_node</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">TensorNode</span><span class="p">(</span>
+        <span class="n">InceptionNode</span><span class="p">(),</span> <span class="n">size_in</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">image_shape</span><span class="p">),</span> <span class="n">size_out</span><span class="o">=</span><span class="mi">1001</span><span class="p">)</span>
+
+    <span class="c1"># connect up our input to our inception node</span>
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">input_node</span><span class="p">,</span> <span class="n">incep_node</span><span class="p">,</span> <span class="n">synapse</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+
+    <span class="c1"># add some probes to collect data</span>
+    <span class="n">input_p</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">input_node</span><span class="p">)</span>
+    <span class="n">incep_p</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">incep_node</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Note that at this point we could connect up the output of <code class="docutils literal notranslate"><span class="pre">incep_node</span></code>
+to any other part of our network, if this was part of a larger model.
+But to keep this example simple we’ll stop here.</p>
+<p>Next we’ll load the pre-trained weights for the Inception network. If we
+wanted we could train the network from scratch using the <code class="docutils literal notranslate"><span class="pre">sim.train</span></code>
+function, but that would take a long time and require some expertise in
+training deep networks.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">sim</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">sim</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">as_default</span><span class="p">():</span>
+    <span class="c1"># load checkpoint file</span>
+    <span class="n">init_fn</span> <span class="o">=</span> <span class="n">slim</span><span class="o">.</span><span class="n">assign_from_checkpoint_fn</span><span class="p">(</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">checkpoints_dir</span><span class="p">,</span> <span class="s1">&#39;inception_v1.ckpt&#39;</span><span class="p">),</span>
+        <span class="n">slim</span><span class="o">.</span><span class="n">get_model_variables</span><span class="p">(</span><span class="s1">&#39;InceptionV1&#39;</span><span class="p">))</span>
+
+    <span class="c1"># update the parameters of the model</span>
+    <span class="n">init_fn</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">sess</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>And finally, all that’s left is to run our network, using our example
+image as input, and check the output</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># run the network for one timestep</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+<span class="c1"># sort the output labels based on the classification probabilites</span>
+<span class="c1"># output from the network</span>
+<span class="n">probabilities</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">incep_p</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sorted_inds</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="o">-</span><span class="n">probabilities</span><span class="p">),</span>
+                                    <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+
+<span class="c1"># print top 5 classes</span>
+<span class="n">names</span> <span class="o">=</span> <span class="n">imagenet</span><span class="o">.</span><span class="n">create_readable_names_for_imagenet_labels</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">sorted_inds</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Probability </span><span class="si">%0.2f%%</span><span class="s1"> =&gt; [</span><span class="si">%s</span><span class="s1">]&#39;</span> <span class="o">%</span> <span class="p">(</span>
+    <span class="n">probabilities</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="n">names</span><span class="p">[</span><span class="n">index</span><span class="p">]))</span>
+
+<span class="c1"># display the test image</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">input_p</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">image_shape</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">sim</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># delete the models repo we cloned</span>
+<span class="k">def</span> <span class="nf">onerror</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">exc_info</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">W_OK</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">stat</span><span class="o">.</span><span class="n">S_IWUSR</span><span class="p">)</span>
+        <span class="n">func</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span>
+<span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="s2">&quot;models&quot;</span><span class="p">,</span> <span class="n">onerror</span><span class="o">=</span><span class="n">onerror</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="spiking_mnist.html" class="btn btn-neutral float-right" title="Optimizing spiking neural networks" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../tensor_node.html" class="btn btn-neutral" title="TensorNodes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.5.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../examples/pretrained_model.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../../v1.0.0/examples/pretrained_model.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.6.2/examples/pretrained_model.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.6.1/examples/pretrained_model.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.6.0/examples/pretrained_model.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.5.2/examples/pretrained_model.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.5.1/examples/pretrained_model.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd>v0.5.0</dd>
+                
+            
+                
+                    <dd><a href="../../v0.4.0/examples/pretrained_model.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.3.1/examples/pretrained_model.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.3.0/examples/pretrained_model.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.2.0/examples/pretrained_model.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="../..//examples/pretrained_model.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.5.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

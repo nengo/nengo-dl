@@ -1,0 +1,624 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>nengo_dl.utils &mdash; NengoDL 0.3.1 docs</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../frontend.html">User API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.html">Developer API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>nengo_dl.utils</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for nengo_dl.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">nengo.exceptions</span> <span class="k">import</span> <span class="n">SimulationError</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">from</span> <span class="nn">tensorflow.python.framework.ops</span> <span class="k">import</span> <span class="n">get_gradient_function</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">print_and_flush</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">file</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;file&#39;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+<span class="k">else</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="nf">print_and_flush</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="sanitize_name"><a class="viewcode-back" href="../../utils.html#nengo_dl.utils.sanitize_name">[docs]</a><span class="k">def</span> <span class="nf">sanitize_name</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Remove illegal Tensorflow name characters from string.</span>
+
+<span class="sd">    Valid Tensorflow name characters are ``[A-Za-z0-9_.\\-/]``</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    name : str</span>
+<span class="sd">        name to be sanitized</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        sanitized name</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span>
+
+    <span class="n">valid_exp</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[A-Za-z0-9_.\-/]&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">name</span> <span class="k">if</span> <span class="n">valid_exp</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">c</span><span class="p">)])</span></div>
+
+
+<div class="viewcode-block" id="function_name"><a class="viewcode-back" href="../../utils.html#nengo_dl.utils.function_name">[docs]</a><span class="k">def</span> <span class="nf">function_name</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">sanitize</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get the name of the callable object ``func``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    func : callable</span>
+<span class="sd">        callable object (e.g., function, callable class)</span>
+<span class="sd">    sanitize : bool, optional</span>
+<span class="sd">        if True, remove any illegal Tensorflow name characters from name</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        (sanitized) name of ``func``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="s2">&quot;__name__&quot;</span><span class="p">,</span> <span class="n">func</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">sanitize</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">sanitize_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">name</span></div>
+
+
+<div class="viewcode-block" id="align_func"><a class="viewcode-back" href="../../utils.html#nengo_dl.utils.align_func">[docs]</a><span class="k">def</span> <span class="nf">align_func</span><span class="p">(</span><span class="n">output_shape</span><span class="p">,</span> <span class="n">output_dtype</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Decorator that ensures the output of ``func`` is an</span>
+<span class="sd">    :class:`~numpy:numpy.ndarray` with the given shape and dtype.</span>
+
+<span class="sd">    Raises a ``SimulationError`` if the function returns ``None`` or a</span>
+<span class="sd">    non-finite value.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    output_shape : tuple of int</span>
+<span class="sd">        desired shape for function output (must have the same size as actual</span>
+<span class="sd">        function output)</span>
+<span class="sd">    output_dtype : ``tf.DType`` or :class:`~numpy:numpy.dtype`</span>
+<span class="sd">        desired dtype of function output</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output_dtype</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">DType</span><span class="p">):</span>
+        <span class="n">output_dtype</span> <span class="o">=</span> <span class="n">output_dtype</span><span class="o">.</span><span class="n">as_numpy_dtype</span>
+
+    <span class="k">def</span> <span class="nf">apply_align</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">aligned_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">output</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
+                    <span class="s2">&quot;Function </span><span class="si">%r</span><span class="s2"> returned None&quot;</span> <span class="o">%</span>
+                    <span class="n">function_name</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">sanitize</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">output</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
+                    <span class="s2">&quot;Function </span><span class="si">%r</span><span class="s2"> returned invalid value </span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span>
+                    <span class="p">(</span><span class="n">function_name</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">sanitize</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="n">output</span><span class="p">))</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">output_dtype</span><span class="p">)</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">output_shape</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">output</span>
+
+        <span class="k">return</span> <span class="n">aligned_func</span>
+
+    <span class="k">return</span> <span class="n">apply_align</span></div>
+
+
+<div class="viewcode-block" id="print_op"><a class="viewcode-back" href="../../utils.html#nengo_dl.utils.print_op">[docs]</a><span class="k">def</span> <span class="nf">print_op</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Inserts a print statement into the tensorflow graph.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    input : ``tf.Tensor``</span>
+<span class="sd">        the value of this tensor will be printed whenever it is computed</span>
+<span class="sd">        in the graph</span>
+<span class="sd">    message : str</span>
+<span class="sd">        string prepended to the value of ``input``, to help with logging</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ``tf.Tensor``</span>
+<span class="sd">        new tensor representing the print operation applied to ``input``</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This is what ``tf.Print`` is supposed to do, but it doesn&#39;t seem to work</span>
+<span class="sd">    consistently.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">print_func</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">x</span>
+
+    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;/cpu:0&quot;</span><span class="p">):</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">py_func</span><span class="p">(</span><span class="n">print_func</span><span class="p">,</span> <span class="p">[</span><span class="nb">input</span><span class="p">],</span> <span class="nb">input</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">output</span><span class="o">.</span><span class="n">set_shape</span><span class="p">(</span><span class="nb">input</span><span class="o">.</span><span class="n">get_shape</span><span class="p">())</span>
+
+    <span class="k">return</span> <span class="n">output</span></div>
+
+
+<div class="viewcode-block" id="cast_dtype"><a class="viewcode-back" href="../../utils.html#nengo_dl.utils.cast_dtype">[docs]</a><span class="k">def</span> <span class="nf">cast_dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">target</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Changes float dtypes to the target dtype, leaves others unchanged.</span>
+
+<span class="sd">    Used to map all float values to a target precision.  Also casts numpy</span>
+<span class="sd">    dtypes to Tensorflow dtypes.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dtype : ``tf.DType`` or :class:`~numpy:numpy.dtype`</span>
+<span class="sd">        input dtype to be converted</span>
+<span class="sd">    target : ``tf.DType``</span>
+<span class="sd">        floating point dtype to which all floating types should be converted</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ``tf.DType``</span>
+<span class="sd">        input dtype, converted to ``target`` type if necessary</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">DType</span><span class="p">):</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">as_dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">dtype</span><span class="o">.</span><span class="n">is_floating</span><span class="p">:</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">target</span>
+
+    <span class="k">return</span> <span class="n">dtype</span></div>
+
+
+<div class="viewcode-block" id="find_non_differentiable"><a class="viewcode-back" href="../../utils.html#nengo_dl.utils.find_non_differentiable">[docs]</a><span class="k">def</span> <span class="nf">find_non_differentiable</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Searches through a Tensorflow graph to find non-differentiable elements</span>
+<span class="sd">    between ``inputs`` and ``outputs`` (elements that would prevent us from</span>
+<span class="sd">    computing ``d_outputs / d_inputs``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    inputs : list of ``tf.Tensor``</span>
+<span class="sd">        input tensors</span>
+<span class="sd">    outputs : list of ``tf.Tensor``</span>
+<span class="sd">        output tensors</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">outputs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">grad</span> <span class="o">=</span> <span class="n">get_gradient_function</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">op</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">grad</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">op</span><span class="o">.</span><span class="n">inputs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="c1"># note: technically we&#39;re not sure that this op is</span>
+                    <span class="c1"># on the path to inputs. we could wait and propagate this</span>
+                    <span class="c1"># until we find inputs, but that can take a long time for</span>
+                    <span class="c1"># large graphs. it seems more useful to fail quickly, and</span>
+                    <span class="c1"># risk some false positives</span>
+                    <span class="k">raise</span> <span class="ne">LookupError</span>
+                <span class="n">find_non_differentiable</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">op</span><span class="o">.</span><span class="n">inputs</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">LookupError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
+                    <span class="s2">&quot;Graph contains non-differentiable &quot;</span>
+                    <span class="s2">&quot;elements: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">o</span><span class="o">.</span><span class="n">op</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ProgressBar"><a class="viewcode-back" href="../../utils.html#nengo_dl.utils.ProgressBar">[docs]</a><span class="k">class</span> <span class="nc">ProgressBar</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Displays a progress bar and ETA for tracked steps.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    max_steps : int</span>
+<span class="sd">        number of steps required to complete the tracked process</span>
+<span class="sd">    label : str, optional</span>
+<span class="sd">        a description of what is being tracked</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_steps</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span> <span class="o">=</span> <span class="n">max_steps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="mi">30</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="n">label</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ProgressBar.reset"><a class="viewcode-back" href="../../utils.html#nengo_dl.utils.ProgressBar.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reset the tracker to initial conditions.&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">curr_step</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="n">print_and_flush</span><span class="p">(</span><span class="s2">&quot;[</span><span class="si">%s</span><span class="s2">] ETA: unknown&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s2">&quot; &quot;</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">),</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ProgressBar.stop"><a class="viewcode-back" href="../../utils.html#nengo_dl.utils.ProgressBar.stop">[docs]</a>    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop the progress tracker.</span>
+
+<span class="sd">        Normally this will be called automatically when ``max_steps`` is</span>
+<span class="sd">        reached, but it can be called manually to trigger an early finish.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">line</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">line</span> <span class="o">+=</span> <span class="p">(</span><span class="s2">&quot;Completed&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span>
+                 <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">+</span> <span class="s2">&quot; completed&quot;</span><span class="p">)</span>
+        <span class="n">line</span> <span class="o">+=</span> <span class="s2">&quot; in </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span>
+            <span class="n">seconds</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curr_step</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="ProgressBar.step"><a class="viewcode-back" href="../../utils.html#nengo_dl.utils.ProgressBar.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Increment the progress tracker one step.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        msg : str, optional</span>
+<span class="sd">            display the given string at the end of the progress bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">curr_step</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">tmp</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">curr_step</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">tmp</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">progress</span> <span class="o">=</span> <span class="n">tmp</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">eta</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">)</span> <span class="o">*</span>
+                  <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">curr_step</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">curr_step</span><span class="p">)</span>
+
+        <span class="n">line</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\r</span><span class="s2">[</span><span class="si">%s%s</span><span class="s2">] ETA: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s2">&quot;#&quot;</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="p">,</span>
+                                     <span class="s2">&quot; &quot;</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="p">),</span>
+                                     <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">eta</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">msg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">+=</span> <span class="s2">&quot; (</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="k">if</span> <span class="n">msg</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">msg</span>
+
+        <span class="n">print_and_flush</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">curr_step</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="minibatch_generator"><a class="viewcode-back" href="../../utils.html#nengo_dl.utils.minibatch_generator">[docs]</a><span class="k">def</span> <span class="nf">minibatch_generator</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">rng</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generator to yield ``minibatch_sized`` subsets from ``inputs`` and</span>
+<span class="sd">    ``targets``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    inputs : dict of {:class:`~nengo:nengo.Node`: \</span>
+<span class="sd">                      :class:`~numpy:numpy.ndarray`}</span>
+<span class="sd">        input values for Nodes in the network</span>
+<span class="sd">    targets : dict of {:class:`~nengo:nengo.Probe`: \</span>
+<span class="sd">                       :class:`~numpy:numpy.ndarray`}</span>
+<span class="sd">        desired output value at Probes, corresponding to each value in</span>
+<span class="sd">        ``inputs``</span>
+<span class="sd">    minibatch_size : int</span>
+<span class="sd">        the number of items in each minibatch</span>
+<span class="sd">    shuffle : bool, optional</span>
+<span class="sd">        if True, the division of items into minibatches will be randomized each</span>
+<span class="sd">        time the generator is created</span>
+<span class="sd">    rng : :class:`~numpy:numpy.random.RandomState`, optional</span>
+<span class="sd">        random number generator</span>
+
+<span class="sd">    Yields</span>
+<span class="sd">    ------</span>
+<span class="sd">    inputs : dict of {:class:`~nengo:nengo.Node`: \</span>
+<span class="sd">                      :class:`~numpy:numpy.ndarray`}</span>
+<span class="sd">        the same structure as ``inputs``, but with each array reduced to</span>
+<span class="sd">        ``minibatch_size`` elements along the first dimension</span>
+<span class="sd">    targets : dict of {:class:`~nengo:nengo.Probe`: \</span>
+<span class="sd">                       :class:`~numpy:numpy.ndarray`}</span>
+<span class="sd">        the same structure as ``targets``, but with each array reduced to</span>
+<span class="sd">        ``minibatch_size`` elements along the first dimension</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">n_inputs</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">rng</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span>
+
+    <span class="k">if</span> <span class="n">shuffle</span><span class="p">:</span>
+        <span class="n">perm</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">n_inputs</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">perm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_inputs</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">n_inputs</span> <span class="o">%</span> <span class="n">minibatch_size</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="ne">UserWarning</span><span class="p">(</span>
+            <span class="s2">&quot;Number of inputs (</span><span class="si">%d</span><span class="s2">) is not an even multiple of &quot;</span>
+            <span class="s2">&quot;minibatch size (</span><span class="si">%d</span><span class="s2">); inputs will be truncated&quot;</span> <span class="o">%</span>
+            <span class="p">(</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="p">)))</span>
+        <span class="n">perm</span> <span class="o">=</span> <span class="n">perm</span><span class="p">[:</span><span class="o">-</span><span class="p">(</span><span class="n">n_inputs</span> <span class="o">%</span> <span class="n">minibatch_size</span><span class="p">)]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_inputs</span> <span class="o">-</span> <span class="n">n_inputs</span> <span class="o">%</span> <span class="n">minibatch_size</span><span class="p">,</span>
+                   <span class="n">minibatch_size</span><span class="p">):</span>
+        <span class="k">yield</span> <span class="p">({</span><span class="n">n</span><span class="p">:</span> <span class="n">inputs</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="n">perm</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">minibatch_size</span><span class="p">]]</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">},</span>
+               <span class="p">{</span><span class="n">p</span><span class="p">:</span> <span class="n">targets</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="n">perm</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">minibatch_size</span><span class="p">]]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">targets</span><span class="p">})</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.3.1
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../../_modules/nengo_dl/utils.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../../../v1.0.0/_modules/nengo_dl/utils.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.2/_modules/nengo_dl/utils.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.1/_modules/nengo_dl/utils.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.0/_modules/nengo_dl/utils.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.2/_modules/nengo_dl/utils.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.1/_modules/nengo_dl/utils.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.0/_modules/nengo_dl/utils.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.4.0/_modules/nengo_dl/utils.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd>v0.3.1</dd>
+                
+            
+                
+                    <dd><a href="../../../v0.3.0/_modules/nengo_dl/utils.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.2.0/_modules/nengo_dl/utils.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../..//_modules/nengo_dl/utils.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'0.3.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

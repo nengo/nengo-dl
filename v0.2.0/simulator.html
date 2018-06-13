@@ -1,0 +1,742 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>NengoDL Simulator &mdash; NengoDL 0.2.0 docs</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="TensorNodes" href="tensor_node.html" />
+    <link rel="prev" title="NengoDL users" href="frontend.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> NengoDL
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.2
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="frontend.html">NengoDL users</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">NengoDL Simulator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tensor_node.html">TensorNodes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="backend.html">NengoDL developers</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="frontend.html">NengoDL users</a> &raquo;</li>
+        
+      <li>NengoDL Simulator</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/simulator.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="nengodl-simulator">
+<h1>NengoDL Simulator<a class="headerlink" href="#nengodl-simulator" title="Permalink to this headline">¶</a></h1>
+<p>This is the class that allows users to access the <code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code>
+backend.  This can be used as a drop-in replacement for <code class="docutils literal notranslate"><span class="pre">nengo.Simulator</span></code>
+(i.e., simply replace any instance of <code class="docutils literal notranslate"><span class="pre">nengo.Simulator</span></code> with
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.Simulator</span></code> and everything will continue to function as
+normal).</p>
+<p>In addition, the Simulator exposes features unique to the
+<code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code> backend, such as <a class="reference internal" href="#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.train()</span></code></a>.</p>
+<dl class="class">
+<dt id="nengo_dl.simulator.Simulator">
+<em class="property">class </em><code class="descclassname">nengo_dl.simulator.</code><code class="descname">Simulator</code><span class="sig-paren">(</span><em>network</em>, <em>dt=0.001</em>, <em>seed=None</em>, <em>model=None</em>, <em>tensorboard=False</em>, <em>dtype=tf.float32</em>, <em>step_blocks=50</em>, <em>device=None</em>, <em>unroll_simulation=True</em>, <em>minibatch_size=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/simulator.html#Simulator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.simulator.Simulator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simulate network using the <code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code> backend.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>network</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">Network</span></code> or None</span></dt>
+<dd><p class="first last">a network object to be built and then simulated. If None,
+then a built model must be passed to <code class="docutils literal notranslate"><span class="pre">model</span></code> instead</p>
+</dd>
+<dt><strong>dt</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd><p class="first last">length of a simulator timestep, in seconds</p>
+</dd>
+<dt><strong>seed</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">seed for all stochastic operators used in this simulator</p>
+</dd>
+<dt><strong>model</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code>, optional</span></dt>
+<dd><p class="first last">pre-built model object</p>
+</dd>
+<dt><strong>tensorboard</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">if True, save network output in the Tensorflow summary format,
+which can be loaded into Tensorboard</p>
+</dd>
+<dt><strong>dtype</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="docutils literal notranslate"><span class="pre">tf.DType</span></code>, optional</span></dt>
+<dd><p class="first last">floating point precision to use for simulation</p>
+</dd>
+<dt><strong>step_blocks</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">controls how many simulation steps run each time the graph is
+executed (affects memory usage and graph construction time)</p>
+</dd>
+<dt><strong>device</strong> <span class="classifier-delimiter">:</span> <span class="classifier">None or <code class="docutils literal notranslate"><span class="pre">&quot;/cpu:0&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;/gpu:[0-n]&quot;</span></code>, optional</span></dt>
+<dd><p class="first last">device on which to execute computations (if None then uses the
+default device as determined by Tensorflow)</p>
+</dd>
+<dt><strong>unroll_simulation</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">if True, unroll simulation loop by explicitly building each iteration
+(up to <code class="docutils literal notranslate"><span class="pre">step_blocks</span></code>) into the computation graph. if False, use a
+symbolic loop, which is more general and produces a simpler graph, but
+is likely to be slower to simulate</p>
+</dd>
+<dt><strong>minibatch_size</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">the number of simultaneous inputs that will be passed through the
+network</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="nengo_dl.simulator.Simulator.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><em>seed=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/simulator.html#Simulator.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.simulator.Simulator.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets the simulator to initial conditions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>seed</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">if not None, overwrite the default simulator seed with this value
+(note: this becomes the new default simulator seed)</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.simulator.Simulator.step">
+<code class="descname">step</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/simulator.html#Simulator.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.simulator.Simulator.step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the simulation for one time step.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>kwargs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
+<dd><p class="first last">see <a class="reference internal" href="#nengo_dl.simulator.Simulator._run_steps" title="nengo_dl.simulator.Simulator._run_steps"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_run_steps()</span></code></a></p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.simulator.Simulator.run">
+<code class="descname">run</code><span class="sig-paren">(</span><em>time_in_seconds</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/simulator.html#Simulator.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.simulator.Simulator.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simulate for the given length of time.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>time_in_seconds</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">amount of time to run the simulation for</p>
+</dd>
+<dt><strong>kwargs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
+<dd><p class="first last">see <a class="reference internal" href="#nengo_dl.simulator.Simulator._run_steps" title="nengo_dl.simulator.Simulator._run_steps"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_run_steps()</span></code></a></p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.simulator.Simulator.run_steps">
+<code class="descname">run_steps</code><span class="sig-paren">(</span><em>n_steps</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/simulator.html#Simulator.run_steps"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.simulator.Simulator.run_steps" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simulate for the given number of steps.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>n_steps</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">the number of simulation steps to be executed</p>
+</dd>
+<dt><strong>kwargs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
+<dd><p class="first last">see <a class="reference internal" href="#nengo_dl.simulator.Simulator._run_steps" title="nengo_dl.simulator.Simulator._run_steps"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_run_steps()</span></code></a></p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">step_blocks</span></code> is specified, and <code class="docutils literal notranslate"><span class="pre">n_steps</span> <span class="pre">&gt;</span> <span class="pre">step_blocks</span></code>, this
+will repeatedly execute <code class="docutils literal notranslate"><span class="pre">step_blocks</span></code> timesteps until the the number
+of steps executed is &gt;= <code class="docutils literal notranslate"><span class="pre">n_steps</span></code>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.simulator.Simulator._run_steps">
+<code class="descname">_run_steps</code><span class="sig-paren">(</span><em>n_steps</em>, <em>profile=False</em>, <em>input_feeds=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/simulator.html#Simulator._run_steps"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.simulator.Simulator._run_steps" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute <code class="docutils literal notranslate"><span class="pre">step_blocks</span></code> sized segments of the simulation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>n_steps</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">the number of simulation steps to be executed</p>
+</dd>
+<dt><strong>profile</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">if True, collect Tensorflow profiling information while the
+simulation is running (this will slow down the simulation)</p>
+</dd>
+<dt><strong>input_feeds</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code>:                                <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>}</span></dt>
+<dd><p class="first last">override the values of input Nodes with the given data.  arrays
+should have shape <code class="docutils literal notranslate"><span class="pre">(sim.minibatch_size,</span> <span class="pre">n_steps,</span> <span class="pre">node.size_out)</span></code>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li>This function should not be called directly; run the simulator
+through <a class="reference internal" href="#nengo_dl.simulator.Simulator.step" title="nengo_dl.simulator.Simulator.step"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.step()</span></code></a>, <a class="reference internal" href="#nengo_dl.simulator.Simulator.run_steps" title="nengo_dl.simulator.Simulator.run_steps"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.run_steps()</span></code></a>, or
+<a class="reference internal" href="#nengo_dl.simulator.Simulator.run" title="nengo_dl.simulator.Simulator.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.run()</span></code></a>.</li>
+<li>The <code class="docutils literal notranslate"><span class="pre">input_feeds</span></code> argument allows the user to pass several
+simultaneous input sequences through the model.  That is, instead of
+running the model <code class="docutils literal notranslate"><span class="pre">n</span></code> times with 1 input at a time, the model
+can be run once with <code class="docutils literal notranslate"><span class="pre">n</span></code> inputs at a time.  Only the values of
+input nodes (nodes with no incoming Connections) can be overwritten
+in this way.</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.simulator.Simulator.train">
+<code class="descname">train</code><span class="sig-paren">(</span><em>inputs</em>, <em>targets</em>, <em>optimizer</em>, <em>n_epochs=1</em>, <em>objective='mse'</em>, <em>shuffle=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/simulator.html#Simulator.train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.simulator.Simulator.train" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optimize the trainable parameters of the network using the given
+optimization method, minimizing the objective value over the given
+inputs and targets.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>inputs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code>:                           <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>}</span></dt>
+<dd><p class="first last">input values for Nodes in the network; arrays should have shape
+<code class="docutils literal notranslate"><span class="pre">(batch_size,</span> <span class="pre">sim.step_blocks,</span> <span class="pre">node.size_out)</span></code></p>
+</dd>
+<dt><strong>targets</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Probe</span></code>:                            <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>}</span></dt>
+<dd><p class="first last">desired output value at Probes, corresponding to each value in
+<code class="docutils literal notranslate"><span class="pre">inputs</span></code>; arrays should have shape
+<code class="docutils literal notranslate"><span class="pre">(batch_size,</span> <span class="pre">sim.step_blocks,</span> <span class="pre">probe.size_in)</span></code></p>
+</dd>
+<dt><strong>optimizer</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="docutils literal notranslate"><span class="pre">tf.train.Optimizer</span></code></span></dt>
+<dd><p class="first last">Tensorflow optimizer, e.g.
+<code class="docutils literal notranslate"><span class="pre">tf.train.GradientDescentOptimizer(learning_rate=0.1)</span></code></p>
+</dd>
+<dt><strong>n_epochs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">run training for the given number of epochs (complete passes
+through <code class="docutils literal notranslate"><span class="pre">inputs</span></code>)</p>
+</dd>
+<dt><strong>objective</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="docutils literal notranslate"><span class="pre">&quot;mse&quot;</span></code> or callable, optional</span></dt>
+<dd><p class="first last">the objective to be minimized. passing <code class="docutils literal notranslate"><span class="pre">&quot;mse&quot;</span></code> will train with
+mean squared error. a custom function
+<code class="docutils literal notranslate"><span class="pre">f(output,</span> <span class="pre">target)</span> <span class="pre">-&gt;</span> <span class="pre">loss</span></code> can be passed that consumes the
+actual output and target output for a probe in <code class="docutils literal notranslate"><span class="pre">targets</span></code>
+and returns a <code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> representing the scalar loss value for
+that Probe (loss will be averaged across Probes).</p>
+</dd>
+<dt><strong>shuffle</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">if True, randomize the data into different minibatches each epoch</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li>Deep learning methods require the network to be differentiable, which
+means that trying to train a network with non-differentiable elements
+will result in an error.  Examples of common non-differentiable
+elements include <code class="xref py py-class docutils literal notranslate"><span class="pre">LIF</span></code>,
+<code class="xref py py-class docutils literal notranslate"><span class="pre">Direct</span></code>, or processes/neurons that don’t have a
+custom Tensorflow implementation (see
+<a class="reference internal" href="processes.html#nengo_dl.processes.SimProcessBuilder" title="nengo_dl.processes.SimProcessBuilder"><code class="xref py py-class docutils literal notranslate"><span class="pre">processes.SimProcessBuilder</span></code></a>/
+<a class="reference internal" href="neurons.html#nengo_dl.neurons.SimNeuronsBuilder" title="nengo_dl.neurons.SimNeuronsBuilder"><code class="xref py py-class docutils literal notranslate"><span class="pre">neurons.SimNeuronsBuilder</span></code></a>)</li>
+<li>Most Tensorflow optimizers do not have GPU support for networks with
+sparse reads, which are a common element in Nengo models.  If your
+network contains sparse reads then training will have to be
+executed on the CPU (by creating the simulator via
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.Simulator(...,</span> <span class="pre">device=&quot;/cpu:0&quot;)</span></code>), or is limited to
+optimizers with GPU support (currently this is only
+<code class="docutils literal notranslate"><span class="pre">tf.train.GradientDescentOptimizer</span></code>). Follow <a class="reference external" href="https://github.com/tensorflow/tensorflow/issues/2314">this issue</a> for updates
+on Tensorflow GPU support.</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.simulator.Simulator.loss">
+<code class="descname">loss</code><span class="sig-paren">(</span><em>inputs</em>, <em>targets</em>, <em>objective=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/simulator.html#Simulator.loss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.simulator.Simulator.loss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the loss value for the given objective and inputs/targets.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>inputs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code>:                           <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>}</span></dt>
+<dd><p class="first last">input values for Nodes in the network; arrays should have shape
+<code class="docutils literal notranslate"><span class="pre">(batch_size,</span> <span class="pre">sim.step_blocks,</span> <span class="pre">node.size_out)</span></code></p>
+</dd>
+<dt><strong>targets</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Probe</span></code>:                            <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>}</span></dt>
+<dd><p class="first last">desired output value at Probes, corresponding to each value in
+<code class="docutils literal notranslate"><span class="pre">inputs</span></code>; arrays should have shape
+<code class="docutils literal notranslate"><span class="pre">(batch_size,</span> <span class="pre">sim.step_blocks,</span> <span class="pre">probe.size_in)</span></code></p>
+</dd>
+<dt><strong>objective</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="docutils literal notranslate"><span class="pre">&quot;mse&quot;</span></code> or callable, optional</span></dt>
+<dd><p class="first last">the objective used to compute loss. passing <code class="docutils literal notranslate"><span class="pre">&quot;mse&quot;</span></code> will use
+mean squared error. a custom function
+<code class="docutils literal notranslate"><span class="pre">f(output,</span> <span class="pre">target)</span> <span class="pre">-&gt;</span> <span class="pre">loss</span></code> can be passed that consumes the
+actual output and target output for a probe in <code class="docutils literal notranslate"><span class="pre">targets</span></code>
+and returns a <code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> representing the scalar loss value for
+that Probe (loss will be averaged across Probes). passing None will
+use the objective passed to the last call of
+<a class="reference internal" href="#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.train()</span></code></a>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.simulator.Simulator._fill_feed">
+<code class="descname">_fill_feed</code><span class="sig-paren">(</span><em>n_steps</em>, <em>inputs</em>, <em>targets=None</em>, <em>start=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/simulator.html#Simulator._fill_feed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.simulator.Simulator._fill_feed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a feed dictionary containing values for all the placeholder
+inputs in the network, which will be passed to <code class="docutils literal notranslate"><span class="pre">tf.Session.run</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>n_steps</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">the number of execution steps</p>
+</dd>
+<dt><strong>input_feeds</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code>:                                <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>}</span></dt>
+<dd><p class="first last">override the values of input Nodes with the given data.  arrays
+should have shape <code class="docutils literal notranslate"><span class="pre">(sim.minibatch_size,</span> <span class="pre">n_steps,</span> <span class="pre">node.size_out)</span></code>.</p>
+</dd>
+<dt><strong>targets</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Probe</span></code>:                            <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>}, optional</span></dt>
+<dd><p class="first last">values for target placeholders (only necessary if loss is being
+computed, e.g. when training the network)</p>
+</dd>
+<dt><strong>start</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">initial value of simulator timestep</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}</strong></dt>
+<dd><p class="first last">feed values for placeholder tensors in the network</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.simulator.Simulator.save_params">
+<code class="descname">save_params</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/simulator.html#Simulator.save_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.simulator.Simulator.save_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save trainable network parameters to the given <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>path</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">filepath of parameter output file</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.simulator.Simulator.load_params">
+<code class="descname">load_params</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/simulator.html#Simulator.load_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.simulator.Simulator.load_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load trainable network parameters from the given <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>path</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">filepath of parameter input file</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.simulator.Simulator.print_params">
+<code class="descname">print_params</code><span class="sig-paren">(</span><em>msg=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/simulator.html#Simulator.print_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.simulator.Simulator.print_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print current values of trainable network parameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>msg</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">title for print output, useful to differentiate multiple print
+calls</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.simulator.Simulator.close">
+<code class="descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/simulator.html#Simulator.close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.simulator.Simulator.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Close the simulation, freeing resources.</p>
+<p class="rubric">Notes</p>
+<p>The simulation cannot be restarted after it is closed.  This is not a
+technical limitation, just a design decision made for all Nengo
+simulators.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.simulator.Simulator.trange">
+<code class="descname">trange</code><span class="sig-paren">(</span><em>dt=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/simulator.html#Simulator.trange"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.simulator.Simulator.trange" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a vector of times matching probed data.</p>
+<p>Note that the range does not start at 0 as one might expect, but at
+the first timestep (i.e., <code class="docutils literal notranslate"><span class="pre">dt</span></code>).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>dt</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd><p class="first last">the sampling period of the probe to create a range for;
+if None, the simulator’s <code class="docutils literal notranslate"><span class="pre">dt</span></code> will be used.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.simulator.Simulator.check_gradients">
+<code class="descname">check_gradients</code><span class="sig-paren">(</span><em>atol=0.0001</em>, <em>rtol=0.001</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/simulator.html#Simulator.check_gradients"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.simulator.Simulator.check_gradients" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform gradient checks for the network (used to verify that the
+analytic gradients are correct).</p>
+<p>Raises a simulation error if the difference between analytic and
+numeric gradient is greater than <code class="docutils literal notranslate"><span class="pre">atol</span> <span class="pre">+</span> <span class="pre">rtol</span> <span class="pre">*</span> <span class="pre">numeric_grad</span></code>
+(elementwise).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>atol</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd><p class="first last">absolute error tolerance</p>
+</dd>
+<dt><strong>rtol</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd><p class="first last">relative (to numeric grad) error tolerance</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="tensor_node.html" class="btn btn-neutral float-right" title="TensorNodes" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="frontend.html" class="btn btn-neutral" title="NengoDL users" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.2.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../simulator.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../v1.0.0/simulator.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.2/simulator.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.1/simulator.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.0/simulator.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.2/simulator.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.1/simulator.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.0/simulator.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.4.0/simulator.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.1/simulator.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.0/simulator.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd>v0.2.0</dd>
+                
+            
+                
+                    <dd><a href="..//simulator.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.2.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

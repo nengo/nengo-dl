@@ -1,0 +1,475 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>TensorFlow graph construction &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Signals" href="signals.html" />
+    <link rel="prev" title="Processes" href="processes.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frontend.html">User documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="backend.html">Developer documentation</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="builder.html">Builder</a></li>
+<li class="toctree-l2"><a class="reference internal" href="op_builders.html">Operator build classes</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">TensorFlow graph construction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="signals.html">Signals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="graph_optimizer.html">Operator graph optimization tools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html">Miscellaneous utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="backend.html">Developer documentation</a> &raquo;</li>
+        
+      <li>TensorFlow graph construction</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/tensor_graph.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="tensorflow-graph-construction">
+<h1>TensorFlow graph construction<a class="headerlink" href="#tensorflow-graph-construction" title="Permalink to this headline">¶</a></h1>
+<p>The TensorGraph class manages all the data and build processes associated with
+the TensorFlow graph.  The TensorFlow graph is the symbolic description of
+the computations in the network, which will be executed by the simulator.</p>
+<span class="target" id="module-nengo_dl.tensor_graph"></span><dl class="function">
+<dt id="nengo_dl.tensor_graph.with_self">
+<code class="descclassname">nengo_dl.tensor_graph.</code><code class="descname">with_self</code><span class="sig-paren">(</span><em>func</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/tensor_graph.html#with_self"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.tensor_graph.with_self" title="Permalink to this definition">¶</a></dt>
+<dd><p>A decorator that can be used to ensure that any ops created within the
+wrapped method will be added to the TensorGraph object’s graph.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.tensor_graph.TensorGraph">
+<em class="property">class </em><code class="descclassname">nengo_dl.tensor_graph.</code><code class="descname">TensorGraph</code><span class="sig-paren">(</span><em>model</em>, <em>dt</em>, <em>unroll_simulation</em>, <em>dtype</em>, <em>minibatch_size</em>, <em>device</em>, <em>progress</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/tensor_graph.html#TensorGraph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.tensor_graph.TensorGraph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Manages the construction of the TensorFlow symbolic computation graph.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>model</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Model" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></a></span></dt>
+<dd><p class="first last">Pre-built Nengo model describing the network to be simulated</p>
+</dd>
+<dt><strong>dt</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">Length of a simulator timestep, in seconds</p>
+</dd>
+<dt><strong>unroll_simulation</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">Unroll simulation loop by explicitly building <code class="docutils literal notranslate"><span class="pre">unroll_simulation</span></code>
+iterations into the computation graph</p>
+</dd>
+<dt><strong>dtype</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="docutils literal notranslate"><span class="pre">tf.DType</span></code></span></dt>
+<dd><p class="first last">Floating point precision to use for simulation</p>
+</dd>
+<dt><strong>minibatch_size</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">The number of simultaneous inputs that will be passed through the
+network</p>
+</dd>
+<dt><strong>device</strong> <span class="classifier-delimiter">:</span> <span class="classifier">None or <code class="docutils literal notranslate"><span class="pre">&quot;/cpu:0&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;/gpu:[0-n]&quot;</span></code></span></dt>
+<dd><p class="first last">Device on which to execute computations (if None then uses the
+default device as determined by TensorFlow)</p>
+</dd>
+<dt><strong>progress</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="utils.html#nengo_dl.utils.ProgressBar" title="nengo_dl.utils.ProgressBar"><code class="xref py py-class docutils literal notranslate"><span class="pre">utils.ProgressBar</span></code></a></span></dt>
+<dd><p class="first last">Progress bar for optimization stage</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="nengo_dl.tensor_graph.TensorGraph.build_step">
+<code class="descname">build_step</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/tensor_graph.html#TensorGraph.build_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.tensor_graph.TensorGraph.build_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build the operators that execute a single simulation timestep
+into the graph.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>probe_tensors</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code></span></dt>
+<dd><p class="first last">The Tensor objects representing the data required for each model
+Probe</p>
+</dd>
+<dt><strong>side_effects</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code></span></dt>
+<dd><p class="first last">The output Tensors of computations that may have side-effects
+(e.g., <a class="reference external" href="https://www.nengo.ai/nengo/frontend_api.html#nengo.Node" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> functions), meaning that they
+must be executed each time step even if their output doesn’t appear
+to be used in the simulation</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.tensor_graph.TensorGraph.build_loop">
+<code class="descname">build_loop</code><span class="sig-paren">(</span><em>progress</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/tensor_graph.html#TensorGraph.build_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.tensor_graph.TensorGraph.build_loop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build simulation loop.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>progress</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="utils.html#nengo_dl.utils.ProgressBar" title="nengo_dl.utils.ProgressBar"><code class="xref py py-class docutils literal notranslate"><span class="pre">utils.ProgressBar</span></code></a></span></dt>
+<dd><p class="first last">Progress bar for loop construction</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.tensor_graph.TensorGraph.build_inputs">
+<code class="descname">build_inputs</code><span class="sig-paren">(</span><em>progress</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/tensor_graph.html#TensorGraph.build_inputs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.tensor_graph.TensorGraph.build_inputs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets up the inputs in the model (which will be computed outside of
+TensorFlow and fed in each simulation block).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>progress</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="utils.html#nengo_dl.utils.ProgressBar" title="nengo_dl.utils.ProgressBar"><code class="xref py py-class docutils literal notranslate"><span class="pre">utils.ProgressBar</span></code></a></span></dt>
+<dd><p class="first last">Progress bar for input construction</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.tensor_graph.TensorGraph.mark_signals">
+<code class="descname">mark_signals</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/tensor_graph.html#TensorGraph.mark_signals"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.tensor_graph.TensorGraph.mark_signals" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mark all the signals in <code class="docutils literal notranslate"><span class="pre">self.model</span></code> according to whether they
+represent trainable parameters of the model (parameters that can be
+optimized by deep learning methods).</p>
+<p>Trainable parameters include connection weights, ensemble encoders, and
+neuron biases.  Unless one of those signals is targeted by a Nengo
+learning rule (otherwise the learning rule update conflicts with the
+deep learning optimization).</p>
+<p>Users can manually specify whether signals are trainable or not using
+the config system (e.g.,
+<code class="docutils literal notranslate"><span class="pre">net.config[nengo.Ensemble].trainable</span> <span class="pre">=</span> <span class="pre">False</span></code>)</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="signals.html" class="btn btn-neutral float-right" title="Signals" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="processes.html" class="btn btn-neutral" title="Processes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015-2018, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.6.2
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../tensor_graph.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../v1.0.0/tensor_graph.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd>v0.6.2</dd>
+                
+            
+                
+                    <dd><a href="../v0.6.1/tensor_graph.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.0/tensor_graph.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.2/tensor_graph.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.1/tensor_graph.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.0/tensor_graph.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.4.0/tensor_graph.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.1/tensor_graph.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.0/tensor_graph.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.2.0/tensor_graph.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="..//tensor_graph.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.6.2',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

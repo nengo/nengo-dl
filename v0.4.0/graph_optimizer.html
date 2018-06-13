@@ -1,0 +1,740 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Operator graph optimization tools &mdash; NengoDL documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Miscellaneous utilities" href="utils.html" />
+    <link rel="prev" title="Signals" href="signals.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> NengoDL
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frontend.html">User API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="backend.html">Developer API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="builder.html">Builder</a></li>
+<li class="toctree-l2"><a class="reference internal" href="op_builders.html">Operator build classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tensor_graph.html">TensorFlow graph construction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="signals.html">Signals</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Operator graph optimization tools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html">Miscellaneous utilities</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="backend.html">Developer API</a> &raquo;</li>
+        
+      <li>Operator graph optimization tools</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/graph_optimizer.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="operator-graph-optimization-tools">
+<h1>Operator graph optimization tools<a class="headerlink" href="#operator-graph-optimization-tools" title="Permalink to this headline">¶</a></h1>
+<p>These functions are used to restructure the operator graph so that it can
+be simulated more efficiently when converted into a TensorFlow graph.</p>
+<span class="target" id="module-nengo_dl.graph_optimizer"></span><dl class="function">
+<dt id="nengo_dl.graph_optimizer.mergeable">
+<code class="descclassname">nengo_dl.graph_optimizer.</code><code class="descname">mergeable</code><span class="sig-paren">(</span><em>op</em>, <em>chosen_ops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/graph_optimizer.html#mergeable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.graph_optimizer.mergeable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if the given op can be merged with the candidate group</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>op</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code></span></dt>
+<dd><p class="first last">the operator to be merged</p>
+</dd>
+<dt><strong>chosen_ops</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code></span></dt>
+<dd><p class="first last">the operator group to be merged in to</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>bool</strong></dt>
+<dd><p class="first last">True if <code class="docutils literal notranslate"><span class="pre">op</span></code> can be merged into <code class="docutils literal notranslate"><span class="pre">chosen_ops</span></code>, else False</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.graph_optimizer.greedy_planner">
+<code class="descclassname">nengo_dl.graph_optimizer.</code><code class="descname">greedy_planner</code><span class="sig-paren">(</span><em>operators</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/graph_optimizer.html#greedy_planner"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.graph_optimizer.greedy_planner" title="Permalink to this definition">¶</a></dt>
+<dd><p>Combine mergeable operators into groups that will be executed as a
+single computation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>operators</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code></span></dt>
+<dd><p class="first last">all the <code class="docutils literal notranslate"><span class="pre">nengo</span></code> operators in a model (unordered)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of tuple of :class:`~nengo:nengo.builder.Operator`</strong></dt>
+<dd><p class="first last">operators combined into mergeable groups and in execution order</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Originally based on <code class="docutils literal notranslate"><span class="pre">nengo_ocl</span></code> greedy planner</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.graph_optimizer.tree_planner">
+<code class="descclassname">nengo_dl.graph_optimizer.</code><code class="descname">tree_planner</code><span class="sig-paren">(</span><em>op_list</em>, <em>max_depth=3</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/graph_optimizer.html#tree_planner"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.graph_optimizer.tree_planner" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create merged execution plan through exhaustive tree search.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">max_depth</span></code> parameter scales the planner between full tree search
+and greedy search.  <code class="docutils literal notranslate"><span class="pre">max_depth==1</span></code> is equivalent to
+<a class="reference internal" href="#nengo_dl.graph_optimizer.greedy_planner" title="nengo_dl.graph_optimizer.greedy_planner"><code class="xref py py-func docutils literal notranslate"><span class="pre">greedy_planner()</span></code></a>, and <code class="docutils literal notranslate"><span class="pre">max_depth==len(op_list)</span></code> is full tree
+search (guaranteed to find the optimal plan, but likely very slow).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>op_list</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code></span></dt>
+<dd><p class="first last">all the <code class="docutils literal notranslate"><span class="pre">nengo</span></code> operators in a model (unordered)</p>
+</dd>
+<dt><strong>max_depth</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">the planner will search this many steps ahead before selecting which
+group to schedule next</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of tuple of :class:`~nengo:nengo.builder.Operator`</strong></dt>
+<dd><p class="first last">operators combined into mergeable groups and in execution order</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.graph_optimizer.noop_planner">
+<code class="descclassname">nengo_dl.graph_optimizer.</code><code class="descname">noop_planner</code><span class="sig-paren">(</span><em>operators</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/graph_optimizer.html#noop_planner"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.graph_optimizer.noop_planner" title="Permalink to this definition">¶</a></dt>
+<dd><p>Orders operators into a valid execution order, but does not perform
+any merging.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>operators</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code></span></dt>
+<dd><p class="first last">all the <code class="docutils literal notranslate"><span class="pre">nengo</span></code> operators in a model (unordered)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of tuple of :class:`~nengo:nengo.builder.Operator`</strong></dt>
+<dd><p class="first last">operators in execution order</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.graph_optimizer.transitive_planner">
+<code class="descclassname">nengo_dl.graph_optimizer.</code><code class="descname">transitive_planner</code><span class="sig-paren">(</span><em>op_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/graph_optimizer.html#transitive_planner"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.graph_optimizer.transitive_planner" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create merged execution plan through transitive closure construction.</p>
+<p>This is something like a middle ground between <a class="reference internal" href="#nengo_dl.graph_optimizer.greedy_planner" title="nengo_dl.graph_optimizer.greedy_planner"><code class="xref py py-func docutils literal notranslate"><span class="pre">greedy_planner()</span></code></a> and
+<a class="reference internal" href="#nengo_dl.graph_optimizer.tree_planner" title="nengo_dl.graph_optimizer.tree_planner"><code class="xref py py-func docutils literal notranslate"><span class="pre">tree_planner()</span></code></a>; it can improve simulation time over the greedy
+planner, but comes with potentially significant build time increases.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>op_list</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code></span></dt>
+<dd><p class="first last">all the <code class="docutils literal notranslate"><span class="pre">nengo</span></code> operators in a model (unordered)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of tuple of :class:`~nengo:nengo.builder.Operator`</strong></dt>
+<dd><p class="first last">operators combined into mergeable groups and in execution order</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.graph_optimizer.transitive_closure_recurse">
+<code class="descclassname">nengo_dl.graph_optimizer.</code><code class="descname">transitive_closure_recurse</code><span class="sig-paren">(</span><em>dg</em>, <em>ops</em>, <em>trans</em>, <em>builder_type</em>, <em>op_builders</em>, <em>cache</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/graph_optimizer.html#transitive_closure_recurse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.graph_optimizer.transitive_closure_recurse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the transitive closure for the given graph, restricted to the
+operators with the given builder type.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>dg</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {int: set of int}</span></dt>
+<dd><p class="first last">dependency graph where <code class="docutils literal notranslate"><span class="pre">dg[a]</span> <span class="pre">=</span> <span class="pre">{b,</span> <span class="pre">c}</span></code> indicates that operators
+<code class="docutils literal notranslate"><span class="pre">b</span></code> and <code class="docutils literal notranslate"><span class="pre">c</span></code> are dependent on <code class="docutils literal notranslate"><span class="pre">a</span></code></p>
+</dd>
+<dt><strong>ops</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of int</span></dt>
+<dd><p class="first last">the operators for which we want to compute the transitive closure</p>
+</dd>
+<dt><strong>trans</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {int: set of int}</span></dt>
+<dd><p class="first last">the transitive closure for the graph (will be filled in-place)</p>
+</dd>
+<dt><strong>builder_type</strong> <span class="classifier-delimiter">:</span> <span class="classifier">type</span></dt>
+<dd><p class="first last">one of the <code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code> build classes (e.g.,
+<a class="reference internal" href="operators.html#nengo_dl.operators.CopyBuilder" title="nengo_dl.operators.CopyBuilder"><code class="xref py py-class docutils literal notranslate"><span class="pre">CopyBuilder</span></code></a>), specifying the type of operators
+to include in the transitive closure</p>
+</dd>
+<dt><strong>op_builders</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of type</span></dt>
+<dd><p class="first last">the build class for each operator</p>
+</dd>
+<dt><strong>cache</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {frozenset of int: set of int}</span></dt>
+<dd><p class="first last">stores base sets which <code class="docutils literal notranslate"><span class="pre">trans</span></code> will reference (to reduce memory
+usage, since many elements in <code class="docutils literal notranslate"><span class="pre">trans</span></code> will have the same value)</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>This function uses ints to refer to operators, where the int indicates
+the index of the operator in the overall op list (this is done to save
+memory).  See <a class="reference internal" href="#nengo_dl.graph_optimizer.transitive_planner" title="nengo_dl.graph_optimizer.transitive_planner"><code class="xref py py-func docutils literal notranslate"><span class="pre">transitive_planner()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.graph_optimizer.order_signals">
+<code class="descclassname">nengo_dl.graph_optimizer.</code><code class="descname">order_signals</code><span class="sig-paren">(</span><em>plan</em>, <em>n_passes=10</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/graph_optimizer.html#order_signals"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.graph_optimizer.order_signals" title="Permalink to this definition">¶</a></dt>
+<dd><p>Orders signals and operators to try to structure reads in contiguous
+blocks.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>plan</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of tuple of <code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code></span></dt>
+<dd><p class="first last">operator execution plan (e.g., output from <code class="docutils literal notranslate"><span class="pre">greedy_planner</span></code>)</p>
+</dd>
+<dt><strong>n_passes</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">number of repeated passes through the operator reordering stage</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of :class:`~nengo:nengo.builder.Signal`</strong></dt>
+<dd><p class="first last">signals organized into the order in which we want them arranged in
+memory</p>
+</dd>
+<dt><strong>list of tuple of :class:`~nengo:nengo.builder.Operator`</strong></dt>
+<dd><p class="first last">input plan with operators reordered within groups to align with order
+of signals</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.graph_optimizer.hamming_sort">
+<code class="descclassname">nengo_dl.graph_optimizer.</code><code class="descname">hamming_sort</code><span class="sig-paren">(</span><em>blocks</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/graph_optimizer.html#hamming_sort"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.graph_optimizer.hamming_sort" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reorder signals using heuristics to try to place signals that are read
+by the same operators into adjacent positions (giving priority to larger
+blocks).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>blocks</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code>: frozenset of int}</span></dt>
+<dd><p class="first last">dictionary indicating which read blocks each signal is a part of</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>dict of {:class:`~nengo:nengo.builder.Signal`: int}</strong></dt>
+<dd><p class="first last">indices indicating where each signal should be in the sorted list</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.graph_optimizer.sort_ops_by_signals">
+<code class="descclassname">nengo_dl.graph_optimizer.</code><code class="descname">sort_ops_by_signals</code><span class="sig-paren">(</span><em>sorted_reads</em>, <em>sigs</em>, <em>sig_idxs</em>, <em>new_plan</em>, <em>blocks</em>, <em>reads</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/graph_optimizer.html#sort_ops_by_signals"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.graph_optimizer.sort_ops_by_signals" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rearrange operators to match the order of signals.</p>
+<p>Note: the same operators can be associated with multiple read blocks if
+they have multiple inputs, so rearranging the operators according to one
+of those blocks could mess up the order with respect to the other read
+block.  We iterate through the read blocks in increasing size so
+that the largest blocks win out.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>sorted_reads</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of tuple of (<code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code>,                                      int)</span></dt>
+<dd><p class="first last">the operators that form each read block, sorted by increasing size of
+the read block. in the case that a group of operators participate in
+multiple read blocks, the integer distinguishes which one of those
+inputs this block is associated with.</p>
+</dd>
+<dt><strong>sigs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></span></dt>
+<dd><p class="first last">signals that have been arranged into a given order by other parts
+of the algorithm</p>
+</dd>
+<dt><strong>sig_idxs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code>: int}</span></dt>
+<dd><p class="first last">sorted indices of signals</p>
+</dd>
+<dt><strong>new_plan</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {tuple of <code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code>:                         tuple of <code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code>}</span></dt>
+<dd><p class="first last">mapping from original operator group to the sorted operators</p>
+</dd>
+<dt><strong>blocks</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code>: frozenset of int}</span></dt>
+<dd><p class="first last">indicates which read blocks each signal participates in</p>
+</dd>
+<dt><strong>reads</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code>:                      list of <code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code>}</span></dt>
+<dd><p class="first last">the signals read by each operator</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>new_plan</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {tuple of <code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code>:                         tuple of <code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code>}</span></dt>
+<dd><p class="first last">mapping from original operator group to the sorted operators</p>
+</dd>
+<dt><strong>sig_idxs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code>: int}</span></dt>
+<dd><p class="first last">signal indices, possibly updated to match new op order</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.graph_optimizer.sort_signals_by_ops">
+<code class="descclassname">nengo_dl.graph_optimizer.</code><code class="descname">sort_signals_by_ops</code><span class="sig-paren">(</span><em>sorted_reads</em>, <em>sigs</em>, <em>sig_idxs</em>, <em>new_plan</em>, <em>blocks</em>, <em>reads</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/graph_optimizer.html#sort_signals_by_ops"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.graph_optimizer.sort_signals_by_ops" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attempts to rearrange <code class="docutils literal notranslate"><span class="pre">sigs</span></code> so that it is in the same order as
+operator reads, without changing the overall block order.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>sorted_reads</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of tuple of (<code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code>,                                      int)</span></dt>
+<dd><p class="first last">the operators that form each read block, sorted by increasing size of
+the read block. in the case that a group of operators participate in
+multiple read blocks, the integer distinguishes which one of those
+inputs this block is associated with.</p>
+</dd>
+<dt><strong>sigs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></span></dt>
+<dd><p class="first last">signals to be sorted</p>
+</dd>
+<dt><strong>sig_idxs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code>: int}</span></dt>
+<dd><p class="first last">sorted indices of signals</p>
+</dd>
+<dt><strong>new_plan</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {tuple of <code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code>:                         tuple of <code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code>}</span></dt>
+<dd><p class="first last">mapping from original operator group to the sorted operators</p>
+</dd>
+<dt><strong>blocks</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code>: frozenset of int}</span></dt>
+<dd><p class="first last">indicates which read blocks each signal participates in</p>
+</dd>
+<dt><strong>reads</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code>:                      list of <code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code>}</span></dt>
+<dd><p class="first last">the signals read by each operator</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>sig_idxs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code>: int}</span></dt>
+<dd><p class="first last">sorted indices of signals</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.graph_optimizer.noop_order_signals">
+<code class="descclassname">nengo_dl.graph_optimizer.</code><code class="descname">noop_order_signals</code><span class="sig-paren">(</span><em>plan</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/graph_optimizer.html#noop_order_signals"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.graph_optimizer.noop_order_signals" title="Permalink to this definition">¶</a></dt>
+<dd><p>A version of <a class="reference internal" href="#nengo_dl.graph_optimizer.order_signals" title="nengo_dl.graph_optimizer.order_signals"><code class="xref py py-func docutils literal notranslate"><span class="pre">graph_optimizer.order_signals()</span></code></a> that doesn’t do any
+reordering, for debugging.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.graph_optimizer.create_signals">
+<code class="descclassname">nengo_dl.graph_optimizer.</code><code class="descname">create_signals</code><span class="sig-paren">(</span><em>sigs</em>, <em>plan</em>, <em>float_type</em>, <em>minibatch_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/graph_optimizer.html#create_signals"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.graph_optimizer.create_signals" title="Permalink to this definition">¶</a></dt>
+<dd><p>Groups signal data together into larger arrays, and represent each
+individual signal as a slice into that array.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>sigs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></span></dt>
+<dd><p class="first last">base signals arranged into the order in which they should reside in
+memory (e.g., output from <code class="docutils literal notranslate"><span class="pre">order_signals</span></code>)</p>
+</dd>
+<dt><strong>plan</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of tuple of <code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code></span></dt>
+<dd><p class="first last">operator execution plan (only used to get a list of all the operators)</p>
+</dd>
+<dt><strong>float_type</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="docutils literal notranslate"><span class="pre">np.float32</span></code> or <code class="docutils literal notranslate"><span class="pre">np.float64</span></code></span></dt>
+<dd><p class="first last">floating point precision to use for signals</p>
+</dd>
+<dt><strong>minibatch_size</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">number of items in each minibatch</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>base_arrays</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {object</span></dt>
+<dd><p class="first last">combined arrays, containing the initial values for all signals</p>
+</dd>
+<dt><strong>sig_map</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code>:                        <a class="reference internal" href="signals.html#nengo_dl.signals.TensorSignal" title="nengo_dl.signals.TensorSignal"><code class="xref py py-class docutils literal notranslate"><span class="pre">signals.TensorSignal</span></code></a>}</span></dt>
+<dd><p class="first last">mapping from <code class="docutils literal notranslate"><span class="pre">nengo</span></code> Signals to <code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code> TensorSignals (views
+into the base arrays)</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="utils.html" class="btn btn-neutral float-right" title="Miscellaneous utilities" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="signals.html" class="btn btn-neutral" title="Signals" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.4.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../graph_optimizer.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../v1.0.0/graph_optimizer.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.2/graph_optimizer.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.1/graph_optimizer.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.0/graph_optimizer.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.2/graph_optimizer.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.1/graph_optimizer.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.0/graph_optimizer.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd>v0.4.0</dd>
+                
+            
+                
+                    <dd><a href="../v0.3.1/graph_optimizer.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.0/graph_optimizer.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.2.0/graph_optimizer.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="..//graph_optimizer.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.4.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

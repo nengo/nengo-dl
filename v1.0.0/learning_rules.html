@@ -1,0 +1,605 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Learning rules &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Processes" href="processes.html" />
+    <link rel="prev" title="Neuron types" href="neurons.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frontend.html">User documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="backend.html">Developer documentation</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="builder.html">Builder</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="op_builders.html">Operator build classes</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="operators.html">Basic operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="neurons.html">Neuron types</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Learning rules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="processes.html">Processes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tensor_graph.html">TensorFlow graph construction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="signals.html">Signals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="graph_optimizer.html">Operator graph optimization tools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html">Miscellaneous utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="backend.html">Developer documentation</a> &raquo;</li>
+        
+          <li><a href="op_builders.html">Operator build classes</a> &raquo;</li>
+        
+      <li>Learning rules</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/learning_rules.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="learning-rules">
+<h1>Learning rules<a class="headerlink" href="#learning-rules" title="Permalink to this headline">¶</a></h1>
+<p>Build Nengo learning rules into the TensorFlow graph.</p>
+<span class="target" id="module-nengo_dl.learning_rule_builders"></span><dl class="class">
+<dt id="nengo_dl.learning_rule_builders.SimBCMBuilder">
+<em class="property">class </em><code class="descclassname">nengo_dl.learning_rule_builders.</code><code class="descname">SimBCMBuilder</code><span class="sig-paren">(</span><em>ops</em>, <em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/learning_rule_builders.html#SimBCMBuilder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.learning_rule_builders.SimBCMBuilder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build a group of <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.learning_rules.SimBCM" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimBCM</span></code></a>
+operators.</p>
+<dl class="method">
+<dt id="nengo_dl.learning_rule_builders.SimBCMBuilder.build_step">
+<code class="descname">build_step</code><span class="sig-paren">(</span><em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/learning_rule_builders.html#SimBCMBuilder.build_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.learning_rule_builders.SimBCMBuilder.build_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function builds whatever computations need to be executed in
+each simulation timestep.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>signals</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="signals.html#nengo_dl.signals.SignalDict" title="nengo_dl.signals.SignalDict"><code class="xref py py-class docutils literal notranslate"><span class="pre">signals.SignalDict</span></code></a></span></dt>
+<dd><p class="first last">Mapping from <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Signal" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></a> to
+<code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> (updated by operations)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of ``tf.Tensor``, optional</strong></dt>
+<dd><p class="first last">If not None, the returned tensors correspond to outputs with
+possible side-effects, i.e. computations that need to be executed
+in the TensorFlow graph even if their output doesn’t appear to be
+used</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.learning_rule_builders.SimOjaBuilder">
+<em class="property">class </em><code class="descclassname">nengo_dl.learning_rule_builders.</code><code class="descname">SimOjaBuilder</code><span class="sig-paren">(</span><em>ops</em>, <em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/learning_rule_builders.html#SimOjaBuilder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.learning_rule_builders.SimOjaBuilder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build a group of <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.learning_rules.SimOja" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimOja</span></code></a>
+operators.</p>
+<dl class="method">
+<dt id="nengo_dl.learning_rule_builders.SimOjaBuilder.build_step">
+<code class="descname">build_step</code><span class="sig-paren">(</span><em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/learning_rule_builders.html#SimOjaBuilder.build_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.learning_rule_builders.SimOjaBuilder.build_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function builds whatever computations need to be executed in
+each simulation timestep.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>signals</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="signals.html#nengo_dl.signals.SignalDict" title="nengo_dl.signals.SignalDict"><code class="xref py py-class docutils literal notranslate"><span class="pre">signals.SignalDict</span></code></a></span></dt>
+<dd><p class="first last">Mapping from <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Signal" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></a> to
+<code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> (updated by operations)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of ``tf.Tensor``, optional</strong></dt>
+<dd><p class="first last">If not None, the returned tensors correspond to outputs with
+possible side-effects, i.e. computations that need to be executed
+in the TensorFlow graph even if their output doesn’t appear to be
+used</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.learning_rule_builders.SimVojaBuilder">
+<em class="property">class </em><code class="descclassname">nengo_dl.learning_rule_builders.</code><code class="descname">SimVojaBuilder</code><span class="sig-paren">(</span><em>ops</em>, <em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/learning_rule_builders.html#SimVojaBuilder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.learning_rule_builders.SimVojaBuilder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build a group of <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.learning_rules.SimVoja" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimVoja</span></code></a>
+operators.</p>
+<dl class="method">
+<dt id="nengo_dl.learning_rule_builders.SimVojaBuilder.build_step">
+<code class="descname">build_step</code><span class="sig-paren">(</span><em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/learning_rule_builders.html#SimVojaBuilder.build_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.learning_rule_builders.SimVojaBuilder.build_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function builds whatever computations need to be executed in
+each simulation timestep.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>signals</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="signals.html#nengo_dl.signals.SignalDict" title="nengo_dl.signals.SignalDict"><code class="xref py py-class docutils literal notranslate"><span class="pre">signals.SignalDict</span></code></a></span></dt>
+<dd><p class="first last">Mapping from <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Signal" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></a> to
+<code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> (updated by operations)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of ``tf.Tensor``, optional</strong></dt>
+<dd><p class="first last">If not None, the returned tensors correspond to outputs with
+possible side-effects, i.e. computations that need to be executed
+in the TensorFlow graph even if their output doesn’t appear to be
+used</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.learning_rule_builders.SimPES">
+<em class="property">class </em><code class="descclassname">nengo_dl.learning_rule_builders.</code><code class="descname">SimPES</code><span class="sig-paren">(</span><em>pre_filtered</em>, <em>error</em>, <em>delta</em>, <em>learning_rate</em>, <em>tag=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/learning_rule_builders.html#SimPES"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.learning_rule_builders.SimPES" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate connection weight change according to the PES rule.</p>
+<p>Implements the PES learning rule of the form</p>
+<div class="math notranslate nohighlight">
+\[\Delta \omega_{ij} = \frac{\kappa}{n} e_j a_i\]</div>
+<p>where</p>
+<ul class="simple">
+<li><span class="math notranslate nohighlight">\(\kappa\)</span> is a scalar learning rate,</li>
+<li><span class="math notranslate nohighlight">\(n\)</span> is the number of presynaptic neurons</li>
+<li><span class="math notranslate nohighlight">\(e_j\)</span> is the error for the jth output dimension, and</li>
+<li><span class="math notranslate nohighlight">\(a_i\)</span> is the activity of a presynaptic neuron.</li>
+</ul>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>pre_filtered</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Signal</span></dt>
+<dd><p class="first last">The presynaptic activity, <span class="math notranslate nohighlight">\(a_i\)</span>.</p>
+</dd>
+<dt><strong>error</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Signal</span></dt>
+<dd><p class="first last">The error signal, <span class="math notranslate nohighlight">\(e_j\)</span>.</p>
+</dd>
+<dt><strong>delta</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Signal</span></dt>
+<dd><p class="first last">The synaptic weight change to be applied, <span class="math notranslate nohighlight">\(\Delta \omega_{ij}\)</span>.</p>
+</dd>
+<dt><strong>learning_rate</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">The scalar learning rate, <span class="math notranslate nohighlight">\(\kappa\)</span>.</p>
+</dd>
+<dt><strong>tag</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional (Default: None)</span></dt>
+<dd><p class="first last">A label associated with the operator, for debugging purposes.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<ol class="arabic simple">
+<li>sets <code class="docutils literal notranslate"><span class="pre">[delta]</span></code></li>
+<li>incs <code class="docutils literal notranslate"><span class="pre">[]</span></code></li>
+<li>reads <code class="docutils literal notranslate"><span class="pre">[pre_filtered,</span> <span class="pre">error]</span></code></li>
+<li>updates <code class="docutils literal notranslate"><span class="pre">[]</span></code></li>
+</ol>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Attributes:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>pre_filtered</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Signal</span></dt>
+<dd><p class="first last">The presynaptic activity, <span class="math notranslate nohighlight">\(a_i\)</span>.</p>
+</dd>
+<dt><strong>error</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Signal</span></dt>
+<dd><p class="first last">The error signal, <span class="math notranslate nohighlight">\(e_j\)</span>.</p>
+</dd>
+<dt><strong>delta</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Signal</span></dt>
+<dd><p class="first last">The synaptic weight change to be applied, <span class="math notranslate nohighlight">\(\Delta \omega_{ij}\)</span>.</p>
+</dd>
+<dt><strong>learning_rate</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">The scalar learning rate, <span class="math notranslate nohighlight">\(\kappa\)</span>.</p>
+</dd>
+<dt><strong>tag</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional (Default: None)</span></dt>
+<dd><p class="first last">A label associated with the operator, for debugging purposes.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.learning_rule_builders.build_pes">
+<code class="descclassname">nengo_dl.learning_rule_builders.</code><code class="descname">build_pes</code><span class="sig-paren">(</span><em>model</em>, <em>pes</em>, <em>rule</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/learning_rule_builders.html#build_pes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.learning_rule_builders.build_pes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Builds a <cite>.PES</cite> object into a model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>model</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Model</span></dt>
+<dd><p class="first last">The model to build into.</p>
+</dd>
+<dt><strong>pes</strong> <span class="classifier-delimiter">:</span> <span class="classifier">PES</span></dt>
+<dd><p class="first last">Learning rule type to build.</p>
+</dd>
+<dt><strong>rule</strong> <span class="classifier-delimiter">:</span> <span class="classifier">LearningRule</span></dt>
+<dd><p class="first last">The learning rule object corresponding to the neuron type.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Does not modify <code class="docutils literal notranslate"><span class="pre">model.params[]</span></code> and can therefore be called
+more than once with the same <cite>.PES</cite> instance.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.learning_rule_builders.SimPESBuilder">
+<em class="property">class </em><code class="descclassname">nengo_dl.learning_rule_builders.</code><code class="descname">SimPESBuilder</code><span class="sig-paren">(</span><em>ops</em>, <em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/learning_rule_builders.html#SimPESBuilder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.learning_rule_builders.SimPESBuilder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build a group of <a class="reference internal" href="#nengo_dl.learning_rule_builders.SimPES" title="nengo_dl.learning_rule_builders.SimPES"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimPES</span></code></a> operators.</p>
+<dl class="method">
+<dt id="nengo_dl.learning_rule_builders.SimPESBuilder.build_step">
+<code class="descname">build_step</code><span class="sig-paren">(</span><em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/learning_rule_builders.html#SimPESBuilder.build_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.learning_rule_builders.SimPESBuilder.build_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function builds whatever computations need to be executed in
+each simulation timestep.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>signals</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="signals.html#nengo_dl.signals.SignalDict" title="nengo_dl.signals.SignalDict"><code class="xref py py-class docutils literal notranslate"><span class="pre">signals.SignalDict</span></code></a></span></dt>
+<dd><p class="first last">Mapping from <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Signal" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></a> to
+<code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> (updated by operations)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of ``tf.Tensor``, optional</strong></dt>
+<dd><p class="first last">If not None, the returned tensors correspond to outputs with
+possible side-effects, i.e. computations that need to be executed
+in the TensorFlow graph even if their output doesn’t appear to be
+used</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="processes.html" class="btn btn-neutral float-right" title="Processes" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="neurons.html" class="btn btn-neutral" title="Neuron types" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015-2018, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v1.0.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../learning_rules.html">latest</a></dd>
+            
+
+            
+                
+                    <dd>v1.0.0</dd>
+                
+            
+                
+                    <dd><a href="../v0.6.2/learning_rules.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.1/learning_rules.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.0/learning_rules.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.2/learning_rules.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.1/learning_rules.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.0/learning_rules.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.4.0/learning_rules.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.1/learning_rules.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.0/learning_rules.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.2.0/learning_rules.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="..//learning_rules.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1.0.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

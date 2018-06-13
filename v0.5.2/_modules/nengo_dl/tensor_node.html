@@ -1,0 +1,608 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>nengo_dl.tensor_node &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../frontend.html">User documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.html">Developer documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>nengo_dl.tensor_node</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for nengo_dl.tensor_node</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">nengo</span> <span class="k">import</span> <span class="n">Node</span><span class="p">,</span> <span class="n">Connection</span><span class="p">,</span> <span class="n">Ensemble</span><span class="p">,</span> <span class="n">builder</span>
+<span class="kn">from</span> <span class="nn">nengo.base</span> <span class="k">import</span> <span class="n">NengoObject</span>
+<span class="kn">from</span> <span class="nn">nengo.builder.operator</span> <span class="k">import</span> <span class="n">Reset</span>
+<span class="kn">from</span> <span class="nn">nengo.exceptions</span> <span class="k">import</span> <span class="n">ValidationError</span><span class="p">,</span> <span class="n">SimulationError</span>
+<span class="kn">from</span> <span class="nn">nengo.neurons</span> <span class="k">import</span> <span class="n">NeuronType</span>
+<span class="kn">from</span> <span class="nn">nengo.params</span> <span class="k">import</span> <span class="n">Default</span><span class="p">,</span> <span class="n">IntParam</span><span class="p">,</span> <span class="n">Parameter</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+
+<span class="kn">from</span> <span class="nn">nengo_dl.builder</span> <span class="k">import</span> <span class="n">Builder</span><span class="p">,</span> <span class="n">OpBuilder</span>
+
+
+<span class="k">class</span> <span class="nc">TensorFuncParam</span><span class="p">(</span><span class="n">Parameter</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Performs validation on the function passed to TensorNode, and sets</span>
+<span class="sd">    ``size_out`` if necessary.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">readonly</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">TensorFuncParam</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">name</span><span class="p">,</span> <span class="n">optional</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">readonly</span><span class="o">=</span><span class="n">readonly</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">coerce</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">TensorFuncParam</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">coerce</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">func</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">size_out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">size_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_size_out</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">func</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output</span>
+
+    <span class="k">def</span> <span class="nf">check_size_out</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;TensorNode output must be a function&quot;</span><span class="p">,</span>
+                                  <span class="n">attr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">obj</span><span class="o">=</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="n">t</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="mf">0.0</span><span class="p">),</span> <span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">size_in</span><span class="p">))</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span> <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">size_in</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="p">(</span><span class="n">t</span><span class="p">,)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span>
+                <span class="s2">&quot;Calling TensorNode function with arguments </span><span class="si">%s</span><span class="s2"> produced an &quot;</span>
+                <span class="s2">&quot;error:</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">e</span><span class="p">),</span> <span class="n">attr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">obj</span><span class="o">=</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;TensorNode function must return a Tensor&quot;</span><span class="p">,</span>
+                                  <span class="n">attr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">obj</span><span class="o">=</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()</span><span class="o">.</span><span class="n">ndims</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;Node output must be a minibatched vector &quot;</span>
+                                  <span class="s2">&quot;(got shape </span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">result</span><span class="o">.</span><span class="n">get_shape</span><span class="p">(),</span>
+                                  <span class="n">attr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">obj</span><span class="o">=</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">value</span>
+
+
+<div class="viewcode-block" id="TensorNode"><a class="viewcode-back" href="../../tensor_node.html#nengo_dl.tensor_node.TensorNode">[docs]</a><span class="k">class</span> <span class="nc">TensorNode</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Inserts TensorFlow code into a Nengo model.  A TensorNode operates in</span>
+<span class="sd">    much the same way as a :class:`~nengo:nengo.Node`, except its inputs and</span>
+<span class="sd">    outputs are defined using TensorFlow operations.</span>
+
+<span class="sd">    The TensorFlow code is defined in a function or callable class</span>
+<span class="sd">    (``tensor_func``).  This function accepts the current simulation time as</span>
+<span class="sd">    input, or the current simulation time and a Tensor ``x`` if</span>
+<span class="sd">    ``node.size_in &gt; 0``.  ``x`` will have shape</span>
+<span class="sd">    ``(sim.minibatch_size, node.size_in``), and the function should return a</span>
+<span class="sd">    Tensor with shape ``(sim.minibatch_size, node.size_out)``.</span>
+<span class="sd">    ``node.size_out`` will be inferred by calling the function once and</span>
+<span class="sd">    checking the output, if it isn&#39;t set when the Node is created.</span>
+
+<span class="sd">    If ``tensor_func`` has a ``pre_build`` attribute, that function will be</span>
+<span class="sd">    called once when the model is constructed.  This can be used to compute any</span>
+<span class="sd">    constant values or set up variables -- things that don&#39;t need to</span>
+<span class="sd">    execute every simulation timestep.</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        def pre_build(shape_in, shape_out):</span>
+<span class="sd">            print(shape_in)  # (minibatch_size, node.size_in)</span>
+<span class="sd">            print(shape_out)  # (minibatch_size, node.size_out)</span>
+
+<span class="sd">    If ``tensor_func`` has a ``post_build`` attribute, that function will be</span>
+<span class="sd">    called after the simulator is created and whenever it is reset.  This can</span>
+<span class="sd">    be used to set any random elements in the TensorNode or perform any</span>
+<span class="sd">    post-initialization setup required by the node (e.g., loading pretrained</span>
+<span class="sd">    weights).</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        def post_build(sess, rng):</span>
+<span class="sd">            print(sess)  # the TensorFlow simulation session object</span>
+<span class="sd">            print(rng)  # random number generator (np.random.RandomState)</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tensor_func : callable</span>
+<span class="sd">        A function that maps node inputs to outputs</span>
+<span class="sd">    size_in : int, optional (Default: 0)</span>
+<span class="sd">        The number of elements in the input vector</span>
+<span class="sd">    size_out : int, optional (Default: None)</span>
+<span class="sd">        The number of elements in the output vector (if None, value will be</span>
+<span class="sd">        inferred by calling ``tensor_func``)</span>
+<span class="sd">    label : str, optional (Default: None)</span>
+<span class="sd">        A name for the node, used for debugging and visualization</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">tensor_func</span> <span class="o">=</span> <span class="n">TensorFuncParam</span><span class="p">(</span><span class="s1">&#39;tensor_func&#39;</span><span class="p">)</span>
+    <span class="n">size_in</span> <span class="o">=</span> <span class="n">IntParam</span><span class="p">(</span><span class="s1">&#39;size_in&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">optional</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">size_out</span> <span class="o">=</span> <span class="n">IntParam</span><span class="p">(</span><span class="s1">&#39;size_out&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">low</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">optional</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensor_func</span><span class="p">,</span> <span class="n">size_in</span><span class="o">=</span><span class="n">Default</span><span class="p">,</span> <span class="n">size_out</span><span class="o">=</span><span class="n">Default</span><span class="p">,</span>
+                 <span class="n">label</span><span class="o">=</span><span class="n">Default</span><span class="p">):</span>
+        <span class="c1"># note: we bypass the Node constructor, because we don&#39;t want to</span>
+        <span class="c1"># perform validation on `output`</span>
+        <span class="n">NengoObject</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">size_in</span> <span class="o">=</span> <span class="n">size_in</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size_out</span> <span class="o">=</span> <span class="n">size_out</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tensor_func</span> <span class="o">=</span> <span class="n">tensor_func</span></div>
+
+
+<span class="nd">@builder</span><span class="o">.</span><span class="n">Builder</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">TensorNode</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">build_tensor_node</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This is the Nengo build function, so that Nengo knows what to do with</span>
+<span class="sd">    TensorNodes.&quot;&quot;&quot;</span>
+
+    <span class="c1"># input signal</span>
+    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">size_in</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">sig_in</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">Signal</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">size_in</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.in&quot;</span> <span class="o">%</span> <span class="n">node</span><span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">add_op</span><span class="p">(</span><span class="n">Reset</span><span class="p">(</span><span class="n">sig_in</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sig_in</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">sig_out</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">Signal</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">size_out</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.out&quot;</span> <span class="o">%</span> <span class="n">node</span><span class="p">)</span>
+
+    <span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="s1">&#39;in&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sig_in</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="s1">&#39;out&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sig_out</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">node</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">model</span><span class="o">.</span><span class="n">add_op</span><span class="p">(</span><span class="n">SimTensorNode</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">tensor_func</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">sig_in</span><span class="p">,</span> <span class="n">sig_out</span><span class="p">))</span>
+
+
+<span class="k">class</span> <span class="nc">SimTensorNode</span><span class="p">(</span><span class="n">builder</span><span class="o">.</span><span class="n">Operator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Operator for TensorNodes (constructed by :func:`.build_tensor_node`).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    func : callable</span>
+<span class="sd">        The TensorNode function (``tensor_func``)</span>
+<span class="sd">    time : :class:`~nengo:nengo.builder.Signal`</span>
+<span class="sd">        Signal representing the current simulation time</span>
+<span class="sd">    input : :class:`~nengo:nengo.builder.Signal` or None</span>
+<span class="sd">        Input Signal for the TensorNode (or None if size_in==0)</span>
+<span class="sd">    output : :class:`~nengo:nengo.builder.Signal`</span>
+<span class="sd">        Output Signal for the TensorNode</span>
+<span class="sd">    tag : str, optional</span>
+<span class="sd">        A label associated with the operator, for debugging</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    1. sets ``[output]``</span>
+<span class="sd">    2. incs ``[]``</span>
+<span class="sd">    3. reads ``[time] if input is None else [time, input]``</span>
+<span class="sd">    4. updates ``[]``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SimTensorNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">tag</span><span class="o">=</span><span class="n">tag</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">func</span> <span class="o">=</span> <span class="n">func</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input</span> <span class="o">=</span> <span class="nb">input</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="n">output</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sets</span> <span class="o">=</span> <span class="p">[</span><span class="n">output</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">incs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reads</span> <span class="o">=</span> <span class="p">[</span><span class="n">time</span><span class="p">]</span> <span class="k">if</span> <span class="nb">input</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="n">time</span><span class="p">,</span> <span class="nb">input</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">updates</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">make_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;``make_step`` is never called by the NengoDL simulator, so if this</span>
+<span class="sd">        is called it means that someone is trying to execute a TensorNode in</span>
+<span class="sd">        some other Simulator.&quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">error</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span><span class="s2">&quot;TensorNode can only be simulated in the &quot;</span>
+                                  <span class="s2">&quot;NengoDL simulator&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">error</span>
+
+
+<div class="viewcode-block" id="SimTensorNodeBuilder"><a class="viewcode-back" href="../../operators.html#nengo_dl.tensor_node.SimTensorNodeBuilder">[docs]</a><span class="nd">@Builder</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">SimTensorNode</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">SimTensorNodeBuilder</span><span class="p">(</span><span class="n">OpBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Builds a :class:`.SimTensorNode` operator into a NengoDL model.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="c1"># SimTensorNodes should never be merged</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">ops</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">op</span><span class="o">.</span><span class="n">input</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">src_data</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">src_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">sig_map</span><span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">input</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">src_data</span><span class="o">.</span><span class="n">load_indices</span><span class="p">()</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">src_data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dst_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">sig_map</span><span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">output</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dst_data</span><span class="o">.</span><span class="n">load_indices</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">func</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">func</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">,</span> <span class="s2">&quot;pre_build&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">pre_build</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">signals</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">src_data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+                <span class="p">(</span><span class="n">signals</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">dst_data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SimTensorNodeBuilder.build_step"><a class="viewcode-back" href="../../operators.html#nengo_dl.tensor_node.SimTensorNodeBuilder.build_step">[docs]</a>    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">src_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="n">signals</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">input</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">src_data</span><span class="p">)</span>
+
+            <span class="c1"># move minibatch dimension to front</span>
+            <span class="nb">input</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+            <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="n">signals</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="nb">input</span><span class="p">)</span>
+
+        <span class="c1"># move minibatch dimension back to end</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+        <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dst_data</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SimTensorNodeBuilder.build_post"><a class="viewcode-back" href="../../operators.html#nengo_dl.tensor_node.SimTensorNodeBuilder.build_post">[docs]</a>    <span class="k">def</span> <span class="nf">build_post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">sess</span><span class="p">,</span> <span class="n">rng</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">,</span> <span class="s2">&quot;post_build&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">post_build</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">rng</span><span class="p">)</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">reshaped</span><span class="p">(</span><span class="n">shape_in</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A decorator to reshape the inputs to a function into non-vector shapes.</span>
+
+<span class="sd">    The output of the function will be flatten back into (batched) vectors.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    shape_in : tuple of int</span>
+<span class="sd">        The desired shape for inputs to the function (not including the first</span>
+<span class="sd">        dimension, which corresponds to the batch axis)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    callable</span>
+<span class="sd">        The decorated function</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">reshape_dec</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">reshaped_func</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">value</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="n">batch_size</span><span class="p">,)</span> <span class="o">+</span> <span class="n">shape_in</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">x</span>
+
+        <span class="k">return</span> <span class="n">reshaped_func</span>
+
+    <span class="k">return</span> <span class="n">reshape_dec</span>
+
+
+<div class="viewcode-block" id="tensor_layer"><a class="viewcode-back" href="../../tensor_node.html#nengo_dl.tensor_node.tensor_layer">[docs]</a><span class="k">def</span> <span class="nf">tensor_layer</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">layer_func</span><span class="p">,</span> <span class="n">shape_in</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">synapse</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">transform</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">return_conn</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">layer_args</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A utility function to construct TensorNodes that apply some function</span>
+<span class="sd">    to their input (analogous to the ``tf.layers`` syntax).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    input : :class:`~nengo:nengo.base.NengoObject`</span>
+<span class="sd">        Object providing input to the layer</span>
+<span class="sd">    layer_func : callable or :class:`~nengo:nengo.neurons.NeuronType`</span>
+<span class="sd">        A function that takes the value from ``input`` (represented as a</span>
+<span class="sd">        ``tf.Tensor``) and maps it to some output value, or a Nengo neuron</span>
+<span class="sd">        type, defining a nonlinearity that will be applied to ``input``.</span>
+<span class="sd">    shape_in : tuple of int, optional</span>
+<span class="sd">        If not None, reshape the input to the given shape</span>
+<span class="sd">    synapse : float or :class:`~nengo:nengo.synapses.Synapse`, optional</span>
+<span class="sd">        Synapse to apply on connection from ``input`` to this layer</span>
+<span class="sd">    transform : :class:`~numpy:numpy.ndarray`, optional</span>
+<span class="sd">        Transform matrix to apply on connection from ``input`` to this layer</span>
+<span class="sd">    return_conn : bool, optional</span>
+<span class="sd">        If True, also return the connection linking this layer to ``input``</span>
+<span class="sd">    layer_args : dict, optional</span>
+<span class="sd">        These arguments will be passed to ``layer_func`` if it is callable, or</span>
+<span class="sd">        :class:`~nengo:nengo.Ensemble` if ``layer_func`` is a</span>
+<span class="sd">        :class:`~nengo:nengo.neurons.NeuronType`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    :class:`.TensorNode` or :class:`~nengo:nengo.ensemble.Neurons`</span>
+<span class="sd">        A TensorNode that implements the given layer function (if</span>
+<span class="sd">        ``layer_func`` was a callable), or a Neuron object with the given</span>
+<span class="sd">        neuron type, connected to ``input``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">transform</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">transform</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">size_in</span> <span class="o">=</span> <span class="n">transform</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">shape_in</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">size_in</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">shape_in</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">size_in</span> <span class="o">=</span> <span class="nb">input</span><span class="o">.</span><span class="n">size_out</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer_func</span><span class="p">,</span> <span class="n">NeuronType</span><span class="p">):</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">Ensemble</span><span class="p">(</span><span class="n">size_in</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">neuron_type</span><span class="o">=</span><span class="n">layer_func</span><span class="p">,</span>
+                        <span class="o">**</span><span class="n">layer_args</span><span class="p">)</span><span class="o">.</span><span class="n">neurons</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># add (ignored) time input and pass kwargs</span>
+        <span class="k">def</span> <span class="nf">node_func</span><span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">layer_func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">**</span><span class="n">layer_args</span><span class="p">)</span>
+
+        <span class="c1"># reshape input if necessary</span>
+        <span class="k">if</span> <span class="n">shape_in</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">node_func</span> <span class="o">=</span> <span class="n">reshaped</span><span class="p">(</span><span class="n">shape_in</span><span class="p">)(</span><span class="n">node_func</span><span class="p">)</span>
+
+        <span class="n">node</span> <span class="o">=</span> <span class="n">TensorNode</span><span class="p">(</span><span class="n">node_func</span><span class="p">,</span> <span class="n">size_in</span><span class="o">=</span><span class="n">size_in</span><span class="p">)</span>
+
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">Connection</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">synapse</span><span class="o">=</span><span class="n">synapse</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">conn</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_conn</span> <span class="k">else</span> <span class="n">node</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.5.2
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../../_modules/nengo_dl/tensor_node.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../../../v1.0.0/_modules/nengo_dl/tensor_node.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.2/_modules/nengo_dl/tensor_node.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.1/_modules/nengo_dl/tensor_node.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.0/_modules/nengo_dl/tensor_node.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd>v0.5.2</dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.1/_modules/nengo_dl/tensor_node.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.0/_modules/nengo_dl/tensor_node.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.4.0/_modules/nengo_dl/tensor_node.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.3.1/_modules/nengo_dl/tensor_node.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.3.0/_modules/nengo_dl/tensor_node.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.2.0/_modules/nengo_dl/tensor_node.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../..//_modules/nengo_dl/tensor_node.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'0.5.2',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

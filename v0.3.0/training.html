@@ -1,0 +1,555 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Optimizing a NengoDL model &mdash; NengoDL 0.3.0 docs</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Additional resources" href="resources.html" />
+    <link rel="prev" title="TensorNodes" href="tensor_node.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> NengoDL
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="frontend.html">User API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="simulator.html">NengoDL Simulator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tensor_node.html">TensorNodes</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Optimizing a NengoDL model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#inputs">Inputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#targets">Targets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#optimizer">Optimizer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#objective">Objective</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#other-parameters">Other parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#limitations">Limitations</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backend.html">Developer API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="frontend.html">User API</a> &raquo;</li>
+        
+      <li>Optimizing a NengoDL model</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/training.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="optimizing-a-nengodl-model">
+<h1>Optimizing a NengoDL model<a class="headerlink" href="#optimizing-a-nengodl-model" title="Permalink to this headline">¶</a></h1>
+<p>Optimizing Nengo models via deep learning training methods is one of the
+important features of NengoDL.  This functionality is accessed via the
+<a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.train()</span></code></a> method.  For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="o">&lt;</span><span class="n">construct</span> <span class="n">the</span> <span class="n">model</span><span class="o">&gt;</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="o">&lt;</span><span class="n">inputs</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">&lt;</span><span class="n">targets</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">&lt;</span><span class="n">optimizer</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">n_epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+              <span class="n">objective</span><span class="o">=&lt;</span><span class="n">objective</span><span class="o">&gt;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>When the <code class="docutils literal notranslate"><span class="pre">Simulator</span></code> is first constructed, all the parameters in the model
+(e.g., encoders, decoders, connection weights, biases) are initialized based
+on the functions/distributions specified during model construction (see the
+<a class="reference external" href="https://pythonhosted.org/nengo/">Nengo documentation</a> for more detail on
+how that works).  What the <a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.train()</span></code></a> method does is then
+further optimize those parameters based on some inputs and desired
+outputs.  We’ll go through each of those components in more detail
+below.</p>
+<div class="section" id="inputs">
+<h2>Inputs<a class="headerlink" href="#inputs" title="Permalink to this headline">¶</a></h2>
+<p>The first argument to the <a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.train()</span></code></a> function is the input data.
+We can think of a model as computing a function
+<span class="math notranslate nohighlight">\(y = f(x, \theta)\)</span>, where <span class="math notranslate nohighlight">\(f\)</span> is the model, mapping inputs
+<span class="math notranslate nohighlight">\(x\)</span> to outputs <span class="math notranslate nohighlight">\(y\)</span> with parameters <span class="math notranslate nohighlight">\(\theta\)</span>.  This
+argument is specifying the values for <span class="math notranslate nohighlight">\(x\)</span>.</p>
+<p>In practice what that means is specifying values for the input Nodes in the
+model.  A <code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code> is a Nengo object that inserts values into
+a Network, usually used
+to define external inputs.  <a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.train()</span></code></a> will override the normal
+Node values with the training data that is provided.  This is specified as a
+dictionary <code class="docutils literal notranslate"><span class="pre">{&lt;node&gt;:</span> <span class="pre">&lt;array&gt;,</span> <span class="pre">...}</span></code>, where <code class="docutils literal notranslate"><span class="pre">&lt;node&gt;</span></code> is the input node
+for which training data is being defined, and <code class="docutils literal notranslate"><span class="pre">&lt;array&gt;</span></code> is a numpy array
+containing the training values.  This training array should have shape
+<code class="docutils literal notranslate"><span class="pre">(n_inputs,</span> <span class="pre">n_steps,</span> <span class="pre">node.size_out)</span></code>, where <code class="docutils literal notranslate"><span class="pre">n_inputs</span></code> is the number of
+training examples, <code class="docutils literal notranslate"><span class="pre">n_steps</span></code> is the number of simulation steps to train
+across, and <code class="docutils literal notranslate"><span class="pre">node.size_out</span></code> is the dimensionality of the Node.</p>
+<p>When training a NengoDL model there are two <a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator" title="nengo_dl.simulator.Simulator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Simulator</span></code></a> parameters
+that must be provided.  The first is <code class="docutils literal notranslate"><span class="pre">minibatch_size</span></code>, which defines how
+many inputs (out of the total <code class="docutils literal notranslate"><span class="pre">n_inputs</span></code> defined above) will be used for each
+optimization step.  The second is <code class="docutils literal notranslate"><span class="pre">step_blocks</span></code>, which tells the simulator
+the value of <code class="docutils literal notranslate"><span class="pre">n_steps</span></code> above, so that the simulation graph is configured
+to run the appropriate number of simulation steps.</p>
+<p>Here is an example illustrating how to define the input values for two
+input nodes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+    <span class="o">...</span>
+
+<span class="n">n_inputs</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">n_steps</span> <span class="o">=</span> <span class="mi">10</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span>
+        <span class="n">net</span><span class="p">,</span> <span class="n">step_blocks</span><span class="o">=</span><span class="n">n_steps</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                      <span class="n">b</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="mi">3</span><span class="p">)},</span>
+              <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Input values must be provided for at least one Node, but beyond that can be
+defined for as many Nodes as desired.  Any Nodes that don’t have data provided
+will take on the values specified during model construction.  Also note that
+inputs can only be defined for Nodes with no incoming connections (i.e., Nodes
+with <code class="docutils literal notranslate"><span class="pre">size_in</span> <span class="pre">==</span> <span class="pre">0</span></code>).</p>
+</div>
+<div class="section" id="targets">
+<h2>Targets<a class="headerlink" href="#targets" title="Permalink to this headline">¶</a></h2>
+<p>Returning to the network equation <span class="math notranslate nohighlight">\(y = f(x, \theta)\)</span>, the goal in
+optimization is to find a set of parameter values such that given inputs
+<span class="math notranslate nohighlight">\(x\)</span> the actual network outputs <span class="math notranslate nohighlight">\(y\)</span> are as close as possible to
+some target values <span class="math notranslate nohighlight">\(t\)</span>.  This argument is specifying those
+desired outputs <span class="math notranslate nohighlight">\(t\)</span>.</p>
+<p>This works very similarly to defining inputs, except instead of assigning
+input values to Nodes it assigns target values to Probes.  The structure of the
+argument is similar – a dictionary of <code class="docutils literal notranslate"><span class="pre">{&lt;probe&gt;:</span> <span class="pre">&lt;array&gt;,</span> <span class="pre">...}</span></code>, where
+<code class="docutils literal notranslate"><span class="pre">&lt;array&gt;</span></code> has shape <code class="docutils literal notranslate"><span class="pre">(n_inputs,</span> <span class="pre">n_steps,</span> <span class="pre">probe.size_in)</span></code>.  Each entry
+in the target array defines the desired output for the corresponding entry in
+the input array.</p>
+<p>For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="o">...</span>
+    <span class="n">ens</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">ens</span><span class="p">)</span>
+
+<span class="n">n_inputs</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">n_steps</span> <span class="o">=</span> <span class="mi">10</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span>
+        <span class="n">net</span><span class="p">,</span> <span class="n">step_blocks</span><span class="o">=</span><span class="n">n_steps</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">targets</span><span class="o">=</span><span class="p">{</span><span class="n">p</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="mi">2</span><span class="p">)},</span>
+              <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that these examples use random inputs/targets, for the sake of simplicity.
+In practice we would do something like <code class="docutils literal notranslate"><span class="pre">targets={p:</span> <span class="pre">my_func(inputs)}</span></code>, where
+<code class="docutils literal notranslate"><span class="pre">my_func</span></code> is a function specifying what the ideal outputs are for the given
+inputs.</p>
+</div>
+<div class="section" id="optimizer">
+<h2>Optimizer<a class="headerlink" href="#optimizer" title="Permalink to this headline">¶</a></h2>
+<p>The optimizer is the algorithm that defines how to update the
+network parameters during training.  Any of the optimization methods
+implemented in TensorFlow can be used in NengoDL; more information can be found
+in the <a class="reference external" href="https://www.tensorflow.org/api_guides/python/train#Optimizers">TensorFlow documentation</a>.</p>
+<p>An instance of the desired TensorFlow optimizer is created (specifying any
+arguments required by that optimizer), and that instance is then passed to
+<a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.train()</span></code></a>.  For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">MomentumOptimizer</span><span class="p">(</span>
+        <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">use_nesterov</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span> <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="objective">
+<h2>Objective<a class="headerlink" href="#objective" title="Permalink to this headline">¶</a></h2>
+<p>The goal in optimization is to minimize the error between the network’s actual
+outputs <span class="math notranslate nohighlight">\(y\)</span> and the targets <span class="math notranslate nohighlight">\(t\)</span>.  The objective is the
+function <span class="math notranslate nohighlight">\(e = o(y, t)\)</span> that computes an error value <span class="math notranslate nohighlight">\(e\)</span>, given
+<span class="math notranslate nohighlight">\(y\)</span> and <span class="math notranslate nohighlight">\(t\)</span>.</p>
+<p>The default objective in NengoDL is the standard <a class="reference external" href="https://en.wikipedia.org/wiki/Mean_squared_error">mean squared error</a>.  This will be used if
+the user doesn’t specify an objective.</p>
+<p>Users can specify a custom objective by creating a function and passing that
+to the <code class="docutils literal notranslate"><span class="pre">objective</span></code> argument in <a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.train()</span></code></a>.  Note that the
+objective is defined using TensorFlow operators.  It should accept Tensors
+representing outputs and targets as input (with shape
+<code class="docutils literal notranslate"><span class="pre">(minibatch_size,</span> <span class="pre">n_steps,</span> <span class="pre">probe.size_in)</span></code>) and return a scalar Tensor
+representing the error. This example manually computes mean squared error,
+rather than using the default:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="k">def</span> <span class="nf">my_objective</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">((</span><span class="n">targets</span> <span class="o">-</span> <span class="n">outputs</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">objective</span><span class="o">=</span><span class="n">my_objective</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If there are multiple output Probes defined in <code class="docutils literal notranslate"><span class="pre">targets</span></code>, then the error
+will be computed for each output individually (using the specified objective).
+Then the error will be averaged across outputs to produce an overall
+error value.</p>
+<p>Note that the <a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.loss" title="nengo_dl.simulator.Simulator.loss"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.loss()</span></code></a> function can be used to check the loss
+(error) value for a given objective.</p>
+</div>
+<div class="section" id="other-parameters">
+<h2>Other parameters<a class="headerlink" href="#other-parameters" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">n_epochs</span></code>: run training for this many passes through the input data</li>
+<li><code class="docutils literal notranslate"><span class="pre">shuffle</span></code>: if True (default), randomly assign data to different minibatches
+each epoch</li>
+</ul>
+</div>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<p>Here is a complete example showing how to train a network using NengoDL.  The
+function being learned here is not particularly interesting (multiplying by 2),
+but it shows how all of the above parts can fit together.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">nengo</span>
+<span class="kn">import</span> <span class="nn">nengo_dl</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="c1"># these parameter settings aren&#39;t necessary, but they set things up in</span>
+    <span class="c1"># a more standard machine learning way, for familiarity</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">neuron_type</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">RectifiedLinear</span><span class="p">()</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">gain</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">dists</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">bias</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">dists</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">]</span><span class="o">.</span><span class="n">synapse</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="c1"># connect up our input node, and 3 ensembles in series</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">([</span><span class="mf">0.5</span><span class="p">])</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
+
+    <span class="c1"># define our outputs with a probe on the last ensemble in the chain</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+
+<span class="n">n_steps</span> <span class="o">=</span> <span class="mi">5</span>  <span class="c1"># the number of simulation steps we want to run our model for</span>
+<span class="n">mini_size</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># minibatch size</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">step_blocks</span><span class="o">=</span><span class="n">n_steps</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">mini_size</span><span class="p">,</span>
+                        <span class="n">device</span><span class="o">=</span><span class="s2">&quot;/cpu:0&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="c1"># create input/target data. this could be whatever we want, but here</span>
+    <span class="c1"># we&#39;ll train the network to output 2x its input</span>
+    <span class="n">input_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">target_data</span> <span class="o">=</span> <span class="n">input_data</span> <span class="o">*</span> <span class="mi">2</span>
+
+    <span class="c1"># train the model, passing `input_data` to our input node `a` and</span>
+    <span class="c1"># `target_data` to our output probe `p`. we can use whatever TensorFlow</span>
+    <span class="c1"># optimizer we want here.</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">({</span><span class="n">a</span><span class="p">:</span> <span class="n">input_data</span><span class="p">},</span> <span class="p">{</span><span class="n">p</span><span class="p">:</span> <span class="n">target_data</span><span class="p">},</span>
+              <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">MomentumOptimizer</span><span class="p">(</span><span class="mf">1e-2</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">),</span> <span class="n">n_epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+    <span class="c1"># run the model to see the results of the training. note that this will</span>
+    <span class="c1"># use the input values specified in our `nengo.Node` definition</span>
+    <span class="c1"># above (0.5)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run_steps</span><span class="p">(</span><span class="n">n_steps</span><span class="p">)</span>
+
+    <span class="c1"># so the output should be 1</span>
+    <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">p</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">)</span>
+
+    <span class="n">sim</span><span class="o">.</span><span class="n">soft_reset</span><span class="p">(</span><span class="n">include_probes</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="c1"># or if we wanted to see the performance on a test dataset, we could do</span>
+    <span class="n">test_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">mini_size</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run_steps</span><span class="p">(</span><span class="n">n_steps</span><span class="p">,</span> <span class="n">input_feeds</span><span class="o">=</span><span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="n">test_data</span><span class="p">})</span>
+
+    <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">test_data</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">p</span><span class="p">],</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Almost all deep learning methods require the network to be differentiable,
+which means that trying to train a network with non-differentiable elements
+will result in an error.  Examples of common non-differentiable
+elements include <code class="xref py py-class docutils literal notranslate"><span class="pre">nengo:nengo.LIF</span></code>,
+<code class="xref py py-class docutils literal notranslate"><span class="pre">nengo:nengo.Direct</span></code>, or processes/neurons that don’t have a
+custom TensorFlow implementation (see
+<a class="reference internal" href="processes.html#nengo_dl.processes.SimProcessBuilder" title="nengo_dl.processes.SimProcessBuilder"><code class="xref py py-class docutils literal notranslate"><span class="pre">processes.SimProcessBuilder</span></code></a>/
+<a class="reference internal" href="neurons.html#nengo_dl.neurons.SimNeuronsBuilder" title="nengo_dl.neurons.SimNeuronsBuilder"><code class="xref py py-class docutils literal notranslate"><span class="pre">neurons.SimNeuronsBuilder</span></code></a>)</li>
+<li>Most TensorFlow optimizers do not have GPU support for networks with
+sparse reads, which are a common element in Nengo models.  If your
+network contains sparse reads then training will have to be
+executed on the CPU (by creating the simulator via
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.Simulator(...,</span> <span class="pre">device=&quot;/cpu:0&quot;)</span></code>), or is limited to
+optimizers with GPU support (currently this is only
+<code class="docutils literal notranslate"><span class="pre">tf.train.GradientDescentOptimizer</span></code>). Follow <a class="reference external" href="https://github.com/tensorflow/tensorflow/issues/2314">this issue</a> for updates
+on Tensorflow GPU support.</li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="resources.html" class="btn btn-neutral float-right" title="Additional resources" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="tensor_node.html" class="btn btn-neutral" title="TensorNodes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.3.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../training.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../v1.0.0/training.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.2/training.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.1/training.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.0/training.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.2/training.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.1/training.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.0/training.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.4.0/training.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.1/training.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd>v0.3.0</dd>
+                
+            
+                
+                    <dd><a href="../v0.2.0/training.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="..//training.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.3.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,1407 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Copyright 2018 The TensorFlow Authors. &mdash; NengoDL documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../../_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+
+  
+  <script src="../../../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../../../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../frontend.html">User API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../backend.html">Developer API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../../index.html">Docs</a> &raquo;</li>
+        
+      <li>Copyright 2018 The TensorFlow Authors.</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../../../../_sources/examples/models/samples/core/get_started/eager.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
+div.nboutput,
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput div.prompt pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput div.prompt pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput div.prompt,
+div.nboutput div.prompt {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput div.input_area,
+div.nboutput div.output_area {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput div.input_area {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Copyright-2018-The-TensorFlow-Authors.">
+<h1>Copyright 2018 The TensorFlow Authors.<a class="headerlink" href="#Copyright-2018-The-TensorFlow-Authors." title="Permalink to this headline">¶</a></h1>
+<p>Licensed under the Apache License, Version 2.0 (the “License”);</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>#@title Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+</pre></div>
+</div>
+</div>
+<div class="section" id="Get-Started-with-Eager-Execution">
+<h2>Get Started with Eager Execution<a class="headerlink" href="#Get-Started-with-Eager-Execution" title="Permalink to this headline">¶</a></h2>
+<table align="left">  <td>
+
+Run in Google Colab</td><td><p>View source on Github</p>
+</td></table><p>This guide uses machine learning to <em>categorize</em> Iris flowers by
+species. It uses <a class="reference external" href="https://www.tensorflow.org">TensorFlow</a>’s eager
+execution to: 1. Build a model, 2. Train this model on example data, and
+3. Use the model to make predictions about unknown data.</p>
+<p>Machine learning experience isn’t required, but you’ll need to read some
+Python code.</p>
+<div class="section" id="TensorFlow-programming">
+<h3>TensorFlow programming<a class="headerlink" href="#TensorFlow-programming" title="Permalink to this headline">¶</a></h3>
+<p>There are many <a class="reference external" href="https://www.tensorflow.org/api_docs/python/">TensorFlow
+APIs</a> available, but
+start with these high-level TensorFlow concepts:</p>
+<ul class="simple">
+<li>Enable an <a class="reference external" href="https://www.tensorflow.org/programmers_guide/eager">eager
+execution</a>
+development environment,</li>
+<li>Import data with the <a class="reference external" href="https://www.tensorflow.org/programmers_guide/datasets">Datasets
+API</a>,</li>
+<li>Build models and layers with TensorFlow’s <a class="reference external" href="https://keras.io/getting-started/sequential-model-guide/">Keras
+API</a>.</li>
+</ul>
+<p>This tutorial is structured like many TensorFlow programs:</p>
+<ol class="arabic simple">
+<li>Import and parse the data sets.</li>
+<li>Select the type of model.</li>
+<li>Train the model.</li>
+<li>Evaluate the model’s effectiveness.</li>
+<li>Use the trained model to make predictions.</li>
+</ol>
+<p>For more TensorFlow examples, see the <a class="reference external" href="https://www.tensorflow.org/get_started/">Get
+Started</a> and
+<a class="reference external" href="https://www.tensorflow.org/tutorials/">Tutorials</a> sections. To learn
+machine learning basics, consider taking the <a class="reference external" href="https://developers.google.com/machine-learning/crash-course/">Machine Learning Crash
+Course</a>.</p>
+</div>
+<div class="section" id="Run-the-notebook">
+<h3>Run the notebook<a class="headerlink" href="#Run-the-notebook" title="Permalink to this headline">¶</a></h3>
+<p>This tutorial is available as an interactive <a class="reference external" href="https://colab.research.google.com">Colab
+notebook</a> that can execute and
+modify Python code directly in the browser. The notebook handles setup
+and dependencies while you “play” cells to run the code blocks. This is
+a fun way to explore the program and test ideas.</p>
+<p>If you are unfamiliar with Python notebook environments, there are a
+couple of things to keep in mind:</p>
+<ol class="arabic simple">
+<li>Executing code requires connecting to a runtime environment. In the
+Colab notebook menu, select <em>Runtime &gt; Connect to runtime…</em></li>
+<li>Notebook cells are arranged sequentially to gradually build the
+program. Typically, later code cells depend on prior code cells,
+though you can always rerun a code block. To execute the entire
+notebook in order, select <em>Runtime &gt; Run all</em>. To rerun a code cell,
+select the cell and click the <em>play icon</em> on the left.</li>
+</ol>
+</div>
+<div class="section" id="Setup-program">
+<h3>Setup program<a class="headerlink" href="#Setup-program" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="Install-the-latest-version-of-TensorFlow">
+<h4>Install the latest version of TensorFlow<a class="headerlink" href="#Install-the-latest-version-of-TensorFlow" title="Permalink to this headline">¶</a></h4>
+<p>This tutorial uses eager execution, which is available in <a class="reference external" href="https://www.tensorflow.org/install/">TensorFlow
+1.8</a>. (You may need to restart
+the runtime after upgrading.)</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>!pip install --upgrade tensorflow
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Configure-imports-and-eager-execution">
+<h4>Configure imports and eager execution<a class="headerlink" href="#Configure-imports-and-eager-execution" title="Permalink to this headline">¶</a></h4>
+<p>Import the required Python modules—including TensorFlow—and enable eager
+execution for this program. Eager execution makes TensorFlow evaluate
+operations immediately, returning concrete values instead of creating a
+<a class="reference external" href="https://www.tensorflow.org/programmers_guide/graphs">computational
+graph</a> that is
+executed later. If you are used to a REPL or the <code class="docutils literal notranslate"><span class="pre">python</span></code> interactive
+console, this feels familiar.</p>
+<p>Once eager execution is enabled, it <em>cannot</em> be disabled within the same
+program. See the <a class="reference external" href="https://www.tensorflow.org/programmers_guide/eager">eager execution
+guide</a> for more
+details.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>from __future__ import absolute_import, division, print_function
+
+import os
+import matplotlib.pyplot as plt
+
+import tensorflow as tf
+import tensorflow.contrib.eager as tfe
+
+tf.enable_eager_execution()
+
+print(&quot;TensorFlow version: {}&quot;.format(tf.VERSION))
+print(&quot;Eager execution: {}&quot;.format(tf.executing_eagerly()))
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="The-Iris-classification-problem">
+<h3>The Iris classification problem<a class="headerlink" href="#The-Iris-classification-problem" title="Permalink to this headline">¶</a></h3>
+<p>Imagine you are a botanist seeking an automated way to categorize each
+Iris flower you find. Machine learning provides many algorithms to
+statistically classify flowers. For instance, a sophisticated machine
+learning program could classify flowers based on photographs. Our
+ambitions are more modest—we’re going to classify Iris flowers based on
+the length and width measurements of their
+<a class="reference external" href="https://en.wikipedia.org/wiki/Sepal">sepals</a> and
+<a class="reference external" href="https://en.wikipedia.org/wiki/Petal">petals</a>.</p>
+<p>The Iris genus entails about 300 species, but our program will only
+classify the following three:</p>
+<ul class="simple">
+<li>Iris setosa</li>
+<li>Iris virginica</li>
+<li>Iris versicolor</li>
+</ul>
+<table><tr><td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">img</span> <span class="n">src</span><span class="o">=</span><span class="s2">&quot;https://www.tensorflow.org/images/iris_three_species.jpg&quot;</span>
+     <span class="n">alt</span><span class="o">=</span><span class="s2">&quot;Petal geometry compared for three iris species: Iris setosa, Iris virginica, and Iris versicolor&quot;</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</td></tr><tr><td align="center"><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">b</span><span class="o">&gt;</span><span class="n">Figure</span> <span class="mf">1.</span><span class="o">&lt;/</span><span class="n">b</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s2">&quot;https://commons.wikimedia.org/w/index.php?curid=170298&quot;</span><span class="o">&gt;</span><span class="n">Iris</span> <span class="n">setosa</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span> <span class="p">(</span><span class="n">by</span> <span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s2">&quot;https://commons.wikimedia.org/wiki/User:Radomil&quot;</span><span class="o">&gt;</span><span class="n">Radomil</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">CC</span> <span class="n">BY</span><span class="o">-</span><span class="n">SA</span> <span class="mf">3.0</span><span class="p">),</span> <span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s2">&quot;https://commons.wikimedia.org/w/index.php?curid=248095&quot;</span><span class="o">&gt;</span><span class="n">Iris</span> <span class="n">versicolor</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span><span class="p">,</span> <span class="p">(</span><span class="n">by</span> <span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s2">&quot;https://commons.wikimedia.org/wiki/User:Dlanglois&quot;</span><span class="o">&gt;</span><span class="n">Dlanglois</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">CC</span> <span class="n">BY</span><span class="o">-</span><span class="n">SA</span> <span class="mf">3.0</span><span class="p">),</span> <span class="ow">and</span> <span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s2">&quot;https://www.flickr.com/photos/33397993@N05/3352169862&quot;</span><span class="o">&gt;</span><span class="n">Iris</span> <span class="n">virginica</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span> <span class="p">(</span><span class="n">by</span> <span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s2">&quot;https://www.flickr.com/photos/33397993@N05&quot;</span><span class="o">&gt;</span><span class="n">Frank</span> <span class="n">Mayfield</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">CC</span> <span class="n">BY</span><span class="o">-</span><span class="n">SA</span> <span class="mf">2.0</span><span class="p">)</span><span class="o">.&lt;</span><span class="n">br</span><span class="o">/&gt;&amp;</span><span class="n">nbsp</span><span class="p">;</span>
+</pre></div>
+</div>
+</td></tr></table><p>Fortunately, someone has already created a <a class="reference external" href="https://en.wikipedia.org/wiki/Iris_flower_data_set">data set of 120 Iris
+flowers</a> with the
+sepal and petal measurements. This is a classic dataset that is popular
+for beginner machine learning classification problems.</p>
+</div>
+<div class="section" id="Import-and-parse-the-training-dataset">
+<h3>Import and parse the training dataset<a class="headerlink" href="#Import-and-parse-the-training-dataset" title="Permalink to this headline">¶</a></h3>
+<p>Download the dataset file and convert it to a structure that can be used
+by this Python program.</p>
+<div class="section" id="Download-the-dataset">
+<h4>Download the dataset<a class="headerlink" href="#Download-the-dataset" title="Permalink to this headline">¶</a></h4>
+<p>Download the training dataset file using the
+<a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/keras/utils/get_file">tf.keras.utils.get_file</a>
+function. This returns the file path of the downloaded file.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>train_dataset_url = &quot;http://download.tensorflow.org/data/iris_training.csv&quot;
+
+train_dataset_fp = tf.keras.utils.get_file(fname=os.path.basename(train_dataset_url),
+                                           origin=train_dataset_url)
+
+print(&quot;Local copy of the dataset file: {}&quot;.format(train_dataset_fp))
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Inspect-the-data">
+<h4>Inspect the data<a class="headerlink" href="#Inspect-the-data" title="Permalink to this headline">¶</a></h4>
+<p>This dataset, <code class="docutils literal notranslate"><span class="pre">iris_training.csv</span></code>, is a plain text file that stores
+tabular data formatted as comma-separated values (CSV). Use the
+<code class="docutils literal notranslate"><span class="pre">head</span> <span class="pre">-n5</span></code> command to take a peak at the first five entries:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>!head -n5 {train_dataset_fp}
+</pre></div>
+</div>
+</div>
+<p>From this view of the dataset, notice the following:</p>
+<ol class="arabic simple">
+<li>The first line is a header containing information about the dataset:</li>
+</ol>
+<ul class="simple">
+<li>There are 120 total examples. Each example has four features and one
+of three possible label names.</li>
+</ul>
+<ol class="arabic simple" start="2">
+<li>Subsequent rows are data records, one
+<em>`example &lt;https://developers.google.com/machine-learning/glossary/#example&gt;`__</em>
+per line, where:</li>
+</ol>
+<ul class="simple">
+<li>The first four fields are
+<em>`features &lt;https://developers.google.com/machine-learning/glossary/#feature&gt;`__</em>:
+these are characteristics of an example. Here, the fields hold float
+numbers representing flower measurements.</li>
+<li>The last column is the
+<em>`label &lt;https://developers.google.com/machine-learning/glossary/#label&gt;`__</em>:
+this is the value we want to predict. For this dataset, it’s an
+integer value of 0, 1, or 2 that corresponds to a flower name.</li>
+</ul>
+<p>Let’s write that out in code:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span># column order in CSV file
+column_names = [&#39;sepal_length&#39;, &#39;sepal_width&#39;, &#39;petal_length&#39;, &#39;petal_width&#39;, &#39;species&#39;]
+
+feature_names = column_names[:-1]
+label_name = column_names[-1]
+
+print(&quot;Features: {}&quot;.format(feature_names))
+print(&quot;Label: {}&quot;.format(label_name))
+</pre></div>
+</div>
+</div>
+<p>Each label is associated with string name (for example, “setosa”), but
+machine learning typically relies on numeric values. The label numbers
+are mapped to a named representation, such as:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">0</span></code>: Iris setosa</li>
+<li><code class="docutils literal notranslate"><span class="pre">1</span></code>: Iris versicolor</li>
+<li><code class="docutils literal notranslate"><span class="pre">2</span></code>: Iris virginica</li>
+</ul>
+<p>For more information about features and labels, see the <a class="reference external" href="https://developers.google.com/machine-learning/crash-course/framing/ml-terminology">ML Terminology
+section of the Machine Learning Crash
+Course</a>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>class_names = [&#39;Iris setosa&#39;, &#39;Iris versicolor&#39;, &#39;Iris virginica&#39;]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Create-a-tf.data.Dataset">
+<h4>Create a <code class="docutils literal notranslate"><span class="pre">tf.data.Dataset</span></code><a class="headerlink" href="#Create-a-tf.data.Dataset" title="Permalink to this headline">¶</a></h4>
+<p>TensorFlow’s <a class="reference external" href="https://www.tensorflow.org/programmers_guide/datasets">Dataset
+API</a> handles
+many common cases for loading data into a model. This is a high-level
+API for reading data and transforming it into a form used for training.
+See the <a class="reference external" href="https://www.tensorflow.org/get_started/datasets_quickstart">Datasets Quick Start
+guide</a>
+for more information.</p>
+<p>Since the dataset is a CSV-formatted text file, use the the
+<a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/contrib/data/make_csv_dataset">make_csv_dataset</a>
+function to parse the data into a suitable format. Since this function
+generates data for training models, the default behavior is to shuffle
+the data (<code class="docutils literal notranslate"><span class="pre">shuffle=True,</span> <span class="pre">shuffle_buffer_size=10000</span></code>), and repeat the
+dataset forever (<code class="docutils literal notranslate"><span class="pre">num_epochs=None</span></code>). We also set the
+<a class="reference external" href="https://developers.google.com/machine-learning/glossary/#batch_size">batch_size</a>
+parameter.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>batch_size = 32
+
+train_dataset = tf.contrib.data.make_csv_dataset(
+    train_dataset_fp,
+    batch_size,
+    column_names=column_names,
+    label_name=label_name,
+    num_epochs=1)
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">make_csv_dataset</span></code> function returns a <code class="docutils literal notranslate"><span class="pre">tf.data.Dataset</span></code> of
+<code class="docutils literal notranslate"><span class="pre">(features,</span> <span class="pre">label)</span></code> pairs, where <code class="docutils literal notranslate"><span class="pre">features</span></code> is a dictionary:
+<code class="docutils literal notranslate"><span class="pre">{'feature_name':</span> <span class="pre">value}</span></code></p>
+<p>With eager execution enabled, these <code class="docutils literal notranslate"><span class="pre">Dataset</span></code> objects are iterable.
+Let’s look at a batch of features:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>features, labels = next(iter(train_dataset))
+
+features
+</pre></div>
+</div>
+</div>
+<p>Notice that like-features are grouped together, or <em>batched</em>. Each
+example row’s fields are appended to the corresponding feature array.
+Change the <code class="docutils literal notranslate"><span class="pre">batch_size</span></code> to set the number of examples stored in these
+feature arrays.</p>
+<p>You can start to see some clusters by plotting a few features from the
+batch:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>plt.scatter(features[&#39;petal_length&#39;],
+            features[&#39;sepal_length&#39;],
+            c=labels,
+            cmap=&#39;viridis&#39;)
+
+plt.xlabel(&quot;Petal length&quot;)
+plt.ylabel(&quot;Sepal length&quot;);
+</pre></div>
+</div>
+</div>
+<p>To simplify the model building step, create a function to repackage the
+features dictionary into a single array with shape:
+<code class="docutils literal notranslate"><span class="pre">(batch_size,</span> <span class="pre">num_features)</span></code>.</p>
+<p>This function uses the
+<a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/stack">tf.stack</a>
+method which takes values from a list of tensors and creates a combined
+tensor at the specified dimension.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>def pack_features_vector(features, labels):
+  &quot;&quot;&quot;Pack the features into a single array.&quot;&quot;&quot;
+  features = tf.stack(list(features.values()), axis=1)
+  return features, labels
+</pre></div>
+</div>
+</div>
+<p>Then use the
+<a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/data/dataset/map">tf.data.Dataset.map</a>
+method to pack the <code class="docutils literal notranslate"><span class="pre">features</span></code> of each <code class="docutils literal notranslate"><span class="pre">(features,label)</span></code> pair into
+the training dataset:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>train_dataset = train_dataset.map(pack_features_vector)
+</pre></div>
+</div>
+</div>
+<p>The features element of the <code class="docutils literal notranslate"><span class="pre">Dataset</span></code> are now arrays with shape
+<code class="docutils literal notranslate"><span class="pre">(batch_size,</span> <span class="pre">num_features)</span></code>. Let’s look at the first few examples:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>features, labels = next(iter(train_dataset))
+
+print(features[:5])
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="Select-the-type-of-model">
+<h3>Select the type of model<a class="headerlink" href="#Select-the-type-of-model" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="Why-model?">
+<h4>Why model?<a class="headerlink" href="#Why-model?" title="Permalink to this headline">¶</a></h4>
+<p>A
+<em>`model &lt;https://developers.google.com/machine-learning/crash-course/glossary#model&gt;`__</em>
+is the relationship between features and the label. For the Iris
+classification problem, the model defines the relationship between the
+sepal and petal measurements and the predicted Iris species. Some simple
+models can be described with a few lines of algebra, but complex machine
+learning models have a large number of parameters that are difficult to
+summarize.</p>
+<p>Could you determine the relationship between the four features and the
+Iris species <em>without</em> using machine learning? That is, could you use
+traditional programming techniques (for example, a lot of conditional
+statements) to create a model? Perhaps—if you analyzed the dataset long
+enough to determine the relationships between petal and sepal
+measurements to a particular species. And this becomes difficult—maybe
+impossible—on more complicated datasets. A good machine learning
+approach <em>determines the model for you</em>. If you feed enough
+representative examples into the right machine learning model type, the
+program will figure out the relationships for you.</p>
+</div>
+<div class="section" id="Select-the-model">
+<h4>Select the model<a class="headerlink" href="#Select-the-model" title="Permalink to this headline">¶</a></h4>
+<p>We need to select the kind of model to train. There are many types of
+models and picking a good one takes experience. This tutorial uses a
+neural network to solve the Iris classification problem. <em>`Neural
+networks &lt;https://developers.google.com/machine-learning/glossary/#neural_network&gt;`__</em>
+can find complex relationships between features and the label. It is a
+highly-structured graph, organized into one or more <em>`hidden
+layers &lt;https://developers.google.com/machine-learning/glossary/#hidden_layer&gt;`__</em>.
+Each hidden layer consists of one or more
+<em>`neurons &lt;https://developers.google.com/machine-learning/glossary/#neuron&gt;`__</em>.
+There are several categories of neural networks and this program uses a
+dense, or <em>`fully-connected neural
+network &lt;https://developers.google.com/machine-learning/glossary/#fully_connected_layer&gt;`__</em>:
+the neurons in one layer receive input connections from <em>every</em> neuron
+in the previous layer. For example, Figure 2 illustrates a dense neural
+network consisting of an input layer, two hidden layers, and an output
+layer:</p>
+<table><tr><td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">img</span> <span class="n">src</span><span class="o">=</span><span class="s2">&quot;https://www.tensorflow.org/images/custom_estimators/full_network.png&quot;</span>
+     <span class="n">alt</span><span class="o">=</span><span class="s2">&quot;A diagram of the network architecture: Inputs, 2 hidden layers, and outputs&quot;</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</td></tr><tr><td align="center"><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">b</span><span class="o">&gt;</span><span class="n">Figure</span> <span class="mf">2.</span><span class="o">&lt;/</span><span class="n">b</span><span class="o">&gt;</span> <span class="n">A</span> <span class="n">neural</span> <span class="n">network</span> <span class="k">with</span> <span class="n">features</span><span class="p">,</span> <span class="n">hidden</span> <span class="n">layers</span><span class="p">,</span> <span class="ow">and</span> <span class="n">predictions</span><span class="o">.&lt;</span><span class="n">br</span><span class="o">/&gt;&amp;</span><span class="n">nbsp</span><span class="p">;</span>
+</pre></div>
+</div>
+</td></tr></table><p>When the model from Figure 2 is trained and fed an unlabeled example, it
+yields three predictions: the likelihood that this flower is the given
+Iris species. This prediction is called
+<em>`inference &lt;https://developers.google.com/machine-learning/crash-course/glossary#inference&gt;`__</em>.
+For this example, the sum of the output predictions is 1.0. In Figure 2,
+this prediction breaks down as: <code class="docutils literal notranslate"><span class="pre">0.03</span></code> for <em>Iris setosa</em>, <code class="docutils literal notranslate"><span class="pre">0.95</span></code> for
+<em>Iris versicolor</em>, and <code class="docutils literal notranslate"><span class="pre">0.02</span></code> for <em>Iris virginica</em>. This means that
+the model predicts—with 95% probability—that an unlabeled example flower
+is an <em>Iris versicolor</em>.</p>
+</div>
+<div class="section" id="Create-a-model-using-Keras">
+<h4>Create a model using Keras<a class="headerlink" href="#Create-a-model-using-Keras" title="Permalink to this headline">¶</a></h4>
+<p>The TensorFlow
+<a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/keras">tf.keras</a> API
+is the preferred way to create models and layers. This makes it easy to
+build models and experiment while Keras handles the complexity of
+connecting everything together.</p>
+<p>The
+<a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/keras/Sequential">tf.keras.Sequential</a>
+model is a linear stack of layers. Its constructor takes a list of layer
+instances, in this case, two
+<a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense">Dense</a>
+layers with 10 nodes each, and an output layer with 3 nodes representing
+our label predictions. The first layer’s <code class="docutils literal notranslate"><span class="pre">input_shape</span></code> parameter
+corresponds to the number of features from the dataset, and is required.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>model = tf.keras.Sequential([
+  tf.keras.layers.Dense(10, activation=&quot;relu&quot;, input_shape=(4,)),  # input shape required
+  tf.keras.layers.Dense(10, activation=&quot;relu&quot;),
+  tf.keras.layers.Dense(3)
+])
+</pre></div>
+</div>
+</div>
+<p>The <em>`activation
+function &lt;https://developers.google.com/machine-learning/crash-course/glossary#activation_function&gt;`__</em>
+determines the output shape of each node in the layer. These
+non-linearities are important—without them the model would be equivalent
+to a single layer. There are many <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/keras/activations">available
+activations</a>,
+but
+<a class="reference external" href="https://developers.google.com/machine-learning/crash-course/glossary#ReLU">ReLU</a>
+is common for hidden layers.</p>
+<p>The ideal number of hidden layers and neurons depends on the problem and
+the dataset. Like many aspects of machine learning, picking the best
+shape of the neural network requires a mixture of knowledge and
+experimentation. As a rule of thumb, increasing the number of hidden
+layers and neurons typically creates a more powerful model, which
+requires more data to train effectively.</p>
+</div>
+<div class="section" id="Using-the-model">
+<h4>Using the model<a class="headerlink" href="#Using-the-model" title="Permalink to this headline">¶</a></h4>
+<p>Let’s have a quick look at what this model does to a batch of features:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>predictions = model(features)
+predictions[:5]
+</pre></div>
+</div>
+</div>
+<p>Here, each example returns a
+<a class="reference external" href="https://developers.google.com/machine-learning/crash-course/glossary#logit">logit</a>
+for each class.</p>
+<p>To convert these logits to a probability for each class, use the
+<a class="reference external" href="https://developers.google.com/machine-learning/crash-course/glossary#softmax">softmax</a>
+function:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>tf.nn.softmax(predictions[:5])
+</pre></div>
+</div>
+</div>
+<p>Taking the <code class="docutils literal notranslate"><span class="pre">tf.argmax</span></code> across classes gives us the predicted class
+index. But, the model hasn’t been trained yet, so these aren’t good
+predictions.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>print(&quot;Prediction: {}&quot;.format(tf.argmax(predictions, axis=1)))
+print(&quot;    Labels: {}&quot;.format(labels))
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="Train-the-model">
+<h3>Train the model<a class="headerlink" href="#Train-the-model" title="Permalink to this headline">¶</a></h3>
+<p><em>`Training &lt;https://developers.google.com/machine-learning/crash-course/glossary#training&gt;`__</em>
+is the stage of machine learning when the model is gradually optimized,
+or the model <em>learns</em> the dataset. The goal is to learn enough about the
+structure of the training dataset to make predictions about unseen data.
+If you learn <em>too much</em> about the training dataset, then the predictions
+only work for the data it has seen and will not be generalizable. This
+problem is called
+<em>`overfitting &lt;https://developers.google.com/machine-learning/crash-course/glossary#overfitting&gt;`__</em>—it’s
+like memorizing the answers instead of understanding how to solve a
+problem.</p>
+<p>The Iris classification problem is an example of <em>`supervised machine
+learning &lt;https://developers.google.com/machine-learning/glossary/#supervised_machine_learning&gt;`__</em>:
+the model is trained from examples that contain labels. In
+<em>`unsupervised machine
+learning &lt;https://developers.google.com/machine-learning/glossary/#unsupervised_machine_learning&gt;`__</em>,
+the examples don’t contain labels. Instead, the model typically finds
+patterns among the features.</p>
+<div class="section" id="Define-the-loss-and-gradient-function">
+<h4>Define the loss and gradient function<a class="headerlink" href="#Define-the-loss-and-gradient-function" title="Permalink to this headline">¶</a></h4>
+<p>Both training and evaluation stages need to calculate the model’s
+<em>`loss &lt;https://developers.google.com/machine-learning/crash-course/glossary#loss&gt;`__</em>.
+This measures how off a model’s predictions are from the desired label,
+in other words, how bad the model is performing. We want to minimize, or
+optimize, this value.</p>
+<p>Our model will calculate its loss using the
+<a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/losses/sparse_softmax_cross_entropy">tf.keras.losses.categorical_crossentropy</a>
+function which takes the model’s class probability predictions and the
+desired label, and returns the average loss across the examples.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>def loss(model, x, y):
+  y_ = model(x)
+  return tf.losses.sparse_softmax_cross_entropy(labels=y, logits=y_)
+
+
+l = loss(model, features, labels)
+print(&quot;Loss test: {}&quot;.format(l))
+</pre></div>
+</div>
+</div>
+<p>Use the
+<a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/GradientTape">tf.GradientTape</a>
+context to calculate the
+<em>`gradients &lt;https://developers.google.com/machine-learning/crash-course/glossary#gradient&gt;`__</em>
+used to optimize our model. For more examples of this, see the <a class="reference external" href="https://www.tensorflow.org/programmers_guide/eager">eager
+execution guide</a>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>def grad(model, inputs, targets):
+  with tf.GradientTape() as tape:
+    loss_value = loss(model, inputs, targets)
+  return loss_value, tape.gradient(loss_value, model.trainable_variables)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Create-an-optimizer">
+<h4>Create an optimizer<a class="headerlink" href="#Create-an-optimizer" title="Permalink to this headline">¶</a></h4>
+<p>An
+<em>`optimizer &lt;https://developers.google.com/machine-learning/crash-course/glossary#optimizer&gt;`__</em>
+applies the computed gradients to the model’s variables to minimize the
+<code class="docutils literal notranslate"><span class="pre">loss</span></code> function. You can think of the loss function as a curved
+surface (see Figure 3) and we want to find its lowest point by walking
+around. The gradients point in the direction of steepest ascent—so we’ll
+travel the opposite way and move down the hill. By iteratively
+calculating the loss and gradient for each batch, we’ll adjust the model
+during training. Gradually, the model will find the best combination of
+weights and bias to minimize loss. And the lower the loss, the better
+the model’s predictions.</p>
+<table><tr><td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">img</span> <span class="n">src</span><span class="o">=</span><span class="s2">&quot;https://cs231n.github.io/assets/nn3/opt1.gif&quot;</span> <span class="n">width</span><span class="o">=</span><span class="s2">&quot;70%&quot;</span>
+     <span class="n">alt</span><span class="o">=</span><span class="s2">&quot;Optimization algorthims visualized over time in 3D space.&quot;</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</td></tr><tr><td align="center"><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">b</span><span class="o">&gt;</span><span class="n">Figure</span> <span class="mf">3.</span><span class="o">&lt;/</span><span class="n">b</span><span class="o">&gt;</span> <span class="n">Optimization</span> <span class="n">algorithms</span> <span class="n">visualized</span> <span class="n">over</span> <span class="n">time</span> <span class="ow">in</span> <span class="mi">3</span><span class="n">D</span> <span class="n">space</span><span class="o">.</span> <span class="p">(</span><span class="n">Source</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s2">&quot;http://cs231n.github.io/neural-networks-3/&quot;</span><span class="o">&gt;</span><span class="n">Stanford</span> <span class="k">class</span> <span class="nc">CS231n</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">MIT</span> <span class="n">License</span><span class="p">)</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;&amp;</span><span class="n">nbsp</span><span class="p">;</span>
+</pre></div>
+</div>
+</td></tr></table><p>TensorFlow has many <a class="reference external" href="https://www.tensorflow.org/api_guides/python/train">optimization
+algorithms</a>
+available for training. This model uses the
+<a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/train/GradientDescentOptimizer">tf.train.GradientDescentOptimizer</a>
+that implements the <em>`stochastic gradient
+descent &lt;https://developers.google.com/machine-learning/crash-course/glossary#gradient_descent&gt;`__</em>
+(SGD) algorithm. The <code class="docutils literal notranslate"><span class="pre">learning_rate</span></code> sets the step size to take for
+each iteration down the hill. This is a <em>hyperparameter</em> that you’ll
+commonly adjust to achieve better results.</p>
+<p>Let’s setup the optimizer and the <code class="docutils literal notranslate"><span class="pre">global_step</span></code> counter:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.01)
+
+global_step = tf.train.get_or_create_global_step()
+</pre></div>
+</div>
+</div>
+<p>We’ll use this to calculate a single optimization step:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>loss_value, grads = grad(model, features, labels)
+
+print(&quot;Step: {}, Initial Loss: {}&quot;.format(global_step.numpy(),
+                                          loss_value.numpy()))
+
+optimizer.apply_gradients(zip(grads, model.variables), global_step)
+
+print(&quot;Step: {},         Loss: {}&quot;.format(global_step.numpy(),
+                                          loss(model, features, labels).numpy()))
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Training-loop">
+<h4>Training loop<a class="headerlink" href="#Training-loop" title="Permalink to this headline">¶</a></h4>
+<p>With all the pieces in place, the model is ready for training! A
+training loop feeds the dataset examples into the model to help it make
+better predictions. The following code block sets up these training
+steps:</p>
+<ol class="arabic simple">
+<li>Iterate each <em>epoch</em>. An epoch is one pass through the dataset.</li>
+<li>Within an epoch, iterate over each example in the training
+<code class="docutils literal notranslate"><span class="pre">Dataset</span></code> grabbing its <em>features</em> (<code class="docutils literal notranslate"><span class="pre">x</span></code>) and <em>label</em> (<code class="docutils literal notranslate"><span class="pre">y</span></code>).</li>
+<li>Using the example’s features, make a prediction and compare it with
+the label. Measure the inaccuracy of the prediction and use that to
+calculate the model’s loss and gradients.</li>
+<li>Use an <code class="docutils literal notranslate"><span class="pre">optimizer</span></code> to update the model’s variables.</li>
+<li>Keep track of some stats for visualization.</li>
+<li>Repeat for each epoch.</li>
+</ol>
+<p>The <code class="docutils literal notranslate"><span class="pre">num_epochs</span></code> variable is the amount of times to loop over the
+dataset collection. Counter-intuitively, training a model longer does
+not guarantee a better model. <code class="docutils literal notranslate"><span class="pre">num_epochs</span></code> is a
+<em>`hyperparameter &lt;https://developers.google.com/machine-learning/glossary/#hyperparameter&gt;`__</em>
+that you can tune. Choosing the right number usually requires both
+experience and experimentation.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>## Note: Rerunning this cell uses the same model variables
+
+# keep results for plotting
+train_loss_results = []
+train_accuracy_results = []
+
+num_epochs = 201
+
+for epoch in range(num_epochs):
+  epoch_loss_avg = tfe.metrics.Mean()
+  epoch_accuracy = tfe.metrics.Accuracy()
+
+  # Training loop - using batches of 32
+  for x, y in train_dataset:
+    # Optimize the model
+    loss_value, grads = grad(model, x, y)
+    optimizer.apply_gradients(zip(grads, model.variables),
+                              global_step)
+
+    # Track progress
+    epoch_loss_avg(loss_value)  # add current batch loss
+    # compare predicted label to actual label
+    epoch_accuracy(tf.argmax(model(x), axis=1, output_type=tf.int32), y)
+
+  # end epoch
+  train_loss_results.append(epoch_loss_avg.result())
+  train_accuracy_results.append(epoch_accuracy.result())
+
+  if epoch % 50 == 0:
+    print(&quot;Epoch {:03d}: Loss: {:.3f}, Accuracy: {:.3%}&quot;.format(epoch,
+                                                                epoch_loss_avg.result(),
+                                                                epoch_accuracy.result()))
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Visualize-the-loss-function-over-time">
+<h4>Visualize the loss function over time<a class="headerlink" href="#Visualize-the-loss-function-over-time" title="Permalink to this headline">¶</a></h4>
+<p>While it’s helpful to print out the model’s training progress, it’s
+often <em>more</em> helpful to see this progress.
+<a class="reference external" href="https://www.tensorflow.org/programmers_guide/summaries_and_tensorboard">TensorBoard</a>
+is a nice visualization tool that is packaged with TensorFlow, but we
+can create basic charts using the <code class="docutils literal notranslate"><span class="pre">matplotlib</span></code> module.</p>
+<p>Interpreting these charts takes some experience, but you really want to
+see the <em>loss</em> go down and the <em>accuracy</em> go up.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>fig, axes = plt.subplots(2, sharex=True, figsize=(12, 8))
+fig.suptitle(&#39;Training Metrics&#39;)
+
+axes[0].set_ylabel(&quot;Loss&quot;, fontsize=14)
+axes[0].plot(train_loss_results)
+
+axes[1].set_ylabel(&quot;Accuracy&quot;, fontsize=14)
+axes[1].set_xlabel(&quot;Epoch&quot;, fontsize=14)
+axes[1].plot(train_accuracy_results);
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="Evaluate-the-model's-effectiveness">
+<h3>Evaluate the model’s effectiveness<a class="headerlink" href="#Evaluate-the-model's-effectiveness" title="Permalink to this headline">¶</a></h3>
+<p>Now that the model is trained, we can get some statistics on its
+performance.</p>
+<p><em>Evaluating</em> means determining how effectively the model makes
+predictions. To determine the model’s effectiveness at Iris
+classification, pass some sepal and petal measurements to the model and
+ask the model to predict what Iris species they represent. Then compare
+the model’s prediction against the actual label. For example, a model
+that picked the correct species on half the input examples has an
+<em>`accuracy &lt;https://developers.google.com/machine-learning/glossary/#accuracy&gt;`__</em>
+of <code class="docutils literal notranslate"><span class="pre">0.5</span></code>. Figure 4 shows a slightly more effective model, getting 4
+out of 5 predictions correct at 80% accuracy:</p>
+<table cellpadding="8" border="0"><colgroup><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">col</span> <span class="n">span</span><span class="o">=</span><span class="s2">&quot;4&quot;</span> <span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">col</span> <span class="n">span</span><span class="o">=</span><span class="s2">&quot;1&quot;</span> <span class="n">bgcolor</span><span class="o">=</span><span class="s2">&quot;lightblue&quot;</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">col</span> <span class="n">span</span><span class="o">=</span><span class="s2">&quot;1&quot;</span> <span class="n">bgcolor</span><span class="o">=</span><span class="s2">&quot;lightgreen&quot;</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</colgroup><tr bgcolor="lightgray"><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">th</span> <span class="n">colspan</span><span class="o">=</span><span class="s2">&quot;4&quot;</span><span class="o">&gt;</span><span class="n">Example</span> <span class="n">features</span><span class="o">&lt;/</span><span class="n">th</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">th</span> <span class="n">colspan</span><span class="o">=</span><span class="s2">&quot;1&quot;</span><span class="o">&gt;</span><span class="n">Label</span><span class="o">&lt;/</span><span class="n">th</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">th</span> <span class="n">colspan</span><span class="o">=</span><span class="s2">&quot;1&quot;</span> <span class="o">&gt;</span><span class="n">Model</span> <span class="n">prediction</span><span class="o">&lt;/</span><span class="n">th</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</tr><tr><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">5.9</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">3.0</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">4.3</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">1.5</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span> <span class="n">align</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="o">&gt;</span><span class="mi">1</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span> <span class="n">align</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="o">&gt;</span><span class="mi">1</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</tr><tr><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">6.9</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">3.1</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">5.4</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">2.1</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span> <span class="n">align</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="o">&gt;</span><span class="mi">2</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span> <span class="n">align</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="o">&gt;</span><span class="mi">2</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</tr><tr><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">5.1</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">3.3</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">1.7</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">0.5</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span> <span class="n">align</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="o">&gt;</span><span class="mi">0</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span> <span class="n">align</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="o">&gt;</span><span class="mi">0</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</tr><tr><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">6.0</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">3.4</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">4.5</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">1.6</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">td</span> <span class="n">align</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="o">&gt;</span><span class="mi">1</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span> <span class="n">align</span><span class="o">=</span><span class="s2">&quot;center&quot;</span> <span class="n">bgcolor</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="o">&gt;</span><span class="mi">2</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</tr><tr><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">5.5</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">2.5</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">4.0</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span><span class="o">&gt;</span><span class="mf">1.3</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span> <span class="n">align</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="o">&gt;</span><span class="mi">1</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;&lt;</span><span class="n">td</span> <span class="n">align</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="o">&gt;</span><span class="mi">1</span><span class="o">&lt;/</span><span class="n">td</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</tr><tr><td align="center" colspan="6"><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">b</span><span class="o">&gt;</span><span class="n">Figure</span> <span class="mf">4.</span><span class="o">&lt;/</span><span class="n">b</span><span class="o">&gt;</span> <span class="n">An</span> <span class="n">Iris</span> <span class="n">classifier</span> <span class="n">that</span> <span class="ow">is</span> <span class="mi">80</span><span class="o">%</span> <span class="n">accurate</span><span class="o">.&lt;</span><span class="n">br</span><span class="o">/&gt;&amp;</span><span class="n">nbsp</span><span class="p">;</span>
+</pre></div>
+</div>
+</td></tr></table><div class="section" id="Setup-the-test-dataset">
+<h4>Setup the test dataset<a class="headerlink" href="#Setup-the-test-dataset" title="Permalink to this headline">¶</a></h4>
+<p>Evaluating the model is similar to training the model. The biggest
+difference is the examples come from a separate <em>`test
+set &lt;https://developers.google.com/machine-learning/crash-course/glossary#test_set&gt;`__</em>
+rather than the training set. To fairly assess a model’s effectiveness,
+the examples used to evaluate a model must be different from the
+examples used to train the model.</p>
+<p>The setup for the test <code class="docutils literal notranslate"><span class="pre">Dataset</span></code> is similar to the setup for training
+<code class="docutils literal notranslate"><span class="pre">Dataset</span></code>. Download the CSV text file and parse that values, then give
+it a little shuffle:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>test_url = &quot;http://download.tensorflow.org/data/iris_test.csv&quot;
+
+test_fp = tf.keras.utils.get_file(fname=os.path.basename(test_url),
+                                  origin=test_url)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>test_dataset = tf.contrib.data.make_csv_dataset(
+    train_dataset_fp,
+    batch_size,
+    column_names=column_names,
+    label_name=&#39;species&#39;,
+    num_epochs=1,
+    shuffle=False)
+
+test_dataset = test_dataset.map(pack_features_vector)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Evaluate-the-model-on-the-test-dataset">
+<h4>Evaluate the model on the test dataset<a class="headerlink" href="#Evaluate-the-model-on-the-test-dataset" title="Permalink to this headline">¶</a></h4>
+<p>Unlike the training stage, the model only evaluates a single
+<a class="reference external" href="https://developers.google.com/machine-learning/glossary/#epoch">epoch</a>
+of the test data. In the following code cell, we iterate over each
+example in the test set and compare the model’s prediction against the
+actual label. This is used to measure the model’s accuracy across the
+entire test set.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>test_accuracy = tfe.metrics.Accuracy()
+
+for (x, y) in test_dataset:
+  logits = model(x)
+  prediction = tf.argmax(logits, axis=1, output_type=tf.int32)
+  test_accuracy(prediction, y)
+
+print(&quot;Test set accuracy: {:.3%}&quot;.format(test_accuracy.result()))
+</pre></div>
+</div>
+</div>
+<p>We can see on the last batch, for example, the model is usually correct:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>tf.stack([y,prediction],axis=1)
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="Use-the-trained-model-to-make-predictions">
+<h3>Use the trained model to make predictions<a class="headerlink" href="#Use-the-trained-model-to-make-predictions" title="Permalink to this headline">¶</a></h3>
+<p>We’ve trained a model and “proven” that it’s good—but not perfect—at
+classifying Iris species. Now let’s use the trained model to make some
+predictions on <a class="reference external" href="https://developers.google.com/machine-learning/glossary/#unlabeled_example">unlabeled
+examples</a>;
+that is, on examples that contain features but not a label.</p>
+<p>In real-life, the unlabeled examples could come from lots of different
+sources including apps, CSV files, and data feeds. For now, we’re going
+to manually provide three unlabeled examples to predict their labels.
+Recall, the label numbers are mapped to a named representation as:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">0</span></code>: Iris setosa</li>
+<li><code class="docutils literal notranslate"><span class="pre">1</span></code>: Iris versicolor</li>
+<li><code class="docutils literal notranslate"><span class="pre">2</span></code>: Iris virginica</li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>predict_dataset = tf.convert_to_tensor([
+    [5.1, 3.3, 1.7, 0.5,],
+    [5.9, 3.0, 4.2, 1.5,],
+    [6.9, 3.1, 5.4, 2.1]
+])
+
+predictions = model(predict_dataset)
+
+for i, logits in enumerate(predictions):
+  class_idx = tf.argmax(logits).numpy()
+  p = tf.nn.softmax(logits)[class_idx]
+  name = class_names[class_idx]
+  print(&quot;Example {} prediction: {} ({:4.1f}%)&quot;.format(i, name, 100*p))
+</pre></div>
+</div>
+</div>
+<p>These predictions look good!</p>
+<p>To dig deeper into machine learning models, take a look at the
+TensorFlow <a class="reference external" href="https://www.tensorflow.org/programmers_guide/">Programmer’s
+Guide</a> and check out
+the <a class="reference external" href="https://www.tensorflow.org/community/">community</a>.</p>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.4.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../../../../../examples/models/samples/core/get_started/eager.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../../../../../../v1.0.0/examples/models/samples/core/get_started/eager.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.6.2/examples/models/samples/core/get_started/eager.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.6.1/examples/models/samples/core/get_started/eager.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.6.0/examples/models/samples/core/get_started/eager.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.5.2/examples/models/samples/core/get_started/eager.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.5.1/examples/models/samples/core/get_started/eager.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.5.0/examples/models/samples/core/get_started/eager.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd>v0.4.0</dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.3.1/examples/models/samples/core/get_started/eager.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.3.0/examples/models/samples/core/get_started/eager.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../v0.2.0/examples/models/samples/core/get_started/eager.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../..//examples/models/samples/core/get_started/eager.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../../../',
+            VERSION:'0.4.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../../../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

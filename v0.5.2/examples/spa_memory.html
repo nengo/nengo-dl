@@ -1,0 +1,1176 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Optimizing a structured semantic pointer model with temporal dynamics &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Additional resources" href="../resources.html" />
+    <link rel="prev" title="Optimizing a structured semantic pointer model" href="spa_retrieval.html" /> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../frontend.html">User documentation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="nef_init.html">Optimizing the parameters of a Nengo model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pretrained_model.html">Inserting a TensorFlow network into a Nengo model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spiking_mnist.html">Optimizing spiking neural networks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spa_retrieval.html">Optimizing a structured semantic pointer model</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Optimizing a structured semantic pointer model with temporal dynamics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#1.-Generate-random-semantic-pointers">1. Generate random semantic pointers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.-Define-the-model">2. Define the model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3.-Train-the-model">3. Train the model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#4.-Introduce-input-binding-and-retrieval-cues">4. Introduce input binding and retrieval cues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#5.-Test-baseline-retrieval-accuracy">5. Test baseline retrieval accuracy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#6.-Train-the-new-model">6. Train the new model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#7.-Test-improved-retrieval-accuracy">7. Test improved retrieval accuracy</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backend.html">Developer documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+        
+      <li>Optimizing a structured semantic pointer model with temporal dynamics</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/examples/spa_memory.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
+div.nboutput,
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput div.prompt pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput div.prompt pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput div.prompt,
+div.nboutput div.prompt {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput div.input_area,
+div.nboutput div.output_area {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput div.input_area {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Optimizing-a-structured-semantic-pointer-model-with-temporal-dynamics">
+<h1>Optimizing a structured semantic pointer model with temporal dynamics<a class="headerlink" href="#Optimizing-a-structured-semantic-pointer-model-with-temporal-dynamics" title="Permalink to this headline">¶</a></h1>
+<p>In the previous examples we have essentially ignored time by defining
+models that map inputs to outputs in a single forward pass (e.g., we
+configured the default synapse to be <code class="docutils literal notranslate"><span class="pre">None</span></code>). In this example we’ll
+introduce a simple process model of information retrieval based on
+<a class="reference external" href="https://github.com/nengo/nengo/blob/master/examples/spa/question_memory.ipynb">this</a>
+standard Nengo tutorial. The idea is similar to <a class="reference external" href="https://www.nengo.ai/nengo_dl/examples/spa_retrieval.html">this
+example</a>
+where we encoded role/filler information using semantic pointers and
+then retrieved a cued attribute. But in this example, rather than
+presenting the whole trace at once, we will present the input
+Role/Filler pairs one at a time and have the network remember them. Once
+all the bound pairs have been added to the memory, we can then query the
+model with a cue to test retrieval accuracy.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">urllib.request</span> <span class="kn">import</span> <span class="n">urlretrieve</span>
+<span class="kn">import</span> <span class="nn">zipfile</span>
+
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">nengo</span>
+<span class="kn">import</span> <span class="nn">nengo.spa</span> <span class="kn">as</span> <span class="nn">spa</span>
+<span class="kn">import</span> <span class="nn">nengo_dl</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="1.-Generate-random-semantic-pointers">
+<h2>1. Generate random semantic pointers<a class="headerlink" href="#1.-Generate-random-semantic-pointers" title="Permalink to this headline">¶</a></h2>
+<p>First we’ll define a function for generating training data. Note that
+this function will produce arrays of shape
+<code class="docutils literal notranslate"><span class="pre">(n_inputs,</span> <span class="pre">n_steps,</span> <span class="pre">dims)</span></code>, where <code class="docutils literal notranslate"><span class="pre">n_steps</span></code> will be the number of
+time steps in the process we want to model. To start, we’ll generate
+simple examples in which the input tractory consists of a single
+semantic pointer presented for some number of time steps, and the
+desired output trajectory involves maintaining a representation of that
+semantic pointer for some further number of time steps.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">get_memory_data</span><span class="p">(</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="n">t_int</span><span class="p">,</span> <span class="n">t_mem</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.001</span><span class="p">):</span>
+    <span class="n">int_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">t_int</span> <span class="o">/</span> <span class="n">dt</span><span class="p">)</span>
+    <span class="n">mem_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">t_mem</span> <span class="o">/</span> <span class="n">dt</span><span class="p">)</span>
+    <span class="n">n_steps</span> <span class="o">=</span> <span class="n">int_steps</span> <span class="o">+</span> <span class="n">mem_steps</span>
+
+    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">vocab</span> <span class="o">=</span> <span class="n">spa</span><span class="o">.</span><span class="n">Vocabulary</span><span class="p">(</span><span class="n">dimensions</span><span class="o">=</span><span class="n">dims</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="n">rng</span><span class="p">,</span> <span class="n">max_similarity</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># intialize arrays for input and output trajectories</span>
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="n">dims</span><span class="p">))</span>
+    <span class="n">outputs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="n">dims</span><span class="p">))</span>
+
+    <span class="c1"># iterate through examples to be generated, fill arrays</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_inputs</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;SP_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">n</span>
+        <span class="n">vocab</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">vocab</span><span class="o">.</span><span class="n">create_pointer</span><span class="p">())</span>
+
+        <span class="c1"># create inputs and target memory for first pair</span>
+        <span class="n">inputs</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="p">:</span><span class="n">int_steps</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">vocab</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">v</span>
+        <span class="n">outputs</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">vocab</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">v</span>
+
+    <span class="c1"># make scaling ramp for target output trajectories</span>
+    <span class="n">ramp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">t</span> <span class="o">/</span> <span class="n">int_steps</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">int_steps</span><span class="p">)])</span>
+    <span class="n">ramp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">ramp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_steps</span> <span class="o">-</span> <span class="n">int_steps</span><span class="p">)))</span>
+    <span class="n">outputs</span> <span class="o">=</span> <span class="n">outputs</span> <span class="o">*</span> <span class="n">ramp</span><span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="p">:,</span> <span class="bp">None</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">vocab</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="2.-Define-the-model">
+<h2>2. Define the model<a class="headerlink" href="#2.-Define-the-model" title="Permalink to this headline">¶</a></h2>
+<p>Our first model will consist of a single input node and single
+recurrently connected memory ensemble. The input will present the input
+semantic pointer for a brief period, and then the task of the model will
+be to remember that semantic pointer over time.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">seed</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">t_int</span> <span class="o">=</span> <span class="mf">0.01</span>  <span class="c1"># length of time for input presentation</span>
+<span class="n">t_mem</span> <span class="o">=</span> <span class="mf">0.04</span>  <span class="c1"># length of time for the network to store the input</span>
+<span class="n">dims</span> <span class="o">=</span> <span class="mi">32</span>  <span class="c1"># dimensionality of semantic pointer vectors</span>
+<span class="n">n_neurons</span> <span class="o">=</span> <span class="mi">5</span> <span class="o">*</span> <span class="n">dims</span>  <span class="c1"># number of neurons for memory ensemble</span>
+<span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">32</span>
+
+<span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">neuron_type</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">RectifiedLinear</span><span class="p">()</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">gain</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">dists</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">bias</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">dists</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="n">sp_input</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dims</span><span class="p">))</span>
+    <span class="n">memory</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="n">n_neurons</span><span class="p">,</span> <span class="n">dims</span><span class="p">)</span>
+
+    <span class="n">tau</span> <span class="o">=</span> <span class="mf">0.01</span>  <span class="c1"># synaptic time constant on recurrent connection</span>
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">sp_input</span><span class="p">,</span> <span class="n">memory</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">tau</span> <span class="o">/</span> <span class="n">t_int</span><span class="p">,</span> <span class="n">synapse</span><span class="o">=</span><span class="n">tau</span><span class="p">)</span>
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span> <span class="n">memory</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">synapse</span><span class="o">=</span><span class="n">tau</span><span class="p">)</span>
+
+    <span class="n">sp_probe</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">sp_input</span><span class="p">)</span>
+    <span class="n">memory_probe</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">memory</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Next, we’ll run the model for the specified length of time in order to
+see how well the memory works.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># generate test data</span>
+<span class="n">test_inputs</span><span class="p">,</span> <span class="n">test_targets</span><span class="p">,</span> <span class="n">test_vocab</span> <span class="o">=</span> <span class="n">get_memory_data</span><span class="p">(</span>
+    <span class="n">minibatch_size</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="n">t_int</span><span class="p">,</span> <span class="n">t_mem</span><span class="p">)</span>
+
+<span class="c1"># run with one example input</span>
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">t_int</span><span class="o">+</span><span class="n">t_mem</span><span class="p">,</span> <span class="n">input_feeds</span><span class="o">=</span><span class="p">{</span><span class="n">sp_input</span><span class="p">:</span> <span class="n">test_inputs</span><span class="p">})</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">plot_memory_example</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">vocab</span><span class="p">,</span> <span class="n">example_input</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;SP_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">example_input</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+        <span class="n">test_inputs</span><span class="p">[</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+        <span class="n">test_inputs</span><span class="p">[</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">v</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;x-small&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">([</span><span class="o">-</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">])</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Input&quot;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+        <span class="n">test_targets</span><span class="p">[</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+        <span class="n">test_targets</span><span class="p">[</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">v</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;x-small&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">([</span><span class="o">-</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">])</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Target Memory&quot;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">memory_probe</span><span class="p">][</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">memory_probe</span><span class="p">][</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">v</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;x-small&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">([</span><span class="o">-</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">])</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Output Memory&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;time [s]&quot;</span><span class="p">)</span>
+
+<span class="n">plot_memory_example</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">test_vocab</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>These plots show the similarity of the input/target/output vectors to
+all the items in the vocabulary. The similarity to the correct
+vocabulary item is highlighted, and we can see that while the memory is
+storing the correct item, that storage is not particularly stable.</p>
+</div>
+<div class="section" id="3.-Train-the-model">
+<h2>3. Train the model<a class="headerlink" href="#3.-Train-the-model" title="Permalink to this headline">¶</a></h2>
+<p>To improve retention we can use Nengo DL to fine tune the model
+parameters. Training on temporally extended trajectories can be slow, so
+we’ll download pretrained parameters by default. You can train your own
+parameters by setting <code class="docutils literal notranslate"><span class="pre">do_training=True</span></code> (allowing you to vary things
+like learning rate or the number of training epochs to see the impact of
+those hyperparameters).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">do_training</span> <span class="o">=</span> <span class="bp">False</span>
+<span class="k">if</span> <span class="n">do_training</span><span class="p">:</span>
+    <span class="n">optimizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">RMSPropOptimizer</span><span class="p">(</span><span class="mf">1e-4</span><span class="p">)</span>
+    <span class="n">train_inputs</span><span class="p">,</span> <span class="n">train_targets</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">get_memory_data</span><span class="p">(</span><span class="mi">4000</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="n">t_int</span><span class="p">,</span> <span class="n">t_mem</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Test loss before: &#39;</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">loss</span><span class="p">(</span>
+            <span class="p">{</span><span class="n">sp_input</span><span class="p">:</span> <span class="n">test_inputs</span><span class="p">},</span> <span class="p">{</span><span class="n">memory_probe</span><span class="p">:</span> <span class="n">test_targets</span><span class="p">},</span> <span class="s1">&#39;mse&#39;</span><span class="p">))</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">({</span><span class="n">sp_input</span><span class="p">:</span> <span class="n">train_inputs</span><span class="p">},</span> <span class="p">{</span><span class="n">memory_probe</span><span class="p">:</span> <span class="n">train_targets</span><span class="p">},</span> <span class="n">optimizer</span><span class="p">,</span>
+                  <span class="n">n_epochs</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">objective</span><span class="o">=</span><span class="s1">&#39;mse&#39;</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Test loss after: &#39;</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">loss</span><span class="p">(</span>
+            <span class="p">{</span><span class="n">sp_input</span><span class="p">:</span> <span class="n">test_inputs</span><span class="p">},</span> <span class="p">{</span><span class="n">memory_probe</span><span class="p">:</span> <span class="n">test_targets</span><span class="p">},</span> <span class="s1">&#39;mse&#39;</span><span class="p">))</span>
+
+        <span class="n">sim</span><span class="o">.</span><span class="n">save_params</span><span class="p">(</span><span class="s1">&#39;./mem_params&#39;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="c1"># download pretrained parameters</span>
+    <span class="n">urlretrieve</span><span class="p">(</span>
+        <span class="s2">&quot;https://drive.google.com/uc?export=download&amp;id=0B6DAasV-Fri4WnZxSEszRXF1Sjg&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;mem_params.zip&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="s2">&quot;mem_params.zip&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">extractall</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">load_params</span><span class="p">(</span><span class="s1">&#39;./mem_params&#39;</span><span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">t_int</span><span class="o">+</span><span class="n">t_mem</span><span class="p">,</span> <span class="n">input_feeds</span><span class="o">=</span><span class="p">{</span><span class="n">sp_input</span><span class="p">:</span> <span class="n">test_inputs</span><span class="p">})</span>
+
+<span class="n">plot_memory_example</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">test_vocab</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We can see that the training procedure significantly improves the
+stability of the memory.</p>
+</div>
+<div class="section" id="4.-Introduce-input-binding-and-retrieval-cues">
+<h2>4. Introduce input binding and retrieval cues<a class="headerlink" href="#4.-Introduce-input-binding-and-retrieval-cues" title="Permalink to this headline">¶</a></h2>
+<p>Now we will return to the cued role/filler retrieval task from <a class="reference external" href="https://www.nengo.ai/nengo_dl/examples/spa_retrieval.html">this
+example</a>,
+and we will modify that task to include a memory aspect. Rather than
+presenting the complete trace as input all at once, we will present each
+<span class="math notranslate nohighlight">\(ROLE\)</span>/<span class="math notranslate nohighlight">\(FILLER\)</span> pair one at a time. The task of the network
+will be to bind each individual pair together, add them together to
+generate the full trace, store that trace in memory, and then when given
+one of the Roles as a cue, output the corresponding Filler. For example,
+one pass through the task would consist of the following phases:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="16%" />
+<col width="20%" />
+<col width="22%" />
+<col width="20%" />
+<col width="22%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">phase</th>
+<th class="head">role input</th>
+<th class="head">filler input</th>
+<th class="head">cue</th>
+<th class="head">target output</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>1</td>
+<td><span class="math notranslate nohighlight">\(ROLE_0\)</span></td>
+<td><span class="math notranslate nohighlight">\(FILLER_0\)</span></td>
+<td><ul class="first last simple">
+<li></li>
+</ul>
+</td>
+<td><ul class="first last simple">
+<li></li>
+</ul>
+</td>
+</tr>
+<tr class="row-odd"><td>2</td>
+<td><span class="math notranslate nohighlight">\(ROLE_1\)</span></td>
+<td><span class="math notranslate nohighlight">\(FILLER_1\)</span></td>
+<td><ul class="first last simple">
+<li></li>
+</ul>
+</td>
+<td><ul class="first last simple">
+<li></li>
+</ul>
+</td>
+</tr>
+<tr class="row-even"><td>…</td>
+<td>…</td>
+<td>…</td>
+<td>…</td>
+<td>…</td>
+</tr>
+<tr class="row-odd"><td><span class="math notranslate nohighlight">\(n\)</span></td>
+<td><span class="math notranslate nohighlight">\(ROLE_n\)</span></td>
+<td><span class="math notranslate nohighlight">\(FILLER_n\)</span></td>
+<td><ul class="first last simple">
+<li></li>
+</ul>
+</td>
+<td><ul class="first last simple">
+<li></li>
+</ul>
+</td>
+</tr>
+<tr class="row-even"><td><span class="math notranslate nohighlight">\(n+1\)</span></td>
+<td><ul class="first last simple">
+<li></li>
+</ul>
+</td>
+<td><ul class="first last simple">
+<li></li>
+</ul>
+</td>
+<td><span class="math notranslate nohighlight">\(ROLE_x\)</span></td>
+<td><span class="math notranslate nohighlight">\(FILLER_x\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>First we will create a function to generate the input/target data for
+this task.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">get_binding_data</span><span class="p">(</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_pairs</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="n">t_int</span><span class="p">,</span> <span class="n">t_mem</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.001</span><span class="p">):</span>
+    <span class="n">int_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">t_int</span> <span class="o">/</span> <span class="n">dt</span><span class="p">)</span>
+    <span class="n">mem_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">t_mem</span> <span class="o">/</span> <span class="n">dt</span><span class="p">)</span>
+    <span class="n">n_steps</span> <span class="o">=</span> <span class="n">int_steps</span><span class="o">*</span><span class="n">n_pairs</span> <span class="o">+</span> <span class="n">mem_steps</span>
+
+    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">vocab</span> <span class="o">=</span> <span class="n">spa</span><span class="o">.</span><span class="n">Vocabulary</span><span class="p">(</span><span class="n">dimensions</span><span class="o">=</span><span class="n">dims</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="n">rng</span><span class="p">,</span> <span class="n">max_similarity</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># intialize arrays for input and output trajectories</span>
+    <span class="n">roles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="n">dims</span><span class="p">))</span>
+    <span class="n">fills</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="n">dims</span><span class="p">))</span>
+    <span class="n">cues</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="n">dims</span><span class="p">))</span>
+    <span class="n">binding</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="n">dims</span><span class="p">))</span>
+    <span class="n">memory</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="n">dims</span><span class="p">))</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="n">dims</span><span class="p">))</span>
+
+    <span class="c1"># iterate through examples to be generated, fill arrays</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_inputs</span><span class="p">):</span>
+        <span class="n">role_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;ROLE_</span><span class="si">%d</span><span class="s2">_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_pairs</span><span class="p">)]</span>
+        <span class="n">filler_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;FILLER_</span><span class="si">%d</span><span class="s2">_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_pairs</span><span class="p">)]</span>
+
+        <span class="c1"># each role/filler pair is presented for t_int seconds</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_pairs</span><span class="p">):</span>
+            <span class="n">roles</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="n">i</span><span class="o">*</span><span class="n">int_steps</span><span class="p">:(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">int_steps</span><span class="p">]</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">role_names</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">v</span>
+            <span class="n">fills</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="n">i</span><span class="o">*</span><span class="n">int_steps</span><span class="p">:(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">int_steps</span><span class="p">]</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">filler_names</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">v</span>
+            <span class="n">binding</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="n">i</span><span class="o">*</span><span class="n">int_steps</span><span class="p">:(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">int_steps</span><span class="p">]</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span>
+                <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">*</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">role_names</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">filler_names</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span><span class="o">.</span><span class="n">v</span>
+
+        <span class="c1"># randomly select a cue</span>
+        <span class="n">cue_idx</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">n_pairs</span><span class="p">)</span>
+
+        <span class="c1"># cue is presented during the memorization period</span>
+        <span class="n">cues</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="o">-</span><span class="n">mem_steps</span><span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">vocab</span><span class="p">[</span><span class="n">role_names</span><span class="p">[</span><span class="n">cue_idx</span><span class="p">]]</span><span class="o">.</span><span class="n">v</span>
+
+        <span class="c1"># the goal is to output the associated filler during the memorization phase</span>
+        <span class="c1"># note: we use nan for the target prior to the memorization phase, to indicate</span>
+        <span class="c1"># that it doesn&#39;t matter what the network output is then</span>
+        <span class="n">output</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="o">-</span><span class="n">mem_steps</span><span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">vocab</span><span class="p">[</span><span class="n">filler_names</span><span class="p">[</span><span class="n">cue_idx</span><span class="p">]]</span><span class="o">.</span><span class="n">v</span>
+        <span class="n">output</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="n">mem_steps</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="n">memory</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">binding</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span> <span class="o">/</span> <span class="n">t_int</span>
+
+    <span class="k">return</span> <span class="n">roles</span><span class="p">,</span> <span class="n">fills</span><span class="p">,</span> <span class="n">cues</span><span class="p">,</span> <span class="n">binding</span><span class="p">,</span> <span class="n">memory</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">vocab</span>
+</pre></div>
+</div>
+</div>
+<p>In this more complicated model we’ll add two circular convolution
+network to our previous memory model, one to convolve the role/filler
+inputs and one to deconvolve the cued answer from the memory trace.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">seed</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">t_int</span> <span class="o">=</span> <span class="mf">0.01</span>  <span class="c1"># length of time to present each input pair</span>
+<span class="n">t_mem</span> <span class="o">=</span> <span class="mf">0.03</span>  <span class="c1"># length of memorization period</span>
+<span class="n">n_pairs</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># number of role/filler pairs in each input</span>
+<span class="n">t_run</span> <span class="o">=</span> <span class="n">n_pairs</span><span class="o">*</span><span class="n">t_int</span> <span class="o">+</span> <span class="n">t_mem</span>  <span class="c1"># total task time</span>
+<span class="n">dims</span> <span class="o">=</span> <span class="mi">64</span>  <span class="c1"># dimensionality of semantic pointer vectors</span>
+<span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">64</span>
+
+<span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">neuron_type</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">RectifiedLinear</span><span class="p">()</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">gain</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">dists</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">bias</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">dists</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">]</span><span class="o">.</span><span class="n">synapse</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="n">role_inp</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dims</span><span class="p">))</span>
+    <span class="n">fill_inp</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dims</span><span class="p">))</span>
+    <span class="n">cue_inp</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dims</span><span class="p">))</span>
+
+    <span class="c1"># circular convolution network to combine roles/fillers</span>
+    <span class="n">cconv</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">networks</span><span class="o">.</span><span class="n">CircularConvolution</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">dims</span><span class="p">)</span>
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">role_inp</span><span class="p">,</span> <span class="n">cconv</span><span class="o">.</span><span class="n">input_a</span><span class="p">)</span>
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">fill_inp</span><span class="p">,</span> <span class="n">cconv</span><span class="o">.</span><span class="n">input_b</span><span class="p">)</span>
+
+    <span class="c1"># memory network to store the role/filler pairs</span>
+    <span class="n">memory</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">5</span><span class="o">*</span><span class="n">dims</span><span class="p">,</span> <span class="n">dims</span><span class="p">)</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="mf">0.01</span>
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">cconv</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="n">memory</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">tau</span><span class="o">/</span><span class="n">t_int</span><span class="p">,</span> <span class="n">synapse</span><span class="o">=</span><span class="n">tau</span><span class="p">)</span>
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span> <span class="n">memory</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">synapse</span><span class="o">=</span><span class="n">tau</span><span class="p">)</span>
+
+    <span class="c1"># another circular convolution network to extract the cued filler</span>
+    <span class="n">ccorr</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">networks</span><span class="o">.</span><span class="n">CircularConvolution</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">invert_b</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span> <span class="n">ccorr</span><span class="o">.</span><span class="n">input_a</span><span class="p">)</span>
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">cue_inp</span><span class="p">,</span> <span class="n">ccorr</span><span class="o">.</span><span class="n">input_b</span><span class="p">)</span>
+
+    <span class="n">conv_probe</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">cconv</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;conv_probe&quot;</span><span class="p">)</span>
+    <span class="n">memory_probe</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;memory_probe&quot;</span><span class="p">)</span>
+    <span class="n">output_probe</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">ccorr</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;output_probe&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="5.-Test-baseline-retrieval-accuracy">
+<h2>5. Test baseline retrieval accuracy<a class="headerlink" href="#5.-Test-baseline-retrieval-accuracy" title="Permalink to this headline">¶</a></h2>
+<p>We will use the same metric as in the previous <a class="reference external" href="https://www.nengo.ai/nengo_dl/examples/spa_retrieval.html">retrieval
+example</a>
+in order to assess the accuracy of the system. That is, we will say that
+the network has successfully retrieved the cued value if the output is
+more similar to the correct answer than to any other items in the
+vocabulary.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">accuracy</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">probe</span><span class="p">,</span> <span class="n">vocab</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">t_step</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+    <span class="c1"># provide a simulator instance, the probe being evaluated, the vocab,</span>
+    <span class="c1"># the target vectors, and the time step at which to evaluate</span>
+
+    <span class="c1"># get output at the given time step</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">probe</span><span class="p">][:,</span> <span class="n">t_step</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="c1"># compute similarity between each output and vocab item</span>
+    <span class="n">sims</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">vocab</span><span class="o">.</span><span class="n">vectors</span><span class="p">,</span> <span class="n">output</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+    <span class="n">idxs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">sims</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># check that the output is most similar to the target</span>
+    <span class="n">acc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">vocab</span><span class="o">.</span><span class="n">vectors</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">==</span> <span class="n">targets</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">acc</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># generate test data</span>
+<span class="n">test_roles</span><span class="p">,</span> <span class="n">test_fills</span><span class="p">,</span> <span class="n">test_cues</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">test_targets</span><span class="p">,</span> <span class="n">test_vocab</span> <span class="o">=</span> <span class="n">get_binding_data</span><span class="p">(</span>
+    <span class="n">minibatch_size</span><span class="p">,</span> <span class="n">n_pairs</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">seed</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">t_int</span><span class="p">,</span> <span class="n">t_mem</span><span class="p">)</span>
+<span class="n">test_inputs</span> <span class="o">=</span> <span class="p">{</span><span class="n">role_inp</span><span class="p">:</span> <span class="n">test_roles</span><span class="p">,</span> <span class="n">fill_inp</span><span class="p">:</span> <span class="n">test_fills</span><span class="p">,</span> <span class="n">cue_inp</span><span class="p">:</span> <span class="n">test_cues</span><span class="p">}</span>
+<span class="n">test_outputs</span> <span class="o">=</span> <span class="p">{</span><span class="n">output_probe</span><span class="p">:</span> <span class="n">test_targets</span><span class="p">}</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">t_run</span><span class="p">,</span> <span class="n">input_feeds</span><span class="o">=</span><span class="n">test_inputs</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Retrieval accuracy: &#39;</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">output_probe</span><span class="p">,</span> <span class="n">test_vocab</span><span class="p">,</span> <span class="n">test_targets</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<p>As we can see, the initial retrieval accuracy of our model is poor. We
+can visualize the model’s output trajectories to see what this accuracy
+looks like in practice.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">plot_retrieval_example</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">vocab</span><span class="p">,</span> <span class="n">example_input</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="n">f</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">14</span><span class="p">),</span> <span class="n">sharex</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+        <span class="n">test_roles</span><span class="p">[</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_pairs</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;ROLE_</span><span class="si">%d</span><span class="s2">_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">example_input</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+        <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+            <span class="n">test_roles</span><span class="p">[</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">v</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;x-small&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Role Input&quot;</span><span class="p">)</span>
+
+    <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+        <span class="n">test_fills</span><span class="p">[</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_pairs</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;FILLER_</span><span class="si">%d</span><span class="s2">_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">example_input</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+        <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+            <span class="n">test_fills</span><span class="p">[</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">v</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;x-small&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Filler Input&quot;</span><span class="p">)</span>
+
+    <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+        <span class="n">test_cues</span><span class="p">[</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_pairs</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;ROLE_</span><span class="si">%d</span><span class="s2">_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">example_input</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+        <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+            <span class="n">test_cues</span><span class="p">[</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">v</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;x-small&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Cue Input&quot;</span><span class="p">)</span>
+
+    <span class="n">axes</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+        <span class="n">test_targets</span><span class="p">[</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_pairs</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;FILLER_</span><span class="si">%d</span><span class="s2">_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">example_input</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+        <span class="n">axes</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+            <span class="n">test_targets</span><span class="p">[</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">v</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;x-small&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Target Output&quot;</span><span class="p">)</span>
+
+    <span class="n">axes</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conv_probe</span><span class="p">][</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_pairs</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;ROLE_</span><span class="si">%d</span><span class="s2">_</span><span class="si">%d</span><span class="s2">*FILLER_</span><span class="si">%d</span><span class="s2">_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">example_input</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">example_input</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+        <span class="n">axes</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+            <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conv_probe</span><span class="p">][</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">v</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;x-small&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Binding&quot;</span><span class="p">)</span>
+
+    <span class="n">axes</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">memory_probe</span><span class="p">][</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;+&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;ROLE_</span><span class="si">%d</span><span class="s2">_</span><span class="si">%d</span><span class="s2">*FILLER_</span><span class="si">%d</span><span class="s2">_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">example_input</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">example_input</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+                     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_pairs</span><span class="p">)])</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">memory_probe</span><span class="p">][</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">v</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;x-small&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Memory&quot;</span><span class="p">)</span>
+
+    <span class="n">axes</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">output_probe</span><span class="p">][</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_pairs</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;FILLER_</span><span class="si">%d</span><span class="s2">_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">example_input</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+        <span class="n">axes</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">nengo</span><span class="o">.</span><span class="n">spa</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+            <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">output_probe</span><span class="p">][</span><span class="n">example_input</span><span class="p">],</span> <span class="n">vocab</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">v</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;x-small&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Output&quot;</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;time [s]&quot;</span><span class="p">)</span>
+
+<span class="n">plot_retrieval_example</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">test_vocab</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>In all of these plots we are showing the similarity of the
+input/target/output vectors to all the items in the vocabulary, over
+time (highlighting the vocabulary items of interest in each case). The
+first three plots show the inputs to the model, and the fourth shows the
+desired output. The fifth and sixth plots show intermediate outputs in
+the model, from the first circular convolution network (which computes
+<span class="math notranslate nohighlight">\(ROLE \circledast FILLER\)</span>) and the memory (which stores a trace of
+all the <span class="math notranslate nohighlight">\(ROLE \circledast FILLER\)</span> pairs), respectively. The final
+plot is the actual output of the system, the <span class="math notranslate nohighlight">\(FILLER\)</span>
+corresponding to the cued <span class="math notranslate nohighlight">\(ROLE\)</span>. Ideally this last plot should
+look like the “Target Output” plot, but we can see that the output
+accuracy is not great.</p>
+</div>
+<div class="section" id="6.-Train-the-new-model">
+<h2>6. Train the new model<a class="headerlink" href="#6.-Train-the-new-model" title="Permalink to this headline">¶</a></h2>
+<p>We can improve the performance of the model by optimizing its parameters
+using Nengo DL. As before we will download pre-trained parameters to
+save time, but you can run the training yourself by setting
+<code class="docutils literal notranslate"><span class="pre">do_training=True</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">do_training</span> <span class="o">=</span> <span class="bp">False</span>
+<span class="k">if</span> <span class="n">do_training</span><span class="p">:</span>
+    <span class="c1"># generate training data</span>
+    <span class="p">(</span><span class="n">train_roles</span><span class="p">,</span> <span class="n">train_fills</span><span class="p">,</span> <span class="n">train_cues</span><span class="p">,</span> <span class="n">train_binding</span><span class="p">,</span> <span class="n">train_memory</span><span class="p">,</span>
+     <span class="n">train_targets</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="o">=</span> <span class="n">get_binding_data</span><span class="p">(</span><span class="mi">8000</span><span class="p">,</span> <span class="n">n_pairs</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="n">t_int</span><span class="p">,</span> <span class="n">t_mem</span><span class="p">)</span>
+    <span class="n">train_inputs</span> <span class="o">=</span> <span class="p">{</span><span class="n">role_inp</span><span class="p">:</span> <span class="n">train_roles</span><span class="p">,</span> <span class="n">fill_inp</span><span class="p">:</span> <span class="n">train_fills</span><span class="p">,</span> <span class="n">cue_inp</span><span class="p">:</span> <span class="n">train_cues</span><span class="p">}</span>
+    <span class="c1"># note: when training we&#39;ll add targets for the intermediate outputs as well, to</span>
+    <span class="c1"># help shape the training process</span>
+    <span class="n">train_outputs</span> <span class="o">=</span> <span class="p">{</span><span class="n">output_probe</span><span class="p">:</span> <span class="n">train_targets</span><span class="p">,</span> <span class="n">conv_probe</span><span class="p">:</span> <span class="n">train_binding</span><span class="p">,</span>
+                     <span class="n">memory_probe</span><span class="p">:</span> <span class="n">train_memory</span><span class="p">}</span>
+
+    <span class="c1"># we&#39;ll define a slightly modified version of mean squared error that allows us</span>
+    <span class="c1"># to specify a weighting (so that we can specify a different weight for each probe)</span>
+    <span class="k">def</span> <span class="nf">weighted_mse</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">is_nan</span><span class="p">(</span><span class="n">target</span><span class="p">),</span> <span class="n">output</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">weight</span> <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">target</span> <span class="o">-</span> <span class="n">output</span><span class="p">))</span>
+
+
+    <span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+        <span class="n">learning_rate</span> <span class="o">=</span> <span class="mf">1e-4</span>
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">RMSPropOptimizer</span><span class="p">(</span><span class="n">learning_rate</span><span class="p">)</span>
+
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Test loss before: &#39;</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">loss</span><span class="p">(</span><span class="n">test_inputs</span><span class="p">,</span> <span class="n">test_outputs</span><span class="p">,</span> <span class="s1">&#39;mse&#39;</span><span class="p">))</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">train_inputs</span><span class="p">,</span> <span class="n">train_outputs</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="n">n_epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                  <span class="n">objective</span><span class="o">=</span><span class="p">{</span><span class="n">output_probe</span><span class="p">:</span> <span class="n">weighted_mse</span><span class="p">,</span>
+                             <span class="n">conv_probe</span><span class="p">:</span> <span class="n">partial</span><span class="p">(</span><span class="n">weighted_mse</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="mf">0.25</span><span class="p">),</span>
+                             <span class="n">memory_probe</span><span class="p">:</span> <span class="n">partial</span><span class="p">(</span><span class="n">weighted_mse</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="mf">0.25</span><span class="p">)})</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Test loss after: &#39;</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">loss</span><span class="p">(</span><span class="n">test_inputs</span><span class="p">,</span> <span class="n">test_outputs</span><span class="p">,</span> <span class="s1">&#39;mse&#39;</span><span class="p">))</span>
+
+        <span class="n">sim</span><span class="o">.</span><span class="n">save_params</span><span class="p">(</span><span class="s1">&#39;./mem_binding_params&#39;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="c1"># download pretrained parameters</span>
+    <span class="n">urlretrieve</span><span class="p">(</span>
+        <span class="s2">&quot;https://drive.google.com/uc?export=download&amp;id=0B6DAasV-Fri4T3dmWC1vQjdzRE0&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;mem_binding_params.zip&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="s2">&quot;mem_binding_params.zip&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">extractall</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="7.-Test-improved-retrieval-accuracy">
+<h2>7. Test improved retrieval accuracy<a class="headerlink" href="#7.-Test-improved-retrieval-accuracy" title="Permalink to this headline">¶</a></h2>
+<p>Recomputing our accuracy measure on the test inputs demonstrates that
+our optimization procedure has significantly improved the performance of
+the model.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">load_params</span><span class="p">(</span><span class="s1">&#39;./mem_binding_params&#39;</span><span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">t_run</span><span class="p">,</span> <span class="n">input_feeds</span><span class="o">=</span><span class="n">test_inputs</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Retrieval accuracy: &#39;</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">output_probe</span><span class="p">,</span> <span class="n">test_vocab</span><span class="p">,</span> <span class="n">test_targets</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<p>We can visualize the change in performance by looking at the same plots
+as before, showing the model output for one example input trajectory.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">plot_retrieval_example</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">test_vocab</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>While we can see that the output of the model is not perfect, it is much
+closer to the target values (the most similar vocabulary item is the
+correct filler). You can modify various parameters of the model, such as
+the number of dimensions or the number of role/filler inputs, in order
+to see how that impacts performance.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../resources.html" class="btn btn-neutral float-right" title="Additional resources" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="spa_retrieval.html" class="btn btn-neutral" title="Optimizing a structured semantic pointer model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.5.2
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../examples/spa_memory.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../../v1.0.0/examples/spa_memory.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.6.2/examples/spa_memory.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.6.1/examples/spa_memory.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.6.0/examples/spa_memory.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd>v0.5.2</dd>
+                
+            
+                
+                    <dd><a href="../../v0.5.1/examples/spa_memory.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.5.0/examples/spa_memory.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.4.0/examples/spa_memory.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.3.1/examples/spa_memory.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.3.0/examples/spa_memory.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.2.0/examples/spa_memory.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="../..//examples/spa_memory.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.5.2',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

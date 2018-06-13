@@ -1,0 +1,656 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>&lt;no title&gt; &mdash; NengoDL documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../../../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../../../_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../../search.html" /> 
+
+  
+  <script src="../../../../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../../../../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../frontend.html">User API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../backend.html">Developer API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../../../index.html">Docs</a> &raquo;</li>
+        
+      <li>&lt;no title&gt;</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../../../../../_sources/examples/models/research/syntaxnet/examples/dragnn/trainer_tutorial.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
+div.nboutput,
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput div.prompt pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput div.prompt pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput div.prompt,
+div.nboutput div.prompt {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput div.input_area,
+div.nboutput div.output_area {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput div.input_area {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">os.path</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">HTML</span>
+<span class="kn">from</span> <span class="nn">tensorflow.python.platform</span> <span class="kn">import</span> <span class="n">gfile</span>
+<span class="kn">from</span> <span class="nn">tensorflow.python.platform</span> <span class="kn">import</span> <span class="n">tf_logging</span> <span class="k">as</span> <span class="n">logging</span>
+
+<span class="kn">from</span> <span class="nn">google.protobuf</span> <span class="kn">import</span> <span class="n">text_format</span>
+
+<span class="kn">from</span> <span class="nn">syntaxnet.ops</span> <span class="kn">import</span> <span class="n">gen_parser_ops</span>
+<span class="kn">from</span> <span class="nn">syntaxnet</span> <span class="kn">import</span> <span class="n">load_parser_ops</span>  <span class="c1"># This loads the actual op definitions</span>
+<span class="kn">from</span> <span class="nn">syntaxnet</span> <span class="kn">import</span> <span class="n">task_spec_pb2</span>
+<span class="kn">from</span> <span class="nn">syntaxnet</span> <span class="kn">import</span> <span class="n">sentence_pb2</span>
+
+<span class="kn">from</span> <span class="nn">dragnn.protos</span> <span class="kn">import</span> <span class="n">spec_pb2</span>
+<span class="kn">from</span> <span class="nn">dragnn.python.sentence_io</span> <span class="kn">import</span> <span class="n">ConllSentenceReader</span>
+
+<span class="kn">from</span> <span class="nn">dragnn.python</span> <span class="kn">import</span> <span class="n">evaluation</span>
+<span class="kn">from</span> <span class="nn">dragnn.python</span> <span class="kn">import</span> <span class="n">graph_builder</span>
+<span class="kn">from</span> <span class="nn">dragnn.python</span> <span class="kn">import</span> <span class="n">lexicon</span>
+<span class="kn">from</span> <span class="nn">dragnn.python</span> <span class="kn">import</span> <span class="n">load_dragnn_cc_impl</span>
+<span class="kn">from</span> <span class="nn">dragnn.python</span> <span class="kn">import</span> <span class="n">render_parse_tree_graphviz</span>
+<span class="kn">from</span> <span class="nn">dragnn.python</span> <span class="kn">import</span> <span class="n">render_spec_with_graphviz</span>
+<span class="kn">from</span> <span class="nn">dragnn.python</span> <span class="kn">import</span> <span class="n">spec_builder</span>
+<span class="kn">from</span> <span class="nn">dragnn.python</span> <span class="kn">import</span> <span class="n">trainer_lib</span>
+<span class="kn">from</span> <span class="nn">dragnn.python</span> <span class="kn">import</span> <span class="n">visualization</span>
+
+<span class="n">DATA_DIR</span> <span class="o">=</span> <span class="s1">&#39;/opt/tensorflow/syntaxnet/examples/dragnn/data/es&#39;</span>
+<span class="n">TENSORBOARD_DIR</span> <span class="o">=</span> <span class="s1">&#39;/notebooks/tensorboard&#39;</span>
+<span class="n">CHECKPOINT_FILENAME</span> <span class="o">=</span> <span class="s1">&#39;{}/spanish.checkpoint&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">)</span>
+<span class="n">TRAINING_CORPUS_PATH</span> <span class="o">=</span> <span class="s1">&#39;{}/es-universal-train.conll&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">)</span>
+<span class="n">DEV_CORPUS_PATH</span> <span class="o">=</span> <span class="s1">&#39;{}/es-universal-dev.conll&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">)</span>
+
+<span class="c1"># Some of the IO functions fail miserably if data is missing.</span>
+<span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">TRAINING_CORPUS_PATH</span><span class="p">),</span> <span class="s1">&#39;Could not find training corpus&#39;</span>
+
+<span class="n">logging</span><span class="o">.</span><span class="n">set_verbosity</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">WARN</span><span class="p">)</span>
+
+<span class="c1"># Constructs lexical resources for SyntaxNet in the given resource path, from</span>
+<span class="c1"># the training data.</span>
+<span class="n">lexicon</span><span class="o">.</span><span class="n">build_lexicon</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">,</span> <span class="n">TRAINING_CORPUS_PATH</span><span class="p">)</span>
+
+<span class="c1"># Construct the &#39;lookahead&#39; ComponentSpec. This is a simple right-to-left RNN</span>
+<span class="c1"># sequence model, which encodes the context to the right of each token. It has</span>
+<span class="c1"># no loss except for the downstream components.</span>
+<span class="n">lookahead</span> <span class="o">=</span> <span class="n">spec_builder</span><span class="o">.</span><span class="n">ComponentSpecBuilder</span><span class="p">(</span><span class="s1">&#39;lookahead&#39;</span><span class="p">)</span>
+<span class="n">lookahead</span><span class="o">.</span><span class="n">set_network_unit</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;FeedForwardNetwork&#39;</span><span class="p">,</span> <span class="n">hidden_layer_sizes</span><span class="o">=</span><span class="s1">&#39;256&#39;</span><span class="p">)</span>
+<span class="n">lookahead</span><span class="o">.</span><span class="n">set_transition_system</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;shift-only&#39;</span><span class="p">,</span> <span class="n">left_to_right</span><span class="o">=</span><span class="s1">&#39;true&#39;</span><span class="p">)</span>
+<span class="n">lookahead</span><span class="o">.</span><span class="n">add_fixed_feature</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;words&#39;</span><span class="p">,</span> <span class="n">fml</span><span class="o">=</span><span class="s1">&#39;input.word&#39;</span><span class="p">,</span> <span class="n">embedding_dim</span><span class="o">=</span><span class="mi">64</span><span class="p">)</span>
+<span class="n">lookahead</span><span class="o">.</span><span class="n">add_rnn_link</span><span class="p">(</span><span class="n">embedding_dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">lookahead</span><span class="o">.</span><span class="n">fill_from_resources</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">)</span>
+
+<span class="c1"># Construct the ComponentSpec for tagging. This is a simple left-to-right RNN</span>
+<span class="c1"># sequence tagger.</span>
+<span class="n">tagger</span> <span class="o">=</span> <span class="n">spec_builder</span><span class="o">.</span><span class="n">ComponentSpecBuilder</span><span class="p">(</span><span class="s1">&#39;tagger&#39;</span><span class="p">)</span>
+<span class="n">tagger</span><span class="o">.</span><span class="n">set_network_unit</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;FeedForwardNetwork&#39;</span><span class="p">,</span> <span class="n">hidden_layer_sizes</span><span class="o">=</span><span class="s1">&#39;256&#39;</span><span class="p">)</span>
+<span class="n">tagger</span><span class="o">.</span><span class="n">set_transition_system</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;tagger&#39;</span><span class="p">)</span>
+<span class="n">tagger</span><span class="o">.</span><span class="n">add_rnn_link</span><span class="p">(</span><span class="n">embedding_dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">tagger</span><span class="o">.</span><span class="n">add_token_link</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">lookahead</span><span class="p">,</span> <span class="n">fml</span><span class="o">=</span><span class="s1">&#39;input.focus&#39;</span><span class="p">,</span> <span class="n">embedding_dim</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+<span class="n">tagger</span><span class="o">.</span><span class="n">fill_from_resources</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">)</span>
+
+<span class="c1"># Construct the ComponentSpec for parsing.</span>
+<span class="n">parser</span> <span class="o">=</span> <span class="n">spec_builder</span><span class="o">.</span><span class="n">ComponentSpecBuilder</span><span class="p">(</span><span class="s1">&#39;parser&#39;</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">set_network_unit</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;FeedForwardNetwork&#39;</span><span class="p">,</span> <span class="n">hidden_layer_sizes</span><span class="o">=</span><span class="s1">&#39;256&#39;</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">set_transition_system</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;arc-standard&#39;</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_token_link</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">lookahead</span><span class="p">,</span> <span class="n">fml</span><span class="o">=</span><span class="s1">&#39;input.focus&#39;</span><span class="p">,</span> <span class="n">embedding_dim</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_token_link</span><span class="p">(</span>
+    <span class="n">source</span><span class="o">=</span><span class="n">tagger</span><span class="p">,</span>
+    <span class="n">fml</span><span class="o">=</span><span class="s1">&#39;input.focus stack.focus stack(1).focus&#39;</span><span class="p">,</span>
+    <span class="n">embedding_dim</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+
+<span class="c1"># Recurrent connection for the arc-standard parser. For both tokens on the</span>
+<span class="c1"># stack, we connect to the last time step to either SHIFT or REDUCE that</span>
+<span class="c1"># token. This allows the parser to build up compositional representations of</span>
+<span class="c1"># phrases.</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_link</span><span class="p">(</span>
+    <span class="n">source</span><span class="o">=</span><span class="n">parser</span><span class="p">,</span>                          <span class="c1"># recurrent connection</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;rnn-stack&#39;</span><span class="p">,</span>                       <span class="c1"># unique identifier</span>
+    <span class="n">fml</span><span class="o">=</span><span class="s1">&#39;stack.focus stack(1).focus&#39;</span><span class="p">,</span>       <span class="c1"># look for both stack tokens</span>
+    <span class="n">source_translator</span><span class="o">=</span><span class="s1">&#39;shift-reduce-step&#39;</span><span class="p">,</span>  <span class="c1"># maps token indices -&gt; step</span>
+    <span class="n">embedding_dim</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>                       <span class="c1"># project down to 32 dims</span>
+
+<span class="n">parser</span><span class="o">.</span><span class="n">fill_from_resources</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">)</span>
+
+<span class="n">master_spec</span> <span class="o">=</span> <span class="n">spec_pb2</span><span class="o">.</span><span class="n">MasterSpec</span><span class="p">()</span>
+<span class="n">master_spec</span><span class="o">.</span><span class="n">component</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">lookahead</span><span class="o">.</span><span class="n">spec</span><span class="p">,</span> <span class="n">tagger</span><span class="o">.</span><span class="n">spec</span><span class="p">,</span> <span class="n">parser</span><span class="o">.</span><span class="n">spec</span><span class="p">])</span>
+<span class="n">HTML</span><span class="p">(</span><span class="n">render_spec_with_graphviz</span><span class="o">.</span><span class="n">master_spec_graph</span><span class="p">(</span><span class="n">master_spec</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Build the TensorFlow graph based on the DRAGNN network spec.</span>
+<span class="n">graph</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Graph</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">graph</span><span class="o">.</span><span class="n">as_default</span><span class="p">():</span>
+    <span class="n">hyperparam_config</span> <span class="o">=</span> <span class="n">spec_pb2</span><span class="o">.</span><span class="n">GridPoint</span><span class="p">(</span>
+        <span class="n">learning_method</span><span class="o">=</span><span class="s1">&#39;adam&#39;</span><span class="p">,</span>
+        <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.0005</span><span class="p">,</span>
+        <span class="n">adam_beta1</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">adam_beta2</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">adam_eps</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
+        <span class="n">dropout_rate</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">gradient_clip_norm</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">use_moving_average</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">seed</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">graph_builder</span><span class="o">.</span><span class="n">MasterBuilder</span><span class="p">(</span><span class="n">master_spec</span><span class="p">,</span> <span class="n">hyperparam_config</span><span class="p">)</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">spec_pb2</span><span class="o">.</span><span class="n">TrainTarget</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">,</span>
+        <span class="n">unroll_using_oracle</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="bp">True</span><span class="p">],</span> <span class="c1"># train tagger &amp; parser on gold unrolling, skip lookahead</span>
+        <span class="n">component_weights</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">])</span> <span class="c1"># tagger and parser losses have equal weights</span>
+    <span class="n">trainer</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">add_training_from_config</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+    <span class="n">annotator</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">add_annotation</span><span class="p">(</span><span class="n">enable_tracing</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">add_saver</span><span class="p">()</span>
+
+<span class="c1"># Train on Spanish data for N_STEPS steps and evaluate.</span>
+<span class="n">N_STEPS</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">BATCH_SIZE</span> <span class="o">=</span> <span class="mi">64</span>
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">(</span><span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+    <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">global_variables_initializer</span><span class="p">())</span>
+    <span class="n">training_corpus</span> <span class="o">=</span> <span class="n">ConllSentenceReader</span><span class="p">(</span>
+        <span class="n">TRAINING_CORPUS_PATH</span><span class="p">,</span> <span class="n">projectivize</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span><span class="o">.</span><span class="n">corpus</span><span class="p">()</span>
+    <span class="n">dev_corpus</span> <span class="o">=</span> <span class="n">ConllSentenceReader</span><span class="p">(</span><span class="n">DEV_CORPUS_PATH</span><span class="p">)</span><span class="o">.</span><span class="n">corpus</span><span class="p">()[:</span><span class="mi">200</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">N_STEPS</span><span class="p">):</span>
+        <span class="n">trainer_lib</span><span class="o">.</span><span class="n">run_training_step</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">trainer</span><span class="p">,</span> <span class="n">training_corpus</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">BATCH_SIZE</span><span class="p">)</span>
+        <span class="n">tf</span><span class="o">.</span><span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;Step </span><span class="si">%d</span><span class="s1">/</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">step</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">N_STEPS</span><span class="p">)</span>
+    <span class="n">parsed_dev_corpus</span> <span class="o">=</span> <span class="n">trainer_lib</span><span class="o">.</span><span class="n">annotate_dataset</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">annotator</span><span class="p">,</span> <span class="n">dev_corpus</span><span class="p">)</span>
+    <span class="n">pos</span><span class="p">,</span> <span class="n">uas</span><span class="p">,</span> <span class="n">las</span> <span class="o">=</span> <span class="n">evaluation</span><span class="o">.</span><span class="n">calculate_parse_metrics</span><span class="p">(</span><span class="n">dev_corpus</span><span class="p">,</span> <span class="n">parsed_dev_corpus</span><span class="p">)</span>
+    <span class="n">tf</span><span class="o">.</span><span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;POS </span><span class="si">%.2f</span><span class="s1"> UAS </span><span class="si">%.2f</span><span class="s1"> LAS </span><span class="si">%.2f</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">uas</span><span class="p">,</span> <span class="n">las</span><span class="p">)</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">saver</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">CHECKPOINT_FILENAME</span><span class="p">)</span>
+
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Visualize the output of our mini-trained model on a test sentence.</span>
+
+<span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;¿ Viste ese gran coche rojo ?&#39;</span>
+<span class="n">tokens</span> <span class="o">=</span> <span class="p">[</span><span class="n">sentence_pb2</span><span class="o">.</span><span class="n">Token</span><span class="p">(</span><span class="n">word</span><span class="o">=</span><span class="n">word</span><span class="p">,</span> <span class="n">start</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">end</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">()]</span>
+<span class="n">sentence</span> <span class="o">=</span> <span class="n">sentence_pb2</span><span class="o">.</span><span class="n">Sentence</span><span class="p">()</span>
+<span class="n">sentence</span><span class="o">.</span><span class="n">token</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">(</span><span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+    <span class="c1"># Restore the model we just trained.</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">saver</span><span class="o">.</span><span class="n">restore</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">CHECKPOINT_FILENAME</span><span class="p">)</span>
+    <span class="n">annotations</span><span class="p">,</span> <span class="n">traces</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">annotator</span><span class="p">[</span><span class="s1">&#39;annotations&#39;</span><span class="p">],</span> <span class="n">annotator</span><span class="p">[</span><span class="s1">&#39;traces&#39;</span><span class="p">]],</span>
+                      <span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="n">annotator</span><span class="p">[</span><span class="s1">&#39;input_batch&#39;</span><span class="p">]:</span> <span class="p">[</span><span class="n">sentence</span><span class="o">.</span><span class="n">SerializeToString</span><span class="p">()]})</span>
+
+<span class="n">HTML</span><span class="p">(</span><span class="n">visualization</span><span class="o">.</span><span class="n">trace_html</span><span class="p">(</span><span class="n">traces</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">parsed_sentence</span> <span class="o">=</span> <span class="n">sentence_pb2</span><span class="o">.</span><span class="n">Sentence</span><span class="o">.</span><span class="n">FromString</span><span class="p">(</span><span class="n">annotations</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">HTML</span><span class="p">(</span><span class="n">render_parse_tree_graphviz</span><span class="o">.</span><span class="n">parse_tree_graph</span><span class="p">(</span><span class="n">parsed_sentence</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.4.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../../../../../../examples/models/research/syntaxnet/examples/dragnn/trainer_tutorial.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../../../../../../../v1.0.0/examples/models/research/syntaxnet/examples/dragnn/trainer_tutorial.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.6.2/examples/models/research/syntaxnet/examples/dragnn/trainer_tutorial.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.6.1/examples/models/research/syntaxnet/examples/dragnn/trainer_tutorial.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.6.0/examples/models/research/syntaxnet/examples/dragnn/trainer_tutorial.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.5.2/examples/models/research/syntaxnet/examples/dragnn/trainer_tutorial.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.5.1/examples/models/research/syntaxnet/examples/dragnn/trainer_tutorial.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.5.0/examples/models/research/syntaxnet/examples/dragnn/trainer_tutorial.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd>v0.4.0</dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.3.1/examples/models/research/syntaxnet/examples/dragnn/trainer_tutorial.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.3.0/examples/models/research/syntaxnet/examples/dragnn/trainer_tutorial.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.2.0/examples/models/research/syntaxnet/examples/dragnn/trainer_tutorial.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../..//examples/models/research/syntaxnet/examples/dragnn/trainer_tutorial.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../../../../',
+            VERSION:'0.4.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../../../../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

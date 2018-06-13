@@ -1,0 +1,616 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Signals &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Operator graph optimization tools" href="graph_optimizer.html" />
+    <link rel="prev" title="TensorFlow graph construction" href="tensor_graph.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frontend.html">User documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="backend.html">Developer documentation</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="builder.html">Builder</a></li>
+<li class="toctree-l2"><a class="reference internal" href="op_builders.html">Operator build classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tensor_graph.html">TensorFlow graph construction</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Signals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="graph_optimizer.html">Operator graph optimization tools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html">Miscellaneous utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="backend.html">Developer documentation</a> &raquo;</li>
+        
+      <li>Signals</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/signals.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="signals">
+<h1>Signals<a class="headerlink" href="#signals" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="nengo_dl.signals.TensorSignal">
+<em class="property">class </em><code class="descclassname">nengo_dl.signals.</code><code class="descname">TensorSignal</code><span class="sig-paren">(</span><em>indices</em>, <em>key</em>, <em>dtype</em>, <em>shape</em>, <em>minibatched</em>, <em>label='TensorSignal'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/signals.html#TensorSignal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.signals.TensorSignal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents a tensor as an indexed view into a base array.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>indices</strong> <span class="classifier-delimiter">:</span> <span class="classifier">tuple or list or <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a> of int</span></dt>
+<dd><p class="first last">indices along the first axis of the base array corresponding to the
+data for this signal</p>
+</dd>
+<dt><strong>key</strong> <span class="classifier-delimiter">:</span> <span class="classifier">object</span></dt>
+<dd><p class="first last">key mapping to the base array that contains the data for this signal</p>
+</dd>
+<dt><strong>dtype</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v1.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code></a></span></dt>
+<dd><p class="first last">dtype of the values represented by this signal</p>
+</dd>
+<dt><strong>shape</strong> <span class="classifier-delimiter">:</span> <span class="classifier">tuple of int</span></dt>
+<dd><p class="first last">view shape of this signal (may differ from shape of base array)</p>
+</dd>
+<dt><strong>minibatched</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd><p class="first last">if True then this signal contains a minibatch dimension</p>
+</dd>
+<dt><strong>label</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">name for this signal, used to make debugging easier</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="nengo_dl.signals.TensorSignal.__getitem__">
+<code class="descname">__getitem__</code><span class="sig-paren">(</span><em>indices</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/signals.html#TensorSignal.__getitem__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.signals.TensorSignal.__getitem__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new TensorSignal representing a subset (slice or advanced
+indexing) of the indices of this TensorSignal.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>indices</strong> <span class="classifier-delimiter">:</span> <span class="classifier">slice or list of int</span></dt>
+<dd><p class="first last">the desired subset of the indices in this TensorSignal</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>:class:`.signals.TensorSignal`</strong></dt>
+<dd><p class="first last">a new TensorSignal representing the subset of this TensorSignal</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.signals.TensorSignal.reshape">
+<code class="descname">reshape</code><span class="sig-paren">(</span><em>shape</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/signals.html#TensorSignal.reshape"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.signals.TensorSignal.reshape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new TensorSignal representing a reshaped view of the
+same data in this TensorSignal (size of data must remain unchanged).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>shape</strong> <span class="classifier-delimiter">:</span> <span class="classifier">tuple of int</span></dt>
+<dd><p class="first last">new shape for the signal (one dimension can be -1 to indicate
+an inferred dimension size, as in numpy)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>:class:`.signals.TensorSignal`</strong></dt>
+<dd><p class="first last">new TensorSignal representing the same data as this signal but
+with the given shape</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.signals.TensorSignal.broadcast">
+<code class="descname">broadcast</code><span class="sig-paren">(</span><em>axis</em>, <em>length</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/signals.html#TensorSignal.broadcast"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.signals.TensorSignal.broadcast" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a new dimension by broadcasting this signal along <code class="docutils literal notranslate"><span class="pre">axis</span></code>
+for the given length.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>axis</strong> <span class="classifier-delimiter">:</span> <span class="classifier">0 or -1</span></dt>
+<dd><p class="first last">where to insert the new dimension (currently only supports either
+the beginning or end of the array)</p>
+</dd>
+<dt><strong>length</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">the number of times to duplicate signal along the broadcast
+dimension</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>:class:`.signals.TensorSignal`</strong></dt>
+<dd><p class="first last">TensorSignal with new broadcasted shape</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.signals.TensorSignal.load_indices">
+<code class="descname">load_indices</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/signals.html#TensorSignal.load_indices"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.signals.TensorSignal.load_indices" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads the indices for this signal into TensorFlow, and if the
+indices form a contiguous slice then also loads the start/stop/step of
+that slice.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.signals.SignalDict">
+<em class="property">class </em><code class="descclassname">nengo_dl.signals.</code><code class="descname">SignalDict</code><span class="sig-paren">(</span><em>sig_map</em>, <em>dtype</em>, <em>minibatch_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/signals.html#SignalDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.signals.SignalDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handles the mapping from <code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code>
+to <code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code>.</p>
+<p>Takes care of gather/scatter logic to read/write signals within the base
+arrays.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>sig_map</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict of {<code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code>:                        <a class="reference internal" href="#nengo_dl.signals.TensorSignal" title="nengo_dl.signals.TensorSignal"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorSignal</span></code></a>}</span></dt>
+<dd><p class="first last">mapping from <code class="docutils literal notranslate"><span class="pre">nengo</span></code> signals to <code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code> signals</p>
+</dd>
+<dt><strong>dtype</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="docutils literal notranslate"><span class="pre">tf.DType</span></code></span></dt>
+<dd><p class="first last">floating point precision used in signals</p>
+</dd>
+<dt><strong>minibatch_size</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">number of items in each minibatch</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="nengo_dl.signals.SignalDict.scatter">
+<code class="descname">scatter</code><span class="sig-paren">(</span><em>dst</em>, <em>val</em>, <em>mode='update'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/signals.html#SignalDict.scatter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.signals.SignalDict.scatter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the base data corresponding to <code class="docutils literal notranslate"><span class="pre">dst</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>dst</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="#nengo_dl.signals.TensorSignal" title="nengo_dl.signals.TensorSignal"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorSignal</span></code></a></span></dt>
+<dd><p class="first last">signal indicating the data to be modified in base array</p>
+</dd>
+<dt><strong>val</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code></span></dt>
+<dd><p class="first last">update data (same shape as <code class="docutils literal notranslate"><span class="pre">dst</span></code>, i.e. a dense array &lt;= the size
+of the base array)</p>
+</dd>
+<dt><strong>mode</strong> <span class="classifier-delimiter">:</span> <span class="classifier">“update” or “inc”</span></dt>
+<dd><p class="first last">overwrite/add the data at <code class="docutils literal notranslate"><span class="pre">dst</span></code> with <code class="docutils literal notranslate"><span class="pre">val</span></code></p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.signals.SignalDict.gather">
+<code class="descname">gather</code><span class="sig-paren">(</span><em>src</em>, <em>force_copy=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/signals.html#SignalDict.gather"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.signals.SignalDict.gather" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetches the data corresponding to <code class="docutils literal notranslate"><span class="pre">src</span></code> from the base array.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>src</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="#nengo_dl.signals.TensorSignal" title="nengo_dl.signals.TensorSignal"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorSignal</span></code></a></span></dt>
+<dd><p class="first last">signal indicating the data to be read from base array</p>
+</dd>
+<dt><strong>force_copy</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">if True, always perform a gather, not a slice (this forces a
+copy). note that setting <code class="docutils literal notranslate"><span class="pre">force_copy=False</span></code> does not guarantee
+that a copy won’t be performed.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>``tf.Tensor``</strong></dt>
+<dd><p class="first last">tensor object corresponding to a dense subset of data from the
+base array</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.signals.SignalDict.mark_gather">
+<code class="descname">mark_gather</code><span class="sig-paren">(</span><em>src</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/signals.html#SignalDict.mark_gather"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.signals.SignalDict.mark_gather" title="Permalink to this definition">¶</a></dt>
+<dd><p>Marks <code class="docutils literal notranslate"><span class="pre">src</span></code> as being gathered, but doesn’t actually perform a
+gather.  Used to indicate that some computation relies on <code class="docutils literal notranslate"><span class="pre">src</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>src</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="#nengo_dl.signals.TensorSignal" title="nengo_dl.signals.TensorSignal"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorSignal</span></code></a></span></dt>
+<dd><p class="first last">signal indicating the data being read</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.signals.SignalDict.combine">
+<code class="descname">combine</code><span class="sig-paren">(</span><em>sigs</em>, <em>load_indices=True</em>, <em>label='Combine'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/signals.html#SignalDict.combine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.signals.SignalDict.combine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Combines several TensorSignals into one by concatenating along
+the first axis.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>sigs</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <a class="reference internal" href="#nengo_dl.signals.TensorSignal" title="nengo_dl.signals.TensorSignal"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorSignal</span></code></a> or                        <code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></span></dt>
+<dd><p class="first last">signals to be combined</p>
+</dd>
+<dt><strong>load_indices</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">if True, load the indices for the new signal into TensorFlow right
+away (otherwise they will need to be manually loaded later)</p>
+</dd>
+<dt><strong>label</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">name for combined signal (to help with debugging)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>:class:`.TensorSignal`</strong></dt>
+<dd><p class="first last">new TensorSignal representing the concatenation of the data in
+<code class="docutils literal notranslate"><span class="pre">sigs</span></code></p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="graph_optimizer.html" class="btn btn-neutral float-right" title="Operator graph optimization tools" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="tensor_graph.html" class="btn btn-neutral" title="TensorFlow graph construction" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.5.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../signals.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../v1.0.0/signals.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.2/signals.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.1/signals.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.0/signals.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.2/signals.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.1/signals.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd>v0.5.0</dd>
+                
+            
+                
+                    <dd><a href="../v0.4.0/signals.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.1/signals.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.0/signals.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.2.0/signals.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="..//signals.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.5.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

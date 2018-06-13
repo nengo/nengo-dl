@@ -1,0 +1,694 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Prerequisites (downloading tensorflow_models and checkpoints) &mdash; NengoDL documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../../../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../../../_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../../search.html" /> 
+
+  
+  <script src="../../../../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../../../../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../frontend.html">User API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../backend.html">Developer API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../../../index.html">Docs</a> &raquo;</li>
+        
+      <li>Prerequisites (downloading tensorflow_models and checkpoints)</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../../../../../_sources/examples/models/research/slim/nets/mobilenet/mobilenet_example.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
+div.nboutput,
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput div.prompt pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput div.prompt pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput div.prompt,
+div.nboutput div.prompt {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput div.input_area,
+div.nboutput div.output_area {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput div.input_area {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<blockquote>
+<div><p><a class="reference external" href="#scrollTo=T_cETKXHDTXu">Prerequisites (downloading tensorflow_models and
+checkpoints)</a></p>
+<p><a class="reference external" href="#scrollTo=fxMe7_pkk_Vo">Checkpoint based inference</a></p>
+<p><a class="reference external" href="#scrollTo=PlwvpK3ElBk6">Frozen inference</a></p>
+</div></blockquote>
+<div class="section" id="Prerequisites-(downloading-tensorflow_models-and-checkpoints)">
+<h1>Prerequisites (downloading tensorflow_models and checkpoints)<a class="headerlink" href="#Prerequisites-(downloading-tensorflow_models-and-checkpoints)" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>!git clone https://github.com/tensorflow/models
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Cloning into &#39;models&#39;...
+remote: Counting objects: 13504, done.
+remote: Total 13504 (delta 2), reused 2 (delta 2), pack-reused 13501
+Receiving objects: 100% (13504/13504), 422.07 MiB | 37.42 MiB/s, done.
+Resolving deltas: 100% (7635/7635), done.
+Checking out files: 100% (1946/1946), done.
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>from __future__ import print_function
+from IPython import display
+checkpoint_name = &#39;mobilenet_v2_1.0_224&#39; #@param
+url = &#39;https://storage.googleapis.com/mobilenet_v2/checkpoints/&#39; + checkpoint_name + &#39;.tgz&#39;
+print(&#39;Downloading from &#39;, url)
+!wget {url}
+print(&#39;Unpacking&#39;)
+!tar -xvf {base_name}.tgz
+checkpoint = base_name + &#39;.ckpt&#39;
+
+display.clear_output()
+print(&#39;Successfully downloaded checkpoint from &#39;, url,
+      &#39;. It is available as&#39;, checkpoint)
+
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Successfully downloaded the checkpoint. It is available as mobilenet_v2_1.0_224.ckpt
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>!wget https://upload.wikimedia.org/wikipedia/commons/f/fe/Giant_Panda_in_Beijing_Zoo_1.JPG -O panda.jpg
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+--2018-03-19 18:43:29--  https://upload.wikimedia.org/wikipedia/commons/f/fe/Giant_Panda_in_Beijing_Zoo_1.JPG
+Resolving upload.wikimedia.org (upload.wikimedia.org)... 208.80.154.240, 2620:0:860:ed1a::2:b
+Connecting to upload.wikimedia.org (upload.wikimedia.org)|208.80.154.240|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 116068 (113K) [image/jpeg]
+Saving to: ‘panda.jpg’
+
+panda.jpg           100%[===================&gt;] 113.35K  --.-KB/s    in 0.03s
+
+2018-03-19 18:43:30 (3.18 MB/s) - ‘panda.jpg’ saved [116068/116068]
+
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span># setup path
+import sys
+sys.path.append(&#39;/content/models/research/slim&#39;)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Checkpoint-based-inference">
+<h1>Checkpoint based inference<a class="headerlink" href="#Checkpoint-based-inference" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>import tensorflow as tf
+from nets.mobilenet import mobilenet_v2
+
+tf.reset_default_graph()
+
+# For simplicity we just decode jpeg inside tensorflow.
+# But one can provide any input obviously.
+file_input = tf.placeholder(tf.string, ())
+
+image = tf.image.decode_jpeg(tf.read_file(file_input))
+
+images = tf.expand_dims(image, 0)
+images = tf.cast(images, tf.float32) / 128.  - 1
+images.set_shape((None, None, None, 3))
+images = tf.image.resize_images(images, (224, 224))
+
+# Note: arg_scope is optional for inference.
+with tf.contrib.slim.arg_scope(mobilenet_v2.training_scope(is_training=False)):
+  logits, endpoints = mobilenet_v2.mobilenet(images)
+
+# Restore using exponential moving average since it produces (1.5-2%) higher
+# accuracy
+ema = tf.train.ExponentialMovingAverage(0.999)
+vars = ema.variables_to_restore()
+
+saver = tf.train.Saver(vars)
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>from IPython import display
+import pylab
+from datasets import imagenet
+import PIL
+display.display(display.Image(&#39;panda.jpg&#39;))
+
+with tf.Session() as sess:
+  saver.restore(sess,  checkpoint)
+  x = endpoints[&#39;Predictions&#39;].eval(feed_dict={file_input: &#39;panda.jpg&#39;})
+label_map = imagenet.create_readable_names_for_imagenet_labels()
+print(&quot;Top 1 prediction: &quot;, x.argmax(),label_map[x.argmax()], x.max())
+
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../../../../_images/examples_models_research_slim_nets_mobilenet_mobilenet_example_8_0.jpeg" src="../../../../../../_images/examples_models_research_slim_nets_mobilenet_mobilenet_example_8_0.jpeg" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+INFO:tensorflow:Restoring parameters from mobilenet_v2_1.0_224.ckpt
+Top 1 prediction:  389 giant panda, panda, panda bear, coon bear, Ailuropoda melanoleuca 0.90984344
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Frozen-inference">
+<h1>Frozen inference<a class="headerlink" href="#Frozen-inference" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>import numpy as np
+img = np.array(PIL.Image.open(&#39;panda.jpg&#39;).resize((224, 224))).astype(np.float) / 128 - 1
+gd = tf.GraphDef.FromString(open(base_name + &#39;_frozen.pb&#39;, &#39;rb&#39;).read())
+inp, predictions = tf.import_graph_def(gd,  return_elements = [&#39;input:0&#39;, &#39;MobilenetV2/Predictions/Reshape_1:0&#39;])
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre>
+<span></span>with tf.Session(graph=inp.graph):
+  x = predictions.eval(feed_dict={inp: img.reshape(1, 224,224, 3)})
+
+label_map = imagenet.create_readable_names_for_imagenet_labels()
+print(&quot;Top 1 Prediction: &quot;, x.argmax(),label_map[x.argmax()], x.max())
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Top 1 Prediction:  389 giant panda, panda, panda bear, coon bear, Ailuropoda melanoleuca 0.9220208
+</pre></div></div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.4.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../../../../../../examples/models/research/slim/nets/mobilenet/mobilenet_example.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../../../../../../../v1.0.0/examples/models/research/slim/nets/mobilenet/mobilenet_example.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.6.2/examples/models/research/slim/nets/mobilenet/mobilenet_example.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.6.1/examples/models/research/slim/nets/mobilenet/mobilenet_example.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.6.0/examples/models/research/slim/nets/mobilenet/mobilenet_example.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.5.2/examples/models/research/slim/nets/mobilenet/mobilenet_example.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.5.1/examples/models/research/slim/nets/mobilenet/mobilenet_example.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.5.0/examples/models/research/slim/nets/mobilenet/mobilenet_example.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd>v0.4.0</dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.3.1/examples/models/research/slim/nets/mobilenet/mobilenet_example.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.3.0/examples/models/research/slim/nets/mobilenet/mobilenet_example.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../../v0.2.0/examples/models/research/slim/nets/mobilenet/mobilenet_example.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../../..//examples/models/research/slim/nets/mobilenet/mobilenet_example.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../../../../',
+            VERSION:'0.4.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../../../../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,593 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>nengo_dl.learning_rule_builders &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../frontend.html">User documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.html">Developer documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>nengo_dl.learning_rule_builders</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for nengo_dl.learning_rule_builders</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">nengo</span> <span class="k">import</span> <span class="n">Lowpass</span>
+<span class="kn">from</span> <span class="nn">nengo.builder</span> <span class="k">import</span> <span class="n">Signal</span>
+<span class="kn">from</span> <span class="nn">nengo.builder.learning_rules</span> <span class="k">import</span> <span class="n">SimBCM</span><span class="p">,</span> <span class="n">SimOja</span><span class="p">,</span> <span class="n">SimVoja</span><span class="p">,</span> <span class="n">get_post_ens</span>
+<span class="kn">from</span> <span class="nn">nengo.builder.operator</span> <span class="k">import</span> <span class="n">Operator</span><span class="p">,</span> <span class="n">Reset</span><span class="p">,</span> <span class="n">DotInc</span><span class="p">,</span> <span class="n">Copy</span>
+<span class="kn">from</span> <span class="nn">nengo.learning_rules</span> <span class="k">import</span> <span class="n">PES</span>
+<span class="kn">from</span> <span class="nn">nengo.version</span> <span class="k">import</span> <span class="n">version_info</span> <span class="k">as</span> <span class="n">nengo_version</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+
+<span class="kn">from</span> <span class="nn">nengo_dl.builder</span> <span class="k">import</span> <span class="n">Builder</span><span class="p">,</span> <span class="n">OpBuilder</span><span class="p">,</span> <span class="n">NengoBuilder</span>
+
+
+<div class="viewcode-block" id="SimBCMBuilder"><a class="viewcode-back" href="../../learning_rules.html#nengo_dl.learning_rule_builders.SimBCMBuilder">[docs]</a><span class="nd">@Builder</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">SimBCM</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">SimBCMBuilder</span><span class="p">(</span><span class="n">OpBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of :class:`~nengo:nengo.builder.learning_rules.SimBCM`</span>
+<span class="sd">    operators.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SimBCMBuilder</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">post_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">post_filtered</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">theta_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">theta</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">pre_filtered</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span>
+             <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">post_filtered</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])],</span> <span class="n">load_indices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">post_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                               <span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">pre_filtered</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span><span class="o">.</span><span class="n">load_indices</span><span class="p">(</span><span class="n">constant</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">constant</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">op_constant</span><span class="p">(</span>
+            <span class="n">ops</span><span class="p">,</span> <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">post_filtered</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">],</span> <span class="s2">&quot;learning_rate&quot;</span><span class="p">,</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">ndims</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">delta</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+
+<div class="viewcode-block" id="SimBCMBuilder.build_step"><a class="viewcode-back" href="../../learning_rules.html#nengo_dl.learning_rule_builders.SimBCMBuilder.build_step">[docs]</a>    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="n">pre</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span><span class="p">)</span>
+        <span class="n">post</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">post_data</span><span class="p">)</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">theta_data</span><span class="p">)</span>
+
+        <span class="n">post</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">*</span> <span class="n">signals</span><span class="o">.</span><span class="n">dt</span> <span class="o">*</span> <span class="n">post</span> <span class="o">*</span> <span class="p">(</span><span class="n">post</span> <span class="o">-</span> <span class="n">theta</span><span class="p">)</span>
+
+        <span class="n">post</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">post</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="p">,</span> <span class="n">post</span> <span class="o">*</span> <span class="n">pre</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="SimOjaBuilder"><a class="viewcode-back" href="../../learning_rules.html#nengo_dl.learning_rule_builders.SimOjaBuilder">[docs]</a><span class="nd">@Builder</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">SimOja</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">SimOjaBuilder</span><span class="p">(</span><span class="n">OpBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of :class:`~nengo:nengo.builder.learning_rules.SimOja`</span>
+<span class="sd">        operators.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SimOjaBuilder</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">post_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">post_filtered</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">pre_filtered</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span>
+             <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">post_filtered</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])],</span> <span class="n">load_indices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">post_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                               <span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">pre_filtered</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span><span class="o">.</span><span class="n">load_indices</span><span class="p">(</span><span class="n">constant</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">constant</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">weights_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">weights</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">delta</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">op_constant</span><span class="p">(</span>
+            <span class="n">ops</span><span class="p">,</span> <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">post_filtered</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">],</span> <span class="s2">&quot;learning_rate&quot;</span><span class="p">,</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">ndims</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">op_constant</span><span class="p">(</span>
+            <span class="n">ops</span><span class="p">,</span> <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">post_filtered</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">],</span> <span class="s2">&quot;beta&quot;</span><span class="p">,</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">ndims</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SimOjaBuilder.build_step"><a class="viewcode-back" href="../../learning_rules.html#nengo_dl.learning_rule_builders.SimOjaBuilder.build_step">[docs]</a>    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="n">pre</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span><span class="p">)</span>
+        <span class="n">post</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">post_data</span><span class="p">)</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_data</span><span class="p">)</span>
+
+        <span class="n">post</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">post</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">alpha</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">*</span> <span class="n">signals</span><span class="o">.</span><span class="n">dt</span>
+
+        <span class="n">update</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">post</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">update</span> <span class="o">*=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">*</span> <span class="n">weights</span>
+        <span class="n">update</span> <span class="o">+=</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">post</span> <span class="o">*</span> <span class="n">pre</span>
+
+        <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="p">,</span> <span class="n">update</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="SimVojaBuilder"><a class="viewcode-back" href="../../learning_rules.html#nengo_dl.learning_rule_builders.SimVojaBuilder">[docs]</a><span class="nd">@Builder</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">SimVoja</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">SimVojaBuilder</span><span class="p">(</span><span class="n">OpBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of :class:`~nengo:nengo.builder.learning_rules.SimVoja`</span>
+<span class="sd">        operators.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SimVojaBuilder</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">post_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">post_filtered</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">pre_decoded</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span>
+             <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">post_filtered</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])],</span> <span class="n">load_indices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">post_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                               <span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">pre_decoded</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span><span class="o">.</span><span class="n">load_indices</span><span class="p">(</span><span class="n">constant</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">constant</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">learning_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">learning_signal</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span>
+             <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">post_filtered</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">scaled_encoders</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">delta</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">scale</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">op_constant</span><span class="p">(</span>
+            <span class="n">ops</span><span class="p">,</span> <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">post_filtered</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">],</span> <span class="s2">&quot;learning_rate&quot;</span><span class="p">,</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SimVojaBuilder.build_step"><a class="viewcode-back" href="../../learning_rules.html#nengo_dl.learning_rule_builders.SimVojaBuilder.build_step">[docs]</a>    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="n">pre</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span><span class="p">)</span>
+        <span class="n">post</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">post_data</span><span class="p">)</span>
+        <span class="n">learning_signal</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">learning_data</span><span class="p">)</span>
+        <span class="n">scaled_encoders</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">encoder_data</span><span class="p">)</span>
+
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">*</span> <span class="n">signals</span><span class="o">.</span><span class="n">dt</span> <span class="o">*</span> <span class="n">learning_signal</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">post</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">post</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">update</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">*</span> <span class="n">post</span> <span class="o">*</span> <span class="n">pre</span> <span class="o">-</span> <span class="n">post</span> <span class="o">*</span> <span class="n">scaled_encoders</span><span class="p">)</span>
+
+        <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="p">,</span> <span class="n">update</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="SimPES"><a class="viewcode-back" href="../../learning_rules.html#nengo_dl.learning_rule_builders.SimPES">[docs]</a><span class="k">class</span> <span class="nc">SimPES</span><span class="p">(</span><span class="n">Operator</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate connection weight change according to the PES rule.</span>
+
+<span class="sd">    Implements the PES learning rule of the form</span>
+
+<span class="sd">    .. math:: \Delta \omega_{ij} = \frac{\kappa}{n} e_j a_i</span>
+
+<span class="sd">    where</span>
+
+<span class="sd">    * :math:`\kappa` is a scalar learning rate,</span>
+<span class="sd">    * :math:`n` is the number of presynaptic neurons</span>
+<span class="sd">    * :math:`e_j` is the error for the jth output dimension, and</span>
+<span class="sd">    * :math:`a_i` is the activity of a presynaptic neuron.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pre_filtered : Signal</span>
+<span class="sd">        The presynaptic activity, :math:`a_i`.</span>
+<span class="sd">    error : Signal</span>
+<span class="sd">        The error signal, :math:`e_j`.</span>
+<span class="sd">    delta : Signal</span>
+<span class="sd">        The synaptic weight change to be applied, :math:`\Delta \omega_{ij}`.</span>
+<span class="sd">    learning_rate : float</span>
+<span class="sd">        The scalar learning rate, :math:`\kappa`.</span>
+<span class="sd">    tag : str, optional (Default: None)</span>
+<span class="sd">        A label associated with the operator, for debugging purposes.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pre_filtered : Signal</span>
+<span class="sd">        The presynaptic activity, :math:`a_i`.</span>
+<span class="sd">    error : Signal</span>
+<span class="sd">        The error signal, :math:`e_j`.</span>
+<span class="sd">    delta : Signal</span>
+<span class="sd">        The synaptic weight change to be applied, :math:`\Delta \omega_{ij}`.</span>
+<span class="sd">    learning_rate : float</span>
+<span class="sd">        The scalar learning rate, :math:`\kappa`.</span>
+<span class="sd">    tag : str, optional (Default: None)</span>
+<span class="sd">        A label associated with the operator, for debugging purposes.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    1. sets ``[delta]``</span>
+<span class="sd">    2. incs ``[]``</span>
+<span class="sd">    3. reads ``[pre_filtered, error]``</span>
+<span class="sd">    4. updates ``[]``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pre_filtered</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">learning_rate</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SimPES</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">tag</span><span class="o">=</span><span class="n">tag</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_filtered</span> <span class="o">=</span> <span class="n">pre_filtered</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error</span> <span class="o">=</span> <span class="n">error</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delta</span> <span class="o">=</span> <span class="n">delta</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">=</span> <span class="n">learning_rate</span>
+
+        <span class="c1"># TODO: change this to an update when (if) we make that change in nengo</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sets</span> <span class="o">=</span> <span class="p">[</span><span class="n">delta</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">incs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reads</span> <span class="o">=</span> <span class="p">[</span><span class="n">pre_filtered</span><span class="p">,</span> <span class="n">error</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">updates</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">_descstr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;pre=</span><span class="si">%s</span><span class="s1">, error=</span><span class="si">%s</span><span class="s1"> -&gt; </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pre_filtered</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="build_pes"><a class="viewcode-back" href="../../learning_rules.html#nengo_dl.learning_rule_builders.build_pes">[docs]</a><span class="nd">@NengoBuilder</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">PES</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">build_pes</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">pes</span><span class="p">,</span> <span class="n">rule</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Builds a `.PES` object into a model.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model : Model</span>
+<span class="sd">        The model to build into.</span>
+<span class="sd">    pes : PES</span>
+<span class="sd">        Learning rule type to build.</span>
+<span class="sd">    rule : LearningRule</span>
+<span class="sd">        The learning rule object corresponding to the neuron type.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Does not modify ``model.params[]`` and can therefore be called</span>
+<span class="sd">    more than once with the same `.PES` instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">rule</span><span class="o">.</span><span class="n">connection</span>
+
+    <span class="c1"># Create input error signal</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">rule</span><span class="o">.</span><span class="n">size_in</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;PES:error&quot;</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">add_op</span><span class="p">(</span><span class="n">Reset</span><span class="p">(</span><span class="n">error</span><span class="p">))</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">rule</span><span class="p">][</span><span class="s1">&#39;in&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">error</span>  <span class="c1"># error connection will attach here</span>
+
+    <span class="k">if</span> <span class="n">nengo_version</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">acts</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">build</span><span class="p">(</span>
+            <span class="n">Lowpass</span><span class="p">(</span><span class="n">pes</span><span class="o">.</span><span class="n">pre_tau</span><span class="p">),</span> <span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">conn</span><span class="o">.</span><span class="n">pre_obj</span><span class="p">][</span><span class="s2">&quot;out&quot;</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">acts</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">pes</span><span class="o">.</span><span class="n">pre_synapse</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">conn</span><span class="o">.</span><span class="n">pre_obj</span><span class="p">][</span><span class="s2">&quot;out&quot;</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">conn</span><span class="o">.</span><span class="n">is_decoded</span><span class="p">:</span>
+        <span class="c1"># multiply error by post encoders to get a per-neuron error</span>
+
+        <span class="n">post</span> <span class="o">=</span> <span class="n">get_post_ens</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span>
+        <span class="n">encoders</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">post</span><span class="p">][</span><span class="s2">&quot;encoders&quot;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">conn</span><span class="o">.</span><span class="n">post_obj</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">conn</span><span class="o">.</span><span class="n">post</span><span class="p">:</span>
+            <span class="c1"># in order to avoid slicing encoders along an axis &gt; 0, we pad</span>
+            <span class="c1"># `error` out to the full base dimensionality and then do the</span>
+            <span class="c1"># dotinc with the full encoder matrix</span>
+            <span class="n">padded_error</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">encoders</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">add_op</span><span class="p">(</span><span class="n">Copy</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">padded_error</span><span class="p">,</span>
+                              <span class="n">dst_slice</span><span class="o">=</span><span class="n">conn</span><span class="o">.</span><span class="n">post_slice</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">padded_error</span> <span class="o">=</span> <span class="n">error</span>
+
+        <span class="c1"># error = dot(encoders, error)</span>
+        <span class="n">local_error</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">post</span><span class="o">.</span><span class="n">n_neurons</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;PES:encoded&quot;</span><span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">add_op</span><span class="p">(</span><span class="n">Reset</span><span class="p">(</span><span class="n">local_error</span><span class="p">))</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">add_op</span><span class="p">(</span><span class="n">DotInc</span><span class="p">(</span><span class="n">encoders</span><span class="p">,</span> <span class="n">padded_error</span><span class="p">,</span> <span class="n">local_error</span><span class="p">,</span>
+                            <span class="n">tag</span><span class="o">=</span><span class="s2">&quot;PES:encode&quot;</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">local_error</span> <span class="o">=</span> <span class="n">error</span>
+
+    <span class="n">model</span><span class="o">.</span><span class="n">operators</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">SimPES</span><span class="p">(</span><span class="n">acts</span><span class="p">,</span> <span class="n">local_error</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">rule</span><span class="p">][</span><span class="s2">&quot;delta&quot;</span><span class="p">],</span>
+                                  <span class="n">pes</span><span class="o">.</span><span class="n">learning_rate</span><span class="p">))</span>
+
+    <span class="c1"># expose these for probes</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">rule</span><span class="p">][</span><span class="s2">&quot;error&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">error</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">sig</span><span class="p">[</span><span class="n">rule</span><span class="p">][</span><span class="s2">&quot;activities&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">acts</span></div>
+
+
+<span class="c1"># remove &#39;correction&#39; from probeable attributes</span>
+<span class="n">PES</span><span class="o">.</span><span class="n">probeable</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="s2">&quot;activities&quot;</span><span class="p">,</span> <span class="s2">&quot;delta&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="SimPESBuilder"><a class="viewcode-back" href="../../learning_rules.html#nengo_dl.learning_rule_builders.SimPESBuilder">[docs]</a><span class="nd">@Builder</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">SimPES</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">SimPESBuilder</span><span class="p">(</span><span class="n">OpBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of :class:`.SimPES` operators.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SimPESBuilder</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">error_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">error</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">],</span> <span class="n">load_indices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ops</span><span class="p">),</span> <span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error_data</span><span class="o">.</span><span class="n">load_indices</span><span class="p">(</span><span class="n">constant</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">constant</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">pre_filtered</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">],</span> <span class="n">load_indices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ops</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">pre_filtered</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span><span class="o">.</span><span class="n">load_indices</span><span class="p">(</span><span class="n">constant</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">constant</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">op_constant</span><span class="p">(</span>
+            <span class="n">ops</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">],</span> <span class="s2">&quot;learning_rate&quot;</span><span class="p">,</span> <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">ndims</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+                <span class="o">-</span><span class="n">signals</span><span class="o">.</span><span class="n">dt_val</span> <span class="o">/</span> <span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">pre_filtered</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">delta</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+
+<div class="viewcode-block" id="SimPESBuilder.build_step"><a class="viewcode-back" href="../../learning_rules.html#nengo_dl.learning_rule_builders.SimPESBuilder.build_step">[docs]</a>    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="n">pre_filtered</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pre_data</span><span class="p">)</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">error_data</span><span class="p">)</span>
+
+        <span class="n">error</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span>
+        <span class="n">update</span> <span class="o">=</span> <span class="n">error</span> <span class="o">*</span> <span class="n">pre_filtered</span>
+
+        <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="p">,</span> <span class="n">update</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015-2018, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v1.0.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../../_modules/nengo_dl/learning_rule_builders.html">latest</a></dd>
+            
+
+            
+                
+                    <dd>v1.0.0</dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.2/_modules/nengo_dl/learning_rule_builders.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.1/_modules/nengo_dl/learning_rule_builders.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.0/_modules/nengo_dl/learning_rule_builders.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.2/_modules/nengo_dl/learning_rule_builders.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.1/_modules/nengo_dl/learning_rule_builders.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.0/_modules/nengo_dl/learning_rule_builders.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.4.0/_modules/nengo_dl/learning_rule_builders.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.3.1/_modules/nengo_dl/learning_rule_builders.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.3.0/_modules/nengo_dl/learning_rule_builders.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.2.0/_modules/nengo_dl/learning_rule_builders.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../..//_modules/nengo_dl/learning_rule_builders.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'1.0.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

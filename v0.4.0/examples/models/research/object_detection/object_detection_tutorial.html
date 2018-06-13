@@ -1,0 +1,762 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Object Detection Demo &mdash; NengoDL documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static\custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+
+  
+  <script src="../../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../frontend.html">User API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../backend.html">Developer API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../index.html">Docs</a> &raquo;</li>
+        
+      <li>Object Detection Demo</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../../../_sources/examples/models/research/object_detection/object_detection_tutorial.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
+div.nboutput,
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput div.prompt pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput div.prompt pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput div.prompt,
+div.nboutput div.prompt {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput div.input_area,
+div.nboutput div.output_area {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput div.input_area {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Object-Detection-Demo">
+<h1>Object Detection Demo<a class="headerlink" href="#Object-Detection-Demo" title="Permalink to this headline">¶</a></h1>
+<p>Welcome to the object detection inference walkthrough! This notebook
+will walk you step by step through the process of using a pre-trained
+model to detect objects in an image. Make sure to follow the
+<a class="reference external" href="https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/installation.md">installation
+instructions</a>
+before you start.</p>
+</div>
+<div class="section" id="Imports">
+<h1>Imports<a class="headerlink" href="#Imports" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">six.moves.urllib</span> <span class="kn">as</span> <span class="nn">urllib</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">tarfile</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">zipfile</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">StringIO</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
+
+<span class="c1"># This is needed since the notebook is stored in the object_detection folder.</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;..&quot;</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">object_detection.utils</span> <span class="kn">import</span> <span class="n">ops</span> <span class="k">as</span> <span class="n">utils_ops</span>
+
+<span class="k">if</span> <span class="n">tf</span><span class="o">.</span><span class="n">__version__</span> <span class="o">&lt;</span> <span class="s1">&#39;1.4.0&#39;</span><span class="p">:</span>
+  <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s1">&#39;Please upgrade your tensorflow installation to v1.4.* or later!&#39;</span><span class="p">)</span>
+
+</pre></div>
+</div>
+</div>
+<div class="section" id="Env-setup">
+<h2>Env setup<a class="headerlink" href="#Env-setup" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># This is needed to display the images.</span>
+<span class="o">%</span><span class="k">matplotlib</span> inline
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Object-detection-imports">
+<h2>Object detection imports<a class="headerlink" href="#Object-detection-imports" title="Permalink to this headline">¶</a></h2>
+<p>Here are the imports from the object detection module.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">utils</span> <span class="kn">import</span> <span class="n">label_map_util</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="kn">import</span> <span class="n">visualization_utils</span> <span class="k">as</span> <span class="n">vis_util</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="Model-preparation">
+<h1>Model preparation<a class="headerlink" href="#Model-preparation" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="Variables">
+<h2>Variables<a class="headerlink" href="#Variables" title="Permalink to this headline">¶</a></h2>
+<p>Any model exported using the <code class="docutils literal notranslate"><span class="pre">export_inference_graph.py</span></code> tool can be
+loaded here simply by changing <code class="docutils literal notranslate"><span class="pre">PATH_TO_CKPT</span></code> to point to a new .pb
+file.</p>
+<p>By default we use an “SSD with Mobilenet” model here. See the <a class="reference external" href="https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md">detection
+model
+zoo</a>
+for a list of other models that can be run out-of-the-box with varying
+speeds and accuracies.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># What model to download.</span>
+<span class="n">MODEL_NAME</span> <span class="o">=</span> <span class="s1">&#39;ssd_mobilenet_v1_coco_2017_11_17&#39;</span>
+<span class="n">MODEL_FILE</span> <span class="o">=</span> <span class="n">MODEL_NAME</span> <span class="o">+</span> <span class="s1">&#39;.tar.gz&#39;</span>
+<span class="n">DOWNLOAD_BASE</span> <span class="o">=</span> <span class="s1">&#39;http://download.tensorflow.org/models/object_detection/&#39;</span>
+
+<span class="c1"># Path to frozen detection graph. This is the actual model that is used for the object detection.</span>
+<span class="n">PATH_TO_CKPT</span> <span class="o">=</span> <span class="n">MODEL_NAME</span> <span class="o">+</span> <span class="s1">&#39;/frozen_inference_graph.pb&#39;</span>
+
+<span class="c1"># List of the strings that is used to add correct label for each box.</span>
+<span class="n">PATH_TO_LABELS</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;mscoco_label_map.pbtxt&#39;</span><span class="p">)</span>
+
+<span class="n">NUM_CLASSES</span> <span class="o">=</span> <span class="mi">90</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Download-Model">
+<h2>Download Model<a class="headerlink" href="#Download-Model" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">opener</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">URLopener</span><span class="p">()</span>
+<span class="n">opener</span><span class="o">.</span><span class="n">retrieve</span><span class="p">(</span><span class="n">DOWNLOAD_BASE</span> <span class="o">+</span> <span class="n">MODEL_FILE</span><span class="p">,</span> <span class="n">MODEL_FILE</span><span class="p">)</span>
+<span class="n">tar_file</span> <span class="o">=</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">MODEL_FILE</span><span class="p">)</span>
+<span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">tar_file</span><span class="o">.</span><span class="n">getmembers</span><span class="p">():</span>
+  <span class="n">file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="nb">file</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+  <span class="k">if</span> <span class="s1">&#39;frozen_inference_graph.pb&#39;</span> <span class="ow">in</span> <span class="n">file_name</span><span class="p">:</span>
+    <span class="n">tar_file</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Load-a-(frozen)-Tensorflow-model-into-memory.">
+<h2>Load a (frozen) Tensorflow model into memory.<a class="headerlink" href="#Load-a-(frozen)-Tensorflow-model-into-memory." title="Permalink to this headline">¶</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">detection_graph</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Graph</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">detection_graph</span><span class="o">.</span><span class="n">as_default</span><span class="p">():</span>
+  <span class="n">od_graph_def</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">GraphDef</span><span class="p">()</span>
+  <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">gfile</span><span class="o">.</span><span class="n">GFile</span><span class="p">(</span><span class="n">PATH_TO_CKPT</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fid</span><span class="p">:</span>
+    <span class="n">serialized_graph</span> <span class="o">=</span> <span class="n">fid</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="n">od_graph_def</span><span class="o">.</span><span class="n">ParseFromString</span><span class="p">(</span><span class="n">serialized_graph</span><span class="p">)</span>
+    <span class="n">tf</span><span class="o">.</span><span class="n">import_graph_def</span><span class="p">(</span><span class="n">od_graph_def</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Loading-label-map">
+<h2>Loading label map<a class="headerlink" href="#Loading-label-map" title="Permalink to this headline">¶</a></h2>
+<p>Label maps map indices to category names, so that when our convolution
+network predicts <code class="docutils literal notranslate"><span class="pre">5</span></code>, we know that this corresponds to <code class="docutils literal notranslate"><span class="pre">airplane</span></code>.
+Here we use internal utility functions, but anything that returns a
+dictionary mapping integers to appropriate string labels would be fine</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">label_map</span> <span class="o">=</span> <span class="n">label_map_util</span><span class="o">.</span><span class="n">load_labelmap</span><span class="p">(</span><span class="n">PATH_TO_LABELS</span><span class="p">)</span>
+<span class="n">categories</span> <span class="o">=</span> <span class="n">label_map_util</span><span class="o">.</span><span class="n">convert_label_map_to_categories</span><span class="p">(</span><span class="n">label_map</span><span class="p">,</span> <span class="n">max_num_classes</span><span class="o">=</span><span class="n">NUM_CLASSES</span><span class="p">,</span> <span class="n">use_display_name</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">category_index</span> <span class="o">=</span> <span class="n">label_map_util</span><span class="o">.</span><span class="n">create_category_index</span><span class="p">(</span><span class="n">categories</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Helper-code">
+<h2>Helper code<a class="headerlink" href="#Helper-code" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">load_image_into_numpy_array</span><span class="p">(</span><span class="n">image</span><span class="p">):</span>
+  <span class="p">(</span><span class="n">im_width</span><span class="p">,</span> <span class="n">im_height</span><span class="p">)</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">size</span>
+  <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">getdata</span><span class="p">())</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+      <span class="p">(</span><span class="n">im_height</span><span class="p">,</span> <span class="n">im_width</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="Detection">
+<h1>Detection<a class="headerlink" href="#Detection" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># For the sake of simplicity we will use only 2 images:</span>
+<span class="c1"># image1.jpg</span>
+<span class="c1"># image2.jpg</span>
+<span class="c1"># If you want to test the code with your images, just add path to the images to the TEST_IMAGE_PATHS.</span>
+<span class="n">PATH_TO_TEST_IMAGES_DIR</span> <span class="o">=</span> <span class="s1">&#39;test_images&#39;</span>
+<span class="n">TEST_IMAGE_PATHS</span> <span class="o">=</span> <span class="p">[</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">PATH_TO_TEST_IMAGES_DIR</span><span class="p">,</span> <span class="s1">&#39;image{}.jpg&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span> <span class="p">]</span>
+
+<span class="c1"># Size, in inches, of the output images.</span>
+<span class="n">IMAGE_SIZE</span> <span class="o">=</span> <span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">run_inference_for_single_image</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+  <span class="k">with</span> <span class="n">graph</span><span class="o">.</span><span class="n">as_default</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+      <span class="c1"># Get handles to input and output tensors</span>
+      <span class="n">ops</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_default_graph</span><span class="p">()</span><span class="o">.</span><span class="n">get_operations</span><span class="p">()</span>
+      <span class="n">all_tensor_names</span> <span class="o">=</span> <span class="p">{</span><span class="n">output</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span> <span class="k">for</span> <span class="n">output</span> <span class="ow">in</span> <span class="n">op</span><span class="o">.</span><span class="n">outputs</span><span class="p">}</span>
+      <span class="n">tensor_dict</span> <span class="o">=</span> <span class="p">{}</span>
+      <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span>
+          <span class="s1">&#39;num_detections&#39;</span><span class="p">,</span> <span class="s1">&#39;detection_boxes&#39;</span><span class="p">,</span> <span class="s1">&#39;detection_scores&#39;</span><span class="p">,</span>
+          <span class="s1">&#39;detection_classes&#39;</span><span class="p">,</span> <span class="s1">&#39;detection_masks&#39;</span>
+      <span class="p">]:</span>
+        <span class="n">tensor_name</span> <span class="o">=</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;:0&#39;</span>
+        <span class="k">if</span> <span class="n">tensor_name</span> <span class="ow">in</span> <span class="n">all_tensor_names</span><span class="p">:</span>
+          <span class="n">tensor_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_default_graph</span><span class="p">()</span><span class="o">.</span><span class="n">get_tensor_by_name</span><span class="p">(</span>
+              <span class="n">tensor_name</span><span class="p">)</span>
+      <span class="k">if</span> <span class="s1">&#39;detection_masks&#39;</span> <span class="ow">in</span> <span class="n">tensor_dict</span><span class="p">:</span>
+        <span class="c1"># The following processing is only for single image</span>
+        <span class="n">detection_boxes</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">tensor_dict</span><span class="p">[</span><span class="s1">&#39;detection_boxes&#39;</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">detection_masks</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">tensor_dict</span><span class="p">[</span><span class="s1">&#39;detection_masks&#39;</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="c1"># Reframe is required to translate mask from box coordinates to image coordinates and fit the image size.</span>
+        <span class="n">real_num_detection</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">tensor_dict</span><span class="p">[</span><span class="s1">&#39;num_detections&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">tf</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">detection_boxes</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="n">detection_boxes</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">real_num_detection</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">detection_masks</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="n">detection_masks</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">real_num_detection</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">detection_masks_reframed</span> <span class="o">=</span> <span class="n">utils_ops</span><span class="o">.</span><span class="n">reframe_box_masks_to_image_masks</span><span class="p">(</span>
+            <span class="n">detection_masks</span><span class="p">,</span> <span class="n">detection_boxes</span><span class="p">,</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">detection_masks_reframed</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span>
+            <span class="n">tf</span><span class="o">.</span><span class="n">greater</span><span class="p">(</span><span class="n">detection_masks_reframed</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">),</span> <span class="n">tf</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+        <span class="c1"># Follow the convention by adding back the batch dimension</span>
+        <span class="n">tensor_dict</span><span class="p">[</span><span class="s1">&#39;detection_masks&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span>
+            <span class="n">detection_masks_reframed</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="n">image_tensor</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_default_graph</span><span class="p">()</span><span class="o">.</span><span class="n">get_tensor_by_name</span><span class="p">(</span><span class="s1">&#39;image_tensor:0&#39;</span><span class="p">)</span>
+
+      <span class="c1"># Run inference</span>
+      <span class="n">output_dict</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">tensor_dict</span><span class="p">,</span>
+                             <span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="n">image_tensor</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="mi">0</span><span class="p">)})</span>
+
+      <span class="c1"># all outputs are float32 numpy arrays, so convert types as appropriate</span>
+      <span class="n">output_dict</span><span class="p">[</span><span class="s1">&#39;num_detections&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">output_dict</span><span class="p">[</span><span class="s1">&#39;num_detections&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+      <span class="n">output_dict</span><span class="p">[</span><span class="s1">&#39;detection_classes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">output_dict</span><span class="p">[</span>
+          <span class="s1">&#39;detection_classes&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+      <span class="n">output_dict</span><span class="p">[</span><span class="s1">&#39;detection_boxes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">output_dict</span><span class="p">[</span><span class="s1">&#39;detection_boxes&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+      <span class="n">output_dict</span><span class="p">[</span><span class="s1">&#39;detection_scores&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">output_dict</span><span class="p">[</span><span class="s1">&#39;detection_scores&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+      <span class="k">if</span> <span class="s1">&#39;detection_masks&#39;</span> <span class="ow">in</span> <span class="n">output_dict</span><span class="p">:</span>
+        <span class="n">output_dict</span><span class="p">[</span><span class="s1">&#39;detection_masks&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">output_dict</span><span class="p">[</span><span class="s1">&#39;detection_masks&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+  <span class="k">return</span> <span class="n">output_dict</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython2 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">for</span> <span class="n">image_path</span> <span class="ow">in</span> <span class="n">TEST_IMAGE_PATHS</span><span class="p">:</span>
+  <span class="n">image</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">image_path</span><span class="p">)</span>
+  <span class="c1"># the array based representation of the image will be used later in order to prepare the</span>
+  <span class="c1"># result image with boxes and labels on it.</span>
+  <span class="n">image_np</span> <span class="o">=</span> <span class="n">load_image_into_numpy_array</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+  <span class="c1"># Expand dimensions since the model expects images to have shape: [1, None, None, 3]</span>
+  <span class="n">image_np_expanded</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">image_np</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+  <span class="c1"># Actual detection.</span>
+  <span class="n">output_dict</span> <span class="o">=</span> <span class="n">run_inference_for_single_image</span><span class="p">(</span><span class="n">image_np</span><span class="p">,</span> <span class="n">detection_graph</span><span class="p">)</span>
+  <span class="c1"># Visualization of the results of a detection.</span>
+  <span class="n">vis_util</span><span class="o">.</span><span class="n">visualize_boxes_and_labels_on_image_array</span><span class="p">(</span>
+      <span class="n">image_np</span><span class="p">,</span>
+      <span class="n">output_dict</span><span class="p">[</span><span class="s1">&#39;detection_boxes&#39;</span><span class="p">],</span>
+      <span class="n">output_dict</span><span class="p">[</span><span class="s1">&#39;detection_classes&#39;</span><span class="p">],</span>
+      <span class="n">output_dict</span><span class="p">[</span><span class="s1">&#39;detection_scores&#39;</span><span class="p">],</span>
+      <span class="n">category_index</span><span class="p">,</span>
+      <span class="n">instance_masks</span><span class="o">=</span><span class="n">output_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;detection_masks&#39;</span><span class="p">),</span>
+      <span class="n">use_normalized_coordinates</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+      <span class="n">line_thickness</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+  <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="n">IMAGE_SIZE</span><span class="p">)</span>
+  <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">image_np</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Applied Brain Research.
+      Last updated on Jun 14, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v0.4.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../../../../examples/models/research/object_detection/object_detection_tutorial.html">latest</a></dd>
+            
+
+            
+                
+                    <dd><a href="../../../../../v1.0.0/examples/models/research/object_detection/object_detection_tutorial.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.6.2/examples/models/research/object_detection/object_detection_tutorial.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.6.1/examples/models/research/object_detection/object_detection_tutorial.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.6.0/examples/models/research/object_detection/object_detection_tutorial.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.5.2/examples/models/research/object_detection/object_detection_tutorial.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.5.1/examples/models/research/object_detection/object_detection_tutorial.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.5.0/examples/models/research/object_detection/object_detection_tutorial.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd>v0.4.0</dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.3.1/examples/models/research/object_detection/object_detection_tutorial.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.3.0/examples/models/research/object_detection/object_detection_tutorial.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../../v0.2.0/examples/models/research/object_detection/object_detection_tutorial.html">v0.2.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../../..//examples/models/research/object_detection/object_detection_tutorial.html"></a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../../',
+            VERSION:'0.4.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>
