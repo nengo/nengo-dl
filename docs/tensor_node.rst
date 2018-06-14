@@ -13,9 +13,8 @@ learning packages.
 Examples
 --------
 
-.. toctree::
-    examples/pretrained_model
-    examples/spiking_mnist
+* :doc:`examples/pretrained_model`
+* :doc:`examples/spiking_mnist`
 
 API
 ---

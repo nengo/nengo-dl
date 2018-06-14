@@ -397,7 +397,6 @@ which differ from the standard config behaviour:
 
 Examples
 --------
-.. toctree::
 
-   examples/nef_init
-   examples/spiking_mnist
+* :doc:`examples/nef_init`
+* :doc:`examples/spiking_mnist`
