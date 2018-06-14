@@ -31,6 +31,7 @@ Release History
 - Move ``tensorflow-gpu`` installation check to Simulator init, and only apply
   if ``device=None``.
 - Switched to ``pylint`` for style checks.
+- TensorFlow INFO-level log messages are now disabled by default on import
 
 **Fixed**
 

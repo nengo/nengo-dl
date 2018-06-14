@@ -18,3 +18,8 @@ from nengo_dl.neurons import SoftLIFRate
 from nengo_dl import tensorflow_patch
 tensorflow_patch.patch_dynamic_stitch_grad()
 tensorflow_patch.patch_state_grads()
+
+# filter out "INFO" level log messages
+import tensorflow as tf  # pylint: disable=wrong-import-order,wrong-import-position
+tf.logging.set_verbosity(tf.logging.WARN)
+del tf  # we don't want a nengo_dl.tf attribute
