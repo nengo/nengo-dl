@@ -171,6 +171,11 @@ def test_configure_trainable():
     with pytest.raises(NetworkContextError):
         utils.configure_settings(trainable=None)
 
+    # check that passing an invalid parameter raises an error
+    with net:
+        with pytest.raises(ValueError):
+            utils.configure_settings(troinable=None)
+
 
 def test_progress_bar():
     progress = utils.ProgressBar("test", max_value=10).start()

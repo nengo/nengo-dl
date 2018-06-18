@@ -35,6 +35,8 @@ Release History
 - TensorFlow INFO-level log messages are now disabled by default on import
 - All previous releases now tracked in documentation
 - Updated spiking MNIST example to simplify and improve performance.
+- Passing unknown configuration options to ``nengo_dl.configure_settings``
+  will now give a more explicit error message.
 
 **Fixed**
 

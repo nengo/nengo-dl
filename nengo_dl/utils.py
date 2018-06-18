@@ -485,6 +485,13 @@ def configure_settings(**kwargs):
         Pass one of the `graph planners
         <https://www.nengo.ai/nengo-dl/graph_optimizer.html>`_ to change the
         default planner.
+    sorter : signal sorting algorithm
+        Pass one of the `sort algorithms
+        <https://www.nengo.ai/nengo-dl/graph_optimizer.html>`_ to change the
+        default sorter.
+    simplifications: list of graph simplification functions
+        Pass a list of functions that transform the list of operators in the
+        model (see https://www.nengo.ai/nengo-dl/graph_optimizer.html).
     session_config: dict
         Config options passed to ``tf.Session`` initialization (e.g., to change
         the `GPU memory allocation method
@@ -517,5 +524,8 @@ def configure_settings(**kwargs):
 
                 obj_params.set_param("trainable", BoolParam("trainable", val,
                                                             optional=True))
-        else:
+        elif attr in ("planner", "sorter", "simplifications",
+                      "session_config"):
             params.set_param(attr, Parameter(attr, val))
+        else:
+            raise ValueError("%s is not a valid config parameter" % attr)
