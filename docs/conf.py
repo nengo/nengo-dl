@@ -61,37 +61,8 @@ html_static_path = ['_static']
 html_context = {
     'css_files': [os.path.join('_static', 'custom.css')],
 }
-htmlhelp_basename = 'Nengodoc'
-html_last_updated_fmt = ''  # Suppress 'Last updated on:' timestamp
+htmlhelp_basename = 'NengoDLdoc'
+html_last_updated_fmt = ''  # default output format
 html_show_sphinx = False
 html_favicon = os.path.join("_static", "favicon.ico")
 html_logo = os.path.join("_static", "logo.png")
-
-# -- Options for LaTeX output -------------------------------------------------
-
-latex_elements = {
-    'papersize': 'letterpaper',
-    'pointsize': '11pt',
-    # 'preamble': '',
-}
-
-latex_documents = [
-    # (source start file, target, title, author, documentclass [howto/manual])
-    ('index', 'nengo_dl.tex', html_title, authors, 'manual'),
-]
-
-# -- Options for manual page output -------------------------------------------
-
-man_pages = [
-    # (source start file, name, description, authors, manual section).
-    ('index', 'nengo_dl', html_title, [authors], 1)
-]
-
-# -- Options for Texinfo output -----------------------------------------------
-
-texinfo_documents = [
-    # (source start file, target, title, author, dir menu entry,
-    #  description, category)
-    ('index', 'nengo_dl', html_title, authors, 'NengoDL',
-     'Nengo with deep learning integration', 'Miscellaneous'),
-]
