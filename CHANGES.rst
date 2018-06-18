@@ -33,6 +33,7 @@ Release History
 - Switched to ``pylint`` for style checks.
 - TensorFlow INFO-level log messages are now disabled by default on import
 - All previous releases now tracked in documentation
+- Updated spiking MNIST example to simplify and improve performance.
 
 **Fixed**
 
