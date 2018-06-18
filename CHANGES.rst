@@ -45,6 +45,11 @@ Release History
   elements
 - Fixed some broken cross references in the documentation
 
+**Deprecated**
+
+- ``Simulator.trange`` argument ``dt`` has been deprecated (replaced with
+  ``sample_every``, see https://github.com/nengo/nengo/pull/1384)
+
 **Removed**
 
 - Removed ``nengo_dl.DATA_DIR`` constant
