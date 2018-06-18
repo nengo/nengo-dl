@@ -368,12 +368,19 @@ def compare_simplifications(ctx, dimensions):
                 (s.__name__, p[i]) for i, s in enumerate(simplifications)])
             for j, p in enumerate(params)]
 
-    net = build_spaun(dimensions)
+    # net = build_spaun(dimensions)
+    net = benchmarks.random_network(dimensions, 32, nengo.RectifiedLinear(),
+                                    1000, 100)
     model = nengo.builder.Model(
         dt=0.001, builder=nengo_dl.builder.NengoBuilder())
     model.build(net)
 
     if reps > 0:
+        # pre-heat
+        with nengo_dl.Simulator(None, model=model, device=device,
+                                progress_bar=False) as sim:
+            sim.run(reps, progress_bar=False)
+
         for j, p in enumerate(params):
             simps = []
             for i, s in enumerate(p):
@@ -386,7 +393,7 @@ def compare_simplifications(ctx, dimensions):
             print("%d/%d" % (j + 1, len(params)), [x.__name__ for x in simps])
 
             with nengo_dl.Simulator(
-                    None, model=model, unroll_simulation=1, device=device,
+                    None, model=model, unroll_simulation=10, device=device,
                     progress_bar=False) as sim:
                 sim.run(0.1, progress_bar=False)
 
