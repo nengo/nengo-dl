@@ -1,4 +1,6 @@
 from functools import partial
+import gzip
+from urllib.request import urlretrieve
 import itertools
 import os
 import pickle
@@ -17,21 +19,6 @@ from nengo_dl import graph_optimizer, benchmarks
 import nengo_ocl
 import numpy as np
 import tensorflow as tf
-from tensorflow.contrib.learn.python.learn.datasets import mnist
-
-# spaun needs to be downloaded from https://github.com/drasmuss/spaun2.0, and
-# manually added to python path
-spaun_dir = os.path.join(os.path.dirname(__file__), "spaun2.0")
-if not os.path.exists(spaun_dir):
-    subprocess.call("git clone https://github.com/drasmuss/spaun2.0",
-                    shell=True)
-sys.path.append(spaun_dir)
-from _spaun.configurator import cfg
-from _spaun.vocabulator import vocab
-from _spaun.experimenter import experiment
-from _spaun.modules.vision.data import vis_data
-from _spaun.modules.motor.data import mtr_data
-from _spaun.spaun_main import Spaun
 
 
 def filter_results(results, **kwargs):
@@ -49,6 +36,20 @@ def bootstrap_ci(data, alpha=0.95, n_samples=1000, func=np.mean):
 
 
 def build_spaun(dimensions):
+    # spaun needs to be downloaded from https://github.com/drasmuss/spaun2.0,
+    # and manually added to python path
+    spaun_dir = os.path.join(os.path.dirname(__file__), "spaun2.0")
+    if not os.path.exists(spaun_dir):
+        subprocess.call("git clone https://github.com/drasmuss/spaun2.0",
+                        shell=True)
+    sys.path.append(spaun_dir)
+    from _spaun.configurator import cfg
+    from _spaun.vocabulator import vocab
+    from _spaun.experimenter import experiment
+    from _spaun.modules.vision.data import vis_data
+    from _spaun.modules.motor.data import mtr_data
+    from _spaun.spaun_main import Spaun
+
     vocab.sp_dim = dimensions
     cfg.mtr_arm_type = None
 
@@ -457,7 +458,17 @@ def spiking_mnist(ctx, n_epochs):
     else:
         results = {"pre": [], "post": [], "spiking": []}
 
-    data = mnist.read_data_sets("MNIST_data/", one_hot=True)
+    urlretrieve("http://deeplearning.net/data/mnist/mnist.pkl.gz",
+                "mnist.pkl.gz")
+    with gzip.open("mnist.pkl.gz") as f:
+        train_data, _, test_data = pickle.load(f, encoding="latin1")
+    train_data = list(train_data)
+    test_data = list(test_data)
+    for data in (train_data, test_data):
+        one_hot = np.zeros((data[0].shape[0], 10))
+        one_hot[np.arange(data[0].shape[0]), data[1]] = 1
+        data[1] = one_hot
+
     minibatch_size = 200
 
     # construct the rate network
@@ -469,10 +480,10 @@ def spiking_mnist(ctx, n_epochs):
     with net:
         out_p = nengo.Probe(out)
 
-    train_inputs = {inp: data.train.images[:, None, :]}
-    train_targets = {out_p: data.train.labels[:, None, :]}
-    test_inputs = {inp: data.test.images[:, None, :]}
-    test_targets = {out_p: data.test.labels[:, None, :]}
+    train_inputs = {inp: train_data[0][:, None, :]}
+    train_targets = {out_p: train_data[1][:, None, :]}
+    test_inputs = {inp: test_data[0][:, None, :]}
+    test_targets = {out_p: test_data[1][:, None, :]}
 
     # construct the spiking network
     spk_net, spk_inp, spk_out = build_network(
@@ -485,7 +496,7 @@ def spiking_mnist(ctx, n_epochs):
 
     n_steps = 50
     test_inputs_time = {
-        spk_inp: np.tile(data.test.images[:, None, :], (1, n_steps, 1))}
+        spk_inp: np.tile(test_data[0][:, None, :], (1, n_steps, 1))}
     test_targets_time = {spk_out_p: np.tile(v, (1, n_steps, 1)) for v in
                          test_targets.values()}
 
