@@ -1,6 +1,7 @@
 include *.rst
 include *.txt
 include *.yml
+recursive-include .ci *.sh
 recursive-include docs *.css
 recursive-include docs *.html
 recursive-include docs *.ico
