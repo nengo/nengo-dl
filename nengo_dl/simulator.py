@@ -692,7 +692,7 @@ class Simulator(object):
         :meth:`.get_nengo_params`.
         """
         if self.closed:
-            raise SimulationError("Simulation has been closed, cannot save "
+            raise SimulatorClosed("Simulation has been closed, cannot save "
                                   "parameters")
 
         with self.tensor_graph.graph.as_default():
@@ -728,7 +728,7 @@ class Simulator(object):
         :meth:`.get_nengo_params`.
         """
         if self.closed:
-            raise SimulationError("Simulation has been closed, cannot load "
+            raise SimulatorClosed("Simulation has been closed, cannot load "
                                   "parameters")
 
         with self.tensor_graph.graph.as_default():
@@ -742,6 +742,72 @@ class Simulator(object):
                 tf.train.Saver(vars).restore(self.sess, path)
 
         logger.info("Model parameters loaded from %s", path)
+
+    def freeze_params(self, objs):
+        """
+        Stores the live parameter values from the simulation back into a
+        Nengo object definition.
+
+        This can be helpful for reusing a NengoDL model inside a different
+        Simulator.  For example:
+
+        .. code-block:: python
+
+            with nengo.Network() as net:
+                < build network >
+
+            with nengo_dl.Simulator(net) as sim:
+                < run some optimization >
+                sim.freeze_params(net)
+
+            with nengo.Simulator(net) as sim2:
+                # run the network in the default Nengo simulator, with the
+                # trained parameters
+                sim2.run(1.0)
+
+        Parameters
+        ----------
+        obj : (list of) ``NengoObject``
+            The Nengo object(s) into which parameter values will be stored.
+            Note that these objects must be members of the Network used to
+            initialize the Simulator.
+
+        Notes
+        -----
+        This modifies the source object in-place, and it may slightly modify
+        the structure of that object.  The goal is to have the object produce
+        the same output as it would if run in the NengoDL simulator.  It may
+        not be possible to accurately freeze all possible object; if you run
+        into errors in this process, try manually extracting the parameters you
+        need in your model (from ``sim.data``).
+        """
+
+        if self.closed:
+            raise SimulatorClosed("Simulation has been closed, cannot freeze "
+                                  "parameters")
+
+        if not isinstance(objs, (list, tuple)):
+            objs = [objs]
+
+        for obj in objs:
+            if obj not in ([self.model.toplevel] +
+                           self.model.toplevel.all_objects):
+                raise ValueError("%s is not a member of the Network used to "
+                                 "initialize the Simulator")
+
+            if not isinstance(obj, (Network, Ensemble, Connection)):
+                raise TypeError("Objects of type %s do not have parameters "
+                                "to store" % type(obj))
+
+            if isinstance(obj, Network):
+                todo = obj.all_ensembles + obj.all_connections
+            else:
+                todo = [obj]
+
+            for o in todo:
+                params = self.get_nengo_params(o)
+                for k, v in params.items():
+                    setattr(o, k, v)
 
     def get_nengo_params(self, nengo_objs, as_dict=False):
         """
@@ -813,7 +879,10 @@ class Simulator(object):
                             data.weights.shape[0]),
                         "transform": 1})
                 else:
-                    params.append({"transform": data.weights})
+                    weights = data.weights
+                    if all(x == 1 for x in weights.shape):
+                        weights = np.squeeze(weights)
+                    params.append({"transform": weights})
             elif isinstance(obj, Ensemble):
                 params.append({"gain": data.gain, "bias": data.bias,
                                "encoders": data.encoders})

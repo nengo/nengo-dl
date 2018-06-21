@@ -395,6 +395,102 @@ which differ from the standard config behaviour:
                net.config[my_ens].trainable = False
 
 
+Saving and loading parameters
+-----------------------------
+
+After optimizing a model we often want to do something with the trained
+parameters (e.g., inspect their values, save them to file, reuse them in a
+different model).  NengoDL provides a number of methods to access model
+parameters, in order to support different use cases.
+
+sim.data
+^^^^^^^^
+
+The most basic way to access model parameters is through the
+:class:`sim.data <.simulator.SimulationData>`
+data structure.  This provides access to the parameters of any Nengo object,
+returning them as ``numpy`` arrays.  For example:
+
+.. code-block:: python
+
+    with nengo.Network() as net:
+        node = nengo.Node([0])
+        ens = nengo.Ensemble(10, 1)
+        conn = nengo.Connection(node, ens)
+        probe = nengo.Probe(ens)
+
+    with nengo_dl.Simulator(net) as sim:
+        # < run training >
+
+        print(sim.data[conn].weights)  # connection weights
+        print(sim.data[ens].bias)  # bias values
+        print(sim.data[ens].encoders)  # encoder values
+        print(sim.data[ens])  # to see all the parameters for an object
+
+Once we have the parameters as ``numpy`` arrays we can then do whatever
+we want with them (e.g., save them to file, or use them as arguments in a
+different model).  Thus this method is the most general and flexible, but also
+somewhat labour intensive as the user needs to handle all of that processing
+themselves for each parameter.
+
+sim.save_params/sim.load_params
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+On the opposite end of the spectrum, :meth:`~.Simulator.save_params`/
+:meth:`~.Simulator.load_params` can be used to save all the parameters of a
+model to file (using TensorFlow's checkpointing system).  This is
+convenient if we want to save and resume the state of a model (e.g., run some
+training, do some analysis, and then run more training):
+
+.. code-block:: python
+
+    with nengo_dl.Simulator(net) as sim:
+        # < run training >
+
+        sim.save_params("./my_saved_params")
+
+    # < do something else >
+
+    with nengo_dl.Simulator(net) as sim2:
+        sim2.load_params("./my_saved_params")
+        # sim2 will now match the final state of sim
+
+We can also use ``save/load_params`` to reuse parameters between models, as
+long as the structure of the two models match exactly (for example,
+reusing parameters from a rate version of a model in a spiking version;
+see the :doc:`spiking MNIST example <examples/spiking_mnist>`).
+
+This method is quick and convenient, but not as flexible as other options.
+
+sim.freeze_params
+^^^^^^^^^^^^^^^^^
+
+Rather than saving model parameters using TensorFlow's checkpoint system,
+we can store live parameters back into the model definition using
+:meth:`~.Simulator.freeze_params`.  We can freeze the parameters of individual
+Ensembles and Connections, or pass a Network to freeze all the Ensembles and
+Connections in that Network.
+
+The main advantage of this approach is
+that it makes it easy to reuse a NengoDL model in different Nengo simulators.
+For example, we could optimize a model in NengoDL, save the result as a
+Nengo network, and then run that model in another Simulator (e.g., one running
+on custom neuromorphic hardware).
+
+.. code-block:: python
+
+    with nengo_dl.Simulator(net) as sim:
+        # < run training >
+
+        sim.freeze_params(net)
+
+    # load our optimized network in a different simulator
+    with nengo.Simulator(net) as sim2:
+        # sim2 will now simulate a model in the default Nengo simulator, but
+        # with the same parameters as our optimized nengo_dl model
+        sim2.run(1.0)
+
+
 Examples
 --------
 

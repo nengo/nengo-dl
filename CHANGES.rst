@@ -26,6 +26,10 @@ Release History
 - The default TensorFlow Session is now set to the underlying Simulator session
   within the Simulator context.
 - Added CLI for benchmarks.py
+- Added ``sim.freeze_params`` tool, to more easily extract model parameters for
+  reuse in different Simulators.
+- Added `documentation on saving and loading model parameters
+  <https://www.nengo.ai/nengo-dl/training.html#saving-and-loading-parameters>`_.
 
 **Changed**
 

@@ -528,4 +528,4 @@ def configure_settings(**kwargs):
                       "session_config"):
             params.set_param(attr, Parameter(attr, val))
         else:
-            raise ValueError("%s is not a valid config parameter" % attr)
+            raise ConfigError("%s is not a valid config parameter" % attr)

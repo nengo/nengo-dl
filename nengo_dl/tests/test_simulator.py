@@ -406,9 +406,9 @@ def test_save_load_params(Simulator, tmpdir):
         sim.save_params(os.path.join(str(tmpdir), "local"),
                         include_local=True)
 
-    with pytest.raises(SimulationError):
+    with pytest.raises(SimulatorClosed):
         sim.save_params(None)
-    with pytest.raises(SimulationError):
+    with pytest.raises(SimulatorClosed):
         sim.load_params(None)
 
     with nengo.Network(seed=1) as net2:
@@ -1152,3 +1152,77 @@ def test_non_differentiable(Simulator):
             with pytest.raises(SimulationError):
                 sim.train({a: np.ones((1, 10, 1))}, {p: np.ones((1, 10, 1))},
                           tf.train.GradientDescentOptimizer(100))
+
+
+@pytest.mark.parametrize("net", (
+        nengo.networks.BasalGanglia(4),
+        nengo.networks.CircularConvolution(32, 4),
+        nengo.networks.Oscillator(0.01, 10, 100),
+        nengo.networks.InputGatedMemory(32, 4),
+))
+def test_freeze_network(Simulator, net):
+    with Simulator(net) as sim:
+        sim.run(0.1)
+        sim.freeze_params(net)
+
+    with nengo.Simulator(net) as sim2:
+        sim2.run(0.1)
+
+    for p in net.all_probes:
+        assert np.allclose(sim.data[p], sim2.data[p])
+
+
+def test_freeze_obj(Simulator):
+    with nengo.Network() as net:
+        a = nengo.Ensemble(10, 1)
+        b = nengo.Node(size_in=1)
+        c = nengo.Connection(a, b)
+        p = nengo.Probe(b)
+
+    with nengo.Network():
+        d = nengo.Ensemble(10, 1)
+
+    with Simulator(net) as sim:
+        # check for error with object outside network
+        with pytest.raises(ValueError):
+            sim.freeze_params(d)
+
+        # check for error with wrong object type
+        with pytest.raises(TypeError):
+            sim.freeze_params(p)
+
+        sim.freeze_params([a, c])
+        sim.run_steps(10)
+
+    with nengo.Simulator(net) as sim2:
+        sim2.run_steps(10)
+
+    assert np.allclose(sim.data[p], sim2.data[p])
+
+    # check that we get an error if the simulator is closed
+    with pytest.raises(SimulatorClosed):
+        sim.freeze_params(net)
+
+
+def test_freeze_train(Simulator):
+    with nengo.Network() as net:
+        a = nengo.Node([1])
+        b = nengo.Node(size_in=1)
+        nengo.Connection(a, b, transform=1, synapse=None)
+        p = nengo.Probe(b)
+
+    with Simulator(net, unroll_simulation=1) as sim:
+        sim.step()
+        assert np.allclose(sim.data[p], 1)
+
+        sim.train({a: np.ones((1, 1, 1))}, {p: np.ones((1, 1, 1)) * 2},
+                  tf.train.GradientDescentOptimizer(0.5), n_epochs=10)
+
+        sim.step()
+        assert np.allclose(sim.data[p][-1], 2)
+
+        sim.freeze_params(net)
+
+    with nengo.Simulator(net) as sim:
+        sim.step()
+        assert np.allclose(sim.data[p], 2)

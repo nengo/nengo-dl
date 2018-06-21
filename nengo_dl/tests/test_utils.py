@@ -1,5 +1,5 @@
 from nengo import ensemble, Network, Connection, Ensemble
-from nengo.exceptions import (SimulationError, ValidationError,
+from nengo.exceptions import (SimulationError, ValidationError, ConfigError,
                               NetworkContextError)
 import numpy as np
 import pytest
@@ -173,7 +173,7 @@ def test_configure_trainable():
 
     # check that passing an invalid parameter raises an error
     with net:
-        with pytest.raises(ValueError):
+        with pytest.raises(ConfigError):
             utils.configure_settings(troinable=None)
 
 
