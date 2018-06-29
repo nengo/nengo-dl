@@ -5,8 +5,6 @@ if [[ $1 == "install" ]]; then
   pip install -e .[docs]
   conda install pandoc
 elif [[ $1 == "script" ]]; then
-  sphinx-build -b linkcheck docs docs/_build -W -D nbsphinx_execute=never
-
   git clone -b gh-pages-release https://github.com/nengo/nengo-dl.git ../nengo-dl-docs
   RELEASES=$(find ../nengo-dl-docs -maxdepth 1 -type d -name "v[0-9].*" -printf "%f;")
 
