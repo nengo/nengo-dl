@@ -44,6 +44,8 @@ Release History
 - Improved speed of parameter fetching though ``get_nengo_params``
 - Raise a warning if user tries to train a network with non-differentiable
   elements (requires ``tensorflow>=1.9.0``)
+- Improved accuracy of ``SoftLIFRate`` implementation for small values (`#45
+  <https://github.com/nengo/nengo-dl/pull/45>`_)
 
 **Fixed**
 

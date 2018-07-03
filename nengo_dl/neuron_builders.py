@@ -322,10 +322,20 @@ class SoftLIFRateBuilder(LIFRateBuilder):
 
         j -= self.one
 
-        z = tf.nn.softplus(j / self.sigma) * self.sigma
-        z += self.epsilon
+        js = j / self.sigma
+        j_valid = js > -20
+        js_safe = tf.where(j_valid, js, self.zeros)
 
-        rates = self.amplitude / (
-            self.tau_ref + self.tau_rc * tf.log1p(tf.reciprocal(z)))
+        # softplus(js) = log(1 + e^js)
+        z = tf.nn.softplus(js_safe) * self.sigma
+
+        # as z->0
+        #   z = s*log(1 + e^js) = s*e^js
+        #   log(1 + 1/z) = log(1/z) = -log(s*e^js) = -js - log(s)
+        q = tf.where(j_valid,
+                     tf.log1p(tf.reciprocal(z)),
+                     -js - tf.log(self.sigma))
+
+        rates = self.amplitude / (self.tau_ref + self.tau_rc * q)
 
         signals.scatter(self.output_data, rates)
