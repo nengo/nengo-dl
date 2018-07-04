@@ -9,7 +9,7 @@ import tempfile
 import time
 import warnings
 
-from nengo import Ensemble, Connection, Probe, Network
+from nengo import Ensemble, Connection, Probe, Network, Direct
 from nengo import version as nengo_version
 from nengo.builder import Model
 from nengo.builder.connection import BuiltConnection
@@ -804,8 +804,7 @@ class Simulator(object):
             else:
                 todo = [obj]
 
-            for o in todo:
-                params = self.get_nengo_params(o)
+            for o, params in zip(todo, self.get_nengo_params(todo)):
                 for k, v in params.items():
                     setattr(o, k, v)
 
@@ -868,29 +867,69 @@ class Simulator(object):
         nengo_objs = [obj.ensemble if isinstance(obj, Neurons) else obj
                       for obj in nengo_objs]
 
-        params = []
+        # find all the data we need to fetch
+        fetches = []
         for obj in nengo_objs:
-            data = self.data[obj]
             if isinstance(obj, Connection):
-                if isinstance(obj.pre_obj, Ensemble):
-                    params.append({
-                        "solver": NoSolver(data.weights.T, weights=False),
-                        "function": lambda x, data=data: np.zeros(
-                            data.weights.shape[0]),
-                        "transform": 1})
-                else:
-                    weights = data.weights
-                    if all(x == 1 for x in weights.shape):
-                        weights = np.squeeze(weights)
-                    params.append({"transform": weights})
+                fetches.append((obj, "weights"))
             elif isinstance(obj, Ensemble):
-                params.append({"gain": data.gain, "bias": data.bias,
-                               "encoders": data.encoders})
+                if isinstance(obj.neuron_type, Direct):
+                    # we cannot transfer direct ensemble parameters, because
+                    # the nengo builder ignores the encoders specified for
+                    # a direct ensemble
+                    raise ValueError(
+                        "get_nengo_params will not work correctly for "
+                        "Direct neuron ensembles. Try manually translating "
+                        "your network using `sim.data` instead.")
+
+                fetches.extend([(obj, "scaled_encoders"), (obj, "bias")])
             else:
                 raise ValueError(
                     "Can only get Nengo parameters for Ensembles or "
                     "Connections")
 
+        # get parameter values from simulation
+        data = self.data.get_params(*fetches)
+
+        # store parameter values in a form that can be loaded in nengo
+        params = []
+        idx = 0
+        for obj in nengo_objs:
+            if isinstance(obj, Connection):
+                weights = data[idx]
+                idx += 1
+                if isinstance(obj.pre_obj, Ensemble):
+                    params.append({
+                        "solver": NoSolver(weights.T, weights=False),
+                        "function": lambda x, weights=weights: np.zeros(
+                            weights.shape[0]),
+                        "transform": 1})
+                else:
+                    if all(x == 1 for x in weights.shape):
+                        weights = np.squeeze(weights)
+                    params.append({"transform": weights})
+            else:
+                # note: we don't want to change the original gain (even though
+                # it is rolled into the encoder values), because connections
+                # direct to `ens.neurons` will still use the gains (and those
+                # gains are not updated during training, only the encoders)
+                gain = self.model.params[obj].gain
+
+                # the encoders we get from the simulation are the actual
+                # weights we want in the simulation. but during the build
+                # process, gains and radius will be applied to the encoders.
+                # so we need to undo that scaling here, so that the build
+                # process will result in the correct values.
+                encoders = data[idx] * obj.radius / gain[:, None]
+
+                params.append(
+                    {"encoders": encoders, "normalize_encoders": False,
+                     "gain": gain, "bias": data[idx + 1],
+                     "max_rates": Ensemble.max_rates.default,
+                     "intercepts": Ensemble.intercepts.default})
+                idx += 2
+
+        # return params in appropriate format
         if scalar:
             return params[0]
 
@@ -1363,14 +1402,20 @@ class SimulationData(collections.Mapping):
 
             data.setflags(write=False)
         elif isinstance(obj, Ensemble):
-            # get the live simulation values
-            scaled_encoders = self.get_param(obj, "scaled_encoders")
-            bias = self.get_param(obj, "bias")
+            if isinstance(obj.neuron_type, Direct):
+                # direct mode ensemble
+                gain = bias = None
+                scaled_encoders = encoders = self.get_params(
+                    (obj, "scaled_encoders"))[0]
+            else:
+                # get the live simulation values
+                scaled_encoders, bias = self.get_params(
+                    (obj, "scaled_encoders"), (obj, "bias"))
 
-            # infer the related values (rolled into scaled_encoders)
-            gain = (obj.radius * np.linalg.norm(scaled_encoders, axis=-1) /
-                    np.linalg.norm(data.encoders, axis=-1))
-            encoders = obj.radius * scaled_encoders / gain[:, None]
+                # infer the related values (rolled into scaled_encoders)
+                gain = (obj.radius * np.linalg.norm(scaled_encoders, axis=-1) /
+                        np.linalg.norm(data.encoders, axis=-1))
+                encoders = obj.radius * scaled_encoders / gain[:, None]
 
             # figure out max_rates/intercepts from neuron model
             max_rates, intercepts = (
@@ -1380,7 +1425,7 @@ class SimulationData(collections.Mapping):
                                  max_rates, scaled_encoders, gain, bias)
         elif isinstance(obj, Connection):
             # get the live simulation values
-            weights = self.get_param(obj, "weights")
+            weights = self.get_params((obj, "weights"))[0]
 
             # impossible to recover transform
             transform = None
@@ -1390,21 +1435,21 @@ class SimulationData(collections.Mapping):
 
         return data
 
-    def get_param(self, obj, attr):
+    def get_params(self, *obj_attrs):
         """
-        Returns the current parameter value for the given object.
+        Returns the current parameter values for the given objects.
 
         Parameters
         ----------
-        obj : ``NengoObject``
-            The nengo object for which we want to know the parameters
-        attr : str
-            The parameter of ``obj`` to be returned
+        obj_attrs : list of (``NengoObject``, str)
+            The Nengo object and attribute of that object for which we want
+            to know the parameter values (each object-attribute pair specified
+            as a tuple argument to the function).
 
         Returns
         -------
-        :class:`~numpy:numpy.ndarray`
-            Current value of the parameters associated with the given object
+        list of :class:`~numpy:numpy.ndarray`
+            Current values of the requested parameters
 
         Notes
         -----
@@ -1414,35 +1459,52 @@ class SimulationData(collections.Mapping):
         """
 
         if self.sim.closed:
-            warnings.warn("Checking %s.%s after simulator is closed; cannot "
-                          "fetch live value, so the initial value will be "
-                          "returned." % (obj, attr))
+            warnings.warn("Checking parameters after simulator is closed; "
+                          "cannot fetch live values, so the initial values "
+                          "will be returned.")
 
-            return getattr(self.sim.model.params[obj], attr)
+            return [getattr(self.sim.model.params[obj], attr)
+                    for obj, attr in obj_attrs]
 
-        sig_obj, sig_attr = self._attr_map(obj, attr)
+        params = []
+        sigs = []
+        fetches = {}
+        for obj, attr in obj_attrs:
 
-        try:
+            sig_obj, sig_attr = self._attr_map(obj, attr)
             sig = self.sim.model.sig[sig_obj][sig_attr]
-        except KeyError:
-            # sig_attr doesn't exist for this attribute
-            return None
+            sigs.append(sig)
 
-        if sig not in self.sim.tensor_graph.sig_map:
-            # if sig isn't in sig_map then that means it isn't used anywhere
-            # in the simulation (and therefore never changes), so we can
-            # safely return the static build value
-            param = getattr(self.sim.model.params[obj], attr)
-        else:
-            param = self.sim.sess.run(self.sim.tensor_graph.get_tensor(sig))
-
-        if sig.minibatched:
-            if not self.minibatched:
-                param = param[..., 0]
+            if sig not in self.sim.tensor_graph.sig_map:
+                # if sig isn't in sig_map then that means it isn't used
+                # anywhere in the simulation (and therefore never changes), so
+                # we can safely return the static build value
+                params.append(getattr(self.sim.model.params[obj], attr))
             else:
-                param = np.moveaxis(param, -1, 0)
+                # this is a live parameter value we need to fetch from the
+                # simulation. we queue them up and fetch them all at once to
+                # be more efficient
+                placeholder = object()
+                fetches[placeholder] = self.sim.tensor_graph.get_tensor(sig)
+                params.append(placeholder)
 
-        return param
+        # get the live parameter values
+        fetched = self.sim.sess.run(fetches)
+
+        # final updating of parameters
+        for i, sig in enumerate(sigs):
+            # fill in placeholder values
+            if type(params[i]) == object:
+                params[i] = fetched[params[i]]
+
+            # handle minibatch dimension
+            if sig.minibatched:
+                if not self.minibatched:
+                    params[i] = params[i][..., 0]
+                else:
+                    params[i] = np.moveaxis(params[i], -1, 0)
+
+        return params
 
     def _attr_map(self, obj, attr):
         """

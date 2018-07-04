@@ -870,6 +870,7 @@ def test_simulation_data(Simulator, seed):
         a = nengo.Ensemble(N, d, gain=gain, bias=bias, encoders=enc, radius=3)
         b = nengo.Ensemble(N, d, gain=gain, bias=bias, encoders=enc * 2,
                            radius=3, normalize_encoders=False)
+        c = nengo.Ensemble(N, d, neuron_type=nengo.Direct())
         conn0 = nengo.Connection(u, a)
         conn = nengo.Connection(
             a.neurons, b, transform=rng.uniform(-1, 1, size=(d, N)),
@@ -882,12 +883,13 @@ def test_simulation_data(Simulator, seed):
         assert u in sim.data
         assert a in sim.data
         assert b in sim.data
+        assert c in sim.data
         assert conn in sim.data
         assert conn0 in sim.data
         assert p in sim.data
         assert net in sim.data
         assert conn.learning_rule in sim.data
-        assert len(sim.data) == 9  # 8 objects + probe connection
+        assert len(sim.data) == 10  # 9 objects + probe connection
         for k, k2 in zip(sim.data, sim.data.keys()):
             assert k is k2
 
@@ -929,6 +931,11 @@ def test_simulation_data(Simulator, seed):
         assert np.allclose(sim.data[a].scaled_encoders, 1)
         assert np.allclose(sim.data[a].gain, np.sqrt(2) * a.radius)
         assert np.allclose(sim.data[a].encoders, 1 / np.sqrt(2))
+
+        # check that direct mode ensemble parameters are handled correctly
+        assert np.allclose(sim.data[c].encoders, np.eye(d))
+        assert sim.data[c].gain is None
+        assert sim.data[c].bias is None
 
     # check minibatch dimension moved to front
     with Simulator(net, minibatch_size=3) as sim:
@@ -1007,7 +1014,7 @@ def test_multiple_objective(Simulator, seed):
 def test_get_nengo_params(Simulator, seed):
     with nengo.Network(seed=seed) as net:
         a = nengo.Ensemble(12, 3, label="a")
-        b = nengo.Ensemble(10, 4, label="b")
+        b = nengo.Ensemble(10, 4, label="b", radius=2)
         n = nengo.Node([1])
         c = nengo.Connection(a.neurons[:5], b[:2], transform=Uniform(-1, 1),
                              label="c")
@@ -1015,6 +1022,7 @@ def test_get_nengo_params(Simulator, seed):
                              transform=Uniform(-1, 1), label="d")
         e = nengo.Connection(n, b, transform=Uniform(-1, 1), label="e")
         f = nengo.Ensemble(5, 1, label="a")
+        g = nengo.Ensemble(11, 1, neuron_type=nengo.Direct(), label="g")
         p = nengo.Probe(b.neurons)
 
     with Simulator(net, seed=seed) as sim:
@@ -1026,6 +1034,10 @@ def test_get_nengo_params(Simulator, seed):
         with pytest.raises(ValueError):
             sim.get_nengo_params([a, f], as_dict=True)
 
+        # check that we get an error for direct ensembles
+        with pytest.raises(ValueError):
+            sim.get_nengo_params(g)
+
         # check that single objects are returned as single dicts
         params = sim.get_nengo_params(d)
         assert params["transform"] == 1
@@ -1035,7 +1047,7 @@ def test_get_nengo_params(Simulator, seed):
 
     with nengo.Network(seed=seed + 1) as net:
         a2 = nengo.Ensemble(12, 3, **params["a"])
-        b2 = nengo.Ensemble(10, 4, **params["b"])
+        b2 = nengo.Ensemble(10, 4, radius=2, **params["b"])
         n2 = nengo.Node([1])
         nengo.Connection(a2.neurons[:5], b2[:2], **params["c"])
         nengo.Connection(a2, b2.neurons, **params["d"])

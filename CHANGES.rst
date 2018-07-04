@@ -41,6 +41,7 @@ Release History
 - Updated spiking MNIST example to simplify and improve performance.
 - Passing unknown configuration options to ``nengo_dl.configure_settings``
   will now give a more explicit error message.
+- Improved speed of parameter fetching though ``get_nengo_params``
 
 **Fixed**
 
@@ -51,6 +52,9 @@ Release History
 - Better error message if user tries to train a network with non-differentiable
   elements
 - Fixed some broken cross references in the documentation
+- Fixed several edge cases for ``get_nengo_params``; don't use trained gains
+  for direct neuron connections, error raised if ``get_nengo_params`` applied
+  to an Ensemble with Direct neurons
 
 **Deprecated**
 
