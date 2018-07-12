@@ -365,10 +365,17 @@ def build(obj, benchmark, dimensions, neurons_per_d, neuron_type,
     """Builds one of the benchmark networks"""
 
     benchmark = globals()[benchmark]
-    neuron_type = getattr(nengo, neuron_type)()
-    net = benchmark(
-        dimensions, neurons_per_d, neuron_type,
-        **dict((k, int(v)) for k, v in [a.split("=") for a in kwarg]))
+    try:
+        neuron_type = getattr(nengo, neuron_type)()
+    except AttributeError:
+        neuron_type = getattr(nengo_dl, neuron_type)()
+    kwargs = dict((k, int(v)) for k, v in [a.split("=") for a in kwarg])
+    if benchmark == mnist:
+        net = benchmark(**kwargs)
+    else:
+        net = benchmark(
+            dimensions=dimensions, neurons_per_d=neurons_per_d,
+            neuron_type=neuron_type, **kwargs)
     obj["net"] = net
 
 
