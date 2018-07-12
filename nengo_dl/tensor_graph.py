@@ -487,24 +487,30 @@ class TensorGraph(object):
 
         agg_method = tf.AggregationMethod.EXPERIMENTAL_TREE
 
+        vars = tf.trainable_variables()
+
         # compute gradients wrt loss
         grads = []
         if loss is not None:
-            grads.append(tf.gradients(loss, tf.trainable_variables(),
-                                      aggregation_method=agg_method))
+            grads.append(tf.gradients(
+                loss, vars, aggregation_method=agg_method))
 
         # add in any gradients where the user directly specified the output
         # error grad
         for p, g in objective.items():
             if g is None:
                 grads.append(tf.gradients(
-                    self.probe_arrays[p], tf.trainable_variables(),
-                    grad_ys=self.target_phs[p], aggregation_method=agg_method))
+                    self.probe_arrays[p], vars, grad_ys=self.target_phs[p],
+                    aggregation_method=agg_method))
 
-        if any(g is None for x in grads for g in x):
-            raise SimulationError(
-                "Could not compute gradients; this usually means that there "
-                "are non-differentiable elements in the network")
+        for grad in grads:
+            for i, g in enumerate(grad):
+                if g is None:
+                    warnings.warn(
+                        "Could not compute gradients for one or more "
+                        "variables; this usually means that there are "
+                        "non-differentiable elements in the network")
+                    grad[i] = tf.zeros_like(vars[i])
 
         if len(grads) == 1:
             grads = grads[0]

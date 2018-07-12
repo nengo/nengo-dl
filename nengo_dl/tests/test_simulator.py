@@ -1153,17 +1153,21 @@ def test_non_differentiable(Simulator):
         p = nengo.Probe(b)
 
     with Simulator(net) as sim:
-        # prior to 1.9 tensorflow would give all-zero gradients instead of
-        # an error
-        if tf.__version__ < "1.9.0":
-            w0 = sim.data[c].weights
+        w0 = sim.data[c].weights
+        with pytest.warns(None) as w:
             sim.train({a: np.ones((1, 10, 1))}, {p: np.ones((1, 10, 1))},
                       tf.train.GradientDescentOptimizer(100))
-            assert np.allclose(sim.data[c].weights, w0)
+
+        w = [x for x in w if isinstance(x.message, UserWarning)]
+
+        if tf.__version__ >= "1.9.0":
+            # note: one warning for each variable
+            assert len(w) == len(tf.trainable_variables())
         else:
-            with pytest.raises(SimulationError):
-                sim.train({a: np.ones((1, 10, 1))}, {p: np.ones((1, 10, 1))},
-                          tf.train.GradientDescentOptimizer(100))
+            # prior to 1.9 tensorflow would give all-zero gradients instead of
+            # None, so we couldn't detect and raise a warning
+            assert len(w) == 0
+        assert np.allclose(sim.data[c].weights, w0)
 
 
 @pytest.mark.parametrize("net", (

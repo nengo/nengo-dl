@@ -42,6 +42,8 @@ Release History
 - Passing unknown configuration options to ``nengo_dl.configure_settings``
   will now give a more explicit error message.
 - Improved speed of parameter fetching though ``get_nengo_params``
+- Raise a warning if user tries to train a network with non-differentiable
+  elements (requires ``tensorflow>=1.9.0``)
 
 **Fixed**
 
@@ -49,8 +51,6 @@ Release History
   `#41 <https://github.com/nengo/nengo-dl/issues/41>`_)
 - Fixed node outputs changing after simulator is built (fixes `#4
   <https://github.com/nengo/nengo-dl/issues/4>`__)
-- Better error message if user tries to train a network with non-differentiable
-  elements
 - Fixed some broken cross references in the documentation
 - Fixed several edge cases for ``get_nengo_params``; don't use trained gains
   for direct neuron connections, error raised if ``get_nengo_params`` applied
