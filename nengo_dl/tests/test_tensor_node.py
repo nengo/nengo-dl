@@ -198,16 +198,26 @@ def test_reuse_vars(Simulator):
 
         inp = nengo.Node([1])
         node = TensorNode(my_func, size_in=1)
+        node2 = TensorNode(
+            lambda _, x: tf.layers.dense(
+                x, units=10, use_bias=False,
+                kernel_initializer=tf.constant_initializer(3)),
+            size_in=1, size_out=10)
         p = nengo.Probe(node)
+        p2 = nengo.Probe(node2)
         nengo.Connection(inp, node, synapse=None)
+        nengo.Connection(inp, node2, synapse=None)
 
     with Simulator(net, unroll_simulation=5) as sim:
         sim.run_steps(5)
         assert np.allclose(sim.data[p], 2)
+        assert np.allclose(sim.data[p2], 3)
 
         with sim.tensor_graph.graph.as_default():
             vars = tf.trainable_variables()
 
-        assert len(vars) == 1
+        assert len(vars) == 2
         assert vars[0].get_shape() == ()
         assert sim.sess.run(vars[0]) == 2
+        assert vars[1].get_shape() == (1, 10)
+        assert np.allclose(sim.sess.run(vars[1]), 3)

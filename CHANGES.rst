@@ -55,6 +55,7 @@ Release History
 - Fixed several edge cases for ``get_nengo_params``; don't use trained gains
   for direct neuron connections, error raised if ``get_nengo_params`` applied
   to an Ensemble with Direct neurons
+- Compatible with ``tensorflow==1.9.0`` release
 
 **Deprecated**
 

@@ -368,7 +368,8 @@ class TensorGraph(object):
                         # aren't accidentally creating new variables for
                         # unrolled iterations (this is really only a concern
                         # with TensorNodes)
-                        with tf.variable_scope("", reuse=iter > 0):
+                        with tf.variable_scope(tf.get_variable_scope(),
+                                               reuse=iter > 0):
                             probe_tensors, side_effects = self.build_step()
 
                     # copy probe data to array
