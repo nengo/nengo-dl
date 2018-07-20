@@ -5,8 +5,6 @@ from urllib.request import urlretrieve
 import itertools
 import os
 import pickle
-import sys
-import subprocess
 import time
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -33,43 +31,6 @@ def bootstrap_ci(data, alpha=0.95, n_samples=1000, func=np.mean):
     lower = int(n_samples * (1 - alpha) / 2)
     upper = int(n_samples * (alpha + (1 - alpha) / 2))
     return func(data), samples[lower], samples[upper]
-
-
-def build_spaun(dimensions):
-    # spaun needs to be downloaded from https://github.com/drasmuss/spaun2.0,
-    # and manually added to python path
-    spaun_dir = os.path.join(os.path.dirname(__file__), "spaun2.0")
-    if not os.path.exists(spaun_dir):
-        subprocess.call("git clone https://github.com/drasmuss/spaun2.0",
-                        shell=True)
-    sys.path.append(spaun_dir)
-    from _spaun.configurator import cfg
-    from _spaun.vocabulator import vocab
-    from _spaun.experimenter import experiment
-    from _spaun.modules.vision.data import vis_data
-    from _spaun.modules.motor.data import mtr_data
-    from _spaun.spaun_main import Spaun
-
-    vocab.sp_dim = dimensions
-    cfg.mtr_arm_type = None
-
-    cfg.set_seed(1)
-    experiment.initialize('A', vis_data.get_image_ind,
-                          vis_data.get_image_label,
-                          cfg.mtr_est_digit_response_time, cfg.rng)
-    vocab.initialize(experiment.num_learn_actions, cfg.rng)
-    vocab.initialize_mtr_vocab(mtr_data.dimensions, mtr_data.sps)
-    vocab.initialize_vis_vocab(vis_data.dimensions, vis_data.sps)
-
-    with Spaun() as net:
-        nengo_dl.configure_settings(trainable=False, simplifications=[
-            graph_optimizer.remove_constant_copies,
-            graph_optimizer.remove_unmodified_resets,
-            # graph_optimizer.remove_zero_incs,
-            graph_optimizer.remove_identity_muls
-        ])
-
-    return net
 
 
 @click.group()
@@ -262,7 +223,7 @@ def compare_optimizations(ctx, dimensions):
                    for simp, plan, sort, unro in params]
 
     if reps > 0:
-        net = build_spaun(dimensions)
+        net = benchmarks.spaun(dimensions)
         model = nengo.builder.Model(
             dt=0.001, builder=nengo_dl.builder.NengoBuilder())
         model.build(net)

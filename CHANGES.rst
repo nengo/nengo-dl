@@ -30,6 +30,8 @@ Release History
   reuse in different Simulators.
 - Added `documentation on saving and loading model parameters
   <https://www.nengo.ai/nengo-dl/training.html#saving-and-loading-parameters>`_.
+- Added `Spaun <http://science.sciencemag.org/content/338/6111/1202.full>`_
+  example in ``benchmarks.py``
 
 **Changed**
 

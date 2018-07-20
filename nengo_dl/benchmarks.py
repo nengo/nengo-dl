@@ -1,6 +1,9 @@
+import inspect
 import itertools
 import os
 import random
+import subprocess
+import sys
 import time
 
 import click
@@ -10,8 +13,6 @@ import numpy as np
 import tensorflow as tf
 
 import nengo_dl
-
-DATA_DIR = os.path.join(os.path.dirname(nengo_dl.__file__), "..", "data")
 
 
 def cconv(dimensions, neurons_per_d, neuron_type):
@@ -250,6 +251,56 @@ def mnist(use_tensor_layer=True):
     return net
 
 
+def spaun(dimensions):
+    """
+    Builds the Spaun network from [1]_
+
+    Parameters
+    ----------
+    dimensions : int
+        Number of dimensions for vector values
+
+    Returns
+    -------
+    :class:`nengo:nengo.Network`
+        benchmark network
+
+    References
+    ----------
+    .. [1] Chris Eliasmith, Terrence C. Stewart, Xuan Choo, Trevor Bekolay,
+       Travis DeWolf, Yichuan Tang, and Daniel Rasmussen (2012). A large-scale
+       model of the functioning brain. Science, 338:1202-1205.
+    """
+
+    # spaun needs to be downloaded from https://github.com/drasmuss/spaun2.0,
+    # and manually added to python path
+    spaun_dir = os.path.join("..", "tmp", "spaun2.0")
+    if not os.path.exists(spaun_dir):
+        subprocess.call(
+            "git clone https://github.com/drasmuss/spaun2.0 %s" % spaun_dir,
+            shell=True)
+    sys.path.append(spaun_dir)
+    from _spaun.configurator import cfg
+    from _spaun.vocabulator import vocab
+    from _spaun.experimenter import experiment
+    from _spaun.modules.vision.data import vis_data
+    from _spaun.modules.motor.data import mtr_data
+    from _spaun.spaun_main import Spaun
+
+    vocab.sp_dim = dimensions
+    cfg.mtr_arm_type = None
+
+    cfg.set_seed(1)
+    experiment.initialize('A', vis_data.get_image_ind,
+                          vis_data.get_image_label,
+                          cfg.mtr_est_digit_response_time, cfg.rng)
+    vocab.initialize(experiment.num_learn_actions, cfg.rng)
+    vocab.initialize_mtr_vocab(mtr_data.dimensions, mtr_data.sps)
+    vocab.initialize_vis_vocab(vis_data.dimensions, vis_data.sps)
+
+    return Spaun()
+
+
 def random_network(dimensions, neurons_per_d, neuron_type, n_ensembles,
                    connections_per_ensemble):
     """
@@ -364,19 +415,31 @@ def build(obj, benchmark, dimensions, neurons_per_d, neuron_type,
           kwarg):
     """Builds one of the benchmark networks"""
 
+    # get benchmark network by name
     benchmark = globals()[benchmark]
+
+    # get the neuron type object from string class name
     try:
         neuron_type = getattr(nengo, neuron_type)()
     except AttributeError:
         neuron_type = getattr(nengo_dl, neuron_type)()
+
+    # set up kwargs
     kwargs = dict((k, int(v)) for k, v in [a.split("=") for a in kwarg])
-    if benchmark == mnist:
-        net = benchmark(**kwargs)
-    else:
-        net = benchmark(
-            dimensions=dimensions, neurons_per_d=neurons_per_d,
-            neuron_type=neuron_type, **kwargs)
-    obj["net"] = net
+
+    # add the special cli kwargs if applicable; note we could just do
+    # everything through --kwarg, but it is convenient to have a
+    # direct option for the common arguments
+    params = inspect.signature(benchmark).parameters
+    for kw in ("benchmark", "dimensions", "neurons_per_d", "neuron_type"):
+        if kw in params:
+            kwargs[kw] = locals()[kw]
+
+    # build benchmark and add to context for chaining
+    print("Building %s with %s" % (
+        nengo_dl.utils.function_name(benchmark, sanitize=False), kwargs))
+
+    obj["net"] = benchmark(**kwargs)
 
 
 @main.command()
@@ -475,6 +538,7 @@ def matmul_vs_reduce():
             if j == 0:
                 ax[i][j].set_ylabel("ops %d" % n_ops)
 
+    DATA_DIR = os.path.join(os.path.dirname(nengo_dl.__file__), "..", "data")
     np.savez(os.path.join(DATA_DIR, "matmul_benchmarks"), n_ops_range,
              mini_range, s0_range, s1_range, Z)
 
@@ -485,6 +549,7 @@ def matmul_vs_reduce():
     plt.show()
 
 
+# TODO: test these functions
 # TODO: set up something to automatically run some basic ci performance tests
 
 if __name__ == "__main__":
