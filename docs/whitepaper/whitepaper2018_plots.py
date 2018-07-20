@@ -1,3 +1,4 @@
+import contextlib
 from functools import partial
 import gzip
 from urllib.request import urlretrieve
@@ -16,7 +17,6 @@ import nengo
 from nengo import spa
 import nengo_dl
 from nengo_dl import graph_optimizer, benchmarks
-import nengo_ocl
 import numpy as np
 import tensorflow as tf
 
@@ -146,6 +146,7 @@ def compare_backends(ctx, batch, n_neurons):
             elif backend == "nengo":
                 sim = nengo.Simulator(net, progress_bar=False, optimize=True)
             elif backend == "nengo_ocl":
+                import nengo_ocl
                 sim = nengo_ocl.Simulator(net, progress_bar=False)
 
             with sim:
@@ -767,10 +768,22 @@ def all_figures(ctx):
 @main.command()
 @click.pass_context
 def test(ctx):
-    ctx.invoke(compare_backends, n_neurons=960)
-    ctx.invoke(compare_optimizations, dimensions=1)
-    ctx.invoke(spiking_mnist, n_epochs=1)
-    ctx.invoke(spa_optimization, dimensions=2, n_epochs=1)
+    with open(os.devnull, "w") as devnull:
+        print("running compare_backends")
+        with contextlib.redirect_stdout(devnull):
+            ctx.invoke(compare_backends, n_neurons=960)
+
+        print("running compare_optimizations")
+        with contextlib.redirect_stdout(devnull):
+            ctx.invoke(compare_optimizations, dimensions=1)
+
+        print("running spiking_mnist")
+        with contextlib.redirect_stdout(devnull):
+            ctx.invoke(spiking_mnist, n_epochs=1)
+
+        print("running spa_optimization")
+        with contextlib.redirect_stdout(devnull):
+            ctx.invoke(spa_optimization, dimensions=2, n_epochs=1)
 
 
 if __name__ == "__main__":
