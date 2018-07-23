@@ -183,9 +183,15 @@ class Simulator(object):
             log_device_placement=False,
         )
 
+        # TODO: XLA compiling doesn't seem to provide any benefit at the
+        # moment, revisit later after tensorflow has developed it further
+        # config.graph_options.optimizer_options.global_jit_level = (
+        #     tf.OptimizerOptions.ON_1)
+
         # set any config options specified by user
         try:
-            config_settings = network.config[Network].session_config
+            config_settings = (
+                self.model.toplevel.config[Network].session_config)
         except (ConfigError, AttributeError):
             config_settings = {}
         for c, v in config_settings.items():
@@ -194,11 +200,6 @@ class Simulator(object):
             for a in attrs[:-1]:
                 x = getattr(x, a)
             setattr(x, attrs[-1], v)
-
-        # TODO: XLA compiling doesn't seem to provide any benefit at the
-        # moment, revisit later after tensorflow has developed it further
-        # config.graph_options.optimizer_options.global_jit_level = (
-        #     tf.OptimizerOptions.ON_1)
 
         self.sess = tf.Session(graph=self.tensor_graph.graph,
                                config=config)

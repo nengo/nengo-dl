@@ -61,6 +61,8 @@ Release History
   for direct neuron connections, error raised if ``get_nengo_params`` applied
   to an Ensemble with Direct neurons
 - Compatible with ``tensorflow==1.9.0`` release
+- Fixed bug in ``nengo_dl.configure_settings(session_config=...)`` when passing
+  a pre-build model to the Simulator instead of a Network
 
 **Deprecated**
 

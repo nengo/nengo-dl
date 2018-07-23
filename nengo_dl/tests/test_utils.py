@@ -1,11 +1,12 @@
 from nengo import ensemble, Network, Connection, Ensemble
+from nengo.builder import Model
 from nengo.exceptions import (SimulationError, ValidationError, ConfigError,
                               NetworkContextError)
 import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import utils
+from nengo_dl import utils, builder
 
 
 def test_sanitize_name():
@@ -199,12 +200,22 @@ def test_progress_bar():
     assert progress.finished
 
 
-def test_session_config(Simulator):
+@pytest.mark.parametrize("as_model", (True, False))
+def test_session_config(Simulator, as_model):
     with Network() as net:
         utils.configure_settings(session_config={
             "graph_options.optimizer_options.opt_level": 21,
             "gpu_options.allow_growth": True})
 
-    with Simulator(net) as sim:
+    if as_model:
+        # checking that config settings work when we pass in a model instead of
+        # network
+        model = Model(dt=0.001, builder=builder.NengoBuilder())
+        model.build(net)
+        net = None
+    else:
+        model = None
+
+    with Simulator(net, model=model) as sim:
         assert sim.sess._config.graph_options.optimizer_options.opt_level == 21
         assert sim.sess._config.gpu_options.allow_growth
