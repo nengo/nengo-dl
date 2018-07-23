@@ -23,10 +23,9 @@ class SimBCMBuilder(OpBuilder):
 
         self.pre_data = signals.combine(
             [op.pre_filtered for op in ops
-             for _ in range(op.post_filtered.shape[0])], load_indices=False)
+             for _ in range(op.post_filtered.shape[0])])
         self.pre_data = self.pre_data.reshape((self.post_data.shape[0],
                                                ops[0].pre_filtered.shape[0]))
-        self.pre_data.load_indices(constant=signals.constant)
 
         self.learning_rate = signals.op_constant(
             ops, [op.post_filtered.shape[0] for op in ops], "learning_rate",
@@ -58,10 +57,9 @@ class SimOjaBuilder(OpBuilder):
 
         self.pre_data = signals.combine(
             [op.pre_filtered for op in ops
-             for _ in range(op.post_filtered.shape[0])], load_indices=False)
+             for _ in range(op.post_filtered.shape[0])])
         self.pre_data = self.pre_data.reshape((self.post_data.shape[0],
                                                ops[0].pre_filtered.shape[0]))
-        self.pre_data.load_indices(constant=signals.constant)
 
         self.weights_data = signals.combine([op.weights for op in ops])
         self.output_data = signals.combine([op.delta for op in ops])
@@ -102,10 +100,9 @@ class SimVojaBuilder(OpBuilder):
 
         self.pre_data = signals.combine(
             [op.pre_decoded for op in ops
-             for _ in range(op.post_filtered.shape[0])], load_indices=False)
+             for _ in range(op.post_filtered.shape[0])])
         self.pre_data = self.pre_data.reshape((self.post_data.shape[0],
                                                ops[0].pre_decoded.shape[0]))
-        self.pre_data.load_indices(constant=signals.constant)
 
         self.learning_data = signals.combine(
             [op.learning_signal for op in ops
@@ -280,17 +277,13 @@ class SimPESBuilder(OpBuilder):
     def __init__(self, ops, signals):
         super(SimPESBuilder, self).__init__(ops, signals)
 
-        self.error_data = signals.combine(
-            [op.error for op in ops], load_indices=False)
+        self.error_data = signals.combine([op.error for op in ops])
         self.error_data = self.error_data.reshape(
             (len(ops), ops[0].error.shape[0], 1))
-        self.error_data.load_indices(constant=signals.constant)
 
-        self.pre_data = signals.combine(
-            [op.pre_filtered for op in ops], load_indices=False)
+        self.pre_data = signals.combine([op.pre_filtered for op in ops])
         self.pre_data = self.pre_data.reshape(
             (len(ops), 1, ops[0].pre_filtered.shape[0]))
-        self.pre_data.load_indices(constant=signals.constant)
 
         self.alpha = signals.op_constant(
             ops, [1 for _ in ops], "learning_rate", signals.dtype, ndims=4) * (

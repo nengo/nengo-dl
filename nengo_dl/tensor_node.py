@@ -200,12 +200,10 @@ class SimTensorNodeBuilder(OpBuilder):
         if op.input is None:
             self.src_data = None
         else:
-            self.src_data = signals.sig_map[op.input]
-            self.src_data.load_indices(constant=signals.constant)
+            self.src_data = signals[op.input]
             assert self.src_data.ndim == 1
 
-        self.dst_data = signals.sig_map[op.output]
-        self.dst_data.load_indices(constant=signals.constant)
+        self.dst_data = signals[op.output]
 
         self.func = op.func
 

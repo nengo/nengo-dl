@@ -84,6 +84,9 @@ test_learning_rules._test_pes = _test_pes
 
 
 class Simulator(simulator.Simulator):
+    """Simulator that allows parameters to be controlled via environment
+    variables (for use in CI testing)."""
+
     def __init__(self, *args, **kwargs):
         logging.basicConfig(level=logging.WARNING)
 

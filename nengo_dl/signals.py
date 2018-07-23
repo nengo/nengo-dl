@@ -1,4 +1,4 @@
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, OrderedDict, Mapping
 import logging
 
 from nengo.builder.signal import Signal
@@ -26,22 +26,28 @@ class TensorSignal(object):
     minibatch_size : int
         If not None then this signal contains a minibatch dimension with the
         given size
+    constant : callable
+        A function that returns a TensorFlow constant (will be provided
+        by :meth:`.signals.SignalDict.get_tensor_signal`)
     label : str, optional
         Name for this signal, used to make debugging easier
     """
 
-    def __init__(self, indices, key, dtype, shape, minibatch_size,
+    def __init__(self, indices, key, dtype, shape, minibatch_size, constant,
                  label="TensorSignal"):
         # make indices read-only
         assert isinstance(indices, (tuple, list, np.ndarray))
         self._indices = np.asarray(indices)
         self._indices.flags.writeable = False
-        self.tf_indices = None
+        self._tf_shape = None
+        self._tf_indices = None
+        self._tf_slice = -1
 
         self.key = key
         self.dtype = dtype
         self.shape = shape
         self.minibatch_size = minibatch_size
+        self.constant = constant
 
         self.label = label
 
@@ -83,7 +89,7 @@ class TensorSignal(object):
         return TensorSignal(
             new_indices, self.key, self.dtype,
             (len(new_indices),) + self.shape[1:], self.minibatch_size,
-            label=self.label + ".slice")
+            self.constant, label=self.label + ".slice")
 
     def reshape(self, shape):
         """Create a new TensorSignal representing a reshaped view of the
@@ -118,7 +124,7 @@ class TensorSignal(object):
 
         return TensorSignal(
             self.indices, self.key, self.dtype, shape, self.minibatch_size,
-            label=self.label + ".reshape(%s)" % (shape,))
+            self.constant, label=self.label + ".reshape(%s)" % (shape,))
 
     def broadcast(self, axis, length):
         """Add a new dimension by broadcasting this signal along ``axis``
@@ -154,38 +160,39 @@ class TensorSignal(object):
 
         return TensorSignal(
             indices, self.key, self.dtype, display_shape, self.minibatch_size,
+            self.constant,
             label=self.label + ".broadcast(%d, %d)" % (axis, length))
 
-    def load_indices(self, constant=None):
-        """
-        Loads the indices for this signal into TensorFlow.
+    @property
+    def tf_shape(self):
+        if self._tf_shape is None:
+            self._tf_shape = tf.constant(self.full_shape, dtype=tf.int32)
 
-        If the indices form a contiguous slice then also loads the
-        start/stop/step of that slice.
+        return self._tf_shape
 
-        Parameters
-        ----------
-        constant : callable, optional
-            A function that returns a TensorFlow constant (this is mainly
-            used with :meth:`.SignalDict.constant`)
-        """
+    @property
+    def tf_indices(self):
+        if self._tf_indices is None:
+            self._tf_indices = self.constant(self.indices, dtype=tf.int32)
 
-        if constant is None:
-            constant = tf.constant
+        return self._tf_indices
 
-        self.tf_indices = constant(self.indices, dtype=tf.int32)
-        self.tf_shape = tf.constant(self.full_shape, dtype=tf.int32)
+    @property
+    def tf_slice(self):
+        if self._tf_slice == -1:
+            start = self.indices[0]
+            stop = self.indices[-1] + 1
+            step = (self.indices[1] - self.indices[0] if len(self.indices) > 1
+                    else 1)
+            if step != 0 and np.array_equal(self.indices,
+                                            np.arange(start, stop, step)):
+                self._tf_slice = (tf.constant([start]), tf.constant([stop]),
+                                  tf.constant([step]))
+            else:
 
-        start = self.indices[0]
-        stop = self.indices[-1] + 1
-        step = (self.indices[1] - self.indices[0] if len(self.indices) > 1
-                else 1)
-        if step != 0 and np.array_equal(self.indices,
-                                        np.arange(start, stop, step)):
-            self.as_slice = (tf.constant([start]), tf.constant([stop]),
-                             tf.constant([step]))
-        else:
-            self.as_slice = None
+                self._tf_slice = None
+
+        return self._tf_slice
 
     @property
     def full_shape(self):
@@ -201,7 +208,7 @@ class TensorSignal(object):
         return self.minibatch_size is not None
 
 
-class SignalDict(object):
+class SignalDict(Mapping):
     """Handles the mapping from :class:`~nengo:nengo.builder.Signal`
     to ``tf.Tensor``.
 
@@ -210,18 +217,15 @@ class SignalDict(object):
 
     Parameters
     ----------
-    sig_map : dict of {:class:`~nengo:nengo.builder.Signal`: \
-                       :class:`.TensorSignal`}
-        Mapping from ``nengo`` signals to ``nengo_dl`` signals
     dtype : ``tf.DType``
         Floating point precision used in signals
     minibatch_size : int
         Number of items in each minibatch
     """
 
-    def __init__(self, sig_map, dtype, minibatch_size):
+    def __init__(self, dtype, minibatch_size):
         self.dtype = dtype
-        self.sig_map = sig_map
+        self.sig_map = {}
         self.minibatch_size = minibatch_size
         self.bases = None
         self.reads_by_base = defaultdict(list)
@@ -247,11 +251,6 @@ class SignalDict(object):
             Overwrite/add the data at ``dst`` with ``val``
         """
 
-        if dst.tf_indices is None:
-            raise BuildError("Indices for %s have not been loaded into "
-                             "TensorFlow" % dst)
-        # if not dst.minibatched:
-        #     raise BuildError("Assigning to a trainable variable")
         if val.dtype.is_floating and val.dtype.base_dtype != self.dtype:
             raise BuildError("Tensor detected with wrong dtype (%s), should "
                              "be %s." % (val.dtype.base_dtype, self.dtype))
@@ -302,7 +301,7 @@ class SignalDict(object):
 
         var = self.bases[dst.key]
 
-        if (dst.as_slice is not None and
+        if (dst.tf_slice is not None and
                 var.get_shape().is_compatible_with(src.get_shape()) and
                 dst.indices[0] == 0 and
                 dst.indices[-1] == var.get_shape()[0].value - 1 and
@@ -345,10 +344,6 @@ class SignalDict(object):
             base array
         """
 
-        if src.tf_indices is None:
-            raise BuildError("Indices for %s have not been loaded into "
-                             "TensorFlow" % src)
-
         logger.debug("gather")
         logger.debug("src %s", src)
         logger.debug("indices %s", src.indices)
@@ -358,7 +353,7 @@ class SignalDict(object):
 
         # we prefer to get the data via `strided_slice` or `identity` if
         # possible, as it is more efficient
-        if force_copy or src.as_slice is None:
+        if force_copy or src.tf_slice is None:
             result = tf.gather(var, src.tf_indices)
             self.read_types["gather"] += 1
         elif (src.indices[0] == 0 and
@@ -367,18 +362,16 @@ class SignalDict(object):
             result = var
             self.read_types["identity"] += 1
         else:
-            result = tf.strided_slice(var, *src.as_slice)
+            result = tf.strided_slice(var, *src.tf_slice)
             self.read_types["strided_slice"] += 1
-
-        # for some reason the shape inference doesn't work in some cases
-        result.set_shape(src.tf_indices.get_shape()[:1].concatenate(
-            var.get_shape()[1:]))
 
         # reshape the data according to the shape set in `src`, if there is
         # one, otherwise keep the shape of the base array
         if result.get_shape() != src.full_shape:
             result = tf.reshape(result, src.tf_shape)
-            result.set_shape(src.full_shape)
+
+        # for some reason the shape inference doesn't work in some cases
+        result.set_shape(src.full_shape)
 
         # whenever we read from an array we use this to mark it as "read"
         # (so that any future writes to the array will be scheduled after
@@ -399,7 +392,7 @@ class SignalDict(object):
 
         self.gather_bases += [self.bases[src.key]]
 
-    def combine(self, sigs, load_indices=True, label="Combine"):
+    def combine(self, sigs, label="Combine"):
         """Combines several TensorSignals into one by concatenating along
         the first axis.
 
@@ -408,9 +401,6 @@ class SignalDict(object):
         sigs : list of :class:`.TensorSignal` or \
                        :class:`~nengo:nengo.builder.Signal`
             Signals to be combined
-        load_indices : bool, optional
-            If True, load the indices for the new signal into TensorFlow right
-            away (otherwise they will need to be manually loaded later)
         label : str, optional
             Name for combined signal (to help with debugging)
 
@@ -427,7 +417,7 @@ class SignalDict(object):
         assert isinstance(sigs, (list, tuple))
         assert isinstance(sigs[0], (Signal, TensorSignal))
 
-        sigs = [self.sig_map[s] if isinstance(s, Signal) else s for s in sigs]
+        sigs = [self[s] if isinstance(s, Signal) else s for s in sigs]
 
         # make sure all the signals have the same base
         # note: this also tells us that they have the same dtype and
@@ -443,19 +433,15 @@ class SignalDict(object):
 
         indices = np.concatenate([s.indices for s in sigs], axis=0)
 
-        output = TensorSignal(indices, key, sigs[0].dtype, shape,
-                              sigs[0].minibatch_size, label=label)
-
-        if load_indices:
-            output.load_indices(constant=self.constant)
+        output = self.get_tensor_signal(indices, key, sigs[0].dtype, shape,
+                                        sigs[0].minibatched, label=label)
 
         return output
 
     def make_internal(self, name, shape, minibatched=True):
-        sig = TensorSignal(
+        sig = self.get_tensor_signal(
             np.arange(shape[0]), object(), self.dtype, shape,
-            self.minibatch_size if minibatched else None, label=name)
-        sig.load_indices(constant=self.constant)
+            minibatched, label=name)
 
         with tf.variable_scope(tf.get_default_graph().get_name_scope(),
                                reuse=False):
@@ -466,6 +452,55 @@ class SignalDict(object):
         self.internal_vars[sig.key] = var
 
         return sig
+
+    def get_tensor_signal(self, indices, key, dtype, shape, minibatched,
+                          signal=None, label="TensorSignal"):
+        """
+        Creates a new ``TensorSignal`` with the given properties.
+
+        This should be used rather than instantiating a new TensorSignal
+        directly, as it handles some extra book-keeping (e.g., using the
+        custom :meth:`.constant` function).
+
+        Parameters
+        ----------
+        indices : tuple or list or :class:`~numpy:numpy.ndarray` of int
+            Indices along the first axis of the base array corresponding to the
+            data for this signal
+        key : object
+            Key mapping to the base array that contains the data for this
+            signal
+        dtype : :class:`~numpy:numpy.dtype`
+            dtype of the values represented by this signal
+        shape : tuple of int
+            View shape of this signal (may differ from shape of base array)
+        minibatched : bool
+            Whether or not this signal contains a minibatch dimension
+        signal : :class:`~nengo:nengo.builder.Signal`, optional
+            If not None, associate the new ``TensorSignal`` with the given
+            ``Signal`` in the ``sig_map``
+        label : str, optional
+            Name for this signal, used to make debugging easier
+
+        Returns
+        -------
+        :class:`.TensorSignal`
+            A new ``TensorSignal`` with the given properties
+        """
+
+        tensor_sig = TensorSignal(
+            indices, key, dtype, shape,
+            self.minibatch_size if minibatched else None,
+            self.constant, label=label)
+
+        if signal is not None:
+            assert len(indices) == (1 if len(signal.shape) == 0 else
+                                    signal.shape[0])
+            assert signal.size == np.prod(shape)
+            assert signal.minibatched == minibatched
+            self[signal] = tensor_sig
+
+        return tensor_sig
 
     def constant(self, value, dtype=None, cutoff=1 << 25):
         """
@@ -499,8 +534,10 @@ class SignalDict(object):
         dtype = tf.as_dtype(dtype)
 
         if value.nbytes > cutoff:
-            ph = tf.placeholder(dtype, value.shape)
-            self.constant_phs[ph] = value
+            def make_ph(shape, dtype, **_):
+                ph = tf.placeholder(dtype, shape)
+                self.constant_phs[ph] = value
+                return ph
 
             with tf.variable_scope("constant_vars", reuse=False):
                 # tensorflow doesn't support int32 variables on the gpu, only
@@ -508,9 +545,11 @@ class SignalDict(object):
                 # that would increase the size a lot, so we allow the variable
                 # to be created on the CPU if necessary, and then move it to
                 # the GPU with the identity
+                # TODO: double check if this is still true in 1.9.0
                 with tf.device(None):
                     const_var = tf.get_variable(
-                        "constant_%d" % len(self.constant_phs), initializer=ph,
+                        "constant_%d" % len(self.constant_phs),
+                        initializer=make_ph, shape=value.shape, dtype=dtype,
                         collections=["constants"], trainable=False)
 
                 return tf.identity(const_var)
@@ -551,3 +590,18 @@ class SignalDict(object):
             [np.reshape(getattr(op, attr), [1] * (ndims - 1))
              for i, op in enumerate(ops) for _ in range(op_sizes[i])],
             dtype=dtype)
+
+    def __getitem__(self, sig):
+        return self.sig_map[sig]
+
+    def __setitem__(self, sig, tensor_sig):
+        self.sig_map[sig] = tensor_sig
+
+    def __len__(self):
+        return len(self.sig_map)
+
+    def __iter__(self):
+        return iter(self.sig_map)
+
+    def __contains__(self, sig):
+        return sig in self.sig_map

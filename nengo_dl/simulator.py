@@ -1475,7 +1475,7 @@ class SimulationData(collections.Mapping):
             sig = self.sim.model.sig[sig_obj][sig_attr]
             sigs.append(sig)
 
-            if sig not in self.sim.tensor_graph.sig_map:
+            if sig not in self.sim.tensor_graph.signals:
                 # if sig isn't in sig_map then that means it isn't used
                 # anywhere in the simulation (and therefore never changes), so
                 # we can safely return the static build value

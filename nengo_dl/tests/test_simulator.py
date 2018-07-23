@@ -1,4 +1,4 @@
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 import os
 
 import nengo
@@ -11,6 +11,7 @@ import tensorflow as tf
 
 from nengo_dl import configure_settings, tensor_layer, dists, TensorNode
 from nengo_dl.simulator import SimulationData
+from nengo_dl.tests import dummies
 
 
 def test_persistent_state(Simulator, seed):
@@ -400,7 +401,7 @@ def test_save_load_params(Simulator, tmpdir):
         weights_var = [x[0] for x in sim.tensor_graph.base_vars.values()
                        if x[0].get_shape() == (1, 10)][0]
         enc_var = sim.tensor_graph.base_vars[
-            sim.tensor_graph.sig_map[sim.model.sig[ens]["encoders"]].key][0]
+            sim.tensor_graph.signals[sim.model.sig[ens]["encoders"]].key][0]
         weights0, enc0 = sim.sess.run([weights_var, enc_var])
         sim.save_params(os.path.join(str(tmpdir), "train"))
         sim.save_params(os.path.join(str(tmpdir), "local"),
@@ -425,7 +426,7 @@ def test_save_load_params(Simulator, tmpdir):
         weights_var = [x[0] for x in sim.tensor_graph.base_vars.values()
                        if x[0].get_shape() == (1, 10)][0]
         enc_var = sim.tensor_graph.base_vars[
-            sim.tensor_graph.sig_map[sim.model.sig[ens]["encoders"]].key][0]
+            sim.tensor_graph.signals[sim.model.sig[ens]["encoders"]].key][0]
         weights1, enc1 = sim.sess.run([weights_var, enc_var])
         assert not np.allclose(weights0, weights1)
         assert not np.allclose(enc0, enc1)
@@ -634,21 +635,9 @@ def test_dt_readonly(Simulator):
 
 
 def test_probe_data():
-    class DummySignal(object):
-        minibatched = True
-
-    class DummySimulator(object):
-        model = nengo.builder.Model()
-        model.sig = defaultdict(lambda: defaultdict(lambda: DummySignal()))
-
-    class DummyProbe(nengo.Probe):
-        # pylint: disable=super-init-not-called
-        def __init__(self):
-            pass
-
-    sim = DummySimulator()
-    a = DummyProbe(add_to_container=False)
-    b = DummyProbe(add_to_container=False)
+    sim = dummies.Simulator()
+    a = dummies.Probe(add_to_container=False)
+    b = dummies.Probe(add_to_container=False)
     sim.model.params = OrderedDict(
         {a: [np.zeros((5, 1, 3)), np.ones((5, 1, 3))],
          b: [np.ones((1, 1, 3)), np.zeros((1, 1, 3))]})
@@ -923,7 +912,7 @@ def test_simulation_data(Simulator, seed):
 
         # check that values can be updated live
         sig = sim.model.sig[a]['encoders']
-        tensor_sig = sim.tensor_graph.sig_map[sig]
+        tensor_sig = sim.tensor_graph.signals[sig]
         base = sim.tensor_graph.base_vars[tensor_sig.key][0]
         op = tf.assign(base, tf.ones_like(base))
         sim.sess.run(op)

@@ -6,7 +6,7 @@ import logging
 import warnings
 
 from nengo import Connection, Process, Ensemble
-from nengo.builder.operator import TimeUpdate, SimPyFunc
+from nengo.builder.operator import TimeUpdate, SimPyFunc, Reset
 from nengo.builder.processes import SimProcess
 from nengo.config import ConfigError
 from nengo.ensemble import Neurons
@@ -65,6 +65,7 @@ class TensorGraph(object):
         self.minibatch_size = minibatch_size
         self.device = device
         self.graph = tf.Graph()
+        self.signals = signals.SignalDict(self.dtype, self.minibatch_size)
 
         # find invariant inputs (nodes that don't receive any input other
         # than the simulation time). we'll compute these outside the simulation
@@ -140,10 +141,7 @@ class TensorGraph(object):
         # create base arrays and map Signals to TensorSignals (views on those
         # base arrays)
         with progress.sub("creating signals", max_value=None):
-            self.base_arrays_init, self.sig_map = \
-                graph_optimizer.create_signals(
-                    sigs, self.plan, float_type=dtype.as_numpy_dtype,
-                    minibatch_size=self.minibatch_size)
+            self.create_signals(sigs)
 
         logger.info("Optimized plan length: %d", len(self.plan))
         logger.info("Number of base arrays: %d", len(self.base_arrays_init))
@@ -157,19 +155,9 @@ class TensorGraph(object):
             Progress bar for construction stage
         """
 
-        self.signals = signals.SignalDict(self.sig_map, self.dtype,
-                                          self.minibatch_size)
         self.target_phs = {}
         self.losses = {}
         self.optimizers = {}
-
-        # make sure indices are loaded for all probe signals (they won't
-        # have been loaded if this signal is only accessed as part of a
-        # larger block during the simulation)
-        for p in self.model.probes:
-            probe_sig = self.model.sig[p]["in"]
-            if probe_sig in self.sig_map:
-                self.sig_map[probe_sig].load_indices()
 
         # create this constant once here so we don't end up creating a new
         # dt constant in each operator
@@ -289,7 +277,7 @@ class TensorGraph(object):
         probe_tensors = []
         for p in self.model.probes:
             probe_sig = self.model.sig[p]["in"]
-            if probe_sig in self.sig_map:
+            if probe_sig in self.signals:
                 # TODO: better solution to avoid the forced_copy
                 # we need to make sure that probe reads occur before the
                 # probe value is overwritten on the next timestep. however,
@@ -304,7 +292,7 @@ class TensorGraph(object):
                 # make sure that the probe value is read before it can be
                 # overwritten.
                 probe_tensors.append(self.signals.gather(
-                    self.sig_map[probe_sig], force_copy=True))
+                    self.signals[probe_sig], force_copy=True))
             else:
                 # if a probe signal isn't in sig_map, that means that it isn't
                 # involved in any simulator ops.  so we know its value never
@@ -354,7 +342,7 @@ class TensorGraph(object):
                     # fill in invariant input data
                     for n in self.input_ph:
                         self.signals.scatter(
-                            self.sig_map[self.model.sig[n]["out"]],
+                            self.signals[self.model.sig[n]["out"]],
                             self.input_ph[n][loop_i])
 
                     # build the operators for a single step
@@ -395,7 +383,7 @@ class TensorGraph(object):
 
         probe_arrays = [
             tf.TensorArray(
-                self.signals.dtype, clear_after_read=True, size=0,
+                self.dtype, clear_after_read=True, size=0,
                 dynamic_size=True)
             for _ in self.model.probes]
 
@@ -435,12 +423,7 @@ class TensorGraph(object):
 
         self.input_ph = {}
         for n in progress(self.invariant_inputs):
-            if self.model.sig[n]["out"] in self.sig_map:
-                # make sure the indices for this input are loaded into
-                # TensorFlow (they may not be, if the output of this node is
-                # only read as part of a larger block during the simulation)
-                self.sig_map[self.model.sig[n]["out"]].load_indices()
-
+            if self.model.sig[n]["out"] in self.signals:
                 # set up a placeholder input for this node
                 self.input_ph[n] = tf.placeholder(
                     self.dtype, (None, n.size_out, self.minibatch_size))
@@ -723,10 +706,7 @@ class TensorGraph(object):
             Tensor containing the value of the given Signal
         """
 
-        tensor_sig = self.sig_map[sig]
-
-        if tensor_sig.tf_indices is None:
-            tensor_sig.load_indices()
+        tensor_sig = self.signals[sig]
 
         base = self.base_vars[tensor_sig.key][0]
         return tf.gather(base, tensor_sig.tf_indices)
@@ -870,3 +850,153 @@ class TensorGraph(object):
 
                 if not hasattr(sig, "minibatched"):
                     sig.minibatched = sig.base.minibatched
+
+    def create_signals(self, sigs):
+        """
+        Groups signal data together into larger arrays, and represent each
+        individual signal as a slice into that array.
+
+        Parameters
+        ----------
+        sigs : list of :class:`~nengo:nengo.builder.Signal`
+            Base signals arranged into the order in which they should reside in
+            memory (e.g., output from :func:`.graph_optimizer.order_signals`)
+        """
+
+        float_type = self.dtype.as_numpy_dtype
+        base_arrays = OrderedDict()
+        curr_keys = {}
+        sig_idxs = {s: i for i, s in enumerate(sigs)}
+
+        # find the non-overlapping partitions of the signals
+        breaks = []
+        diff = defaultdict(int)
+        for ops in self.plan:
+            # note: we don't include Resets, otherwise the big reset block
+            # overrides most of the partitioning
+            if not isinstance(ops[0], Reset):
+                for i in range(len(ops[0].all_signals)):
+                    op_sigs = [op.all_signals[i].base for op in ops]
+                    idxs = [sig_idxs[s] for s in op_sigs]
+                    diff[op_sigs[np.argmin(idxs)]] += 1
+                    diff[op_sigs[np.argmax(idxs)]] -= 1
+
+        # find the partition points in signal list
+        open = 0
+        for i, s in enumerate(sigs):
+            if s in diff:
+                open += diff[s]
+
+            if open == 0:
+                breaks += [i + 1]
+
+        logging.debug("partitions")
+        logging.debug("\n%s", "".join("|" if i in breaks else " "
+                                      for i in range(len(sigs))))
+
+        # create all the base signals
+        for i, sig in enumerate(sigs):
+            assert sig not in self.signals
+            assert not sig.is_view
+
+            if i in breaks:
+                # start a new array for all current bases
+                for k in curr_keys:
+                    curr_keys[k] = object()
+
+            # convert to appropriate dtype
+            if np.issubdtype(sig.dtype, np.floating):
+                dtype = float_type
+            elif np.issubdtype(sig.dtype, np.integer):
+                dtype = np.int32
+            else:
+                raise NotImplementedError
+
+            # resize scalars to length 1 vectors
+            shape = sig.shape if sig.shape != () else (1,)
+
+            # parameters of signal that affect the base array
+            array_params = (dtype, shape[1:], sig.trainable, sig.minibatched)
+
+            # key used to map signals to base arrays
+            if array_params not in curr_keys:
+                curr_keys[array_params] = object()
+            key = curr_keys[array_params]
+
+            initial_value = sig.initial_value.astype(dtype, copy=False)
+
+            # broadcast scalars up to full size
+            if initial_value.shape != shape:
+                initial_value = np.resize(initial_value, shape)
+
+            if sig.minibatched:
+                # duplicate along minibatch dimension
+                initial_value = np.tile(
+                    initial_value[..., None],
+                    tuple(1 for _ in shape) + (self.minibatch_size,))
+
+            if key in base_arrays:
+                base_arrays[key][0].append(initial_value)
+                base_arrays[key][2] += shape[0]
+            else:
+                base_arrays[key] = [[initial_value], sig.trainable, shape[0]]
+
+            n = base_arrays[key][-1]
+            indices = np.arange(n - shape[0], n)
+
+            tensor_sig = self.signals.get_tensor_signal(
+                indices, key, dtype, shape, sig.minibatched, label=sig.name,
+                signal=sig)
+
+            logger.debug("created base signal")
+            logger.debug(sig)
+            logger.debug(tensor_sig)
+
+        for key in base_arrays:
+            arrs, t, _ = base_arrays[key]
+            base_arrays[key] = (np.concatenate(arrs, axis=0), t)
+
+        # add any signal views to the sig_map
+        all_views = [sig for ops in self.plan for op in ops for sig in
+                     op.all_signals if sig.is_view]
+        for sig in all_views:
+            if sig.size == sig.base.size:
+                # reshape view
+                self.signals[sig] = self.signals[sig.base].reshape(sig.shape)
+            else:
+                if sig.shape[1:] != sig.base.shape[1:]:
+                    # TODO: support this?
+                    raise NotImplementedError(
+                        "Slicing on axes > 0 is not supported")
+
+                # slice view
+                assert np.all([x == 1 for x in sig.elemstrides[1:]])
+
+                start = sig.elemoffset
+                stride = sig.elemstrides[0]
+                stop = start + sig.size * stride
+                if stop < 0:
+                    stop = None
+
+                self.signals[sig] = self.signals[sig.base][slice(start, stop,
+                                                                 stride)]
+
+        # error checking
+        for sig, tensor_sig in self.signals.items():
+            # tensorsignal shapes should match signal shapes
+            assert tensor_sig.shape == (sig.shape if sig.shape != () else (1,))
+
+            # tensorsignal values should match signal values
+            initial_value = sig.initial_value
+            if sig.minibatched:
+                initial_value = initial_value[..., None]
+
+            assert np.allclose(
+                base_arrays[tensor_sig.key][0][tensor_sig.indices],
+                initial_value.astype(dtype))
+
+        logger.debug("base arrays")
+        logger.debug("\n".join([str((k, v.dtype, v.shape, trainable))
+                                for k, (v, trainable) in base_arrays.items()]))
+
+        self.base_arrays_init = base_arrays

@@ -6,8 +6,8 @@ from nengo.builder.operator import ElementwiseInc, DotInc
 import numpy as np
 import pytest
 
-
 import nengo_dl
+from nengo_dl.tests import dummies
 
 
 def test_warn_on_opensim_del(Simulator):
@@ -51,20 +51,14 @@ def test_signal_init_values(Simulator):
     zeroarray = Signal([[0.0], [0.0], [0.0]])
     array = Signal([1.0, 2.0, 3.0])
 
-    class DummyProbe(nengo.Probe):
-        # pylint: disable=super-init-not-called
-        def __init__(self, target):
-            # bypass target validation
-            nengo.Probe.target.data[self] = target
-
     m = nengo.builder.Model(dt=0)
     m.operators += [ElementwiseInc(zero, zero, five),
                     DotInc(zeroarray, one, array)]
 
-    probes = [DummyProbe(zero, add_to_container=False),
-              DummyProbe(one, add_to_container=False),
-              DummyProbe(five, add_to_container=False),
-              DummyProbe(array, add_to_container=False)]
+    probes = [dummies.Probe(zero, add_to_container=False),
+              dummies.Probe(one, add_to_container=False),
+              dummies.Probe(five, add_to_container=False),
+              dummies.Probe(array, add_to_container=False)]
     m.probes += probes
     for p in probes:
         m.sig[p]['in'] = p.target

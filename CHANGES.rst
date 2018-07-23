@@ -48,6 +48,7 @@ Release History
   elements (requires ``tensorflow>=1.9.0``)
 - Improved accuracy of ``SoftLIFRate`` implementation for small values (`#45
   <https://github.com/nengo/nengo-dl/pull/45>`_)
+- Simplified how ``TensorSignals`` are loaded into the TensorFlow graph
 
 **Fixed**
 

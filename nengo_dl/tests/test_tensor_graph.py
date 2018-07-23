@@ -1,10 +1,11 @@
 import nengo
+from nengo.builder.operator import Reset
 import numpy as np
 import pytest
 import tensorflow as tf
 
 from nengo_dl import tensor_graph, utils, graph_optimizer
-
+from nengo_dl.tests import dummies
 
 @pytest.mark.parametrize("unroll", (1, 2))
 def test_gradients(Simulator, unroll, seed):
@@ -264,3 +265,130 @@ def test_signal_order_deterministic(Simulator, seed):
                 sim1.tensor_graph.base_arrays_init.values(),
                 sim2.tensor_graph.base_arrays_init.values()):
             assert np.allclose(v[0], v2[0])
+
+
+def test_create_signals():
+    # check that floats/ints get split into different arrays
+
+    sigs = [dummies.Signal(dtype=np.float32), dummies.Signal(dtype=np.float32),
+            dummies.Signal(dtype=np.int32), dummies.Signal(dtype=np.int32)]
+    plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
+    graph = dummies.TensorGraph(plan, tf.float32, 10)
+    graph.create_signals(sigs)
+
+    assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
+    assert graph.signals[sigs[1]].key != graph.signals[sigs[2]].key
+    assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
+
+    # check that floats all get converted to same precision and combined
+    sigs = [dummies.Signal(dtype=np.float32), dummies.Signal(dtype=np.float32),
+            dummies.Signal(dtype=np.float64), dummies.Signal(dtype=np.float64)]
+    plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
+    graph = dummies.TensorGraph(plan, tf.float32, 10)
+    graph.create_signals(sigs)
+    assert np.all([graph.signals[x].dtype == np.float32 for x in sigs])
+    assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
+    assert graph.signals[sigs[1]].key == graph.signals[sigs[2]].key
+    assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
+
+    # check that ints all get converted to same precision and combined
+    sigs = [dummies.Signal(dtype=np.int32), dummies.Signal(dtype=np.int32),
+            dummies.Signal(dtype=np.int64), dummies.Signal(dtype=np.int64)]
+    plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
+    graph = dummies.TensorGraph(plan, tf.float32, 10)
+    graph.create_signals(sigs)
+    assert np.all([graph.signals[x].dtype == np.int32 for x in sigs])
+    assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
+    assert graph.signals[sigs[1]].key == graph.signals[sigs[2]].key
+    assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
+
+    # check that different shapes go in different groups
+    sigs = [dummies.Signal(shape=(10,)), dummies.Signal(shape=(5,)),
+            dummies.Signal(shape=(10, 1)), dummies.Signal(shape=(5, 1))]
+    plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
+    graph = dummies.TensorGraph(plan, tf.float32, 10)
+    graph.create_signals(sigs)
+    assert graph.base_arrays_init[graph.signals[sigs[0]].key][0].shape == (
+        15, 10)
+    assert graph.base_arrays_init[graph.signals[sigs[2]].key][0].shape == (
+        15, 1, 10)
+    assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
+    assert graph.signals[sigs[1]].key != graph.signals[sigs[2]].key
+    assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
+
+    # check trainable
+    sigs = [dummies.Signal(trainable=True), dummies.Signal(trainable=True),
+            dummies.Signal(trainable=False), dummies.Signal(trainable=False)]
+    plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
+    graph = dummies.TensorGraph(plan, tf.float32, 10)
+    graph.create_signals(sigs)
+    assert graph.base_arrays_init[graph.signals[sigs[0]].key][0].shape == (2,)
+    assert graph.base_arrays_init[graph.signals[sigs[2]].key][0].shape == (
+        2, 10)
+    assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
+    assert graph.signals[sigs[1]].key != graph.signals[sigs[2]].key
+    assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
+
+    # check that scalars get upsized
+    sigs = [dummies.Signal(shape=()), dummies.Signal(shape=(4,))]
+    plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
+    graph = dummies.TensorGraph(plan, tf.float32, 10)
+    graph.create_signals(sigs)
+    assert list(graph.base_arrays_init.values())[0][0].shape == (5, 10)
+
+
+def test_create_signals_views():
+    sigs = [dummies.Signal(shape=(2, 2), base_shape=(4,)),
+            dummies.Signal(shape=(2, 2), base_shape=(4,))]
+    sigs += [sigs[0].base, sigs[1].base]
+    plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
+    graph = dummies.TensorGraph(plan, tf.float32, 10)
+    graph.create_signals(sigs[2:])
+    assert list(graph.base_arrays_init.values())[0][0].shape == (8, 10)
+    assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
+    assert graph.signals[sigs[1]].key == graph.signals[sigs[2]].key
+    assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
+    assert np.all(graph.signals[sigs[0]].indices == (0, 1, 2, 3))
+    assert np.all(graph.signals[sigs[1]].indices == (4, 5, 6, 7))
+    assert np.all(graph.signals[sigs[0]].indices ==
+                  graph.signals[sigs[2]].indices)
+    assert np.all(graph.signals[sigs[1]].indices ==
+                  graph.signals[sigs[3]].indices)
+
+
+def test_create_signals_partition():
+    # check that signals are partitioned based on plan
+    sigs = [dummies.Signal(), dummies.Signal(),
+            dummies.Signal(), dummies.Signal()]
+    plan = [tuple(dummies.Op(reads=[x]) for x in sigs[:2]),
+            tuple(dummies.Op(reads=[x]) for x in sigs[2:])]
+    graph = dummies.TensorGraph(plan, tf.float32, 10)
+    graph.create_signals(sigs)
+    assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
+    assert graph.signals[sigs[1]].key != graph.signals[sigs[2]].key
+    assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
+
+    # check that signals are partioned for different read blocks
+    plan = [tuple(dummies.Op(reads=[sigs[i], sigs[2 + i]]) for i in range(2))]
+    graph = dummies.TensorGraph(plan, tf.float32, 10)
+    graph.create_signals(sigs)
+    assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
+    assert graph.signals[sigs[1]].key != graph.signals[sigs[2]].key
+    assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
+
+    # check that signals are partioned for different sig types
+    plan = [tuple(dummies.Op(reads=[sigs[i]], sets=[sigs[2 + i]])
+                  for i in range(2))]
+    graph = dummies.TensorGraph(plan, tf.float32, 10)
+    graph.create_signals(sigs)
+    assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
+    assert graph.signals[sigs[1]].key != graph.signals[sigs[2]].key
+    assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
+
+    # check that resets are ignored
+    sigs = [dummies.Signal(), dummies.Signal(), dummies.Signal(),
+            dummies.Signal()]
+    plan = [tuple(Reset(x) for x in sigs)]
+    graph = dummies.TensorGraph(plan, tf.float32, 10)
+    graph.create_signals(sigs)
+    assert len(graph.base_arrays_init) == 4

@@ -41,7 +41,7 @@ class ResetBuilder(OpBuilder):
         # bases, which we need to handle
         scatters = defaultdict(list)
         for op in ops:
-            scatters[signals.sig_map[op.dst].key] += [op]
+            scatters[signals[op.dst].key] += [op]
         self.scatters = []
         for group in scatters.values():
             value = np.concatenate(
@@ -79,20 +79,18 @@ class CopyBuilder(OpBuilder):
         srcs = []
         dsts = []
         for op in ops:
-            srcs += [signals.sig_map[op.src][op.src_slice]]
-            dsts += [signals.sig_map[op.dst][op.dst_slice]]
+            srcs += [signals[op.src][op.src_slice]]
+            dsts += [signals[op.dst][op.dst_slice]]
 
         self.mode = "inc" if ops[0].inc else "update"
 
-        self.src_data = signals.combine(srcs, load_indices=False)
+        self.src_data = signals.combine(srcs)
         self.dst_data = signals.combine(dsts)
 
         if not self.src_data.minibatched and self.dst_data.minibatched:
             # broadcast indices so that the un-minibatched src data gets
             # copied to each minibatch dimension in dst
             self.src_data = self.src_data.broadcast(-1, signals.minibatch_size)
-
-        self.src_data.load_indices(constant=signals.constant)
 
     def build_step(self, signals):
         signals.scatter(self.dst_data, signals.gather(self.src_data),
@@ -123,8 +121,8 @@ class ElementwiseIncBuilder(OpBuilder):
         self.Y_data = signals.combine([op.Y for op in ops])
 
         # group all the A's and X's
-        self.A_data = signals.combine([op.A for op in ops], load_indices=False)
-        self.X_data = signals.combine([op.X for op in ops], load_indices=False)
+        self.A_data = signals.combine([op.A for op in ops])
+        self.X_data = signals.combine([op.X for op in ops])
 
         # separate data from each op along the first dimension
         if self.A_data.shape[0] != self.X_data.shape[0]:
@@ -140,9 +138,6 @@ class ElementwiseIncBuilder(OpBuilder):
         # add broadcast dimension for minibatch, if needed
         if not self.A_data.minibatched and self.X_data.minibatched:
             self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
-
-        self.A_data.load_indices(constant=signals.constant)
-        self.X_data.load_indices(constant=signals.constant)
 
     def build_step(self, signals):
         A = signals.gather(self.A_data)
@@ -176,8 +171,8 @@ class DotIncBuilder(OpBuilder):
         self.Y_data = signals.combine([op.Y for op in ops])
 
         # group all the A's and X's
-        A_data = signals.combine([op.A for op in ops], load_indices=False)
-        X_data = signals.combine([op.X for op in ops], load_indices=False)
+        A_data = signals.combine([op.A for op in ops])
+        X_data = signals.combine([op.X for op in ops])
 
         # separate data from each op along the first dimension
         self.A_data = A_data.reshape((len(ops), -1, A_data.shape[1]))
@@ -205,9 +200,6 @@ class DotIncBuilder(OpBuilder):
         #     # add empty minibatch dimension if needed
         #     if not self.A_data.minibatched and self.X_data.minibatched:
         #         self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
-
-        self.A_data.load_indices(constant=signals.constant)
-        self.X_data.load_indices(constant=signals.constant)
 
     def build_step(self, signals):
         A = signals.gather(self.A_data)
@@ -287,10 +279,8 @@ class SparseDotIncBuilder(DotIncBuilder):
             self.Y_data = signals.combine([op.Y for op in ops])
 
             # group all the A's and X's
-            self.A_data = signals.combine([op.A for op in ops],
-                                          load_indices=False)
+            self.A_data = signals.combine([op.A for op in ops])
             self.A_data = self.A_data.reshape((-1,))
-            self.A_data.load_indices(constant=signals.constant)
             self.X_data = signals.combine([op.X for op in ops])
 
             assert not self.A_data.minibatched
