@@ -197,7 +197,9 @@ def compare_backends(ctx, batch, n_neurons):
 @click.pass_context
 @click.option("--dimensions", default=128,
               help="Dimensionality of spaun model")
-def compare_optimizations(ctx, dimensions):
+@click.option("--unroll", default=25,
+              help="Number of iterations to unroll simulation")
+def compare_optimizations(ctx, dimensions, unroll):
     load = ctx.obj["load"]
     reps = ctx.obj["reps"]
     device = ctx.obj["device"]
@@ -253,7 +255,7 @@ def compare_optimizations(ctx, dimensions):
                 nengo_dl.configure_settings(**config)
 
             with nengo_dl.Simulator(
-                    None, model=model, unroll_simulation=50 if unro else 1,
+                    None, model=model, unroll_simulation=unroll if unro else 1,
                     device=device) as sim:
                 sim.run(0.1)
 
@@ -736,7 +738,7 @@ def test(ctx):
 
         print("running compare_optimizations")
         with contextlib.redirect_stdout(devnull):
-            ctx.invoke(compare_optimizations, dimensions=1)
+            ctx.invoke(compare_optimizations, dimensions=1, unroll=5)
 
         print("running spiking_mnist")
         with contextlib.redirect_stdout(devnull):

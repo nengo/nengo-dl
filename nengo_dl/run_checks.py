@@ -1,5 +1,6 @@
 import os
 import sys
+import tempfile
 
 import nengo
 from pylint import epylint
@@ -28,9 +29,17 @@ pytest.main(['--gpu'])
 
 # test whitepaper plots
 print("=" * 30, "WHITEPAPER PLOTS", "#" * 30)
-os.chdir("../tmp")  # so that we don't end up with a bunch of files in this dir
-sys.path.append("../docs/whitepaper")
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "docs",
+                             "whitepaper"))
 import whitepaper2018_plots  # pylint: disable=wrong-import-position
 
-sys.argv += "--no-show --reps 1 test".split()
-whitepaper2018_plots.main(obj={})
+with tempfile.TemporaryDirectory() as tmpdir:
+    # run in temporary directory so that we don't end up with a bunch of files
+    # in this dir
+    os.chdir(tmpdir)
+
+    sys.argv += "--no-show --reps 1 test".split()
+    try:
+        whitepaper2018_plots.main(obj={})
+    except SystemExit:
+        pass
