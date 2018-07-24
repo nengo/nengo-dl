@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from distutils.version import LooseVersion
 import os
 
 import nengo
@@ -599,7 +600,8 @@ def test_profile(Simulator, mode, outfile):
         nengo.Connection(a, x)
         p = nengo.Probe(x)
 
-    suffix = "" if tf.__version__ < "1.4.0" else "_-1"
+    suffix = ("" if LooseVersion(tf.__version__) < LooseVersion("1.4.0") else
+              "_-1")
 
     if outfile is None:
         filename = "nengo_dl_profile.json%s" % suffix
@@ -1149,7 +1151,7 @@ def test_non_differentiable(Simulator):
 
         w = [x for x in w if isinstance(x.message, UserWarning)]
 
-        if tf.__version__ >= "1.9.0":
+        if LooseVersion(tf.__version__) >= LooseVersion("1.9.0"):
             # note: one warning for each variable
             assert len(w) == len(tf.trainable_variables())
         else:

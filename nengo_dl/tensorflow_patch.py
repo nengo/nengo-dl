@@ -1,4 +1,5 @@
 import copy
+from distutils.version import LooseVersion
 import traceback
 
 from tensorflow.python.framework import dtypes, ops, versions
@@ -74,7 +75,7 @@ def patch_state_grads():
                 var.get_shape())
         else:
             # pylint: disable=no-member
-            if versions.__version__ < "1.7.0":
+            if LooseVersion(versions.__version__) < LooseVersion("1.7.0"):
                 temp_var = gen_state_ops._temporary_variable
                 destroy_temp_var = gen_state_ops._destroy_temporary_variable
             else:

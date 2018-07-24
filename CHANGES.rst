@@ -63,6 +63,7 @@ Release History
 - Compatible with ``tensorflow==1.9.0`` release
 - Fixed bug in ``nengo_dl.configure_settings(session_config=...)`` when passing
   a pre-build model to the Simulator instead of a Network
+- Fixed TensorFlow version comparisons for 1.10.0
 
 **Deprecated**
 

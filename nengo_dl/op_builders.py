@@ -1,4 +1,5 @@
 from collections import defaultdict
+from distutils.version import LooseVersion
 import logging
 
 from nengo.builder.operator import (
@@ -314,7 +315,7 @@ class SparseDotIncBuilder(DotIncBuilder):
         assert A.get_shape()[0] == self.sparse_indices.get_shape()[0]
 
         # approach 1: using sparse_tensor_dense_matmul
-        if tf.__version__ < "1.7.0":
+        if LooseVersion(tf.__version__) < LooseVersion("1.7.0"):
             mat_mul = gen_sparse_ops._sparse_tensor_dense_mat_mul
         else:
             mat_mul = gen_sparse_ops.sparse_tensor_dense_mat_mul

@@ -1,3 +1,4 @@
+from distutils.version import LooseVersion
 import logging
 import warnings
 
@@ -318,7 +319,7 @@ class LinearFilterBuilder(OpBuilder):
         signals.scatter(self.output_data, output)
 
         # update state
-        if tf.__version__ < "1.7.0":
+        if LooseVersion(tf.__version__) < LooseVersion("1.7.0"):
             mat_mul = gen_sparse_ops._sparse_tensor_dense_mat_mul
         else:
             mat_mul = gen_sparse_ops.sparse_tensor_dense_mat_mul
