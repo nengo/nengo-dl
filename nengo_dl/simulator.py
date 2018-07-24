@@ -31,7 +31,7 @@ from nengo_dl.tensor_graph import TensorGraph
 logger = logging.getLogger(__name__)
 
 if sys.version_info < (3, 4):
-    import backports.tempfile as tempfile
+    from backports import tempfile
 
 
 class Simulator(object):

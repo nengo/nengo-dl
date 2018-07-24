@@ -1060,8 +1060,8 @@ def noop_order_signals(plan, **_):
     """A version of :func:`.graph_optimizer.order_signals` that doesn't do any
     reordering, for debugging."""
 
-    all_signals = list(set([s.base for ops in plan for op in ops
-                            for s in op.all_signals]))
+    all_signals = list({s.base for ops in plan for op in ops
+                        for s in op.all_signals})
     return all_signals, plan
 
 
