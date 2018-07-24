@@ -1,0 +1,565 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Basic operators &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Neuron types" href="neurons.html" />
+    <link rel="prev" title="Operator build classes" href="operators.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frontend.html">User documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="backend.html">Developer documentation</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="builder.html">Builder</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="operators.html">Operator build classes</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Basic operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="neurons.html">Neuron types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="learning_rules.html">Learning rules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="processes.html">Processes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tensor_node_builders.html">TensorNodes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tensor_graph.html">TensorFlow graph construction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="signals.html">Signals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="graph_optimizer.html">Operator graph optimization tools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html">Miscellaneous utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="backend.html">Developer documentation</a> &raquo;</li>
+        
+          <li><a href="operators.html">Operator build classes</a> &raquo;</li>
+        
+      <li>Basic operators</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/op_builders.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="module-nengo_dl.op_builders">
+<span id="basic-operators"></span><h1>Basic operators<a class="headerlink" href="#module-nengo_dl.op_builders" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="nengo_dl.op_builders.ResetInc">
+<em class="property">class </em><code class="descclassname">nengo_dl.op_builders.</code><code class="descname">ResetInc</code><span class="sig-paren">(</span><em>dst</em>, <em>value=0</em>, <em>tag=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/op_builders.html#ResetInc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.op_builders.ResetInc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.op_builders.ResetBuilder">
+<em class="property">class </em><code class="descclassname">nengo_dl.op_builders.</code><code class="descname">ResetBuilder</code><span class="sig-paren">(</span><em>ops</em>, <em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/op_builders.html#ResetBuilder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.op_builders.ResetBuilder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build a group of <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.operator.Reset" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Reset</span></code></a>
+operators.</p>
+<dl class="method">
+<dt id="nengo_dl.op_builders.ResetBuilder.build_step">
+<code class="descname">build_step</code><span class="sig-paren">(</span><em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/op_builders.html#ResetBuilder.build_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.op_builders.ResetBuilder.build_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function builds whatever computations need to be executed in
+each simulation timestep.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>signals</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="signals.html#nengo_dl.signals.SignalDict" title="nengo_dl.signals.SignalDict"><code class="xref py py-class docutils literal notranslate"><span class="pre">signals.SignalDict</span></code></a></span></dt>
+<dd><p class="first last">Mapping from <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Signal" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></a> to
+<code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> (updated by operations)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of ``tf.Tensor``, optional</strong></dt>
+<dd><p class="first last">If not None, the returned tensors correspond to outputs with
+possible side-effects, i.e. computations that need to be executed
+in the TensorFlow graph even if their output doesn’t appear to be
+used</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.op_builders.CopyBuilder">
+<em class="property">class </em><code class="descclassname">nengo_dl.op_builders.</code><code class="descname">CopyBuilder</code><span class="sig-paren">(</span><em>ops</em>, <em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/op_builders.html#CopyBuilder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.op_builders.CopyBuilder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build a group of <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.operator.Copy" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Copy</span></code></a>
+operators.</p>
+<dl class="method">
+<dt id="nengo_dl.op_builders.CopyBuilder.build_step">
+<code class="descname">build_step</code><span class="sig-paren">(</span><em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/op_builders.html#CopyBuilder.build_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.op_builders.CopyBuilder.build_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function builds whatever computations need to be executed in
+each simulation timestep.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>signals</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="signals.html#nengo_dl.signals.SignalDict" title="nengo_dl.signals.SignalDict"><code class="xref py py-class docutils literal notranslate"><span class="pre">signals.SignalDict</span></code></a></span></dt>
+<dd><p class="first last">Mapping from <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Signal" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></a> to
+<code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> (updated by operations)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of ``tf.Tensor``, optional</strong></dt>
+<dd><p class="first last">If not None, the returned tensors correspond to outputs with
+possible side-effects, i.e. computations that need to be executed
+in the TensorFlow graph even if their output doesn’t appear to be
+used</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.op_builders.ElementwiseIncBuilder">
+<em class="property">class </em><code class="descclassname">nengo_dl.op_builders.</code><code class="descname">ElementwiseIncBuilder</code><span class="sig-paren">(</span><em>ops</em>, <em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/op_builders.html#ElementwiseIncBuilder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.op_builders.ElementwiseIncBuilder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build a group of <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.operator.ElementwiseInc" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ElementwiseInc</span></code></a>
+operators.</p>
+<dl class="method">
+<dt id="nengo_dl.op_builders.ElementwiseIncBuilder.build_step">
+<code class="descname">build_step</code><span class="sig-paren">(</span><em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/op_builders.html#ElementwiseIncBuilder.build_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.op_builders.ElementwiseIncBuilder.build_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function builds whatever computations need to be executed in
+each simulation timestep.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>signals</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="signals.html#nengo_dl.signals.SignalDict" title="nengo_dl.signals.SignalDict"><code class="xref py py-class docutils literal notranslate"><span class="pre">signals.SignalDict</span></code></a></span></dt>
+<dd><p class="first last">Mapping from <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Signal" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></a> to
+<code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> (updated by operations)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of ``tf.Tensor``, optional</strong></dt>
+<dd><p class="first last">If not None, the returned tensors correspond to outputs with
+possible side-effects, i.e. computations that need to be executed
+in the TensorFlow graph even if their output doesn’t appear to be
+used</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.op_builders.DotIncBuilder">
+<em class="property">class </em><code class="descclassname">nengo_dl.op_builders.</code><code class="descname">DotIncBuilder</code><span class="sig-paren">(</span><em>ops</em>, <em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/op_builders.html#DotIncBuilder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.op_builders.DotIncBuilder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build a group of <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.operator.DotInc" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DotInc</span></code></a>
+operators.</p>
+<dl class="method">
+<dt id="nengo_dl.op_builders.DotIncBuilder.build_step">
+<code class="descname">build_step</code><span class="sig-paren">(</span><em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/op_builders.html#DotIncBuilder.build_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.op_builders.DotIncBuilder.build_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function builds whatever computations need to be executed in
+each simulation timestep.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>signals</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="signals.html#nengo_dl.signals.SignalDict" title="nengo_dl.signals.SignalDict"><code class="xref py py-class docutils literal notranslate"><span class="pre">signals.SignalDict</span></code></a></span></dt>
+<dd><p class="first last">Mapping from <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Signal" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></a> to
+<code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> (updated by operations)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of ``tf.Tensor``, optional</strong></dt>
+<dd><p class="first last">If not None, the returned tensors correspond to outputs with
+possible side-effects, i.e. computations that need to be executed
+in the TensorFlow graph even if their output doesn’t appear to be
+used</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.op_builders.SparseDotIncBuilder">
+<em class="property">class </em><code class="descclassname">nengo_dl.op_builders.</code><code class="descname">SparseDotIncBuilder</code><span class="sig-paren">(</span><em>ops</em>, <em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/op_builders.html#SparseDotIncBuilder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.op_builders.SparseDotIncBuilder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build a group of <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.operator.DotInc" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DotInc</span></code></a>
+operators.</p>
+<dl class="method">
+<dt id="nengo_dl.op_builders.SparseDotIncBuilder.build_step">
+<code class="descname">build_step</code><span class="sig-paren">(</span><em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/op_builders.html#SparseDotIncBuilder.build_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.op_builders.SparseDotIncBuilder.build_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function builds whatever computations need to be executed in
+each simulation timestep.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>signals</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="signals.html#nengo_dl.signals.SignalDict" title="nengo_dl.signals.SignalDict"><code class="xref py py-class docutils literal notranslate"><span class="pre">signals.SignalDict</span></code></a></span></dt>
+<dd><p class="first last">Mapping from <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Signal" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></a> to
+<code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> (updated by operations)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of ``tf.Tensor``, optional</strong></dt>
+<dd><p class="first last">If not None, the returned tensors correspond to outputs with
+possible side-effects, i.e. computations that need to be executed
+in the TensorFlow graph even if their output doesn’t appear to be
+used</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.op_builders.SimPyFuncBuilder">
+<em class="property">class </em><code class="descclassname">nengo_dl.op_builders.</code><code class="descname">SimPyFuncBuilder</code><span class="sig-paren">(</span><em>ops</em>, <em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/op_builders.html#SimPyFuncBuilder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.op_builders.SimPyFuncBuilder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build a group of <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.operator.SimPyFunc" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimPyFunc</span></code></a>
+operators.</p>
+<dl class="method">
+<dt id="nengo_dl.op_builders.SimPyFuncBuilder.build_step">
+<code class="descname">build_step</code><span class="sig-paren">(</span><em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/op_builders.html#SimPyFuncBuilder.build_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.op_builders.SimPyFuncBuilder.build_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function builds whatever computations need to be executed in
+each simulation timestep.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>signals</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="signals.html#nengo_dl.signals.SignalDict" title="nengo_dl.signals.SignalDict"><code class="xref py py-class docutils literal notranslate"><span class="pre">signals.SignalDict</span></code></a></span></dt>
+<dd><p class="first last">Mapping from <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Signal" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></a> to
+<code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> (updated by operations)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of ``tf.Tensor``, optional</strong></dt>
+<dd><p class="first last">If not None, the returned tensors correspond to outputs with
+possible side-effects, i.e. computations that need to be executed
+in the TensorFlow graph even if their output doesn’t appear to be
+used</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="neurons.html" class="btn btn-neutral float-right" title="Neuron types" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="operators.html" class="btn btn-neutral" title="Operator build classes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015-2018, Applied Brain Research.
+      Last updated on Jul 24, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v1.1.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../op_builders.html">latest</a></dd>
+            
+
+            
+                
+                    <dd>v1.1.0</dd>
+                
+            
+                
+                    <dd><a href="../v1.0.0/op_builders.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.2/op_builders.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.1/op_builders.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.0/op_builders.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.2/op_builders.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.1/op_builders.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.0/op_builders.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.4.0/op_builders.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.1/op_builders.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.0/op_builders.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.2.0/op_builders.html">v0.2.0</a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1.1.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

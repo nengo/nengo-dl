@@ -1,0 +1,764 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Optimizing a NengoDL model &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="TensorNodes" href="tensor_node.html" />
+    <link rel="prev" title="NengoDL Simulator" href="simulator.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="frontend.html">User documentation</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="simulator.html">NengoDL Simulator</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Optimizing a NengoDL model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#simulator-train-arguments">Simulator.train arguments</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#inputs">inputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#targets">targets</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#optimizer">optimizer</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#objective">objective</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#truncation">truncation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#summaries">summaries</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#other-parameters">Other parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#choosing-which-elements-to-optimize">Choosing which elements to optimize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#saving-and-loading-parameters">Saving and loading parameters</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#sim-data">sim.data</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#sim-save-params-sim-load-params">sim.save_params/sim.load_params</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#sim-freeze-params">sim.freeze_params</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tensor_node.html">TensorNodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extra_objects.html">Extra Nengo objects</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backend.html">Developer documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="frontend.html">User documentation</a> &raquo;</li>
+        
+      <li>Optimizing a NengoDL model</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/training.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="optimizing-a-nengodl-model">
+<h1>Optimizing a NengoDL model<a class="headerlink" href="#optimizing-a-nengodl-model" title="Permalink to this headline">¶</a></h1>
+<p>Optimizing Nengo models via deep learning training methods is one of the
+important features of NengoDL.  This functionality is accessed via the
+<a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.train()</span></code></a> method.  For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="o">&lt;</span><span class="n">construct</span> <span class="n">the</span> <span class="n">model</span><span class="o">&gt;</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="o">&lt;</span><span class="n">inputs</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">&lt;</span><span class="n">targets</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">&lt;</span><span class="n">optimizer</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">n_epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+              <span class="n">objective</span><span class="o">=&lt;</span><span class="n">objective</span><span class="o">&gt;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>When the <code class="docutils literal notranslate"><span class="pre">Simulator</span></code> is first constructed, all the parameters in the model
+(e.g., encoders, decoders, connection weights, biases) are initialized based
+on the functions/distributions specified during model construction (see the
+<a class="reference external" href="https://www.nengo.ai/nengo/">Nengo documentation</a> for more detail on
+how that works).  What the <a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.train()</span></code></a> method does is then
+further optimize those parameters based on some inputs and desired
+outputs.  We’ll go through each of those components in more detail
+below.</p>
+<div class="section" id="simulator-train-arguments">
+<h2>Simulator.train arguments<a class="headerlink" href="#simulator-train-arguments" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="inputs">
+<h3>inputs<a class="headerlink" href="#inputs" title="Permalink to this headline">¶</a></h3>
+<p>The first argument to the <a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.train()</span></code></a> function is the input data.
+We can think of a model as computing a function
+<span class="math notranslate nohighlight">\(y = f(x, \theta)\)</span>, where <span class="math notranslate nohighlight">\(f\)</span> is the model, mapping inputs
+<span class="math notranslate nohighlight">\(x\)</span> to outputs <span class="math notranslate nohighlight">\(y\)</span> with parameters <span class="math notranslate nohighlight">\(\theta\)</span>.  This
+argument is specifying the values for <span class="math notranslate nohighlight">\(x\)</span>.</p>
+<p>In practice what that means is specifying values for the input Nodes in the
+model.  A <a class="reference external" href="https://www.nengo.ai/nengo/frontend_api.html#nengo.Node" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> is a Nengo object that inserts values into
+a Network, usually used
+to define external inputs.  <a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.train()</span></code></a> will override the normal
+Node values with the training data that is provided.  This is specified as a
+dictionary <code class="docutils literal notranslate"><span class="pre">{&lt;node&gt;:</span> <span class="pre">&lt;array&gt;,</span> <span class="pre">...}</span></code>, where <code class="docutils literal notranslate"><span class="pre">&lt;node&gt;</span></code> is the input node
+for which training data is being defined, and <code class="docutils literal notranslate"><span class="pre">&lt;array&gt;</span></code> is a numpy array
+containing the training values.  This training array should have shape
+<code class="docutils literal notranslate"><span class="pre">(n_inputs,</span> <span class="pre">n_steps,</span> <span class="pre">node.size_out)</span></code>, where <code class="docutils literal notranslate"><span class="pre">n_inputs</span></code> is the number of
+training examples, <code class="docutils literal notranslate"><span class="pre">n_steps</span></code> is the number of simulation steps to train
+across, and <code class="docutils literal notranslate"><span class="pre">node.size_out</span></code> is the dimensionality of the Node.</p>
+<p>When training a NengoDL model the user must specify the <code class="docutils literal notranslate"><span class="pre">minibatch_size</span></code>
+to use during training, via the <code class="docutils literal notranslate"><span class="pre">Simulator(...,</span> <span class="pre">minibatch_size=n</span></code>) argument.
+This defines how many inputs (out of the total <code class="docutils literal notranslate"><span class="pre">n_inputs</span></code> defined above) will
+be used for each optimization step.</p>
+<p>Here is an example illustrating how to define the input values for two
+input nodes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+    <span class="o">...</span>
+
+<span class="n">n_inputs</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">n_steps</span> <span class="o">=</span> <span class="mi">10</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                      <span class="n">b</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="mi">3</span><span class="p">)},</span>
+              <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Input values must be provided for at least one Node, but beyond that can be
+defined for as many Nodes as desired.  Any Nodes that don’t have data provided
+will take on the values specified during model construction.  Also note that
+inputs can only be defined for Nodes with no incoming connections (i.e., Nodes
+with <code class="docutils literal notranslate"><span class="pre">size_in</span> <span class="pre">==</span> <span class="pre">0</span></code>).</p>
+</div>
+<div class="section" id="targets">
+<h3>targets<a class="headerlink" href="#targets" title="Permalink to this headline">¶</a></h3>
+<p>Returning to the network equation <span class="math notranslate nohighlight">\(y = f(x, \theta)\)</span>, the goal in
+optimization is to find a set of parameter values such that given inputs
+<span class="math notranslate nohighlight">\(x\)</span> the actual network outputs <span class="math notranslate nohighlight">\(y\)</span> are as close as possible to
+some target values <span class="math notranslate nohighlight">\(t\)</span>.  This argument is specifying those
+desired outputs <span class="math notranslate nohighlight">\(t\)</span>.</p>
+<p>This works very similarly to defining inputs, except instead of assigning
+input values to Nodes it assigns target values to Probes.  The structure of the
+argument is similar – a dictionary of <code class="docutils literal notranslate"><span class="pre">{&lt;probe&gt;:</span> <span class="pre">&lt;array&gt;,</span> <span class="pre">...}</span></code>, where
+<code class="docutils literal notranslate"><span class="pre">&lt;array&gt;</span></code> has shape <code class="docutils literal notranslate"><span class="pre">(n_inputs,</span> <span class="pre">n_steps,</span> <span class="pre">probe.size_in)</span></code>.  Each entry
+in the target array defines the desired output for the corresponding entry in
+the input array.</p>
+<p>For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="o">...</span>
+    <span class="n">ens</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">ens</span><span class="p">)</span>
+
+<span class="n">n_inputs</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">n_steps</span> <span class="o">=</span> <span class="mi">10</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">targets</span><span class="o">=</span><span class="p">{</span><span class="n">p</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_inputs</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="mi">2</span><span class="p">)},</span>
+              <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that these examples use random inputs/targets, for the sake of simplicity.
+In practice we would do something like <code class="docutils literal notranslate"><span class="pre">targets={p:</span> <span class="pre">my_func(inputs)}</span></code>, where
+<code class="docutils literal notranslate"><span class="pre">my_func</span></code> is a function specifying what the ideal outputs are for the given
+inputs.</p>
+</div>
+<div class="section" id="optimizer">
+<h3>optimizer<a class="headerlink" href="#optimizer" title="Permalink to this headline">¶</a></h3>
+<p>The optimizer is the algorithm that defines how to update the
+network parameters during training.  Any of the optimization methods
+implemented in TensorFlow can be used in NengoDL; more information can be found
+in the <a class="reference external" href="https://www.tensorflow.org/api_guides/python/train#Optimizers">TensorFlow documentation</a>.</p>
+<p>An instance of the desired TensorFlow optimizer is created (specifying any
+arguments required by that optimizer), and that instance is then passed to
+<a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.train()</span></code></a>.  For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">MomentumOptimizer</span><span class="p">(</span>
+        <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">use_nesterov</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span> <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="objective">
+<h3>objective<a class="headerlink" href="#objective" title="Permalink to this headline">¶</a></h3>
+<p>The goal in optimization is to minimize the error between the network’s actual
+outputs <span class="math notranslate nohighlight">\(y\)</span> and the targets <span class="math notranslate nohighlight">\(t\)</span>.  The objective is the
+function <span class="math notranslate nohighlight">\(e = o(y, t)\)</span> that computes an error value <span class="math notranslate nohighlight">\(e\)</span>, given
+<span class="math notranslate nohighlight">\(y\)</span> and <span class="math notranslate nohighlight">\(t\)</span>.</p>
+<p>The default objective in NengoDL is the standard <a class="reference external" href="https://en.wikipedia.org/wiki/Mean_squared_error">mean squared error</a>.  This will be used if
+the user doesn’t specify an objective.</p>
+<p>Users can specify a custom objective by creating a function and passing that
+to the <code class="docutils literal notranslate"><span class="pre">objective</span></code> argument in <a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.train()</span></code></a>.  Note that the
+objective is defined using TensorFlow operators.  It should accept Tensors
+representing outputs and targets as input (each with shape
+<code class="docutils literal notranslate"><span class="pre">(minibatch_size,</span> <span class="pre">n_steps,</span> <span class="pre">probe.size_in)</span></code>) and return a scalar Tensor
+representing the error. This example manually computes mean squared error,
+rather than using the default:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="k">def</span> <span class="nf">my_objective</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">((</span><span class="n">targets</span> <span class="o">-</span> <span class="n">outputs</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">objective</span><span class="o">=</span><span class="n">my_objective</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Finally, it is also possible to pass <code class="docutils literal notranslate"><span class="pre">None</span></code> as the objective.  This indicates
+that the error is being computed outside the simulation by the modeller.  In
+this case the modeller should directly specify the output error gradient as the
+<code class="docutils literal notranslate"><span class="pre">targets</span></code> value.  For example, we could apply the same mean squared error
+update this way:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">-</span> <span class="n">my_targets</span><span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">targets</span><span class="o">=</span><span class="n">error</span><span class="p">,</span> <span class="n">objective</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If there are multiple output Probes defined in <code class="docutils literal notranslate"><span class="pre">targets</span></code> then by default the
+same objective will be used for all probes.  This can be overridden by passing
+a dictionary with the form
+<code class="docutils literal notranslate"><span class="pre">{my_probe0:</span> <span class="pre">my_objective0,</span> <span class="pre">my_probe1:</span> <span class="pre">my_objective1,</span> <span class="pre">...}</span></code> for the
+<code class="docutils literal notranslate"><span class="pre">objective</span></code>, specifying a different
+objective for each probe. In either case, the error will then be summed
+across the probes to produce an overall error value.</p>
+<p>Note that <a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.loss" title="nengo_dl.simulator.Simulator.loss"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Simulator.loss()</span></code></a> can be used to check the loss
+(error) value for a given objective.</p>
+</div>
+<div class="section" id="truncation">
+<span id="id1"></span><h3>truncation<a class="headerlink" href="#truncation" title="Permalink to this headline">¶</a></h3>
+<p>When optimizing a simulation over time we specify inputs and targets for all
+<span class="math notranslate nohighlight">\(n\)</span> steps of the simulation.  The gradients are computed by running
+the simulation forward for <span class="math notranslate nohighlight">\(n\)</span> steps, comparing the outputs to the
+targets we specified, and then propagating the gradients backwards from
+<span class="math notranslate nohighlight">\(n\)</span> to 0.  This is known as <a class="reference external" href="https://en.wikipedia.org/wiki/Backpropagation_through_time">Backpropagation Through Time (BPTT)</a>.</p>
+<p>However, in some cases we may not want to run BPTT over the full <span class="math notranslate nohighlight">\(n\)</span>
+steps (usually because it requires a lot of memory to store all the
+intermediate values for <span class="math notranslate nohighlight">\(n\)</span> steps of gradient calculation).  In this case
+we choose some value <span class="math notranslate nohighlight">\(m &lt; n\)</span>, run the simulation for <span class="math notranslate nohighlight">\(m\)</span> steps,
+backpropagate the gradients over those <span class="math notranslate nohighlight">\(m\)</span> steps, then run the simulation
+for <span class="math notranslate nohighlight">\(m\)</span> more steps, and so on until we have run for the total <span class="math notranslate nohighlight">\(n\)</span>
+steps.  This is known as Truncated BPTT.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">truncation</span></code> argument is used to specify <span class="math notranslate nohighlight">\(m\)</span>, i.e.
+<code class="docutils literal notranslate"><span class="pre">sim.train(...,</span> <span class="pre">truncation=m)</span></code>.  If no value is given then full un-truncated
+BPTT will be performed.</p>
+<p>In general, truncated BPTT will result in worse performance than untruncated
+BPTT.  Truncation limits the range of the temporal dynamics that the network
+is able to learn.  For example, if we tried to learn a function where input
+<span class="math notranslate nohighlight">\(x_t\)</span> should influence the output at <span class="math notranslate nohighlight">\(y_{t+m+1}\)</span> that would not
+work well, because the errors from step <span class="math notranslate nohighlight">\(t+m+1\)</span> never make it back to
+step <span class="math notranslate nohighlight">\(t\)</span>.  More generally, a truncated system has less information about
+how outputs at <span class="math notranslate nohighlight">\(t\)</span> will affect future performance, which will limit how
+well that system can be optimized.</p>
+<p>As mentioned, the main reason to use truncated BPTT is in order to reduce the
+memory demands during training.  So if you find yourself running out of memory
+while training a model, consider using the <code class="docutils literal notranslate"><span class="pre">truncation</span></code> argument (while
+ensuring that the value of <span class="math notranslate nohighlight">\(m\)</span> is still large enough to capture the
+temporal dynamics in the task).</p>
+</div>
+<div class="section" id="summaries">
+<span id="id2"></span><h3>summaries<a class="headerlink" href="#summaries" title="Permalink to this headline">¶</a></h3>
+<p>It is often useful to view information about how aspects of a model are
+changing over the course of training.  TensorFlow has created <a class="reference external" href="https://www.tensorflow.org/programmers_guide/summaries_and_tensorboard">TensorBoard</a> to
+help visualize this kind of data, and the <code class="docutils literal notranslate"><span class="pre">summaries</span></code> argument can be used to
+specify the model data that you would like to export for TensorBoard.</p>
+<p>It is specified as a list of objects for which we want to collect
+data.  The data collected depends on the object: if it is a
+<a class="reference external" href="https://www.nengo.ai/nengo/frontend_api.html#nengo.Connection" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code></a> then data will be collected about the
+distribution of the connection weights over the course of training; passing an
+<a class="reference external" href="https://www.nengo.ai/nengo/frontend_api.html#nengo.Ensemble" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Ensemble</span></code></a> will collect data about the distribution of
+encoders, and <a class="reference external" href="https://www.nengo.ai/nengo/frontend_api.html#nengo.ensemble.Neurons" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Neurons</span></code></a> will collect data about
+the distribution of biases. Additionally, the string <code class="docutils literal notranslate"><span class="pre">&quot;loss&quot;</span></code> can be passed,
+in which case the training error for the given objective will be
+collected over the course of training.</p>
+<p>Alternatively, you can manually create summaries using <code class="docutils literal notranslate"><span class="pre">tf.summary.*</span></code> ops for
+any Tensors you would like to track (see <a class="reference external" href="https://www.tensorflow.org/api_guides/python/summary">the TensorFlow documentation</a>), and include those
+in the summaries list.</p>
+<p>TensorBoard can be used to view the exported data via the command</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>tensorboard --logdir &lt;tensorboard_dir&gt;
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">tensorboard_dir</span></code> is the value specified on Simulator creation via
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.Simulator(...,</span> <span class="pre">tensorboard=tensorboard_dir)</span></code>.  After TensorBoard is
+running you can view the data by opening a web browser and navigating to
+<a class="reference external" href="http://localhost:6006">http://localhost:6006</a>.</p>
+<p>For details on the usage of TensorBoard, consult the <a class="reference external" href="https://www.tensorflow.org/programmers_guide/summaries_and_tensorboard">TensorFlow documentation</a>.
+However, as a brief summary, you will find plots showing the loss values over
+the course of training in the <code class="docutils literal notranslate"><span class="pre">Scalars</span></code> tab at the top, and plots showing the
+distributions of weights/encoders/biases over time in the <code class="docutils literal notranslate"><span class="pre">Distributions</span></code> or
+<code class="docutils literal notranslate"><span class="pre">Histograms</span></code> tabs.  If you call <code class="docutils literal notranslate"><span class="pre">sim.train</span></code> several times with the same
+summaries, each call will result in its own set of plots, with a suffix added
+to the label indicating the call number (e.g.
+<code class="docutils literal notranslate"><span class="pre">label,</span> <span class="pre">label_1,</span> <span class="pre">label_2,</span> <span class="pre">...</span></code>). If you run your code multiple times with
+the same <code class="docutils literal notranslate"><span class="pre">tensorboard_dir</span></code>, data will be organized according to run number;
+you can turn on/off the plots for different runs using the checkboxes in the
+bottom left.</p>
+</div>
+<div class="section" id="other-parameters">
+<h3>Other parameters<a class="headerlink" href="#other-parameters" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">n_epochs</span></code> (int): run training for this many passes through the input data</li>
+<li><code class="docutils literal notranslate"><span class="pre">shuffle</span></code> (bool): if <code class="docutils literal notranslate"><span class="pre">True</span></code> (default), randomly assign data to different
+minibatches each epoch</li>
+<li><code class="docutils literal notranslate"><span class="pre">profile</span></code> (bool or dict): collect profiling information
+(<a class="reference internal" href="simulator.html#sim-profile"><span class="std std-ref">as in Simulator.run</span></a>)</li>
+</ul>
+</div>
+</div>
+<div class="section" id="choosing-which-elements-to-optimize">
+<h2>Choosing which elements to optimize<a class="headerlink" href="#choosing-which-elements-to-optimize" title="Permalink to this headline">¶</a></h2>
+<p>By default, NengoDL will optimize the following elements in a model:</p>
+<ol class="arabic simple">
+<li>Connection weights (neuron–neuron weight matrices or decoders)</li>
+<li>Ensemble encoders</li>
+<li>Neuron biases</li>
+</ol>
+<p>These elements will <em>not</em> be optimized if they are targeted by an online
+learning rule.  For example, <a class="reference external" href="https://www.nengo.ai/nengo/frontend_api.html#nengo.PES" title="(in Nengo v2.8)"><code class="docutils literal notranslate"><span class="pre">nengo.PES</span></code></a> modifies connection
+weights as a model is running.  If we also tried to optimize those weights with
+some offline training method then those two processes would conflict
+with each other, likely resulting in unintended effects.  So NengoDL will
+assume that those elements should not be optimized.</p>
+<p>Any of these default behaviours can be overridden using <a class="reference external" href="https://www.nengo.ai/nengo/config.html">Nengo’s config system</a>.  Specifically, setting the
+<code class="docutils literal notranslate"><span class="pre">trainable</span></code> config attribute for an object will control whether or not it
+will be optimized.</p>
+<p><a class="reference internal" href="utils.html#nengo_dl.utils.configure_settings" title="nengo_dl.utils.configure_settings"><code class="xref py py-func docutils literal notranslate"><span class="pre">configure_settings()</span></code></a> is a utility function that can be used to add a
+configurable <code class="docutils literal notranslate"><span class="pre">trainable</span></code> attribute to the objects in a network.  Setting
+<code class="docutils literal notranslate"><span class="pre">trainable=None</span></code> will use the defaults described above, or True/False can
+be passed to override the default for all objects in a model.</p>
+<p>For example, suppose we only want to optimize one connection in our network,
+while leaving everything else unchanged.  This could be achieved via</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="c1"># this adds the `trainable` attribute to all the trainable objects</span>
+    <span class="c1"># in the network, and initializes it to `False`</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+    <span class="n">a</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">size_in</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+
+    <span class="c1"># make this specific connection trainable</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">conn</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="bp">True</span>
+</pre></div>
+</div>
+<p>Or if we wanted to disable training for some subnetwork:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+    <span class="o">...</span>
+    <span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">subnet</span><span class="p">:</span>
+        <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">subnet</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="o">...</span>
+</pre></div>
+</div>
+<p>Note that <code class="docutils literal notranslate"><span class="pre">config[nengo.Ensemble].trainable</span></code> controls both encoders and
+biases, as both are properties of an Ensemble.  However, it is possible to
+separately control the biases via <code class="docutils literal notranslate"><span class="pre">config[nengo.ensemble.Neurons].trainable</span></code>
+or <code class="docutils literal notranslate"><span class="pre">config[my_ensemble.neurons].trainable</span></code>.</p>
+<p>There are two important caveats to keep in mind when configuring <code class="docutils literal notranslate"><span class="pre">trainable</span></code>,
+which differ from the standard config behaviour:</p>
+<ol class="arabic">
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">trainable</span></code> applies to all objects in a network, regardless of whether
+they were created before or after <code class="docutils literal notranslate"><span class="pre">trainable</span></code> is set.  For example,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="o">...</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>is the same as</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="o">...</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">trainable</span></code> can only be set on the config of the top-level network.  For
+example,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">subnet</span><span class="p">:</span>
+        <span class="n">my_ens</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+
+        <span class="c1"># incorrect</span>
+        <span class="n">subnet</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">my_ens</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="c1"># correct</span>
+        <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">my_ens</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="bp">False</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</div>
+<div class="section" id="saving-and-loading-parameters">
+<h2>Saving and loading parameters<a class="headerlink" href="#saving-and-loading-parameters" title="Permalink to this headline">¶</a></h2>
+<p>After optimizing a model we often want to do something with the trained
+parameters (e.g., inspect their values, save them to file, reuse them in a
+different model).  NengoDL provides a number of methods to access model
+parameters, in order to support different use cases.</p>
+<div class="section" id="sim-data">
+<h3>sim.data<a class="headerlink" href="#sim-data" title="Permalink to this headline">¶</a></h3>
+<p>The most basic way to access model parameters is through the
+<a class="reference internal" href="simulator.html#nengo_dl.simulator.SimulationData" title="nengo_dl.simulator.SimulationData"><code class="xref py py-class docutils literal notranslate"><span class="pre">sim.data</span></code></a>
+data structure.  This provides access to the parameters of any Nengo object,
+returning them as <code class="docutils literal notranslate"><span class="pre">numpy</span></code> arrays.  For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">ens</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">ens</span><span class="p">)</span>
+    <span class="n">probe</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">ens</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="c1"># &lt; run training &gt;</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conn</span><span class="p">]</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span>  <span class="c1"># connection weights</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ens</span><span class="p">]</span><span class="o">.</span><span class="n">bias</span><span class="p">)</span>  <span class="c1"># bias values</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ens</span><span class="p">]</span><span class="o">.</span><span class="n">encoders</span><span class="p">)</span>  <span class="c1"># encoder values</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ens</span><span class="p">])</span>  <span class="c1"># to see all the parameters for an object</span>
+</pre></div>
+</div>
+<p>Once we have the parameters as <code class="docutils literal notranslate"><span class="pre">numpy</span></code> arrays we can then do whatever
+we want with them (e.g., save them to file, or use them as arguments in a
+different model).  Thus this method is the most general and flexible, but also
+somewhat labour intensive as the user needs to handle all of that processing
+themselves for each parameter.</p>
+</div>
+<div class="section" id="sim-save-params-sim-load-params">
+<h3>sim.save_params/sim.load_params<a class="headerlink" href="#sim-save-params-sim-load-params" title="Permalink to this headline">¶</a></h3>
+<p>On the opposite end of the spectrum, <a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.save_params" title="nengo_dl.simulator.Simulator.save_params"><code class="xref py py-meth docutils literal notranslate"><span class="pre">save_params()</span></code></a>/
+<a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.load_params" title="nengo_dl.simulator.Simulator.load_params"><code class="xref py py-meth docutils literal notranslate"><span class="pre">load_params()</span></code></a> can be used to save all the parameters of a
+model to file (using TensorFlow’s checkpointing system).  This is
+convenient if we want to save and resume the state of a model (e.g., run some
+training, do some analysis, and then run more training):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="c1"># &lt; run training &gt;</span>
+
+    <span class="n">sim</span><span class="o">.</span><span class="n">save_params</span><span class="p">(</span><span class="s2">&quot;./my_saved_params&quot;</span><span class="p">)</span>
+
+<span class="c1"># &lt; do something else &gt;</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim2</span><span class="p">:</span>
+    <span class="n">sim2</span><span class="o">.</span><span class="n">load_params</span><span class="p">(</span><span class="s2">&quot;./my_saved_params&quot;</span><span class="p">)</span>
+    <span class="c1"># sim2 will now match the final state of sim</span>
+</pre></div>
+</div>
+<p>We can also use <code class="docutils literal notranslate"><span class="pre">save/load_params</span></code> to reuse parameters between models, as
+long as the structure of the two models match exactly (for example,
+reusing parameters from a rate version of a model in a spiking version;
+see the <a class="reference internal" href="examples/spiking_mnist.html"><span class="doc">spiking MNIST example</span></a>).</p>
+<p>This method is quick and convenient, but not as flexible as other options.</p>
+</div>
+<div class="section" id="sim-freeze-params">
+<h3>sim.freeze_params<a class="headerlink" href="#sim-freeze-params" title="Permalink to this headline">¶</a></h3>
+<p>Rather than saving model parameters using TensorFlow’s checkpoint system,
+we can store live parameters back into the model definition using
+<a class="reference internal" href="simulator.html#nengo_dl.simulator.Simulator.freeze_params" title="nengo_dl.simulator.Simulator.freeze_params"><code class="xref py py-meth docutils literal notranslate"><span class="pre">freeze_params()</span></code></a>.  We can freeze the parameters of individual
+Ensembles and Connections, or pass a Network to freeze all the Ensembles and
+Connections in that Network.</p>
+<p>The main advantage of this approach is
+that it makes it easy to reuse a NengoDL model in different Nengo simulators.
+For example, we could optimize a model in NengoDL, save the result as a
+Nengo network, and then run that model in another Simulator (e.g., one running
+on custom neuromorphic hardware).</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="c1"># &lt; run training &gt;</span>
+
+    <span class="n">sim</span><span class="o">.</span><span class="n">freeze_params</span><span class="p">(</span><span class="n">net</span><span class="p">)</span>
+
+<span class="c1"># load our optimized network in a different simulator</span>
+<span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim2</span><span class="p">:</span>
+    <span class="c1"># sim2 will now simulate a model in the default Nengo simulator, but</span>
+    <span class="c1"># with the same parameters as our optimized nengo_dl model</span>
+    <span class="n">sim2</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference internal" href="examples/nef_init.html"><span class="doc">Optimizing the parameters of a Nengo model</span></a></li>
+<li><a class="reference internal" href="examples/spiking_mnist.html"><span class="doc">Optimizing spiking neural networks</span></a></li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="tensor_node.html" class="btn btn-neutral float-right" title="TensorNodes" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="simulator.html" class="btn btn-neutral" title="NengoDL Simulator" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015-2018, Applied Brain Research.
+      Last updated on Jul 24, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v1.1.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../training.html">latest</a></dd>
+            
+
+            
+                
+                    <dd>v1.1.0</dd>
+                
+            
+                
+                    <dd><a href="../v1.0.0/training.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.2/training.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.1/training.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.0/training.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.2/training.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.1/training.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.0/training.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.4.0/training.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.1/training.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.0/training.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.2.0/training.html">v0.2.0</a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1.1.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
