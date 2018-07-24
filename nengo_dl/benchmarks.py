@@ -175,8 +175,6 @@ def mnist(use_tensor_layer=True):
     """
 
     with nengo.Network() as net:
-        nengo_dl.configure_settings(trainable=False)
-
         # create node to feed in images
         net.inp = nengo.Node(np.ones(28 * 28))
 
@@ -228,7 +226,7 @@ def mnist(use_tensor_layer=True):
             #     return rates
 
             @nengo_dl.reshaped((28, 28, 1))
-            def mnist_node(_, x):
+            def mnist_node(_, x):  # pragma: no cover
                 x = tf.layers.conv2d(x, filters=32, kernel_size=3,
                                      activation=nl)
                 x = tf.layers.conv2d(x, filters=32, kernel_size=3,
@@ -387,7 +385,8 @@ def run_profile(net, train=False, n_steps=150, do_profile=True, **kwargs):
             start = time.time()
             sim.train({net.inp: x}, {net.p: y}, optimizer=opt, n_epochs=1,
                       profile=do_profile)
-            print("Execution time:", time.time() - start)
+            exec_time = time.time() - start
+            print("Execution time:", exec_time)
 
         else:
             for _ in range(2):
@@ -395,7 +394,10 @@ def run_profile(net, train=False, n_steps=150, do_profile=True, **kwargs):
 
             start = time.time()
             sim.run_steps(n_steps, profile=do_profile)
-            print("Execution time:", time.time() - start)
+            exec_time = time.time() - start
+            print("Execution time:", exec_time)
+
+    return exec_time
 
 
 @click.group(chain=True)
@@ -430,7 +432,10 @@ def build(obj, benchmark, dimensions, neurons_per_d, neuron_type,
     # add the special cli kwargs if applicable; note we could just do
     # everything through --kwarg, but it is convenient to have a
     # direct option for the common arguments
-    params = inspect.signature(benchmark).parameters
+    if sys.version_info[0] < 3:
+        params = inspect.getargspec(benchmark).args  # pylint: disable=deprecated-method
+    else:
+        params = inspect.signature(benchmark).parameters
     for kw in ("benchmark", "dimensions", "neurons_per_d", "neuron_type"):
         if kw in params:
             kwargs[kw] = locals()[kw]
@@ -461,13 +466,13 @@ def profile(obj, train, n_steps, batch_size, device, unroll, time_only):
     if "net" not in obj:
         raise ValueError("Must call `build` before `profile`")
 
-    run_profile(
+    obj["time"] = run_profile(
         obj["net"], do_profile=not time_only, train=train, n_steps=n_steps,
         minibatch_size=batch_size, device=device, unroll_simulation=unroll)
 
 
 @main.command()
-def matmul_vs_reduce():
+def matmul_vs_reduce():  # pragma: no cover
     """
     Compares two different approaches to batched matrix multiplication
     (tf.matmul vs tf.multiply+tf.reduce_sum).
@@ -549,8 +554,7 @@ def matmul_vs_reduce():
     plt.show()
 
 
-# TODO: test these functions
 # TODO: set up something to automatically run some basic ci performance tests
 
 if __name__ == "__main__":
-    main(obj={})
+    main(obj={})  # pragma: no cover
