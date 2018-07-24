@@ -81,7 +81,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     scripts=[],
-    url="https://github.com/nengo/nengo-dl",
+    url="https://www.nengo.ai/nengo-dl",
     license="Free for non-commercial use",
     description="Deep learning integration for Nengo",
     long_description=read('README.rst', 'CHANGES.rst'),
