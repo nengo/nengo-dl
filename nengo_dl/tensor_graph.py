@@ -165,6 +165,10 @@ class TensorGraph(object):
         self.signals.zero = tf.constant(0, self.dtype)
         self.signals.one = tf.constant(1, self.dtype)
 
+        # this variable controls behaviour in the simulation that is
+        # conditional on whether we are doing training or inference
+        self.signals.training = tf.placeholder(tf.bool, shape=())
+
         # variable to track training step
         with tf.device("/cpu:0"):
             with tf.variable_scope("misc_vars", reuse=False):

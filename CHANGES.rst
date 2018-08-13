@@ -18,9 +18,14 @@ Release History
    - Removed
    - Fixed
 
-1.1.1 (unreleased)
+1.2.0 (unreleased)
 ------------------
 
+**Added**
+
+- NengoDL will now automatically use a rate-based approximation to compute the
+  gradient for spiking neuron types, if one is known (no more need to manually
+  swap neuron types for training and inference).
 
 **Changed**
 

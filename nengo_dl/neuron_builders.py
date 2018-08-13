@@ -170,11 +170,15 @@ class RectifiedLinearBuilder(OpBuilder):
                 [op.neurons for op in ops], [op.J.shape[0] for op in ops],
                 "amplitude", signals.dtype)
 
-    def build_step(self, signals):
-        J = signals.gather(self.J_data)
+    def _step(self, J):
         out = tf.nn.relu(J)
         if self.amplitude is not None:
             out *= self.amplitude
+        return out
+
+    def build_step(self, signals):
+        J = signals.gather(self.J_data)
+        out = self._step(J)
         signals.scatter(self.output_data, out)
 
 
@@ -190,16 +194,34 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
         self.alpha = 1 if self.amplitude is None else self.amplitude
         self.alpha /= signals.dt
 
+    def _step(self, J, voltage, dt):
+        voltage = tf.nn.relu(J) * dt + voltage
+        n_spikes = tf.floor(voltage)
+        voltage -= n_spikes
+        out = n_spikes * self.alpha
+
+        return out, voltage
+
     def build_step(self, signals):
         J = signals.gather(self.J_data)
         voltage = signals.gather(self.voltage_data)
 
-        voltage += tf.nn.relu(J) * signals.dt
-        n_spikes = tf.floor(voltage)
+        # note: we do it this weird way (building both parts outside the cond
+        # and then conditionally returning one, rather than building the parts
+        # within the cond) because if we build the parts inside the
+        # cond function then we run into some tensorflow bug related to the
+        # constant folding optimization
+        # TODO: check back to see if this is fixed in later versions
+        rate_out = super(SpikingRectifiedLinearBuilder, self)._step(J)
 
-        signals.scatter(self.output_data, self.alpha * n_spikes)
+        spike_out, spike_voltage = self._step(J, voltage, signals.dt)
 
-        voltage -= n_spikes
+        out, voltage = tf.cond(
+            signals.training,
+            lambda: (rate_out, voltage),
+            lambda: (spike_out, spike_voltage))
+
+        signals.scatter(self.output_data, out)
         signals.scatter(self.voltage_data, voltage)
 
 
@@ -242,12 +264,13 @@ class LIFRateBuilder(OpBuilder):
         self.zeros = tf.zeros(self.J_data.shape + (signals.minibatch_size,),
                               signals.dtype)
 
-        self.zero = signals.zero
-        self.one = signals.one
         self.epsilon = tf.constant(1e-15, dtype=signals.dtype)
 
-    def build_step(self, signals):
-        j = signals.gather(self.J_data)
+        # copy these so that they're easily accessible in the _step functions
+        self.zero = signals.zero
+        self.one = signals.one
+
+    def _step(self, j):
         j -= self.one
 
         # note: we convert all the j to be positive before this calculation
@@ -257,8 +280,12 @@ class LIFRateBuilder(OpBuilder):
             self.tau_ref + self.tau_rc * tf.log1p(tf.reciprocal(
                 tf.maximum(j, self.epsilon))))
 
-        signals.scatter(self.output_data, tf.where(j > self.zero, rates,
-                                                   self.zeros))
+        return tf.where(j > self.zero, rates, self.zeros)
+
+    def build_step(self, signals):
+        j = signals.gather(self.J_data)
+        rates = self._step(j)
+        signals.scatter(self.output_data, rates)
 
 
 class LIFBuilder(LIFRateBuilder):
@@ -270,25 +297,19 @@ class LIFBuilder(LIFRateBuilder):
         self.min_voltage = signals.op_constant(
             [op.neurons for op in ops], [op.J.shape[0] for op in ops],
             "min_voltage", signals.dtype)
-        self.amplitude /= signals.dt
+        self.alpha = self.amplitude / signals.dt
 
         self.voltage_data = signals.combine([op.states[0] for op in ops])
         self.refractory_data = signals.combine([op.states[1] for op in ops])
 
-    def build_step(self, signals):
-        J = signals.gather(self.J_data)
-        voltage = signals.gather(self.voltage_data)
-        refractory = signals.gather(self.refractory_data)
-
-        delta_t = tf.clip_by_value(signals.dt - refractory, self.zero,
-                                   signals.dt)
+    def _step(self, J, voltage, refractory, dt):
+        delta_t = tf.clip_by_value(dt - refractory, self.zero, dt)
 
         dV = (voltage - J) * tf.expm1(-delta_t / self.tau_rc)
         voltage += dV
 
         spiked = voltage > self.one
-        spikes = tf.cast(spiked, signals.dtype) * self.amplitude
-        signals.scatter(self.output_data, spikes)
+        spikes = tf.cast(spiked, J.dtype) * self.alpha
 
         partial_ref = -self.tau_rc * tf.log1p((self.one - voltage) /
                                               (J - self.one))
@@ -297,13 +318,37 @@ class LIFBuilder(LIFRateBuilder):
         # partial_ref = signals.dt * (voltage - self.one) / dV
 
         refractory = tf.where(spiked, self.tau_ref - partial_ref,
-                              refractory - signals.dt)
-
-        signals.mark_gather(self.J_data)
-        signals.scatter(self.refractory_data, refractory)
+                              refractory - dt)
 
         voltage = tf.where(spiked, self.zeros,
                            tf.maximum(voltage, self.min_voltage))
+
+        return spikes, voltage, refractory
+
+    def build_step(self, signals):
+        J = signals.gather(self.J_data)
+        voltage = signals.gather(self.voltage_data)
+        refractory = signals.gather(self.refractory_data)
+
+        # note: we do it this weird way (building both parts outside the cond
+        # and then conditionally returning one, rather than building the parts
+        # within the cond) because if we build the parts inside the
+        # cond function then we run into some tensorflow bug related to the
+        # constant folding optimization
+        # TODO: check back to see if this is fixed in later versions
+        rate_out = super(LIFBuilder, self)._step(J)
+
+        spike_out, spike_voltage, spike_ref = self._step(
+            J, voltage, refractory, signals.dt)
+
+        spikes, voltage, refractory = tf.cond(
+            signals.training,
+            lambda: (rate_out, voltage, refractory),
+            lambda: (spike_out, spike_voltage, spike_ref)
+        )
+
+        signals.scatter(self.output_data, spikes)
+        signals.scatter(self.refractory_data, refractory)
         signals.scatter(self.voltage_data, voltage)
 
 

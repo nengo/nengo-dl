@@ -567,7 +567,8 @@ class Simulator(object):
                         self.soft_reset()
 
                     steps = next(iter(inp.values())).shape[1]
-                    feed = self._fill_feed(steps, inp, tar, start=offset)
+                    feed = self._fill_feed(steps, inp, tar, start=offset,
+                                           training=True)
                     if extra_feeds is not None:
                         feed.update(extra_feeds)
                     outputs = self.sess.run(
@@ -1096,7 +1097,8 @@ class Simulator(object):
 
             self.closed = True
 
-    def _fill_feed(self, n_steps, inputs, targets=None, start=0):
+    def _fill_feed(self, n_steps, inputs, targets=None, start=0,
+                   training=False):
         """
         Create a feed dictionary containing values for all the placeholder
         inputs in the network, which will be passed to ``tf.Session.run``.
@@ -1115,6 +1117,8 @@ class Simulator(object):
             computed, e.g. when training the network)
         start : int, optional
             Initial value of simulator timestep
+        training : bool, optional
+            Whether we are running in traning or inference mode
 
         Returns
         -------
@@ -1122,10 +1126,11 @@ class Simulator(object):
             Feed values for placeholder tensors in the network
         """
 
-        # fill in loop variables
+        # fill in constants
         feed_dict = {
             self.tensor_graph.step_var: start,
-            self.tensor_graph.stop_var: start + n_steps
+            self.tensor_graph.stop_var: start + n_steps,
+            self.tensor_graph.signals.training: training,
         }
 
         # fill in input values
