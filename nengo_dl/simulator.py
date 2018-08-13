@@ -1134,9 +1134,14 @@ class Simulator(object):
 
         # fill in target values
         if targets is not None:
-            feed_dict.update(
-                {self.tensor_graph.target_phs[p]: t
-                 for p, t in targets.items()})
+            for p, t in targets.items():
+                if p not in self.tensor_graph.target_phs:
+                    raise ValidationError(
+                        "%s is not a valid target; this is probably because "
+                        "it is not used in the objective function" % p,
+                        "targets")
+
+                feed_dict[self.tensor_graph.target_phs[p]] = t
 
         return feed_dict
 

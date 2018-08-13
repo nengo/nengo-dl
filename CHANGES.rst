@@ -22,6 +22,11 @@ Release History
 ------------------
 
 
+**Changed**
+
+- More informative error message if the user tries to pass target values for
+  a probe that isn't used in the objective function.
+
 1.1.0 (July 24, 2018)
 ---------------------
 

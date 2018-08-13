@@ -1233,3 +1233,22 @@ def test_freeze_train(Simulator):
     with nengo.Simulator(net) as sim:
         sim.step()
         assert np.allclose(sim.data[p], 2)
+
+
+def test_fill_feed(Simulator):
+    with nengo.Network() as net:
+        a = nengo.Node([0])
+        p0 = nengo.Probe(a)
+        p1 = nengo.Probe(a)
+
+    with Simulator(net) as sim:
+        # build an objective with p0 in it, so that it will be added to the
+        # graph
+        sim.tensor_graph.build_loss({p0: "mse"})
+
+        # filling p0 will work fine
+        sim._fill_feed(1, {}, targets={p0: np.zeros((1, 1, 1))})
+
+        # validation error if filling p1
+        with pytest.raises(ValidationError):
+            sim._fill_feed(1, {}, targets={p1: np.zeros((1, 1, 1))})
