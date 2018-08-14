@@ -9,8 +9,7 @@ from nengo_dl import (
 # import into top-level namespace
 from nengo_dl import dists
 from nengo_dl.simulator import Simulator
-from nengo_dl.tensor_node import (
-    TensorNode, tensor_layer, reshaped)
+from nengo_dl.tensor_node import TensorNode, tensor_layer, reshaped
 from nengo_dl.utils import configure_settings
 from nengo_dl.neurons import SoftLIFRate
 

@@ -51,7 +51,7 @@ def patch_dynamic_stitch_grad():
 
 
 def patch_state_grads():
-    """Tensorflow doesn't have a gradient implementation for state ops (e.g.,
+    """TensorFlow doesn't have a gradient implementation for state ops (e.g.,
     scatter_add/update).  This adds them in."""
 
     def ScatterUpdateGrads(op, grad):

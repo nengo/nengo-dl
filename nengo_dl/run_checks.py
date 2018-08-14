@@ -18,14 +18,14 @@ epylint.py_run("../nengo_dl --rcfile=setup.cfg")
 print("#" * 30, "NENGO TESTS", "#" * 30)
 pytest.main([
     os.path.dirname(nengo.__file__),
-    '--simulator', 'nengo_dl.tests.Simulator',
-    '--ref-simulator', 'nengo_dl.tests.Simulator',
-    '--disable-warnings'
+    "--simulator", "nengo_dl.tests.Simulator",
+    "--ref-simulator", "nengo_dl.tests.Simulator",
+    "--disable-warnings"
 ])
 
 # run local tests
 print("#" * 30, "NENGO_DL TESTS", "#" * 30)
-pytest.main(['--gpu'])
+pytest.main(["--gpu"])
 
 # test whitepaper plots
 print("=" * 30, "WHITEPAPER PLOTS", "#" * 30)

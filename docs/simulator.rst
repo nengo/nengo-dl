@@ -242,8 +242,8 @@ passed on to the TensorFlow profiler.  See `the tf.profiler documentation
 for details on the available options.
 
 Note that in order for GPU profiling to work, you need to manually add
-``<cuda>\extras\CUPTI\libx64`` to your path (where ``<cuda>`` is your
-CUDA installation directory).
+``<cuda>\extras\CUPTI\libx64`` to the `LD_LIBRARY_PATH` (where ``<cuda>`` is
+your CUDA installation directory).
 
 .. _sim-doc:
 

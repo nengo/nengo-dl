@@ -4,6 +4,7 @@ import os
 import random
 import subprocess
 import sys
+import tempfile
 import time
 
 import click
@@ -272,7 +273,7 @@ def spaun(dimensions):
 
     # spaun needs to be downloaded from https://github.com/drasmuss/spaun2.0,
     # and manually added to python path
-    spaun_dir = os.path.join("..", "tmp", "spaun2.0")
+    spaun_dir = os.path.join(tempfile.gettempdir(), "spaun2.0")
     if not os.path.exists(spaun_dir):
         subprocess.call(
             "git clone https://github.com/drasmuss/spaun2.0 %s" % spaun_dir,

@@ -566,7 +566,6 @@ class TensorGraph(object):
                 loss.append(tf.reduce_mean(
                     tf.square(target - self.probe_arrays[p])))
             elif callable(obj):
-                # move minibatch dimension back to the front
                 loss.append(obj(self.probe_arrays[p], self.target_phs[p]))
             elif obj is None:
                 # user is directly specifying error, not using objective

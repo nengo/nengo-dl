@@ -202,10 +202,9 @@ class LowpassBuilder(OpBuilder):
         signals.scatter(self.output_data,
                         self.dens * output + self.nums * input)
 
-        # method using _step
-        # note: this build_step function doesn't use _step for efficiency
-        # reasons (we can avoid an extra scatter by reusing the output signal
-        # as the state signal)
+        # method using internal state signal
+        # note: this isn't used for efficiency reasons (we can avoid an extra
+        # scatter by reusing the output signal as the state signal)
         # input = signals.gather(self.input_data)
         # prev_state = signals.gather(self.state_sig)
         # new_state = self.dens * prev_state + self.nums * input
