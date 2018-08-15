@@ -159,10 +159,11 @@ class TensorGraph(object):
         self.losses = {}
         self.optimizers = {}
 
-        # create this constant once here so we don't end up creating a new
-        # dt constant in each operator
+        # create these constants once here for reuse in different operators
         self.signals.dt = tf.constant(self.dt, self.dtype)
         self.signals.dt_val = self.dt  # store the actual value as well
+        self.signals.zero = tf.constant(0, self.dtype)
+        self.signals.one = tf.constant(1, self.dtype)
 
         # variable to track training step
         with tf.device("/cpu:0"):

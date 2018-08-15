@@ -242,8 +242,8 @@ class LIFRateBuilder(OpBuilder):
         self.zeros = tf.zeros(self.J_data.shape + (signals.minibatch_size,),
                               signals.dtype)
 
-        self.zero = tf.constant(0, dtype=signals.dtype)
-        self.one = tf.constant(1, dtype=signals.dtype)
+        self.zero = signals.zero
+        self.one = signals.one
         self.epsilon = tf.constant(1e-15, dtype=signals.dtype)
 
     def build_step(self, signals):
