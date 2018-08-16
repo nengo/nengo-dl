@@ -491,15 +491,6 @@ class TensorGraph(object):
                     self.probe_arrays[p], vars, grad_ys=self.target_phs[p],
                     aggregation_method=agg_method))
 
-        for grad in grads:
-            for i, g in enumerate(grad):
-                if g is None:
-                    warnings.warn(
-                        "Could not compute gradients for one or more "
-                        "variables; this usually means that there are "
-                        "non-differentiable elements in the network")
-                    grad[i] = tf.zeros_like(vars[i])
-
         if len(grads) == 1:
             grads = grads[0]
         else:

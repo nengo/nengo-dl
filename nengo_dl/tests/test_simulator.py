@@ -1139,25 +1139,21 @@ def test_direct_grads(Simulator, mixed):
 def test_non_differentiable(Simulator):
     with nengo.Network() as net:
         a = nengo.Node([0])
-        b = nengo.Ensemble(10, 1, neuron_type=nengo.LIF())
+        b = nengo.Node(lambda t, x: x, size_in=1)
         c = nengo.Connection(a, b)
+        nengo.Connection(a, b)
         p = nengo.Probe(b)
 
     with Simulator(net) as sim:
         w0 = sim.data[c].weights
-        with pytest.warns(None) as w:
-            sim.train({a: np.ones((1, 10, 1))}, {p: np.ones((1, 10, 1))},
-                      tf.train.GradientDescentOptimizer(100))
+        sim.train({a: np.ones((1, 10, 1))}, {p: np.ones((1, 10, 1))},
+                  tf.train.GradientDescentOptimizer(100))
 
-        w = [x for x in w if isinstance(x.message, UserWarning)]
-
-        if LooseVersion(tf.__version__) >= LooseVersion("1.9.0"):
-            # note: one warning for each variable
-            assert len(w) == len(tf.trainable_variables())
-        else:
-            # prior to 1.9 tensorflow would give all-zero gradients instead of
-            # None, so we couldn't detect and raise a warning
-            assert len(w) == 0
+        # TODO: find another way to detect non-differentiable elements in graph
+        # note: the challenge is that our stateful ops tend to mask the
+        # backpropagating None gradients, because the overwritten parts of
+        # the variable end up with a gradient of zero (regardless of what the
+        # output gradient is)
         assert np.allclose(sim.data[c].weights, w0)
 
 
