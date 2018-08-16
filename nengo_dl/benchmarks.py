@@ -301,7 +301,7 @@ def spaun(dimensions):
 
 
 def random_network(dimensions, neurons_per_d, neuron_type, n_ensembles,
-                   connections_per_ensemble):
+                   connections_per_ensemble, seed=0):
     """
     Basal ganglia network benchmark.
 
@@ -324,8 +324,8 @@ def random_network(dimensions, neurons_per_d, neuron_type, n_ensembles,
         benchmark network
     """
 
-    random.seed(0)
-    with nengo.Network(label="random", seed=0) as net:
+    random.seed(seed)
+    with nengo.Network(label="random", seed=seed) as net:
         net.inp = nengo.Node([0] * dimensions)
         net.out = nengo.Node(size_in=dimensions)
         net.p = nengo.Probe(net.out)
