@@ -9,6 +9,7 @@ import time
 import warnings
 
 from nengo import Connection, Ensemble, Network, ensemble
+from nengo.builder import Model
 from nengo.exceptions import SimulationError, ConfigError, NetworkContextError
 from nengo.params import BoolParam, Parameter
 import numpy as np
@@ -529,3 +530,33 @@ def configure_settings(**kwargs):
             params.set_param(attr, Parameter(attr, val))
         else:
             raise ConfigError("%s is not a valid config parameter" % attr)
+
+
+def get_setting(model, setting, default=None):
+    """
+    Returns config settings (created by :func:`.configure_settings`).
+
+    Parameters
+    ----------
+    model : :class:`~nengo:nengo.builder.Model` or \
+            :class:`~nengo:nengo.Network`
+        Built model or Network containing all the config settings.
+    setting : str
+        Name of the config option to return
+    default
+        The default value to return if config option not set
+
+    Returns
+    -------
+    Value of ``setting`` if it has been specified, else ``default``.
+    """
+
+    if isinstance(model, Model):
+        if model.toplevel is None:
+            return default
+        model = model.toplevel
+
+    try:
+        return getattr(model.config[model], setting, default)
+    except ConfigError:
+        return default

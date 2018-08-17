@@ -97,16 +97,12 @@ class TensorGraph(object):
         logger.info("Initial plan length: %d", len(operators))
 
         # apply graph simplification functions
-        try:
-            simplifications = model.toplevel.config[
-                model.toplevel].simplifications
-        except (ConfigError, AttributeError):
-            simplifications = [
-                graph_optimizer.remove_constant_copies,
-                graph_optimizer.remove_unmodified_resets,
-                graph_optimizer.remove_zero_incs,
-                graph_optimizer.remove_identity_muls,
-            ]
+        simplifications = utils.get_setting(model, "simplifications", [
+            graph_optimizer.remove_constant_copies,
+            graph_optimizer.remove_unmodified_resets,
+            graph_optimizer.remove_zero_incs,
+            graph_optimizer.remove_identity_muls,
+        ])
 
         with progress.sub("operator simplificaton", max_value=None):
             old_operators = []
@@ -117,10 +113,8 @@ class TensorGraph(object):
                     operators = simp(operators)
 
         # group mergeable operators
-        try:
-            planner = model.toplevel.config[model.toplevel].planner
-        except (ConfigError, AttributeError):
-            planner = graph_optimizer.tree_planner
+        planner = utils.get_setting(
+            model, "planner", graph_optimizer.tree_planner)
 
         with progress.sub("merging operators", max_value=None):
             plan = planner(operators)
@@ -130,10 +124,8 @@ class TensorGraph(object):
         # is only written to by one op and read by one op
 
         # order signals/operators to promote contiguous reads
-        try:
-            sorter = model.toplevel.config[model.toplevel].sorter
-        except (ConfigError, AttributeError):
-            sorter = graph_optimizer.order_signals
+        sorter = utils.get_setting(
+            model, "sorter", graph_optimizer.order_signals)
 
         with progress.sub("ordering signals", max_value=None):
             sigs, self.plan = sorter(plan, n_passes=10)

@@ -17,7 +17,7 @@ from nengo.builder.ensemble import BuiltEnsemble
 from nengo.ensemble import Neurons
 from nengo.exceptions import (
     ReadonlyError, SimulatorClosed, NengoWarning, SimulationError,
-    ValidationError, ConfigError)
+    ValidationError)
 from nengo.solvers import NoSolver
 import numpy as np
 import pkg_resources
@@ -189,11 +189,7 @@ class Simulator(object):
         #     tf.OptimizerOptions.ON_1)
 
         # set any config options specified by user
-        try:
-            config_settings = (
-                self.model.toplevel.config[Network].session_config)
-        except (ConfigError, AttributeError):
-            config_settings = {}
+        config_settings = utils.get_setting(self.model, "session_config", {})
         for c, v in config_settings.items():
             attrs = c.split(".")
             x = config
