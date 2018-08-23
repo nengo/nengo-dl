@@ -469,7 +469,7 @@ class TensorGraph(object):
         except KeyError:
             pass
 
-        agg_method = tf.AggregationMethod.EXPERIMENTAL_TREE
+        agg_method = tf.AggregationMethod.DEFAULT
 
         vars = tf.trainable_variables()
 

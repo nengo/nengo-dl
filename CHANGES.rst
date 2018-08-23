@@ -34,6 +34,8 @@ Release History
 
 - More informative error message if the user tries to pass target values for
   a probe that isn't used in the objective function.
+- Switched to ADD_N gradient accumulation (from TREE); this will increase
+  the memory usage during training, but improve performance.
 
 1.1.0 (July 24, 2018)
 ---------------------
