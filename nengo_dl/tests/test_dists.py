@@ -101,3 +101,11 @@ def test_truncated_normal(limit, stddev, seed):
     # test with default rng
     samples = dist.sample(1000, 2000)
     assert samples.shape == (1000, 2000)
+
+
+@pytest.mark.parametrize("dist", [
+    dists.TruncatedNormal(), dists.VarianceScaling(), dists.Glorot(),
+    dists.He()])
+def test_seeding(dist, seed):
+    assert np.allclose(dist.sample(100, rng=np.random.RandomState(seed)),
+                       dist.sample(100, rng=np.random.RandomState(seed)))

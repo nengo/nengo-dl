@@ -37,6 +37,13 @@ Release History
 - Switched to ADD_N gradient accumulation (from TREE); this will increase
   the memory usage during training, but improve performance.
 
+**Fixed**
+
+- Fixed a bug where
+  ``nengo_dl.dists.VarianceScaling(..., distribution="normal")`` did not
+  respect the seed if one was given.
+
+
 1.1.0 (July 24, 2018)
 ---------------------
 

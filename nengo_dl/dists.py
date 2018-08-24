@@ -135,7 +135,7 @@ class VarianceScaling(Distribution):
             return rng.uniform(-limit, limit, size=shape)
         elif self.distribution == "normal":
             stddev = np.sqrt(scale)
-            return TruncatedNormal(stddev=stddev).sample(n, d)
+            return TruncatedNormal(stddev=stddev).sample(n, d, rng=rng)
         else:
             # note: this should be caught by the enumparam check
             raise NotImplementedError
