@@ -232,14 +232,10 @@ runs.  This will significantly slow down the simulation, so it should be left
 on ``False`` (the default) in most cases.  It is mainly used by developers,
 in order to help identify performance bottlenecks.
 
-Profiling data will be saved to a file named ``nengo_dl_profile.json_-1``.  It
+Profiling data will be saved to a file named ``nengo_dl_profile.json``.  It
 can be viewed by opening a Chrome browser, navigating to
-`<chrome://tracing>`_ and loading the ``nengo_dl_profile.json_-1`` file.
-
-A dict of config options can be passed instead of ``True``, which will be
-passed on to the TensorFlow profiler.  See `the tf.profiler documentation
-<https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/profiler/g3doc/options.md>`_
-for details on the available options.
+`<chrome://tracing>`_ and loading the ``nengo_dl_profile.json`` file.  A
+filename can be passed instead of ``True``, to change the output filename.
 
 Note that in order for GPU profiling to work, you need to manually add
 ``<cuda>\extras\CUPTI\libx64`` to the `LD_LIBRARY_PATH` (where ``<cuda>`` is

@@ -36,6 +36,9 @@ Release History
   a probe that isn't used in the objective function.
 - Switched to ADD_N gradient accumulation (from TREE); this will increase
   the memory usage during training, but improve performance.
+- Revert to ``Timeline`` profiling method. ``tf.profiler`` can produce
+  incorrect output, and isn't maintained any more
+  (https://github.com/tensorflow/tensorflow/issues/15214#issuecomment-382442357)
 
 **Fixed**
 

@@ -22,6 +22,7 @@ from nengo.solvers import NoSolver
 import numpy as np
 import pkg_resources
 import tensorflow as tf
+from tensorflow.python.client.timeline import Timeline
 from tensorflow.python.ops import gradient_checker
 
 from nengo_dl import utils
@@ -393,16 +394,7 @@ class Simulator(object):
             self.n_steps += n_steps
             self.time = self.n_steps * self.dt
 
-        if profile:
-            filename = "nengo_dl_profile.json"
-            options = tf.profiler.ProfileOptionBuilder.time_and_memory()
-            options["output"] = "timeline:outfile=%s" % filename
-            options["min_bytes"] = 0
-            if isinstance(profile, dict):
-                options.update(profile)
-            tf.profiler.profile(
-                self.tensor_graph.graph, run_meta=run_metadata,
-                cmd="scope", options=options)
+        self._profile_output(profile, run_metadata)
 
     def train(self, inputs, targets, optimizer, n_epochs=1, objective="mse",
               shuffle=True, truncation=None, summaries=None, profile=False,
@@ -548,7 +540,6 @@ class Simulator(object):
         if profile:
             run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
             run_metadata = tf.RunMetadata()
-            profiler = tf.profiler.Profiler(self.tensor_graph.graph)
         else:
             run_options = None
             run_metadata = None
@@ -578,9 +569,6 @@ class Simulator(object):
                     if summary_op is not None:
                         self.summary.add_summary(outputs[-1], outputs[1])
 
-                    if profile:
-                        profiler.add_step(int(outputs[1]), run_metadata)
-
                     if offset == 0:
                         progress.step(loss="%.4f" % (
                             np.nan if loss is None else outputs[2]))
@@ -590,14 +578,7 @@ class Simulator(object):
                          include_global=False)
         tmpdir.cleanup()
 
-        if profile:
-            filename = "nengo_dl_profile.json"
-            options = tf.profiler.ProfileOptionBuilder.time_and_memory()
-            options["output"] = "timeline:outfile=%s" % filename
-            options["min_bytes"] = 0
-            if isinstance(profile, dict):
-                options.update(profile)
-            profiler.profile_name_scope(options)
+        self._profile_output(profile, run_metadata)
 
     def loss(self, inputs, targets, objective, extra_feeds=None):
         """
@@ -1316,6 +1297,29 @@ class Simulator(object):
                     "Dimensionality of data (%s) does not match "
                     "dimensionality of %s (%s)" % (x.shape[2], n, d),
                     "%s data" % mode)
+
+    def _profile_output(self, profile, run_metadata):
+        """
+        Outputs profile information to file.
+
+        Parameters
+        ----------
+        profile : bool or str
+            If True or a string (filename), output profile information to file
+        run_metadata : ``tf.RunMetadata``
+            TensorFlow RunMetadata proto populated with profiling data
+        """
+
+        if not profile:
+            return
+
+        trace = Timeline(step_stats=run_metadata.step_stats)
+        if isinstance(profile, str):
+            filename = profile
+        else:
+            filename = "nengo_dl_profile.json"
+        with open(filename, "w") as f:
+            f.write(trace.generate_chrome_trace_format())
 
     @property
     def dt(self):

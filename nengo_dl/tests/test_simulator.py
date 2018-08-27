@@ -1,5 +1,4 @@
 from collections import OrderedDict
-from distutils.version import LooseVersion
 import os
 
 import nengo
@@ -607,13 +606,10 @@ def test_profile(Simulator, mode, outfile):
         nengo.Connection(a, x)
         p = nengo.Probe(x)
 
-    suffix = ("" if LooseVersion(tf.__version__) < LooseVersion("1.4.0") else
-              "_-1")
-
     if outfile is None:
-        filename = "nengo_dl_profile.json%s" % suffix
+        filename = "nengo_dl_profile.json"
     else:
-        filename = outfile + suffix
+        filename = outfile
     if os.path.exists(filename):
         os.remove(filename)
 
@@ -621,7 +617,7 @@ def test_profile(Simulator, mode, outfile):
         if outfile is None:
             prof = True
         else:
-            prof = {"output": "timeline:outfile=%s" % outfile}
+            prof = outfile
 
         if mode == "run":
             sim.run_steps(5, profile=prof)
