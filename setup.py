@@ -48,8 +48,8 @@ version = runpy.run_path(os.path.join(
 
 install_requires = [
     "nengo>=2.7.0",
-    "numpy>=1.11.0",
-    "%s>=1.3.0" % tf_req,
+    "numpy>=1.12.1",
+    "%s>=1.4.0" % tf_req,
     "progressbar2>=3.37.1",
     "backports.tempfile>=1.0;python_version<'3.4'",
 ]

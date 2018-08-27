@@ -1,10 +1,9 @@
 import copy
-from distutils.version import LooseVersion
 import traceback
 
-from tensorflow.python.framework import dtypes, ops, versions
+from tensorflow.python.framework import dtypes, ops
 from tensorflow.python.ops import (math_ops, array_ops, data_flow_ops,
-                                   state_ops, gen_state_ops)
+                                   state_ops, variable_scope)
 
 saved_registry = copy.copy(ops._gradient_registry._registry)
 
@@ -74,20 +73,20 @@ def patch_state_grads():
                 array_ops.expand_dims(indices, 1), updates_grad,
                 var.get_shape())
         else:
-            # pylint: disable=no-member
-            if LooseVersion(versions.__version__) < LooseVersion("1.7.0"):
-                temp_var = gen_state_ops._temporary_variable
-                destroy_temp_var = gen_state_ops._destroy_temporary_variable
-            else:
-                temp_var = gen_state_ops.temporary_variable
-                destroy_temp_var = gen_state_ops.destroy_temporary_variable
+            key = (tuple(grad.get_shape().as_list()), grad.dtype.base_dtype)
 
-            var_grad = temp_var(grad.get_shape(), grad.dtype)
-            var_name = var_grad.op.name
+            with variable_scope.variable_scope(
+                    "gradient_vars", reuse=variable_scope.AUTO_REUSE):
+                var_grad = variable_scope.get_variable(
+                    "tmp" + "_%s" * (len(grad.get_shape()) + 1) % (
+                        key[0] + (key[1].name,)),
+                    shape=key[0], dtype=key[1], trainable=False,
+                    collections=["gradient_vars"])
+
             var_grad = state_ops.assign(var_grad, grad)
             var_grad = state_ops.scatter_update(
                 var_grad, indices, array_ops.zeros_like(updates))
-            var_grad = destroy_temp_var(var_grad, var_name)
+            var_grad = var_grad + 0  # TODO: why is this necessary?
 
         return var_grad, None, updates_grad
 

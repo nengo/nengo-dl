@@ -2,6 +2,6 @@
 set -e -v
 
 if [[ $1 == "script" ]]; then
-  pytest -n 2 --pyargs nengo
-  pytest -n 2 --durations 20 $TEST_ARGS nengo_dl
+  pytest -v -n 2 --color=yes --pyargs nengo
+  pytest -v -n 2 --color=yes --durations 20 $TEST_ARGS nengo_dl
 fi

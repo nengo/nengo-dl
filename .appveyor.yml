@@ -5,7 +5,7 @@ environment:
   PYTHON_VERSION: C:\Miniconda36-x64
   NENGO_DL_TEST_PRECISION: 32
   NENGO_DL_TEST_UNROLL: 1
-  NUMPY_VERSION: numpy
+  NUMPY_VERSION: numpy<1.15
   TF_VERSION: tensorflow
   NENGO_VERSION: nengo
 
@@ -15,8 +15,8 @@ environment:
     - NENGO_VERSION: git+https://github.com/nengo/nengo.git
       TF_VERSION: tensorflow --pre
     - NENGO_VERSION: nengo==2.7.0
-      TF_VERSION: tensorflow==1.3.0
-      NUMPY_VERSION: numpy==1.11.0
+      TF_VERSION: tensorflow==1.4.0
+      NUMPY_VERSION: numpy==1.12.1
       PYTHON_VERSION: C:\Miniconda35-x64
 
 init:
@@ -26,16 +26,16 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - conda install %NUMPY_VERSION% matplotlib
-  - pip install %TF_VERSION%
-  - conda install --force html5lib -v  # fixes a bug related to tensorflow and pip
-  - pip install %NENGO_VERSION%
   - if %MODE% == examples (
       conda install pandoc jupyter &
       pip install -e .[tests,docs]
     ) else (
       pip install -e .[tests]
     )
+  - pip install %TF_VERSION%
+  - pip install %NENGO_VERSION%
+  - pip uninstall -y numpy
+  - conda install "%NUMPY_VERSION%"
   - conda list -e
   - pip freeze
 

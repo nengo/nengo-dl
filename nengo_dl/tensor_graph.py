@@ -471,21 +471,24 @@ class TensorGraph(object):
 
         agg_method = tf.AggregationMethod.DEFAULT
 
-        vars = tf.trainable_variables()
-
         # compute gradients wrt loss
         grads = []
-        if loss is not None:
-            grads.append(tf.gradients(
-                loss, vars, aggregation_method=agg_method))
-
-        # add in any gradients where the user directly specified the output
-        # error grad
-        for p, g in objective.items():
-            if g is None:
+        vars = tf.trainable_variables()
+        with tf.variable_scope(tf.get_variable_scope()) as scope:
+            if loss is not None:
                 grads.append(tf.gradients(
-                    self.probe_arrays[p], vars, grad_ys=self.target_phs[p],
-                    aggregation_method=agg_method))
+                    loss, vars, aggregation_method=agg_method))
+
+            # add in any gradients where the user directly specified the output
+            # error grad
+            for p, g in objective.items():
+                if g is None:
+                    grads.append(tf.gradients(
+                        self.probe_arrays[p], vars, grad_ys=self.target_phs[p],
+                        aggregation_method=agg_method))
+
+            # get any new variables created by the gradient calculations
+            new_vars = scope.get_collection("gradient_vars")
 
         if len(grads) == 1:
             grads = grads[0]
@@ -499,11 +502,13 @@ class TensorGraph(object):
 
             # get any new variables created by the optimizer (so they
             # can be initialized)
-            vars = scope.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
-            if len(vars) > 0:
-                opt_slots_init = tf.variables_initializer(vars)
-            else:
-                opt_slots_init = None
+            new_vars.extend(
+                scope.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
+
+        if len(new_vars) > 0:
+            opt_slots_init = tf.variables_initializer(new_vars)
+        else:
+            opt_slots_init = None
 
         self.optimizers[key] = opt_op
 

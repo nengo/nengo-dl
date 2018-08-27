@@ -39,6 +39,10 @@ Release History
 - Revert to ``Timeline`` profiling method. ``tf.profiler`` can produce
   incorrect output, and isn't maintained any more
   (https://github.com/tensorflow/tensorflow/issues/15214#issuecomment-382442357)
+- Reduce memory usage during training by caching temporary variables used
+  when computing ``ScatterUpdate`` gradient.
+- Increase minimum TensorFlow version to 1.4.0.
+- Increased minimum NumPy version to 1.12.1 (required by TensorFlow)
 
 **Fixed**
 
