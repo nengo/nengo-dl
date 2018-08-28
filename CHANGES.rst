@@ -43,6 +43,8 @@ Release History
   when computing ``ScatterUpdate`` gradient.
 - Increase minimum TensorFlow version to 1.4.0.
 - Increased minimum NumPy version to 1.12.1 (required by TensorFlow)
+- Sort write signals as well as reads during graph optimization (encourages
+  tighter partitioning, which can improve training/inference speed).
 
 **Fixed**
 
