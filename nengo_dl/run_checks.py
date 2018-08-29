@@ -9,6 +9,7 @@ import pytest
 os.environ["NENGO_DL_TEST_PRECISION"] = "32"
 os.environ["NENGO_DL_TEST_UNROLL"] = "1"
 os.environ["NENGO_DL_TEST_DEVICE"] = "/gpu:0"
+os.environ["NENGO_DL_TEST_INFERENCE_ONLY"] = "False"
 
 # run pylint
 print("#" * 30, "PYLINT", "#" * 30)

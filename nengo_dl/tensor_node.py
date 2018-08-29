@@ -190,8 +190,8 @@ class SimTensorNodeBuilder(OpBuilder):
     """Builds a :class:`~.tensor_node.SimTensorNode` operator into a NengoDL
     model."""
 
-    def __init__(self, ops, signals):
-        super(SimTensorNodeBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(SimTensorNodeBuilder, self).__init__(ops, signals, config)
 
         # SimTensorNodes should never be merged
         assert len(ops) == 1

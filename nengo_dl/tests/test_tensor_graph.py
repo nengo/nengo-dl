@@ -7,7 +7,9 @@ import tensorflow as tf
 from nengo_dl import tensor_graph, utils, graph_optimizer
 from nengo_dl.tests import dummies
 
+
 @pytest.mark.parametrize("unroll", (1, 2))
+@pytest.mark.training
 def test_gradients(Simulator, unroll, seed):
     minibatch_size = 4
 
@@ -66,6 +68,7 @@ def test_build_loss(Simulator):
                 sim.tensor_graph.build_loss({p: loss}))
 
 
+@pytest.mark.training
 def test_build_optimizer(Simulator):
     with nengo.Network() as net:
         inp = nengo.Node([0])

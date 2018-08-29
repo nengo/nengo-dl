@@ -369,7 +369,7 @@ def run_profile(net, train=False, n_steps=150, do_profile=True, **kwargs):
     """
 
     with net:
-        nengo_dl.configure_settings(trainable=None if train else False)
+        nengo_dl.configure_settings(inference_only=not train)
 
     with nengo_dl.Simulator(net, **kwargs) as sim:
         # note: we run a few times to try to eliminate startup overhead (only

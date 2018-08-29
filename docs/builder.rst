@@ -8,3 +8,5 @@ TensorFlow graph.
 
 .. autoclass:: nengo_dl.builder.OpBuilder
     :exclude-members: pass_rng
+
+.. autoclass:: nengo_dl.builder.BuildConfig

@@ -95,6 +95,7 @@ def test_zero_matrices(Simulator, zero, seed):
     assert allclose(t, y, yhat, delay=dt * 2 if zero == "D" else dt, atol=5e-5)
 
 
+@pytest.mark.training
 def test_linear_filter_gradient(Simulator):
     with nengo.Network() as net:
         a = nengo.Node([1])

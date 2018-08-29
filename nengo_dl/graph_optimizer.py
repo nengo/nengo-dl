@@ -106,7 +106,8 @@ def mergeable(op, chosen_ops):
     elif isinstance(op, SimProcess):
         # we can merge ops if they have a custom implementation, or merge
         # generic processes, but can't mix the two
-        custom_impl = process_builders.SimProcessBuilder.TF_PROCESS_IMPL
+        custom_impl = tuple(
+            process_builders.SimProcessBuilder.TF_PROCESS_IMPL.keys())
         if isinstance(op.process, custom_impl):
             if type(op.process) == Lowpass:
                 # lowpass ops can only be merged with other lowpass ops, since

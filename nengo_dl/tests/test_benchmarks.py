@@ -98,8 +98,7 @@ def test_run_profile(train):
 
     benchmarks.run_profile(net, train=train, n_steps=10, do_profile=False)
 
-    for ens in net.all_ensembles:
-        assert net.config[ens].trainable == (None if train else False)
+    assert net.config[net].inference_only == (False if train else True)
 
 
 def test_cli():

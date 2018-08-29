@@ -498,6 +498,10 @@ def configure_settings(**kwargs):
         the `GPU memory allocation method
         <https://www.tensorflow.org/programmers_guide/using_gpu#allowing_gpu_memory_growth>`_
         pass ``{"gpu_options.allow_growth": True}``).
+    inference_only : bool
+        Set to True if the network will only be run in inference mode (i.e.,
+        no calls to :meth:`.Simulator.train`).  This may result in a small
+        increase in the inference speed.
     """
 
     # get the toplevel network
@@ -526,7 +530,7 @@ def configure_settings(**kwargs):
                 obj_params.set_param("trainable", BoolParam("trainable", val,
                                                             optional=True))
         elif attr in ("planner", "sorter", "simplifications",
-                      "session_config"):
+                      "session_config", "inference_only"):
             params.set_param(attr, Parameter(attr, val))
         else:
             raise ConfigError("%s is not a valid config parameter" % attr)

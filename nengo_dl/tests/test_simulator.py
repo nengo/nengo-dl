@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import configure_settings, tensor_layer, dists, TensorNode
+from nengo_dl import configure_settings, tensor_layer, dists, TensorNode, utils
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
 
@@ -123,6 +123,7 @@ def test_input_feeds(Simulator):
 
 
 @pytest.mark.parametrize("neurons", (True, False))
+@pytest.mark.training
 def test_train_ff(Simulator, neurons, seed):
     minibatch_size = 4
     n_hidden = 20
@@ -167,6 +168,7 @@ def test_train_ff(Simulator, neurons, seed):
 
 
 @pytest.mark.parametrize("truncation", (None, 5))
+@pytest.mark.training
 def test_train_recurrent(Simulator, truncation, seed):
     batch_size = 100
     minibatch_size = 100
@@ -204,6 +206,7 @@ def test_train_recurrent(Simulator, truncation, seed):
 
 
 @pytest.mark.parametrize("unroll", (1, 2))
+@pytest.mark.training
 def test_train_objective(Simulator, unroll, seed):
     minibatch_size = 1
     n_hidden = 20
@@ -241,6 +244,7 @@ def test_train_objective(Simulator, unroll, seed):
         assert np.allclose(sim.data[p2][:, -1], z[:, -1] + 0.5, atol=1e-3)
 
 
+@pytest.mark.training
 def test_train_sparse(Simulator, seed):
     minibatch_size = 4
     n_hidden = 20
@@ -387,6 +391,7 @@ def test_generate_inputs(Simulator, seed):
         assert not np.allclose(feed[ph[-1]][..., 0], feed[ph[-1]][..., 1])
 
 
+@pytest.mark.training
 def test_save_load_params(Simulator, tmpdir):
     with nengo.Network(seed=0) as net:
         inp = nengo.Node([0])
@@ -523,6 +528,7 @@ def test_side_effects(Simulator):
     assert func.x == 11
 
 
+@pytest.mark.training
 def test_tensorboard(Simulator, tmpdir):
     with nengo.Network() as net:
         a = nengo.Node([0])
@@ -593,6 +599,7 @@ def test_tensorboard(Simulator, tmpdir):
 
 @pytest.mark.parametrize("mode", ("run", "train"))
 @pytest.mark.parametrize("outfile", (None, "tmp.txt"))
+@pytest.mark.training
 def test_profile(Simulator, mode, outfile):
     with nengo.Network() as net:
         a = nengo.Node([0])
@@ -677,6 +684,7 @@ def test_node_output_change(Simulator, pre_val, post_val, seed):
         assert np.allclose(sim.data[p], 1.0)
 
 
+@pytest.mark.training
 def test_check_gradients_error(Simulator):
     # check_gradients detects nans in gradient
     with nengo.Network() as net:
@@ -805,6 +813,7 @@ def test_probe_no_data(Simulator):
     assert sim.data[p] == []
 
 
+@pytest.mark.training
 def test_train_state_save(Simulator):
     with nengo.Network() as net:
         u = nengo.Node([1])
@@ -940,6 +949,7 @@ def test_simulation_data(Simulator, seed):
         _ = sim.data[nengo.Ensemble(10, 1, add_to_container=False)]
 
 
+@pytest.mark.training
 def test_learning_rate_schedule(Simulator):
     with nengo.Network() as net:
         a = nengo.Node([0])
@@ -963,6 +973,7 @@ def test_learning_rate_schedule(Simulator):
                       opt, n_epochs=5)
 
 
+@pytest.mark.training
 def test_multiple_objective(Simulator, seed):
     with nengo.Network(seed=seed) as net:
         net.config[nengo.Connection].synapse = None
@@ -1061,6 +1072,7 @@ def test_progress_bar(Simulator, progress):
         sim.run_steps(10, progress_bar=progress)
 
 
+@pytest.mark.training
 def test_extra_feeds(Simulator):
     # set up a tensornode that will fail unless a value is fed in for the
     # placeholder
@@ -1099,6 +1111,7 @@ def test_extra_feeds(Simulator):
 
 
 @pytest.mark.parametrize("mixed", (False, True))
+@pytest.mark.training
 def test_direct_grads(Simulator, mixed):
     with nengo.Network() as net:
         a = nengo.Node([1])
@@ -1136,6 +1149,7 @@ def test_direct_grads(Simulator, mixed):
             assert np.allclose(sim.data[p2], 2)
 
 
+@pytest.mark.training
 def test_non_differentiable(Simulator):
     with nengo.Network() as net:
         a = nengo.Node([0])
@@ -1207,6 +1221,7 @@ def test_freeze_obj(Simulator):
         sim.freeze_params(net)
 
 
+@pytest.mark.training
 def test_freeze_train(Simulator):
     with nengo.Network() as net:
         a = nengo.Node([1])
@@ -1248,3 +1263,40 @@ def test_fill_feed(Simulator):
         # validation error if filling p1
         with pytest.raises(ValidationError):
             sim._fill_feed(1, {}, targets={p1: np.zeros((1, 1, 1))})
+
+
+@pytest.mark.parametrize("neuron_type", (nengo.SpikingRectifiedLinear(),
+                                         nengo.LIF()))
+def test_inference_only(Simulator, neuron_type, seed):
+    with nengo.Network(seed=seed) as net:
+        utils.configure_settings(inference_only=False)
+
+        a = nengo.Node([0])
+        b = nengo.Ensemble(10, 1, neuron_type=neuron_type)
+        c = nengo.Connection(a, b, synapse=None)
+        p = nengo.Probe(b)
+
+    with Simulator(net) as sim:
+        sim.run(0.1)
+
+        assert sim.model.sig[c]["weights"].trainable
+
+    with net:
+        utils.configure_settings(inference_only=True)
+
+    with Simulator(net) as sim2:
+        sim2.run(0.1)
+
+        # check that inference-only mode produces the same output
+        assert np.allclose(sim.data[p], sim2.data[p])
+
+        # check that parameters aren't trainable
+        assert not sim2.model.sig[c]["weights"].trainable
+
+        # validation checks (can't do train/gradients in inference-only mode)
+        with pytest.raises(ValidationError):
+            sim2.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1))},
+                      tf.train.GradientDescentOptimizer(1))
+
+        with pytest.raises(ValidationError):
+            sim2.check_gradients()

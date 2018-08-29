@@ -225,8 +225,8 @@ class SignalDict(Mapping):
 
     def __init__(self, dtype, minibatch_size):
         self.dtype = dtype
-        self.sig_map = {}
         self.minibatch_size = minibatch_size
+        self.sig_map = {}
         self.bases = None
         self.reads_by_base = defaultdict(list)
         self.gather_bases = []

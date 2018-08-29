@@ -15,8 +15,8 @@ class SimBCMBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.learning_rules.SimBCM`
     operators."""
 
-    def __init__(self, ops, signals):
-        super(SimBCMBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(SimBCMBuilder, self).__init__(ops, signals, config)
 
         self.post_data = signals.combine([op.post_filtered for op in ops])
         self.theta_data = signals.combine([op.theta for op in ops])
@@ -50,8 +50,8 @@ class SimOjaBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.learning_rules.SimOja`
         operators."""
 
-    def __init__(self, ops, signals):
-        super(SimOjaBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(SimOjaBuilder, self).__init__(ops, signals, config)
 
         self.post_data = signals.combine([op.post_filtered for op in ops])
 
@@ -93,8 +93,8 @@ class SimVojaBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.learning_rules.SimVoja`
         operators."""
 
-    def __init__(self, ops, signals):
-        super(SimVojaBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(SimVojaBuilder, self).__init__(ops, signals, config)
 
         self.post_data = signals.combine([op.post_filtered for op in ops])
 
@@ -274,8 +274,8 @@ PES.probeable = ("error", "activities", "delta")
 class SimPESBuilder(OpBuilder):
     """Build a group of :class:`.SimPES` operators."""
 
-    def __init__(self, ops, signals):
-        super(SimPESBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(SimPESBuilder, self).__init__(ops, signals, config)
 
         self.error_data = signals.combine([op.error for op in ops])
         self.error_data = self.error_data.reshape(

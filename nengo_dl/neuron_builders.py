@@ -13,59 +13,9 @@ from nengo_dl.neurons import SoftLIFRate
 logger = logging.getLogger(__name__)
 
 
-@Builder.register(SimNeurons)
-class SimNeuronsBuilder(OpBuilder):
-    """Builds a group of :class:`~nengo:nengo.builder.neurons.SimNeurons`
-    operators.
-
-    Calls the appropriate sub-build class for the different neuron types.
-
-    Attributes
-    ----------
-    TF_NEURON_IMPL : list of :class:`~nengo:nengo.neurons.NeuronType`
-        The neuron types that have a custom implementation
-    """
-
-    TF_NEURON_IMPL = (RectifiedLinear, SpikingRectifiedLinear, Sigmoid,
-                      LIF, LIFRate, SoftLIFRate)
-
-    def __init__(self, ops, signals):
-        super(SimNeuronsBuilder, self).__init__(ops, signals)
-
-        logger.debug("J %s", [op.J for op in ops])
-
-        neuron_type = type(ops[0].neurons)
-
-        # if we have a custom tensorflow implementation for this neuron type,
-        # then we build that. otherwise we'll just execute the neuron step
-        # function externally (using `tf.py_func`), so we just need to set up
-        # the inputs/outputs for that.
-        if neuron_type in self.TF_NEURON_IMPL:
-            # note: we do this two-step check (even though it's redundant) to
-            # make sure that TF_NEURON_IMPL is kept up to date
-
-            if neuron_type == RectifiedLinear:
-                self.built_neurons = RectifiedLinearBuilder(ops, signals)
-            elif neuron_type == SpikingRectifiedLinear:
-                self.built_neurons = SpikingRectifiedLinearBuilder(
-                    ops, signals)
-            elif neuron_type == Sigmoid:
-                self.built_neurons = SigmoidBuilder(ops, signals)
-            elif neuron_type == LIFRate:
-                self.built_neurons = LIFRateBuilder(ops, signals)
-            elif neuron_type == LIF:
-                self.built_neurons = LIFBuilder(ops, signals)
-            elif neuron_type == SoftLIFRate:
-                self.built_neurons = SoftLIFRateBuilder(ops, signals)
-        else:
-            self.built_neurons = GenericNeuronBuilder(ops, signals)
-
-    def build_step(self, signals):
-        self.built_neurons.build_step(signals)
-
-
 class GenericNeuronBuilder(OpBuilder):
-    """Builds all neuron types for which there is no custom Tensorflow
+    """
+    Builds all neuron types for which there is no custom Tensorflow
     implementation.
 
     Notes
@@ -76,8 +26,8 @@ class GenericNeuronBuilder(OpBuilder):
     adding a custom TensorFlow implementation for their neuron type instead.
     """
 
-    def __init__(self, ops, signals):
-        super(GenericNeuronBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(GenericNeuronBuilder, self).__init__(ops, signals, config)
 
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
@@ -157,8 +107,8 @@ class RectifiedLinearBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.RectifiedLinear`
     neuron operators."""
 
-    def __init__(self, ops, signals):
-        super(RectifiedLinearBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(RectifiedLinearBuilder, self).__init__(ops, signals, config)
 
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
@@ -186,8 +136,9 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
     """Build a group of :class:`~nengo:nengo.SpikingRectifiedLinear` neuron
        operators."""
 
-    def __init__(self, ops, signals):
-        super(SpikingRectifiedLinearBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(SpikingRectifiedLinearBuilder, self).__init__(
+            ops, signals, config)
 
         self.voltage_data = signals.combine([op.states[0] for op in ops])
 
@@ -195,7 +146,7 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
         self.alpha /= signals.dt
 
     def _step(self, J, voltage, dt):
-        voltage = tf.nn.relu(J) * dt + voltage
+        voltage += tf.nn.relu(J) * dt
         n_spikes = tf.floor(voltage)
         voltage -= n_spikes
         out = n_spikes * self.alpha
@@ -206,20 +157,17 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
         J = signals.gather(self.J_data)
         voltage = signals.gather(self.voltage_data)
 
-        # note: we do it this weird way (building both parts outside the cond
-        # and then conditionally returning one, rather than building the parts
-        # within the cond) because if we build the parts inside the
-        # cond function then we run into some tensorflow bug related to the
-        # constant folding optimization
-        # TODO: check back to see if this is fixed in later versions
-        rate_out = super(SpikingRectifiedLinearBuilder, self)._step(J)
-
         spike_out, spike_voltage = self._step(J, voltage, signals.dt)
 
-        out, voltage = tf.cond(
-            signals.training,
-            lambda: (rate_out, voltage),
-            lambda: (spike_out, spike_voltage))
+        if self.config.inference_only:
+            out, voltage = spike_out, spike_voltage
+        else:
+            rate_out = super(SpikingRectifiedLinearBuilder, self)._step(J)
+
+            out, voltage = tf.cond(
+                signals.training,
+                lambda: (rate_out, voltage),
+                lambda: (spike_out, spike_voltage))
 
         signals.scatter(self.output_data, out)
         signals.scatter(self.voltage_data, voltage)
@@ -228,8 +176,8 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
 class SigmoidBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.Sigmoid` neuron operators."""
 
-    def __init__(self, ops, signals):
-        super(SigmoidBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(SigmoidBuilder, self).__init__(ops, signals, config)
 
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
@@ -246,8 +194,8 @@ class SigmoidBuilder(OpBuilder):
 class LIFRateBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.LIFRate` neuron operators."""
 
-    def __init__(self, ops, signals):
-        super(LIFRateBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(LIFRateBuilder, self).__init__(ops, signals, config)
 
         self.tau_ref = signals.op_constant(
             [op.neurons for op in ops], [op.J.shape[0] for op in ops],
@@ -291,8 +239,8 @@ class LIFRateBuilder(OpBuilder):
 class LIFBuilder(LIFRateBuilder):
     """Build a group of :class:`~nengo:nengo.LIF` neuron operators."""
 
-    def __init__(self, ops, signals):
-        super(LIFBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(LIFBuilder, self).__init__(ops, signals, config)
 
         self.min_voltage = signals.op_constant(
             [op.neurons for op in ops], [op.J.shape[0] for op in ops],
@@ -330,24 +278,22 @@ class LIFBuilder(LIFRateBuilder):
         voltage = signals.gather(self.voltage_data)
         refractory = signals.gather(self.refractory_data)
 
-        # note: we do it this weird way (building both parts outside the cond
-        # and then conditionally returning one, rather than building the parts
-        # within the cond) because if we build the parts inside the
-        # cond function then we run into some tensorflow bug related to the
-        # constant folding optimization
-        # TODO: check back to see if this is fixed in later versions
-        rate_out = super(LIFBuilder, self)._step(J)
-
         spike_out, spike_voltage, spike_ref = self._step(
             J, voltage, refractory, signals.dt)
 
-        spikes, voltage, refractory = tf.cond(
-            signals.training,
-            lambda: (rate_out, voltage, refractory),
-            lambda: (spike_out, spike_voltage, spike_ref)
-        )
+        if self.config.inference_only:
+            spikes, voltage, refractory = spike_out, spike_voltage, spike_ref
+        else:
+            rate_out = super(LIFBuilder, self)._step(J)
+
+            spikes, voltage, refractory = tf.cond(
+                signals.training,
+                lambda: (rate_out, voltage, refractory),
+                lambda: (spike_out, spike_voltage, spike_ref)
+            )
 
         signals.scatter(self.output_data, spikes)
+        signals.mark_gather(self.J_data)
         signals.scatter(self.refractory_data, refractory)
         signals.scatter(self.voltage_data, voltage)
 
@@ -355,8 +301,8 @@ class LIFBuilder(LIFRateBuilder):
 class SoftLIFRateBuilder(LIFRateBuilder):
     """Build a group of :class:`.SoftLIFRate` neuron operators."""
 
-    def __init__(self, ops, signals):
-        super(SoftLIFRateBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(SoftLIFRateBuilder, self).__init__(ops, signals, config)
 
         self.sigma = signals.op_constant(
             [op.neurons for op in ops], [op.J.shape[0] for op in ops],
@@ -384,3 +330,48 @@ class SoftLIFRateBuilder(LIFRateBuilder):
         rates = self.amplitude / (self.tau_ref + self.tau_rc * q)
 
         signals.scatter(self.output_data, rates)
+
+
+@Builder.register(SimNeurons)
+class SimNeuronsBuilder(OpBuilder):
+    """
+    Builds a group of :class:`~nengo:nengo.builder.neurons.SimNeurons`
+    operators.
+
+    Calls the appropriate sub-build class for the different neuron types.
+
+    Attributes
+    ----------
+    TF_NEURON_IMPL : dict of {:class:`~nengo:nengo.neurons.NeuronType`, \
+                              :class:`.builder.OpBuilder`}
+        Mapping from neuron types to custom build classes (neurons without
+        a custom builder will use the generic builder).
+    """
+
+    TF_NEURON_IMPL = {
+        RectifiedLinear: RectifiedLinearBuilder,
+        SpikingRectifiedLinear: SpikingRectifiedLinearBuilder,
+        Sigmoid: SigmoidBuilder,
+        LIF: LIFBuilder,
+        LIFRate: LIFRateBuilder,
+        SoftLIFRate: SoftLIFRateBuilder,
+    }
+
+    def __init__(self, ops, signals, config):
+        super(SimNeuronsBuilder, self).__init__(ops, signals, config)
+
+        logger.debug("J %s", [op.J for op in ops])
+
+        neuron_type = type(ops[0].neurons)
+
+        # if we have a custom tensorflow implementation for this neuron type,
+        # then we build that. otherwise we'll just execute the neuron step
+        # function externally (using `tf.py_func`).
+        if neuron_type in self.TF_NEURON_IMPL:
+            self.built_neurons = self.TF_NEURON_IMPL[neuron_type](
+                ops, signals, config)
+        else:
+            self.built_neurons = GenericNeuronBuilder(ops, signals, config)
+
+    def build_step(self, signals):
+        self.built_neurons.build_step(signals)

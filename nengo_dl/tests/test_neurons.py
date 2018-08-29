@@ -54,6 +54,7 @@ def test_soft_lif(Simulator, sigma, seed):
 
 @pytest.mark.parametrize(
     "neuron_type", (nengo.LIFRate, nengo.RectifiedLinear, SoftLIFRate))
+@pytest.mark.training
 def test_neuron_gradients(Simulator, neuron_type, seed):
     with nengo.Network(seed=seed) as net:
         a = nengo.Node(output=[0])

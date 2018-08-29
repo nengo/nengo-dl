@@ -496,6 +496,10 @@ class Simulator(object):
             raise ValidationError(
                 "Truncation length must be evenly divisible by "
                 "unroll_simulation", "inputs")
+        if self.tensor_graph.inference_only:
+            raise ValidationError(
+                "Network was created with inference_only=True, cannot "
+                "be trained", "inference_only")
 
         # check for non-differentiable elements in graph
         # utils.find_non_differentiable(
@@ -970,6 +974,11 @@ class Simulator(object):
         should not be intermixed with calls to :meth:`.Simulator.run`.
         """
 
+        if self.tensor_graph.inference_only:
+            raise ValidationError(
+                "Network was created with inference_only=True, cannot "
+                "compute gradients", "inference_only")
+
         delta = 1e-3
         n_steps = self.unroll * 2
 
@@ -1126,8 +1135,9 @@ class Simulator(object):
         feed_dict = {
             self.tensor_graph.step_var: start,
             self.tensor_graph.stop_var: start + n_steps,
-            self.tensor_graph.signals.training: training,
         }
+        if not self.tensor_graph.inference_only:
+            feed_dict[self.tensor_graph.signals.training] = training
 
         # fill in input values
         tmp = self._generate_inputs(inputs, n_steps)

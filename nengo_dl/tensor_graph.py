@@ -66,6 +66,7 @@ class TensorGraph(object):
         self.device = device
         self.graph = tf.Graph()
         self.signals = signals.SignalDict(self.dtype, self.minibatch_size)
+        self.inference_only = utils.get_setting(model, "inference_only", False)
 
         # find invariant inputs (nodes that don't receive any input other
         # than the simulation time). we'll compute these outside the simulation
@@ -157,9 +158,10 @@ class TensorGraph(object):
         self.signals.zero = tf.constant(0, self.dtype)
         self.signals.one = tf.constant(1, self.dtype)
 
-        # this variable controls behaviour in the simulation that is
-        # conditional on whether we are doing training or inference
-        self.signals.training = tf.placeholder(tf.bool, shape=())
+        if not self.inference_only:
+            # this variable controls behaviour in the simulation that is
+            # conditional on whether we are doing training or inference
+            self.signals.training = tf.placeholder(tf.bool, shape=())
 
         # variable to track training step
         with tf.device("/cpu:0"):
@@ -205,10 +207,12 @@ class TensorGraph(object):
         # pre-build stage
         sub = progress.sub("pre-build stage")
         self.op_builds = {}
+        config = builder.BuildConfig(inference_only=self.inference_only)
         for ops in sub(self.plan):
             with self.graph.name_scope(utils.sanitize_name(
                     builder.Builder.builders[type(ops[0])].__name__)):
-                builder.Builder.pre_build(ops, self.signals, self.op_builds)
+                builder.Builder.pre_build(ops, self.signals, self.op_builds,
+                                          config)
 
         # build stage
         sub = progress.sub("unrolled step ops")
@@ -393,7 +397,7 @@ class TensorGraph(object):
 
         loop_vars = tf.while_loop(
             loop_condition, loop_body, loop_vars=loop_vars,
-            parallel_iterations=1, back_prop=True)
+            parallel_iterations=1, back_prop=not self.inference_only)
 
         self.steps_run = loop_vars[2]
         self.probe_arrays = OrderedDict()
@@ -716,6 +720,9 @@ class TensorGraph(object):
 
         def get_trainable(config, obj, network_trainable):
             """Looks up the current value of ``obj.trainable``."""
+
+            if self.inference_only:
+                return False
 
             try:
                 if obj in config.params:

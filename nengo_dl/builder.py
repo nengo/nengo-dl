@@ -1,3 +1,4 @@
+from collections import namedtuple
 import logging
 import warnings
 
@@ -15,7 +16,7 @@ class Builder(object):
     builders = {}
 
     @classmethod
-    def pre_build(cls, ops, signals, op_builds):
+    def pre_build(cls, ops, signals, op_builds, config):
         """Setup step for build classes, in which they compute any of the
         values that are constant across simulation timesteps.
 
@@ -45,7 +46,7 @@ class Builder(object):
 
         BuildClass = cls.builders[type(ops[0])]
 
-        op_builds[ops] = BuildClass(ops, signals)
+        op_builds[ops] = BuildClass(ops, signals, config)
 
     @classmethod
     def build(cls, ops, signals, op_builds):
@@ -103,6 +104,21 @@ class Builder(object):
         return register_builder
 
 
+class BuildConfig(namedtuple("BuildConfig", ("inference_only",))):
+    """
+    Stores configuration parameters that may be relevant to parts of the
+    build process.
+
+    Parameters
+    ----------
+    inference_only : bool
+        If True the network should be constructed in "inference only" mode
+        (not including any support for training operations).
+    """
+
+    __slots__ = ()
+
+
 class OpBuilder(object):  # pragma: no cover
     """The constructor should set up any computations that are fixed for
     this op (i.e., things that do not need to be recomputed each timestep).
@@ -114,11 +130,17 @@ class OpBuilder(object):  # pragma: no cover
     signals : :class:`.signals.SignalDict`
         Mapping from :class:`~nengo:nengo.builder.Signal` to
         ``tf.Tensor`` (updated by operations)
+    config : :class:`~.builder.BuildConfig`
+        General repository for config information builders might want
+        (conglomerated into this object so that we can add/remove config data
+        without having to change the function signature all the time).
     """
 
-    def __init__(self, ops, signals):
+    def __init__(self, ops, signals, config):
         logger.debug(self.__class__.__name__)
         logger.debug("\n".join(str(x) for x in ops))
+
+        self.config = config
 
     def build_step(self, signals):
         """This function builds whatever computations need to be executed in

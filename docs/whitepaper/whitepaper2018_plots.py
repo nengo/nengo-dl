@@ -98,7 +98,7 @@ def compare_backends(ctx, batch, n_neurons):
                 neuron_type=neuron_type)
 
             with net:
-                nengo_dl.configure_settings(trainable=False)
+                nengo_dl.configure_settings(inference_only=True)
 
             if "nengo_dl" in backend:
                 sim = nengo_dl.Simulator(
@@ -225,7 +225,8 @@ def compare_optimizations(ctx, dimensions, unroll):
                    for simp, plan, sort, unro in params]
 
     if reps > 0:
-        net = benchmarks.spaun(dimensions)
+        with benchmarks.spaun(dimensions) as net:
+            nengo_dl.configure_settings(inference_only=True)
         model = nengo.builder.Model(
             dt=0.001, builder=nengo_dl.builder.NengoBuilder())
         model.build(net)
@@ -336,6 +337,8 @@ def compare_simplifications(ctx, dimensions):
     # net = build_spaun(dimensions)
     net = benchmarks.random_network(dimensions, 32, nengo.RectifiedLinear(),
                                     1000, 100)
+    with net:
+        nengo_dl.configure_settings(inference_only=True)
     model = nengo.builder.Model(
         dt=0.001, builder=nengo_dl.builder.NengoBuilder())
     model.build(net)

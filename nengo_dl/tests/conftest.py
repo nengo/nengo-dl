@@ -14,14 +14,20 @@ def Simulator(request):
 
 
 def pytest_runtest_setup(item):
-    if getattr(item.obj, 'gpu', None) and not item.config.getvalue('--gpu'):
+    if getattr(item.obj, "gpu", False) and not item.config.getvalue("--gpu"):
         pytest.skip("GPU tests not requested")
+    elif ("Simulator" not in item.fixturenames and
+          item.config.getvalue("--simulator-only")):
+        pytest.skip("Only running tests that require a Simulator")
+    elif getattr(item.obj, "training", False) and item.config.getvalue(
+            "--inference-only"):
+        pytest.skip("Skipping training test in inference-only mode")
 
 
 def pytest_addoption(parser):
     parser.addoption("--gpu", action="store_true", default=False,
-                     help="run GPU tests")
-
-
-# TODO: add a --simulator-only flag to only run tests with a simulator (when
-# we're varying simulator params)
+                     help="Run GPU tests")
+    parser.addoption("--simulator-only", action="store_true", default=False,
+                     help="Only run tests involving Simulator")
+    parser.addoption("--inference-only", action="store_true", default=False,
+                     help="Don't run tests that require training/gradients")

@@ -6,7 +6,7 @@ from nengo.tests import test_synapses, test_learning_rules
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl import simulator
+from nengo_dl import simulator, utils
 
 
 # set looser tolerances on synapse tests
@@ -87,7 +87,7 @@ class Simulator(simulator.Simulator):
     """Simulator that allows parameters to be controlled via environment
     variables (for use in CI testing)."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, net, *args, **kwargs):
         logging.basicConfig(level=logging.WARNING)
 
         if "NENGO_DL_TEST_PRECISION" in os.environ:
@@ -107,4 +107,13 @@ class Simulator(simulator.Simulator):
             else:
                 kwargs.setdefault("device", os.environ["NENGO_DL_TEST_DEVICE"])
 
-        super(Simulator, self).__init__(*args, **kwargs)
+        if "NENGO_DL_TEST_INFERENCE_ONLY" in os.environ and net is not None:
+            with net:
+                # change the default value of inference_only (if it hasn't
+                # been specifically set)
+                if utils.get_setting(net, "inference_only") is None:
+                    utils.configure_settings(inference_only=(
+                        os.environ["NENGO_DL_TEST_INFERENCE_ONLY"] ==
+                        "True"))
+
+        super(Simulator, self).__init__(net, *args, **kwargs)

@@ -26,6 +26,9 @@ Release History
 - NengoDL will now automatically use a rate-based approximation to compute the
   gradient for spiking neuron types, if one is known (no more need to manually
   swap neuron types for training and inference).
+- Added ``nengo_dl.configure_settings(inference_only=True)`` option, which will
+  build the network in inference-only mode.  This will slightly improve the
+  inference speed of the simulation, but the network will not be trainable.
 
 **Changed**
 

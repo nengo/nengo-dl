@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from distutils.version import LooseVersion
 import logging
 import warnings
@@ -17,55 +18,9 @@ from nengo_dl.builder import Builder, OpBuilder
 logger = logging.getLogger(__name__)
 
 
-@Builder.register(SimProcess)
-class SimProcessBuilder(OpBuilder):
-    """Builds a group of :class:`~nengo:nengo.builder.processes.SimProcess`
-    operators.
-
-    Calls the appropriate sub-build class for the different process types.
-
-    Attributes
-    ----------
-    TF_PROCESS_IMPL : list of :class:`~nengo:nengo.Process`
-        The process types that have a custom implementation
-    """
-
-    TF_PROCESS_IMPL = (Lowpass, LinearFilter)
-
-    def __init__(self, ops, signals):
-        super(SimProcessBuilder, self).__init__(ops, signals)
-
-        logger.debug("process %s", [op.process for op in ops])
-        logger.debug("input %s", [op.input for op in ops])
-        logger.debug("output %s", [op.output for op in ops])
-        logger.debug("t %s", [op.t for op in ops])
-
-        # if we have a custom tensorflow implementation for this process type,
-        # then we build that. otherwise we'll execute the process step
-        # function externally (using `tf.py_func`), so we just need to set up
-        # the inputs/outputs for that.
-
-        if isinstance(ops[0].process, self.TF_PROCESS_IMPL):
-            # note: we do this two-step check (even though it's redundant) to
-            # make sure that TF_PROCESS_IMPL is kept up to date
-
-            if type(ops[0].process) == Lowpass:
-                self.built_process = LowpassBuilder(ops, signals)
-            elif isinstance(ops[0].process, LinearFilter):
-                self.built_process = LinearFilterBuilder(ops, signals)
-        else:
-            self.built_process = GenericProcessBuilder(ops, signals)
-
-    def build_step(self, signals):
-        self.built_process.build_step(signals)
-
-    def build_post(self, ops, signals, sess, rng):
-        if isinstance(self.built_process, GenericProcessBuilder):
-            self.built_process.build_post(ops, signals, sess, rng)
-
-
 class GenericProcessBuilder(OpBuilder):
-    """Builds all process types for which there is no custom TensorFlow
+    """
+    Builds all process types for which there is no custom TensorFlow
     implementation.
 
     Notes
@@ -76,8 +31,8 @@ class GenericProcessBuilder(OpBuilder):
     adding a custom TensorFlow implementation for their type instead.
     """
 
-    def __init__(self, ops, signals):
-        super(GenericProcessBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(GenericProcessBuilder, self).__init__(ops, signals, config)
 
         self.input_data = (None if ops[0].input is None else
                            signals.combine([op.input for op in ops]))
@@ -145,8 +100,8 @@ class GenericProcessBuilder(OpBuilder):
 class LowpassBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.Lowpass` synapse operators."""
 
-    def __init__(self, ops, signals):
-        super(LowpassBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(LowpassBuilder, self).__init__(ops, signals, config)
 
         self.input_data = signals.combine([op.input for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
@@ -216,8 +171,8 @@ class LinearFilterBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.LinearFilter` synapse
     operators."""
 
-    def __init__(self, ops, signals):
-        super(LinearFilterBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(LinearFilterBuilder, self).__init__(ops, signals, config)
 
         self.input_data = signals.combine([op.input for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
@@ -336,3 +291,53 @@ class LinearFilterBuilder(OpBuilder):
         signals.mark_gather(self.input_data)
         signals.mark_gather(self.state_sig)
         signals.scatter(self.state_sig, state)
+
+
+@Builder.register(SimProcess)
+class SimProcessBuilder(OpBuilder):
+    """
+    Builds a group of :class:`~nengo:nengo.builder.processes.SimProcess`
+    operators.
+
+    Calls the appropriate sub-build class for the different process types.
+
+    Attributes
+    ----------
+    TF_PROCESS_IMPL : dict of {:class:`~nengo:nengo.Process`: \
+                               :class:`.builder.OpBuilder`}
+        Mapping from process types to custom build classes (processes without
+        a custom builder will use the generic builder).
+    """
+
+    # we use OrderedDict because it is important that Lowpass come before
+    # LinearFilter (since we'll be using isinstance to find the right builder,
+    # and Lowpass is a subclass of LinearFilter)
+    TF_PROCESS_IMPL = OrderedDict([
+        (Lowpass, LowpassBuilder),
+        (LinearFilter, LinearFilterBuilder),
+    ])
+
+    def __init__(self, ops, signals, config):
+        super(SimProcessBuilder, self).__init__(ops, signals, config)
+
+        logger.debug("process %s", [op.process for op in ops])
+        logger.debug("input %s", [op.input for op in ops])
+        logger.debug("output %s", [op.output for op in ops])
+        logger.debug("t %s", [op.t for op in ops])
+
+        # if we have a custom tensorflow implementation for this process type,
+        # then we build that. otherwise we'll execute the process step
+        # function externally (using `tf.py_func`).
+        for process_type, process_builder in self.TF_PROCESS_IMPL.items():
+            if isinstance(ops[0].process, process_type):
+                self.built_process = process_builder(ops, signals, config)
+                break
+        else:
+            self.built_process = GenericProcessBuilder(ops, signals, config)
+
+    def build_step(self, signals):
+        self.built_process.build_step(signals)
+
+    def build_post(self, ops, signals, sess, rng):
+        if isinstance(self.built_process, GenericProcessBuilder):
+            self.built_process.build_post(ops, signals, sess, rng)

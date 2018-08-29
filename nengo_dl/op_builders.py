@@ -26,8 +26,8 @@ class ResetBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.operator.Reset`
     operators."""
 
-    def __init__(self, ops, signals):
-        super(ResetBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(ResetBuilder, self).__init__(ops, signals, config)
 
         logger.debug("val %s", [op.value for op in ops])
         logger.debug("dst %s", [op.dst for op in ops])
@@ -67,8 +67,8 @@ class CopyBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.operator.Copy`
     operators."""
 
-    def __init__(self, ops, signals):
-        super(CopyBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(CopyBuilder, self).__init__(ops, signals, config)
 
         logger.debug("src %s", [op.src for op in ops])
         logger.debug("src_slice %s", [getattr(op, "src_slice", None)
@@ -110,8 +110,8 @@ class ElementwiseIncBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.operator.ElementwiseInc`
     operators."""
 
-    def __init__(self, ops, signals):
-        super(ElementwiseIncBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(ElementwiseIncBuilder, self).__init__(ops, signals, config)
 
         logger.debug("dst %s", [op.Y for op in ops])
         logger.debug("A %s", [op.A for op in ops])
@@ -160,8 +160,8 @@ class DotIncBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.operator.DotInc`
     operators."""
 
-    def __init__(self, ops, signals):
-        super(DotIncBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(DotIncBuilder, self).__init__(ops, signals, config)
 
         logger.debug("dst %s", [op.Y for op in ops])
         logger.debug("A %s", [op.A for op in ops])
@@ -249,10 +249,10 @@ class SparseDotIncBuilder(DotIncBuilder):
     """Build a group of :class:`~nengo:nengo.builder.operator.DotInc`
     operators."""
 
-    def __init__(self, ops, signals):
+    def __init__(self, ops, signals, config):
         # note: bypassing the DotIncBuilder init
         # pylint: disable=bad-super-call
-        super(DotIncBuilder, self).__init__(ops, signals)
+        super(DotIncBuilder, self).__init__(ops, signals, config)
 
         logger.debug("dst %s", [op.Y for op in ops])
         logger.debug("A %s", [op.A for op in ops])
@@ -275,7 +275,7 @@ class SparseDotIncBuilder(DotIncBuilder):
                 break
 
         if self.len_match:
-            super(SparseDotIncBuilder, self).__init__(ops, signals)
+            super(SparseDotIncBuilder, self).__init__(ops, signals, config)
         else:
             self.Y_data = signals.combine([op.Y for op in ops])
 
@@ -335,8 +335,8 @@ class SimPyFuncBuilder(OpBuilder):
     """Build a group of :class:`~nengo:nengo.builder.operator.SimPyFunc`
     operators."""
 
-    def __init__(self, ops, signals):
-        super(SimPyFuncBuilder, self).__init__(ops, signals)
+    def __init__(self, ops, signals, config):
+        super(SimPyFuncBuilder, self).__init__(ops, signals, config)
 
         logger.debug("t %s", [op.t for op in ops])
         logger.debug("x %s", [op.x for op in ops])
