@@ -207,7 +207,9 @@ class TensorGraph(object):
         # pre-build stage
         sub = progress.sub("pre-build stage")
         self.op_builds = {}
-        config = builder.BuildConfig(inference_only=self.inference_only)
+        config = builder.BuildConfig(
+            inference_only=self.inference_only,
+            lif_smoothing=utils.get_setting(self.model, "lif_smoothing"))
         for ops in sub(self.plan):
             with self.graph.name_scope(utils.sanitize_name(
                     builder.Builder.builders[type(ops[0])].__name__)):

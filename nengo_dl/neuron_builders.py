@@ -236,11 +236,52 @@ class LIFRateBuilder(OpBuilder):
         signals.scatter(self.output_data, rates)
 
 
-class LIFBuilder(LIFRateBuilder):
+class SoftLIFRateBuilder(LIFRateBuilder):
+    """Build a group of :class:`.SoftLIFRate` neuron operators."""
+
+    def __init__(self, ops, signals, config):
+        super(SoftLIFRateBuilder, self).__init__(ops, signals, config)
+
+        self.sigma = signals.op_constant(
+            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
+            "sigma", signals.dtype)
+
+    def _step(self, J):
+        J -= self.one
+
+        js = J / self.sigma
+        j_valid = js > -20
+        js_safe = tf.where(j_valid, js, self.zeros)
+
+        # softplus(js) = log(1 + e^js)
+        z = tf.nn.softplus(js_safe) * self.sigma
+
+        # as z->0
+        #   z = s*log(1 + e^js) = s*e^js
+        #   log(1 + 1/z) = log(1/z) = -log(s*e^js) = -js - log(s)
+        q = tf.where(j_valid,
+                     tf.log1p(tf.reciprocal(z)),
+                     -js - tf.log(self.sigma))
+
+        rates = self.amplitude / (self.tau_ref + self.tau_rc * q)
+
+        return rates
+
+    def build_step(self, signals):
+        j = signals.gather(self.J_data)
+
+        rates = self._step(j)
+
+        signals.scatter(self.output_data, rates)
+
+
+class LIFBuilder(SoftLIFRateBuilder):
     """Build a group of :class:`~nengo:nengo.LIF` neuron operators."""
 
     def __init__(self, ops, signals, config):
-        super(LIFBuilder, self).__init__(ops, signals, config)
+        # note: we skip the SoftLIFRateBuilder init
+        # pylint: disable=bad-super-call
+        super(SoftLIFRateBuilder, self).__init__(ops, signals, config)
 
         self.min_voltage = signals.op_constant(
             [op.neurons for op in ops], [op.J.shape[0] for op in ops],
@@ -249,6 +290,10 @@ class LIFBuilder(LIFRateBuilder):
 
         self.voltage_data = signals.combine([op.states[0] for op in ops])
         self.refractory_data = signals.combine([op.states[1] for op in ops])
+
+        if self.config.lif_smoothing:
+            self.sigma = tf.constant(self.config.lif_smoothing,
+                                     dtype=signals.dtype)
 
     def _step(self, J, voltage, refractory, dt):
         delta_t = tf.clip_by_value(dt - refractory, self.zero, dt)
@@ -284,7 +329,9 @@ class LIFBuilder(LIFRateBuilder):
         if self.config.inference_only:
             spikes, voltage, refractory = spike_out, spike_voltage, spike_ref
         else:
-            rate_out = super(LIFBuilder, self)._step(J)
+            rate_out = (LIFRateBuilder._step(self, J)
+                        if self.config.lif_smoothing is None else
+                        SoftLIFRateBuilder._step(self, J))
 
             spikes, voltage, refractory = tf.cond(
                 signals.training,
@@ -296,40 +343,6 @@ class LIFBuilder(LIFRateBuilder):
         signals.mark_gather(self.J_data)
         signals.scatter(self.refractory_data, refractory)
         signals.scatter(self.voltage_data, voltage)
-
-
-class SoftLIFRateBuilder(LIFRateBuilder):
-    """Build a group of :class:`.SoftLIFRate` neuron operators."""
-
-    def __init__(self, ops, signals, config):
-        super(SoftLIFRateBuilder, self).__init__(ops, signals, config)
-
-        self.sigma = signals.op_constant(
-            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
-            "sigma", signals.dtype)
-
-    def build_step(self, signals):
-        j = signals.gather(self.J_data)
-
-        j -= self.one
-
-        js = j / self.sigma
-        j_valid = js > -20
-        js_safe = tf.where(j_valid, js, self.zeros)
-
-        # softplus(js) = log(1 + e^js)
-        z = tf.nn.softplus(js_safe) * self.sigma
-
-        # as z->0
-        #   z = s*log(1 + e^js) = s*e^js
-        #   log(1 + 1/z) = log(1/z) = -log(s*e^js) = -js - log(s)
-        q = tf.where(j_valid,
-                     tf.log1p(tf.reciprocal(z)),
-                     -js - tf.log(self.sigma))
-
-        rates = self.amplitude / (self.tau_ref + self.tau_rc * q)
-
-        signals.scatter(self.output_data, rates)
 
 
 @Builder.register(SimNeurons)

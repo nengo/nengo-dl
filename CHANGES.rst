@@ -29,6 +29,9 @@ Release History
 - Added ``nengo_dl.configure_settings(inference_only=True)`` option, which will
   build the network in inference-only mode.  This will slightly improve the
   inference speed of the simulation, but the network will not be trainable.
+- Added ``nengo_dl.configure_settings(lif_smoothing=x)`` option, which will
+  control how much smoothing is applied to the LIF function during gradient
+  calculations (if any).
 
 **Changed**
 

@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import SoftLIFRate
+from nengo_dl import utils, dists, SoftLIFRate
 
 
 def test_lif_deterministic(Simulator, seed):
@@ -70,20 +70,28 @@ def test_neuron_gradients(Simulator, neuron_type, seed):
 
 @pytest.mark.parametrize("rate, spiking", [
     (nengo.RectifiedLinear, nengo.SpikingRectifiedLinear),
-    (nengo.LIFRate, nengo.LIF)])
+    (nengo.LIFRate, nengo.LIF),
+    (SoftLIFRate, nengo.LIF)])
 def test_spiking_swap(Simulator, rate, spiking, seed):
     grads = []
     for neuron_type in [rate, spiking]:
         with nengo.Network(seed=seed) as net:
-            a = nengo.Node(output=[0])
+            if rate == SoftLIFRate and neuron_type == spiking:
+                utils.configure_settings(lif_smoothing=1.0)
+
+            a = nengo.Node(output=[1])
             b = nengo.Ensemble(50, 1, neuron_type=neuron_type())
             c = nengo.Ensemble(50, 1, neuron_type=neuron_type(amplitude=0.1))
             nengo.Connection(a, b, synapse=None)
-            nengo.Connection(b, c, synapse=None)
-            p = nengo.Probe(c)
-            p_neuron = nengo.Probe(c.neurons)
 
-        with Simulator(net) as sim:
+            # note: we avoid decoders, as the rate/spiking models may have
+            # different rate implementations in nengo, resulting in different
+            # decoders
+            nengo.Connection(b.neurons, c.neurons, synapse=None,
+                             transform=dists.He())
+            p = nengo.Probe(c.neurons)
+
+        with Simulator(net, dtype=tf.float64) as sim:
             grads.append(sim.sess.run(
                 tf.gradients(sim.tensor_graph.probe_arrays[p],
                              tf.trainable_variables()),
@@ -96,7 +104,7 @@ def test_spiking_swap(Simulator, rate, spiking, seed):
         with nengo.Simulator(net) as sim2:
             sim2.run(0.5)
 
-            assert np.allclose(sim.data[p_neuron], sim2.data[p_neuron])
+            assert np.allclose(sim.data[p], sim2.data[p])
 
     # check that the gradients match
     assert all(np.allclose(g0, g1) for g0, g1 in zip(*grads))

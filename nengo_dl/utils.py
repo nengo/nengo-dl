@@ -502,6 +502,11 @@ def configure_settings(**kwargs):
         Set to True if the network will only be run in inference mode (i.e.,
         no calls to :meth:`.Simulator.train`).  This may result in a small
         increase in the inference speed.
+    lif_smoothing : float
+        If specified, use the smoothed :class:`~.neurons.SoftLIFRate` neuron
+        model, with the given smoothing parameter (``sigma``), during training
+        to compute the gradient for :class:`~nengo:nengo.LIF` neurons (as
+        opposed to using :class:`~nengo:nengo.LIFRate`).
     """
 
     # get the toplevel network
@@ -530,7 +535,7 @@ def configure_settings(**kwargs):
                 obj_params.set_param("trainable", BoolParam("trainable", val,
                                                             optional=True))
         elif attr in ("planner", "sorter", "simplifications",
-                      "session_config", "inference_only"):
+                      "session_config", "inference_only", "lif_smoothing"):
             params.set_param(attr, Parameter(attr, val))
         else:
             raise ConfigError("%s is not a valid config parameter" % attr)

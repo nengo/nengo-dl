@@ -104,7 +104,8 @@ class Builder(object):
         return register_builder
 
 
-class BuildConfig(namedtuple("BuildConfig", ("inference_only",))):
+class BuildConfig(namedtuple("BuildConfig", (
+        "inference_only", "lif_smoothing"))):
     """
     Stores configuration parameters that may be relevant to parts of the
     build process.
@@ -114,6 +115,9 @@ class BuildConfig(namedtuple("BuildConfig", ("inference_only",))):
     inference_only : bool
         If True the network should be constructed in "inference only" mode
         (not including any support for training operations).
+    lif_smoothing : float
+        Smoothing parameter for :class:`~nengo:nengo.LIF`
+        gradient approximation.
     """
 
     __slots__ = ()

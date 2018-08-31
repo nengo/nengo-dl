@@ -40,7 +40,7 @@ class SoftLIFRate(LIFRate):
 
     sigma = NumberParam('sigma', low=0, low_open=True)
 
-    def __init__(self, sigma=1., **lif_args):
+    def __init__(self, sigma=1.0, **lif_args):
         super(SoftLIFRate, self).__init__(**lif_args)
         self.sigma = sigma
         self._epsilon = 1e-15
@@ -48,7 +48,7 @@ class SoftLIFRate(LIFRate):
     @property
     def _argreprs(self):
         args = super(SoftLIFRate, self)._argreprs
-        if self.sigma != 1.:
+        if self.sigma != 1.0:
             args.append("sigma=%s" % self.sigma)
         return args
 
@@ -62,15 +62,11 @@ class SoftLIFRate(LIFRate):
     def step_math(self, dt, J, output):
         """Compute rates in Hz for input current (incl. bias)"""
 
-        x = J - 1
-        y = x / self.sigma
-        valid = y < 34
-        y_v = y[valid]
-        np.exp(y_v, out=y_v)
-        np.log1p(y_v, out=y_v)
-        y_v *= self.sigma
-        x[valid] = y_v
-        x += self._epsilon
+        j = J - 1
+        js = j / self.sigma
+        j_valid = js > -20
 
-        output[:] = self.amplitude / (
-            self.tau_ref + self.tau_rc * np.log1p(1. / x))
+        z = np.where(js > 30, js, np.log1p(np.exp(js))) * self.sigma
+
+        q = np.where(j_valid, np.log1p(1 / z), -js - np.log(self.sigma))
+        output[:] = self.amplitude / (self.tau_ref + self.tau_rc * q)
