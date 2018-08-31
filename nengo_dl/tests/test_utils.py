@@ -1,12 +1,9 @@
-from nengo import ensemble, Network, Connection, Ensemble
-from nengo.builder import Model
-from nengo.exceptions import (SimulationError, ValidationError, ConfigError,
-                              NetworkContextError)
+from nengo.exceptions import SimulationError
 import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import utils, builder
+from nengo_dl import utils
 
 
 def test_sanitize_name():
@@ -138,46 +135,6 @@ def test_find_non_differentiable():
     utils.find_non_differentiable([x], [z])
 
 
-def test_configure_trainable():
-    with Network() as net:
-        conf = net.config
-        utils.configure_settings(trainable=None)
-
-    assert conf[Ensemble].trainable is None
-    assert conf[Connection].trainable is None
-    assert conf[ensemble.Neurons].trainable is None
-
-    # check that we can set trainable after it is set up for configuration
-    conf[Ensemble].trainable = True
-
-    # check that boolean value is enforced
-    with pytest.raises(ValidationError):
-        conf[Ensemble].trainable = 5
-
-    assert conf[Ensemble].trainable is True
-
-    # check that calling configure again overrides previous changes
-    with net:
-        utils.configure_settings(trainable=None)
-
-    assert conf[Ensemble].trainable is None
-
-    # check that non-None defaults work
-    with net:
-        utils.configure_settings(trainable=False)
-
-    assert conf[Ensemble].trainable is False
-
-    # check that calling configure outside network context is an error
-    with pytest.raises(NetworkContextError):
-        utils.configure_settings(trainable=None)
-
-    # check that passing an invalid parameter raises an error
-    with net:
-        with pytest.raises(ConfigError):
-            utils.configure_settings(troinable=None)
-
-
 def test_progress_bar():
     progress = utils.ProgressBar("test", max_value=10).start()
 
@@ -198,24 +155,3 @@ def test_progress_bar():
     # check that closing the parent process closes the sub
     assert sub2.finished
     assert progress.finished
-
-
-@pytest.mark.parametrize("as_model", (True, False))
-def test_session_config(Simulator, as_model):
-    with Network() as net:
-        utils.configure_settings(session_config={
-            "graph_options.optimizer_options.opt_level": 21,
-            "gpu_options.allow_growth": True})
-
-    if as_model:
-        # checking that config settings work when we pass in a model instead of
-        # network
-        model = Model(dt=0.001, builder=builder.NengoBuilder())
-        model.build(net)
-        net = None
-    else:
-        model = None
-
-    with Simulator(net, model=model) as sim:
-        assert sim.sess._config.graph_options.optimizer_options.opt_level == 21
-        assert sim.sess._config.gpu_options.allow_growth

@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import configure_settings, tensor_layer, dists, TensorNode, utils
+from nengo_dl import configure_settings, tensor_layer, dists, TensorNode
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
 
@@ -1265,7 +1265,7 @@ def test_fill_feed(Simulator):
                                          nengo.LIF()))
 def test_inference_only(Simulator, neuron_type, seed):
     with nengo.Network(seed=seed) as net:
-        utils.configure_settings(inference_only=False)
+        configure_settings(inference_only=False)
 
         a = nengo.Node([0])
         b = nengo.Ensemble(10, 1, neuron_type=neuron_type)
@@ -1278,7 +1278,7 @@ def test_inference_only(Simulator, neuron_type, seed):
         assert sim.model.sig[c]["weights"].trainable
 
     with net:
-        utils.configure_settings(inference_only=True)
+        configure_settings(inference_only=True)
 
     with Simulator(net) as sim2:
         sim2.run(0.1)

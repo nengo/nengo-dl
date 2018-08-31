@@ -6,7 +6,7 @@ from nengo.tests import test_synapses, test_learning_rules
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl import simulator, utils
+from nengo_dl import simulator, config
 
 
 # set looser tolerances on synapse tests
@@ -111,8 +111,8 @@ class Simulator(simulator.Simulator):
             with net:
                 # change the default value of inference_only (if it hasn't
                 # been specifically set)
-                if utils.get_setting(net, "inference_only") is None:
-                    utils.configure_settings(inference_only=(
+                if config.get_setting(net, "inference_only") is None:
+                    config.configure_settings(inference_only=(
                         os.environ["NENGO_DL_TEST_INFERENCE_ONLY"] ==
                         "True"))
 

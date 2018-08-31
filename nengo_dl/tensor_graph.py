@@ -15,7 +15,8 @@ from nengo.neurons import Direct
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node
+from nengo_dl import (builder, graph_optimizer, signals, utils, tensor_node,
+                      config)
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +67,8 @@ class TensorGraph(object):
         self.device = device
         self.graph = tf.Graph()
         self.signals = signals.SignalDict(self.dtype, self.minibatch_size)
-        self.inference_only = utils.get_setting(model, "inference_only", False)
+        self.inference_only = config.get_setting(model, "inference_only",
+                                                 False)
 
         # find invariant inputs (nodes that don't receive any input other
         # than the simulation time). we'll compute these outside the simulation
@@ -98,7 +100,7 @@ class TensorGraph(object):
         logger.info("Initial plan length: %d", len(operators))
 
         # apply graph simplification functions
-        simplifications = utils.get_setting(model, "simplifications", [
+        simplifications = config.get_setting(model, "simplifications", [
             graph_optimizer.remove_constant_copies,
             graph_optimizer.remove_unmodified_resets,
             graph_optimizer.remove_zero_incs,
@@ -114,7 +116,7 @@ class TensorGraph(object):
                     operators = simp(operators)
 
         # group mergeable operators
-        planner = utils.get_setting(
+        planner = config.get_setting(
             model, "planner", graph_optimizer.tree_planner)
 
         with progress.sub("merging operators", max_value=None):
@@ -125,7 +127,7 @@ class TensorGraph(object):
         # is only written to by one op and read by one op
 
         # order signals/operators to promote contiguous reads
-        sorter = utils.get_setting(
+        sorter = config.get_setting(
             model, "sorter", graph_optimizer.order_signals)
 
         with progress.sub("ordering signals", max_value=None):
@@ -207,14 +209,14 @@ class TensorGraph(object):
         # pre-build stage
         sub = progress.sub("pre-build stage")
         self.op_builds = {}
-        config = builder.BuildConfig(
+        build_config = builder.BuildConfig(
             inference_only=self.inference_only,
-            lif_smoothing=utils.get_setting(self.model, "lif_smoothing"))
+            lif_smoothing=config.get_setting(self.model, "lif_smoothing"))
         for ops in sub(self.plan):
             with self.graph.name_scope(utils.sanitize_name(
                     builder.Builder.builders[type(ops[0])].__name__)):
                 builder.Builder.pre_build(ops, self.signals, self.op_builds,
-                                          config)
+                                          build_config)
 
         # build stage
         sub = progress.sub("unrolled step ops")
@@ -725,22 +727,22 @@ class TensorGraph(object):
         ``net.config[nengo.Ensemble].trainable = False``)
         """
 
-        def get_trainable(config, obj, network_trainable):
+        def get_trainable(net_config, obj, network_trainable):
             """Looks up the current value of ``obj.trainable``."""
 
             if self.inference_only:
                 return False
 
             try:
-                if obj in config.params:
+                if obj in net_config.params:
                     # priority #1: instance config
-                    trainable = config[obj].trainable
+                    trainable = net_config[obj].trainable
                 elif network_trainable is not 1:
                     # priority #2: network setting
                     trainable = network_trainable
                 else:
                     # priority #3: class config
-                    trainable = config[obj].trainable
+                    trainable = net_config[obj].trainable
             except (ConfigError, AttributeError):
                 trainable = network_trainable
 
@@ -750,23 +752,23 @@ class TensorGraph(object):
             # trainable (True) or just defaulting to trainable (1)
             return 1 if trainable is None else trainable
 
-        def mark_network(config, net, network_trainable):
+        def mark_network(net_config, net, network_trainable):
             """Recursively marks the signals for objects within each
             subnetwork."""
 
             for subnet in net.networks:
-                mark_network(config, subnet,
-                             get_trainable(config, subnet, network_trainable))
+                mark_network(net_config, subnet,
+                             get_trainable(net_config, subnet, network_trainable))
 
             # encoders and biases are trainable
             for ens in net.ensembles:
-                ens_trainable = get_trainable(config, ens, network_trainable)
+                ens_trainable = get_trainable(net_config, ens, network_trainable)
 
                 self.model.sig[ens]["encoders"].trainable = ens_trainable
                 self.model.sig[ens]["encoders"].minibatched = False
 
                 if not isinstance(ens.neuron_type, Direct):
-                    neurons_trainable = get_trainable(config, ens.neurons,
+                    neurons_trainable = get_trainable(net_config, ens.neurons,
                                                       network_trainable)
                     if neurons_trainable is 1:
                         neurons_trainable = ens_trainable
@@ -780,7 +782,7 @@ class TensorGraph(object):
                 # note: this doesn't include probe connections, since they
                 # aren't added to the network
                 self.model.sig[conn]["weights"].trainable = get_trainable(
-                    config, conn, network_trainable)
+                    net_config, conn, network_trainable)
                 self.model.sig[conn]["weights"].minibatched = False
 
             # parameters can't be modified by an online Nengo learning rule
@@ -823,9 +825,9 @@ class TensorGraph(object):
                 "No top-level network in model; assuming no trainable "
                 "parameters", UserWarning)
         else:
-            config = self.model.toplevel.config
-            mark_network(config, self.model.toplevel,
-                         get_trainable(config, self.model.toplevel, 1))
+            net_config = self.model.toplevel.config
+            mark_network(net_config, self.model.toplevel,
+                         get_trainable(net_config, self.model.toplevel, 1))
 
             # the connections to connection probes are not trainable, but
             # also not minibatched

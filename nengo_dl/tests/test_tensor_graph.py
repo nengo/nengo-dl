@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import tensor_graph, utils, graph_optimizer
+from nengo_dl import tensor_graph, utils, graph_optimizer, config
 from nengo_dl.tests import dummies
 
 
@@ -133,7 +133,7 @@ def test_mark_signals():
 
 def test_mark_signals_config():
     with nengo.Network() as net:
-        utils.configure_settings(trainable=None)
+        config.configure_settings(trainable=None)
         net.config[nengo.Ensemble].trainable = False
 
         with nengo.Network():
@@ -179,7 +179,7 @@ def test_mark_signals_config():
 
     # check that learning rule connections can be manually set to True
     with nengo.Network() as net:
-        utils.configure_settings(trainable=None)
+        config.configure_settings(trainable=None)
 
         a = nengo.Ensemble(10, 1)
         b = nengo.Ensemble(10, 1)
@@ -197,7 +197,7 @@ def test_mark_signals_config():
     assert model.sig[conn0]["weights"].trainable
 
     with nengo.Network() as net:
-        utils.configure_settings(trainable=None)
+        config.configure_settings(trainable=None)
 
         a = nengo.Node([0])
         ens = nengo.Ensemble(10, 1)

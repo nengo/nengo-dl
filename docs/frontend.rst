@@ -14,5 +14,6 @@ inserting TensorFlow code into a Nengo model.
     simulator
     training
     tensor_node
+    config
     extra_objects
 

@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import utils, dists, SoftLIFRate
+from nengo_dl import config, dists, SoftLIFRate
 
 
 def test_lif_deterministic(Simulator, seed):
@@ -77,7 +77,7 @@ def test_spiking_swap(Simulator, rate, spiking, seed):
     for neuron_type in [rate, spiking]:
         with nengo.Network(seed=seed) as net:
             if rate == SoftLIFRate and neuron_type == spiking:
-                utils.configure_settings(lif_smoothing=1.0)
+                config.configure_settings(lif_smoothing=1.0)
 
             a = nengo.Node(output=[1])
             b = nengo.Ensemble(50, 1, neuron_type=neuron_type())

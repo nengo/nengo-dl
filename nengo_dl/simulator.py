@@ -25,7 +25,7 @@ import tensorflow as tf
 from tensorflow.python.client.timeline import Timeline
 from tensorflow.python.ops import gradient_checker
 
-from nengo_dl import utils
+from nengo_dl import utils, config
 from nengo_dl.builder import NengoBuilder
 from nengo_dl.tensor_graph import TensorGraph
 
@@ -179,7 +179,7 @@ class Simulator(object):
 
         # start session
 
-        config = tf.ConfigProto(
+        session_config = tf.ConfigProto(
             allow_soft_placement=False,
             log_device_placement=False,
         )
@@ -190,16 +190,16 @@ class Simulator(object):
         #     tf.OptimizerOptions.ON_1)
 
         # set any config options specified by user
-        config_settings = utils.get_setting(self.model, "session_config", {})
+        config_settings = config.get_setting(self.model, "session_config", {})
         for c, v in config_settings.items():
             attrs = c.split(".")
-            x = config
+            x = session_config
             for a in attrs[:-1]:
                 x = getattr(x, a)
             setattr(x, attrs[-1], v)
 
         self.sess = tf.Session(graph=self.tensor_graph.graph,
-                               config=config)
+                               config=session_config)
 
         self.reset(seed=seed)
 

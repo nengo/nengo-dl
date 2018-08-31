@@ -32,6 +32,8 @@ Release History
 - Added ``nengo_dl.configure_settings(lif_smoothing=x)`` option, which will
   control how much smoothing is applied to the LIF function during gradient
   calculations (if any).
+- Added `documentation <https://www.nengo.ai/nengo-dl/config.html>`__ on the
+  various NengoDL config options.
 
 **Changed**
 
@@ -48,6 +50,7 @@ Release History
 - Increased minimum NumPy version to 1.12.1 (required by TensorFlow)
 - Sort write signals as well as reads during graph optimization (encourages
   tighter partitioning, which can improve training/inference speed).
+- Moved ``configure_settings`` from ``utils.py`` to ``config.py``.
 
 **Fixed**
 
