@@ -44,7 +44,10 @@ def test_soft_lif(Simulator, sigma, seed):
         _, nengo_curves = nengo.utils.ensemble.tuning_curves(ens, sim)
         sim.run_steps(30)
 
-    with Simulator(net, dtype=tf.float64) as sim2:
+    with net:
+        config.configure_settings(dtype=tf.float64)
+
+    with Simulator(net) as sim2:
         _, nengo_dl_curves = nengo.utils.ensemble.tuning_curves(ens, sim2)
         sim2.run_steps(30)
 
@@ -76,6 +79,8 @@ def test_spiking_swap(Simulator, rate, spiking, seed):
     grads = []
     for neuron_type in [rate, spiking]:
         with nengo.Network(seed=seed) as net:
+            config.configure_settings(dtype=tf.float64)
+
             if rate == SoftLIFRate and neuron_type == spiking:
                 config.configure_settings(lif_smoothing=1.0)
 
@@ -91,7 +96,7 @@ def test_spiking_swap(Simulator, rate, spiking, seed):
                              transform=dists.He())
             p = nengo.Probe(c.neurons)
 
-        with Simulator(net, dtype=tf.float64) as sim:
+        with Simulator(net) as sim:
             grads.append(sim.sess.run(
                 tf.gradients(sim.tensor_graph.probe_arrays[p],
                              tf.trainable_variables()),

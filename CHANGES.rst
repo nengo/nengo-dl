@@ -14,9 +14,9 @@ Release History
 
    - Added
    - Changed
+   - Fixed
    - Deprecated
    - Removed
-   - Fixed
 
 1.2.0 (unreleased)
 ------------------
@@ -58,6 +58,11 @@ Release History
   ``nengo_dl.dists.VarianceScaling(..., distribution="normal")`` did not
   respect the seed if one was given.
 
+**Deprecated**
+
+- The ``Simulator(dtype=...)`` argument has been deprecated; use
+  ``nengo_dl.configure_settings(dtype=...)`` instead.  Will be removed in
+  1.3.0.
 
 1.1.0 (July 24, 2018)
 ---------------------

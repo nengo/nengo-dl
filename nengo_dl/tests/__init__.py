@@ -90,11 +90,12 @@ class Simulator(simulator.Simulator):
     def __init__(self, net, *args, **kwargs):
         logging.basicConfig(level=logging.WARNING)
 
-        if "NENGO_DL_TEST_PRECISION" in os.environ:
-            if os.environ["NENGO_DL_TEST_PRECISION"] == "32":
-                kwargs.setdefault("dtype", tf.float32)
-            else:
-                kwargs.setdefault("dtype", tf.float64)
+        if ("NENGO_DL_TEST_PRECISION" in os.environ and net is not None and
+                config.get_setting(net, "dtype") is None):
+            with net:
+                config.configure_settings(dtype=(
+                    tf.float32 if os.environ["NENGO_DL_TEST_PRECISION"] == "32"
+                    else tf.float64))
 
         if "NENGO_DL_TEST_UNROLL" in os.environ:
             kwargs.setdefault("unroll_simulation",
@@ -107,13 +108,11 @@ class Simulator(simulator.Simulator):
             else:
                 kwargs.setdefault("device", os.environ["NENGO_DL_TEST_DEVICE"])
 
-        if "NENGO_DL_TEST_INFERENCE_ONLY" in os.environ and net is not None:
+        if ("NENGO_DL_TEST_INFERENCE_ONLY" in os.environ and net is not None
+                and config.get_setting(net, "inference_only") is None):
             with net:
-                # change the default value of inference_only (if it hasn't
-                # been specifically set)
-                if config.get_setting(net, "inference_only") is None:
-                    config.configure_settings(inference_only=(
-                        os.environ["NENGO_DL_TEST_INFERENCE_ONLY"] ==
-                        "True"))
+                config.configure_settings(inference_only=(
+                    os.environ["NENGO_DL_TEST_INFERENCE_ONLY"] ==
+                    "True"))
 
         super(Simulator, self).__init__(net, *args, **kwargs)

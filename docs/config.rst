@@ -199,6 +199,16 @@ known as the :class:`~.neurons.SoftLIFRate` neuron model.
 gradients to be approximated by ``SoftLIFRate`` instead of ``LIFRate``, with
 ``sigma=x``.
 
+dtype
+^^^^^
+
+This specifies the floating point precision to be used for the simulator's
+internal computations.  It can be either ``tf.float32`` or ``tf.float64``,
+for 32 or 64-bit precision, respectively.  32-bit precision is the default,
+as it is faster, will use less memory, and in most cases will not make a
+difference in the results of the simulation.  However, if very precise outputs
+are required then this can be changed to ``tf.float64``.
+
 API
 ---
 

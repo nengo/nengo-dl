@@ -49,6 +49,8 @@ def configure_settings(**kwargs):
         model, with the given smoothing parameter (``sigma``),
         to compute the gradient for :class:`~nengo:nengo.LIF` neurons (as
         opposed to using :class:`~nengo:nengo.LIFRate`).
+    dtype : ``tf.DType``
+        Set the floating point precision for simulation values.
     """
 
     # get the toplevel network
@@ -77,7 +79,8 @@ def configure_settings(**kwargs):
                 obj_params.set_param("trainable", BoolParam("trainable", val,
                                                             optional=True))
         elif attr in ("planner", "sorter", "simplifications",
-                      "session_config", "inference_only", "lif_smoothing"):
+                      "session_config", "inference_only", "lif_smoothing",
+                      "dtype"):
             params.set_param(attr, Parameter(attr, val))
         else:
             raise ConfigError("%s is not a valid config parameter" % attr)

@@ -51,7 +51,7 @@ class Simulator(object):
     model : :class:`~nengo:nengo.builder.Model`, optional
         Pre-built model object
     dtype : ``tf.DType``, optional
-        Floating point precision to use for simulation
+        Deprecated, use ``nengo_dl.configure_settings(dtype=...)`` instead.
     device : None or ``"/cpu:0"`` or ``"/gpu:[0-n]"``, optional
         Device on which to execute computations (if None then uses the
         default device as determined by TensorFlow)
@@ -106,7 +106,7 @@ class Simulator(object):
     ]
 
     def __init__(self, network, dt=0.001, seed=None, model=None,
-                 dtype=tf.float32, device=None, unroll_simulation=1,
+                 dtype=None, device=None, unroll_simulation=1,
                  minibatch_size=None, tensorboard=None, progress_bar=True):
         self.closed = False
         self.unroll = unroll_simulation
@@ -150,6 +150,14 @@ class Simulator(object):
             else:
                 p = ProgressBar("Building network", "Build")
                 self.model.build(network, progress=p)
+
+        if dtype is not None:
+            warnings.warn(
+                "dtype parameter is deprecated; use "
+                "nengo_dl.configure_settings(dtype=...) instead",
+                DeprecationWarning)
+        else:
+            dtype = config.get_setting(self.model, "dtype", tf.float32)
 
         # set up tensorflow graph plan
         with ProgressBar("Optimizing graph", "Optimization",

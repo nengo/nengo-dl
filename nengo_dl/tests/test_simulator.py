@@ -1296,3 +1296,9 @@ def test_inference_only(Simulator, neuron_type, seed):
 
         with pytest.raises(ValidationError):
             sim2.check_gradients()
+
+
+def test_dtype(Simulator):
+    with pytest.warns(DeprecationWarning):
+        with Simulator(None, dtype=tf.float32) as sim:
+            assert sim.tensor_graph.dtype == tf.float32
