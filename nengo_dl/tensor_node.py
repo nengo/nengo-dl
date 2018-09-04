@@ -10,6 +10,26 @@ import tensorflow as tf
 from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
 
 
+def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
+    if not isinstance(output, tf.Tensor):
+        raise ValidationError("TensorNode function must return a Tensor "
+                              "(got %s)" % type(output), attr="tensor_func")
+
+    shape = output.get_shape()
+    if (shape.ndims != 2 or
+            (minibatch_size is not None and shape[0] != minibatch_size) or
+            (output_d is not None and shape[1] != output_d)):
+        raise ValidationError("TensorNode output should have shape (%s, %s) "
+                              "(got shape %s)" % (minibatch_size, output_d,
+                                                  output.get_shape()),
+                              attr="tensor_func")
+
+    if dtype is not None and output.dtype != dtype:
+        raise ValidationError("TensorNode output should have dtype %s "
+                              "(got %s)" % (dtype, output.dtype),
+                              attr="tensor_func")
+
+
 class TensorFuncParam(Parameter):
     """Performs validation on the function passed to TensorNode, and sets
     ``size_out`` if necessary."""
@@ -41,14 +61,7 @@ class TensorFuncParam(Parameter):
                     "Calling TensorNode function with arguments %s produced "
                     "an error:\n%s" % (args, e), attr=self.name, obj=node)
 
-        if not isinstance(result, tf.Tensor):
-            raise ValidationError("TensorNode function must return a Tensor",
-                                  attr=self.name, obj=node)
-
-        if result.get_shape().ndims != 2:
-            raise ValidationError("Node output must be a minibatched vector "
-                                  "(got shape %s)" % result.get_shape(),
-                                  attr=self.name, obj=node)
+        validate_output(result)
 
         return result.get_shape()[1].value
 
@@ -223,6 +236,9 @@ class SimTensorNodeBuilder(OpBuilder):
             input = tf.transpose(input, (1, 0))
 
             output = self.func(signals.time, input)
+
+        validate_output(output, minibatch_size=signals.minibatch_size,
+                        output_d=self.dst_data.shape[0], dtype=signals.dtype)
 
         # move minibatch dimension back to end
         output = tf.transpose(output, (1, 0))

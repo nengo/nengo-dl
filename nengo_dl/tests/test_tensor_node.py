@@ -7,35 +7,78 @@ import tensorflow as tf
 from nengo_dl import TensorNode, configure_settings, reshaped, tensor_layer
 
 
-def test_validation():
+def test_validation(Simulator):
     with nengo.Network() as net:
+        # not a callable
         with pytest.raises(ValidationError):
             TensorNode([0])
 
+        # size out < 1
         with pytest.raises(ValidationError):
             TensorNode(lambda t: t, size_out=0)
 
+        # wrong call signature
         with pytest.raises(ValidationError):
             TensorNode(lambda a, b, c: a)
 
+        # returning None
         with pytest.raises(ValidationError):
             TensorNode(lambda x: None)
 
+        # returning non-tensor
         with pytest.raises(ValidationError):
             TensorNode(lambda x: [0])
 
+        # returning wrong number of dimensions
         with pytest.raises(ValidationError):
             TensorNode(lambda t: tf.zeros((2, 2, 2)))
 
+        # correct output
         n = TensorNode(lambda t: tf.zeros((5, 2)))
         assert n.size_out == 2
 
-        n = TensorNode(lambda t: tf.zeros((5, 2)), size_out=4)
-        assert n.size_out == 4
-
+    # can't build tensornode in regular Nengo simulator
     with pytest.raises(BuildError):
-        with nengo.Simulator(net):
-            pass
+        nengo.Simulator(net)
+
+    # these tensornodes won't be validated at creation, because size_out
+    # is specified. instead the validation occurs when the network is built
+
+    # None output
+    with nengo.Network() as net:
+        TensorNode(lambda t: None, size_out=2)
+    with pytest.raises(ValidationError):
+        Simulator(net)
+
+    # wrong number of dimensions
+    with nengo.Network() as net:
+        TensorNode(lambda t: tf.zeros((1, 2, 2)), size_out=2)
+    with pytest.raises(ValidationError):
+        Simulator(net)
+
+    # wrong minibatch size
+    with nengo.Network() as net:
+        TensorNode(lambda t: tf.zeros((3, 2)), size_out=2)
+    with pytest.raises(ValidationError):
+        Simulator(net, minibatch_size=2)
+
+    # wrong output d
+    with nengo.Network() as net:
+        TensorNode(lambda t: tf.zeros((3, 2)), size_out=3)
+    with pytest.raises(ValidationError):
+        Simulator(net, minibatch_size=3)
+
+    # wrong dtype
+    with nengo.Network() as net:
+        TensorNode(lambda t: tf.zeros((3, 2), dtype=tf.int32), size_out=2)
+    with pytest.raises(ValidationError):
+        Simulator(net, minibatch_size=3)
+
+    # make sure that correct output _does_ pass
+    with nengo.Network() as net:
+        TensorNode(lambda t: tf.zeros((3, 2), dtype=t.dtype), size_out=2)
+    with Simulator(net, minibatch_size=3):
+        pass
 
 
 def test_node(Simulator):

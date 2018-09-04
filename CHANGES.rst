@@ -34,6 +34,8 @@ Release History
   calculations (if any).
 - Added `documentation <https://www.nengo.ai/nengo-dl/config.html>`__ on the
   various NengoDL config options.
+- Added better validation for TensorNode output when ``size_out != None``
+  (`#51 <https://github.com/nengo/nengo-dl/issues/51>`_)
 
 **Changed**
 
