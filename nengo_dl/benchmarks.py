@@ -555,7 +555,73 @@ def matmul_vs_reduce():  # pragma: no cover
     plt.show()
 
 
-# TODO: set up something to automatically run some basic ci performance tests
+@main.command()
+@click.option("--device", default="/gpu:0",
+              help="TensorFlow device on which to run benchmarks")
+def performance_samples(device):  # pragma: no cover
+    """
+    Run a brief sample of the benchmarks to check overall performance.
+
+    This is mainly used to quickly check that there haven't been any unexpected
+    performance regressions.
+    """
+
+    # TODO: automatically run some basic performance tests during CI
+
+    default_kwargs = {"n_steps": 1000, "device": device,
+                      "unroll_simulation": 25,
+                      "progress_bar": False, "do_profile": False}
+
+    print("cconv + relu")
+    net = cconv(128, 64, nengo.RectifiedLinear())
+    run_profile(net, minibatch_size=64, **default_kwargs)
+
+    print("cconv + lif")
+    net = cconv(128, 64, nengo.LIF())
+    run_profile(net, minibatch_size=64, **default_kwargs)
+
+    print("integrator training + relu")
+    net = integrator(128, 32, nengo.RectifiedLinear())
+    run_profile(net, minibatch_size=64, train=True, **default_kwargs)
+
+    print("integrator training + lif")
+    net = integrator(128, 32, nengo.LIF())
+    run_profile(net, minibatch_size=64, train=True, **default_kwargs)
+
+    print("random")
+    net = random_network(128, 64, nengo.RectifiedLinear(), n_ensembles=50,
+                         connections_per_ensemble=5, seed=0)
+    run_profile(net, **default_kwargs)
+
+    print("spaun")
+    net = spaun(1)
+    run_profile(net, **default_kwargs)
+
+    # example benchmark data
+    # CPU: 4.00GHz Intel Core i7-6700K
+    # GPU: NVIDIA GeForce GTX 980 Ti
+    # TensorFlow version: 1.10.0
+    # Nengo version: 2.8.0
+    # NengoDL version: 1.2.0
+
+    # cconv + relu
+    # Execution time: 1.0098507404327393
+
+    # cconv + lif
+    # Execution time: 2.074916362762451
+
+    # integrator training + relu
+    # Execution time: 1.8205187320709229
+
+    # integrator training + lif
+    # Execution time: 2.669060707092285
+
+    # random
+    # Execution time: 21.686023235321045
+
+    # spaun
+    # Execution time: 9.540623426437378
+
 
 if __name__ == "__main__":
     main(obj={})  # pragma: no cover
