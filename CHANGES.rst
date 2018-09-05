@@ -21,6 +21,11 @@ Release History
 1.2.1 (unreleased)
 ------------------
 
+**Added**
+
+- Added a warning if users run one-timestep training with a network containing
+  synaptic filters.
+
 **Changed**
 
 - Test Simulator parameters are now controlled through pytest arguments,

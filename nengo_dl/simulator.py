@@ -500,6 +500,14 @@ class Simulator(object):
             raise ValidationError(
                 "Network was created with inference_only=True, cannot "
                 "be trained", "inference_only")
+        if (n_steps == 1 and self.model.toplevel is not None and
+                any(x.synapse is not None for x in
+                    (self.model.toplevel.all_connections +
+                     list(targets.keys())))):
+            warnings.warn(
+                "Training for one timestep, but the network contains "
+                "synaptic filters (which will introduce at least a "
+                "one-timestep delay); did you mean to set synapse=None?")
 
         # check for non-differentiable elements in graph
         # utils.find_non_differentiable(

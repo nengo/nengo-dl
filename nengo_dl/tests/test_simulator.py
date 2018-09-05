@@ -1292,7 +1292,7 @@ def test_inference_only(Simulator, neuron_type, seed):
         # validation checks (can't do train/gradients in inference-only mode)
         with pytest.raises(ValidationError):
             sim2.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1))},
-                      tf.train.GradientDescentOptimizer(1))
+                       tf.train.GradientDescentOptimizer(1))
 
         with pytest.raises(ValidationError):
             sim2.check_gradients()
@@ -1302,3 +1302,38 @@ def test_dtype(Simulator):
     with pytest.warns(DeprecationWarning):
         with Simulator(None, dtype=tf.float32) as sim:
             assert sim.tensor_graph.dtype == tf.float32
+
+
+@pytest.mark.training
+def test_synapse_warning(Simulator):
+    with nengo.Network() as net:
+        a = nengo.Node([0])
+        b = nengo.Ensemble(10, 1)
+        c = nengo.Connection(a, b, synapse=1)
+        p = nengo.Probe(b)
+        p2 = nengo.Probe(b)
+
+    def does_warn(n_steps=1):
+        with Simulator(net, unroll_simulation=1) as sim:
+            with pytest.warns(UserWarning) as rec:
+                sim.train({a: np.zeros((1, n_steps, 1))},
+                          {p: np.zeros((1, n_steps, 1))},
+                          tf.train.GradientDescentOptimizer(0))
+        return any(str(w.message).startswith("Training for one timestep")
+                   for w in rec)
+
+    # warning from connection
+    assert does_warn()
+
+    # warning from probe
+    c.synapse = None
+    p.synapse = 1
+    assert does_warn()
+
+    # no warning for >1 step training
+    assert not does_warn(n_steps=2)
+
+    # no warning from non-target probe
+    p.synapse = None
+    p2.synapse = 1
+    assert not does_warn()
