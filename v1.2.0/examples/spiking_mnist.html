@@ -1,0 +1,928 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Optimizing spiking neural networks &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Optimizing a cognitive model" href="spa_retrieval.html" />
+    <link rel="prev" title="Inserting a TensorFlow network into a Nengo model" href="pretrained_model.html" /> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../frontend.html">User documentation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="nef_init.html">Optimizing the parameters of a Nengo model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pretrained_model.html">Inserting a TensorFlow network into a Nengo model</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Optimizing spiking neural networks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spa_retrieval.html">Optimizing a cognitive model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spa_memory.html">Optimizing a cognitive model with temporal dynamics</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backend.html">Developer documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+        
+      <li>Optimizing spiking neural networks</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/examples/spiking_mnist.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
+div.nboutput,
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput div.prompt pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput div.prompt pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput div.prompt,
+div.nboutput div.prompt {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput div.input_area,
+div.nboutput div.output_area {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput div.input_area {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Optimizing-spiking-neural-networks">
+<h1>Optimizing spiking neural networks<a class="headerlink" href="#Optimizing-spiking-neural-networks" title="Permalink to this headline">¶</a></h1>
+<p>Almost all deep learning methods are based on <a class="reference external" href="https://en.wikipedia.org/wiki/Gradient_descent">gradient
+descent</a>, which means
+that the network being optimized needs to be differentiable. Deep neural
+networks are usually built using rectified linear or sigmoid neurons, as
+these are differentiable nonlinearities. However, in biological neural
+modelling we often want to use spiking neurons, which are not
+differentiable. So the challenge is how to apply deep learning methods
+to spiking neural networks.</p>
+<p>A method for accomplishing this is presented in <a class="reference external" href="https://arxiv.org/abs/1611.05141">Hunsberger and
+Eliasmith (2016)</a>. The basic idea
+is to use a differentiable approximation of the spiking neurons during
+the training process, and the actual spiking neurons during inference.
+NengoDL will perform these transformations automatically if the user
+tries to optimize a model containing a spiking neuron model that has an
+equivalent, differentiable rate-based implementation. In this example we
+will use these techniques to develop a network to classify handwritten
+digits (<a class="reference external" href="http://yann.lecun.com/exdb/mnist/">MNIST</a>) in a spiking
+convolutional network.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+
+<span class="kn">import</span> <span class="nn">gzip</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">from</span> <span class="nn">urllib.request</span> <span class="kn">import</span> <span class="n">urlretrieve</span>
+<span class="kn">import</span> <span class="nn">zipfile</span>
+
+<span class="kn">import</span> <span class="nn">nengo</span>
+<span class="kn">import</span> <span class="nn">nengo_dl</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+</pre></div>
+</div>
+</div>
+<p>First we’ll load the training data, the MNIST digits/labels.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">urlretrieve</span><span class="p">(</span><span class="s2">&quot;http://deeplearning.net/data/mnist/mnist.pkl.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;mnist.pkl.gz&quot;</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;mnist.pkl.gz&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">train_data</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">test_data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;latin1&quot;</span><span class="p">)</span>
+<span class="n">train_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span>
+<span class="n">test_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">test_data</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="p">(</span><span class="n">train_data</span><span class="p">,</span> <span class="n">test_data</span><span class="p">):</span>
+    <span class="n">one_hot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">10</span><span class="p">))</span>
+    <span class="n">one_hot</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">one_hot</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">],</span> <span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">i</span><span class="p">])));</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking_mnist_3_0.png" src="../_images/examples_spiking_mnist_3_0.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking_mnist_3_1.png" src="../_images/examples_spiking_mnist_3_1.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking_mnist_3_2.png" src="../_images/examples_spiking_mnist_3_2.png" />
+</div>
+</div>
+<p>We will use
+<a class="reference external" href="https://www.nengo.ai/nengo-dl/tensor_node.html">TensorNodes</a> to
+construct the network, as they allow us to easily include features such
+as convolutional connections. To make things even easier, we’ll use
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.tensor_layer</span></code>. This is a utility function for constructing
+<code class="docutils literal notranslate"><span class="pre">TensorNodes</span></code> that mimics the layer-based syntax of many deep learning
+packages (e.g.
+<a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/layers">tf.layers</a>).
+The full documentation for this function can be found
+<a class="reference external" href="https://www.nengo.ai/nengo-dl/tensor_node.html">here</a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> is used to build a sequence of layers, where each layer
+takes the output of the previous layer and applies some transformation
+to it. So when we build a <code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> we pass it the input to the
+layer, the transformation we want to apply (expressed as a function that
+accepts a <code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> as input and produces a <code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> as
+output), and any arguments to that transformation function.
+<code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> also has optional <code class="docutils literal notranslate"><span class="pre">transform</span></code> and <code class="docutils literal notranslate"><span class="pre">synapse</span></code>
+parameters that set those respective values on the Connection from the
+previous layer to the one being constructed.</p>
+<p>Normally all signals in a Nengo model are (batched) vectors. However,
+certain layer functions, such as convolutional layers, may expect a
+different shape for their inputs. If the <code class="docutils literal notranslate"><span class="pre">shape_in</span></code> argument is
+specified for a <code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> then the inputs to the layer will
+automatically be reshaped to the given shape. Note that this shape does
+not include the batch dimension on the first axis, as that will be
+automatically set by the simulation.</p>
+<p><code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> can also be passed a Nengo NeuronType, instead of a
+Tensor function. In this case <code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> will construct an
+Ensemble implementing the given neuron nonlinearity (the rest of the
+arguments work the same).</p>
+<p>Note that <code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> is just a syntactic wrapper for constructing
+<code class="docutils literal notranslate"><span class="pre">TensorNodes</span></code> or <code class="docutils literal notranslate"><span class="pre">Ensembles</span></code>; anything we build with a
+<code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> we could instead construct directly using those
+underlying components. <code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> just simplifies the construction
+of this common layer-based pattern.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="c1"># set some default parameters for the neurons that will make</span>
+    <span class="c1"># the training progress more smoothly</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">max_rates</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">dists</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span><span class="mi">100</span><span class="p">])</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">intercepts</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">dists</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">neuron_type</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">LIF</span><span class="p">(</span><span class="n">amplitude</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+
+    <span class="c1"># we&#39;ll make all the nengo objects in the network</span>
+    <span class="c1"># non-trainable. we could train them if we wanted, but they don&#39;t</span>
+    <span class="c1"># add any representational power. note that this doesn&#39;t affect</span>
+    <span class="c1"># the internal components of tensornodes, which will always be</span>
+    <span class="c1"># trainable or non-trainable depending on the code written in</span>
+    <span class="c1"># the tensornode.</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+    <span class="c1"># the input node that will be used to feed in input images</span>
+    <span class="n">inp</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">28</span> <span class="o">*</span> <span class="mi">28</span><span class="p">)</span>
+
+    <span class="c1"># add the first convolutional layer</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span>
+        <span class="n">inp</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">,</span> <span class="n">shape_in</span><span class="o">=</span><span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">filters</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+        <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+    <span class="c1"># apply the neural nonlinearity</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">neuron_type</span><span class="p">)</span>
+
+    <span class="c1"># add another convolutional layer</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">,</span> <span class="n">shape_in</span><span class="o">=</span><span class="p">(</span><span class="mi">26</span><span class="p">,</span> <span class="mi">26</span><span class="p">,</span> <span class="mi">32</span><span class="p">),</span>
+        <span class="n">filters</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">neuron_type</span><span class="p">)</span>
+
+    <span class="c1"># add a pooling layer</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">average_pooling2d</span><span class="p">,</span> <span class="n">shape_in</span><span class="o">=</span><span class="p">(</span><span class="mi">24</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">64</span><span class="p">),</span>
+        <span class="n">pool_size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">strides</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># another convolutional layer</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">,</span> <span class="n">shape_in</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">64</span><span class="p">),</span>
+            <span class="n">filters</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">neuron_type</span><span class="p">)</span>
+
+    <span class="c1"># another pooling layer</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">average_pooling2d</span><span class="p">,</span> <span class="n">shape_in</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span>
+        <span class="n">pool_size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">strides</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># linear readout</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+    <span class="c1"># we&#39;ll create two different output probes, one with a filter</span>
+    <span class="c1"># (for when we&#39;re simulating the network over time and</span>
+    <span class="c1"># accumulating spikes), and one without (for when we&#39;re</span>
+    <span class="c1"># training the network using a rate-based approximation)</span>
+    <span class="n">out_p</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">out_p_filt</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">synapse</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Next we can construct a Simulator for that network.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">200</span>
+<span class="n">sim</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Build finished in 0:00:00
+|#                Optimizing graph: creating signals                  | 0:00:00
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="stderr output_area docutils container">
+<div class="highlight"><pre>
+/home/travis/build/nengo/nengo-dl/nengo_dl/simulator.py:127: UserWarning: No GPU support detected. It is recommended that you install tensorflow-gpu (`pip install tensorflow-gpu`).
+  &#34;No GPU support detected. It is recommended that you &#34;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Optimization finished in 0:00:01
+Construction finished in 0:00:02
+</pre></div></div>
+</div>
+<p>Now we need to train this network to classify MNIST digits. First we
+load our input images and target labels.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># note that we need to add the time dimension (axis 1), which will be a</span>
+<span class="c1"># single step during training</span>
+<span class="n">train_inputs</span> <span class="o">=</span> <span class="p">{</span><span class="n">inp</span><span class="p">:</span> <span class="n">train_data</span><span class="p">[</span><span class="mi">0</span><span class="p">][:,</span> <span class="bp">None</span><span class="p">,</span> <span class="p">:]}</span>
+<span class="n">train_targets</span> <span class="o">=</span> <span class="p">{</span><span class="n">out_p</span><span class="p">:</span> <span class="n">train_data</span><span class="p">[</span><span class="mi">1</span><span class="p">][:,</span> <span class="bp">None</span><span class="p">,</span> <span class="p">:]}</span>
+
+<span class="c1"># when testing our network with spiking neurons we will need to run it over time,</span>
+<span class="c1"># so we repeat the input/target data for a number of timesteps. we&#39;re also going</span>
+<span class="c1"># to reduce the number of test images, just to speed up this example.</span>
+<span class="n">n_steps</span> <span class="o">=</span> <span class="mi">30</span>
+<span class="n">test_inputs</span> <span class="o">=</span> <span class="p">{</span><span class="n">inp</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">test_data</span><span class="p">[</span><span class="mi">0</span><span class="p">][:</span><span class="n">minibatch_size</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="p">:],</span>
+                            <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="mi">1</span><span class="p">))}</span>
+<span class="n">test_targets</span> <span class="o">=</span> <span class="p">{</span><span class="n">out_p_filt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">test_data</span><span class="p">[</span><span class="mi">1</span><span class="p">][:</span><span class="n">minibatch_size</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="p">:],</span>
+                                    <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="mi">1</span><span class="p">))}</span>
+</pre></div>
+</div>
+</div>
+<p>Next we need to define our objective (error) function. Because this is a
+classification task we’ll use cross entropy, instead of the default mean
+squared error.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">objective</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">softmax_cross_entropy_with_logits_v2</span><span class="p">(</span><span class="n">logits</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The last thing we need to specify is the optimizer. For this example
+we’ll use RMSProp.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">opt</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">RMSPropOptimizer</span><span class="p">(</span><span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.001</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>In order to quantify the network’s performance we will also define a
+classification error function (the percentage of test images classified
+incorrectly). We could use the cross entropy objective, but
+classification error is easier to interpret. Note that we use the output
+from the network on the final timestep (as we are simulating the network
+over time).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">classification_error</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mi">100</span> <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span>
+        <span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">not_equal</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">outputs</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span>
+                             <span class="n">tf</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">targets</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)),</span>
+                <span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;error before training: </span><span class="si">%.2f%%</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">sim</span><span class="o">.</span><span class="n">loss</span><span class="p">(</span>
+    <span class="n">test_inputs</span><span class="p">,</span> <span class="n">test_targets</span><span class="p">,</span> <span class="p">{</span><span class="n">out_p_filt</span><span class="p">:</span> <span class="n">classification_error</span><span class="p">}))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+error before training: 91.25%
+</pre></div></div>
+</div>
+<p>Now we are ready to train the network. In order to keep this example
+relatively quick we are going to download some pretrained weights.
+However, if you’d like to run the training yourself set
+<code class="docutils literal notranslate"><span class="pre">do_training=True</span></code> below.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">do_training</span> <span class="o">=</span> <span class="bp">False</span>
+<span class="k">if</span> <span class="n">do_training</span><span class="p">:</span>
+    <span class="c1"># run training</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">train_inputs</span><span class="p">,</span> <span class="n">train_targets</span><span class="p">,</span> <span class="n">opt</span><span class="p">,</span> <span class="n">objective</span><span class="o">=</span><span class="p">{</span><span class="n">out_p</span><span class="p">:</span> <span class="n">objective</span><span class="p">},</span>
+              <span class="n">n_epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+    <span class="c1"># save the parameters to file</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">save_params</span><span class="p">(</span><span class="s2">&quot;./mnist_params&quot;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="c1"># download pretrained weights</span>
+    <span class="n">urlretrieve</span><span class="p">(</span>
+        <span class="s2">&quot;https://drive.google.com/uc?export=download&amp;id=18ErAZh0LFRaISLHDM-dJjjnzqvYfyjo0&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;mnist_params.zip&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="s2">&quot;mnist_params.zip&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">extractall</span><span class="p">()</span>
+
+    <span class="c1"># load parameters</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">load_params</span><span class="p">(</span><span class="s2">&quot;./mnist_params&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Now we can check the classification error again, with the trained
+parameters.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">print</span><span class="p">(</span><span class="s2">&quot;error after training: </span><span class="si">%.2f%%</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">sim</span><span class="o">.</span><span class="n">loss</span><span class="p">(</span>
+    <span class="n">test_inputs</span><span class="p">,</span> <span class="n">test_targets</span><span class="p">,</span> <span class="p">{</span><span class="n">out_p_filt</span><span class="p">:</span> <span class="n">classification_error</span><span class="p">}))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+error after training: 0.75%
+</pre></div></div>
+</div>
+<p>We can see that the spiking neural network is achieving ~1% error, which
+is what we would expect for MNIST. <code class="docutils literal notranslate"><span class="pre">n_steps</span></code> could be increased to
+further improve performance, since we would get a more accurate measure
+of each spiking neuron’s output.</p>
+<p>We can also plot some example outputs from the network, to see how it is
+performing over time.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">sim</span><span class="o">.</span><span class="n">run_steps</span><span class="p">(</span><span class="n">n_steps</span><span class="p">,</span> <span class="n">input_feeds</span><span class="o">=</span><span class="p">{</span><span class="n">inp</span><span class="p">:</span> <span class="n">test_inputs</span><span class="p">[</span><span class="n">inp</span><span class="p">][:</span><span class="n">minibatch_size</span><span class="p">]})</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">test_data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">],</span> <span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">out_p_filt</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)],</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Simulation finished in 0:00:51
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking_mnist_21_1.png" src="../_images/examples_spiking_mnist_21_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking_mnist_21_2.png" src="../_images/examples_spiking_mnist_21_2.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking_mnist_21_3.png" src="../_images/examples_spiking_mnist_21_3.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking_mnist_21_4.png" src="../_images/examples_spiking_mnist_21_4.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking_mnist_21_5.png" src="../_images/examples_spiking_mnist_21_5.png" />
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">sim</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="spa_retrieval.html" class="btn btn-neutral float-right" title="Optimizing a cognitive model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="pretrained_model.html" class="btn btn-neutral" title="Inserting a TensorFlow network into a Nengo model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015-2018, Applied Brain Research.
+      Last updated on Sep 05, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v1.2.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../examples/spiking_mnist.html">latest</a></dd>
+            
+
+            
+                
+                    <dd>v1.2.0</dd>
+                
+            
+                
+                    <dd><a href="../../v1.1.0/examples/spiking_mnist.html">v1.1.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../v1.0.0/examples/spiking_mnist.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.6.2/examples/spiking_mnist.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.6.1/examples/spiking_mnist.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.6.0/examples/spiking_mnist.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.5.2/examples/spiking_mnist.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.5.1/examples/spiking_mnist.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.5.0/examples/spiking_mnist.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.4.0/examples/spiking_mnist.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.3.1/examples/spiking_mnist.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.3.0/examples/spiking_mnist.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../v0.2.0/examples/spiking_mnist.html">v0.2.0</a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'1.2.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

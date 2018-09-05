@@ -1,0 +1,399 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>nengo_dl.config &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../frontend.html">User documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.html">Developer documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>nengo_dl.config</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for nengo_dl.config</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">nengo</span> <span class="k">import</span> <span class="n">Connection</span><span class="p">,</span> <span class="n">Ensemble</span><span class="p">,</span> <span class="n">Network</span><span class="p">,</span> <span class="n">ensemble</span>
+<span class="kn">from</span> <span class="nn">nengo.builder</span> <span class="k">import</span> <span class="n">Model</span>
+<span class="kn">from</span> <span class="nn">nengo.exceptions</span> <span class="k">import</span> <span class="n">ConfigError</span><span class="p">,</span> <span class="n">NetworkContextError</span>
+<span class="kn">from</span> <span class="nn">nengo.params</span> <span class="k">import</span> <span class="n">BoolParam</span><span class="p">,</span> <span class="n">Parameter</span>
+
+
+<div class="viewcode-block" id="configure_settings"><a class="viewcode-back" href="../../config.html#nengo_dl.config.configure_settings">[docs]</a><span class="k">def</span> <span class="nf">configure_settings</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Pass settings to ``nengo_dl`` by setting them as parameters on the</span>
+<span class="sd">    top-level Network config.</span>
+
+<span class="sd">    The settings are passed as keyword arguments to ``configure_settings``;</span>
+<span class="sd">    e.g., to set ``trainable`` use ``configure_settings(trainable=True)``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    trainable : bool or None</span>
+<span class="sd">        Adds a parameter to Nengo Ensembles/Connections/Networks that controls</span>
+<span class="sd">        whether or not they will be optimized by :meth:`.Simulator.train`.</span>
+<span class="sd">        Passing ``None`` will use the default ``nengo_dl`` trainable settings,</span>
+<span class="sd">        or True/False will override the default for all objects.  In either</span>
+<span class="sd">        case trainability can be further configured on a per-object basis (e.g.</span>
+<span class="sd">        ``net.config[my_ensemble].trainable = True``.  See `the documentation</span>
+<span class="sd">        &lt;https://www.nengo.ai/nengo-dl/training.html#choosing-which-elements-to-optimize&gt;`_</span>
+<span class="sd">        for more details.</span>
+<span class="sd">    planner : graph planning algorithm</span>
+<span class="sd">        Pass one of the `graph planners</span>
+<span class="sd">        &lt;https://www.nengo.ai/nengo-dl/graph_optimizer.html&gt;`_ to change the</span>
+<span class="sd">        default planner.</span>
+<span class="sd">    sorter : signal sorting algorithm</span>
+<span class="sd">        Pass one of the `sort algorithms</span>
+<span class="sd">        &lt;https://www.nengo.ai/nengo-dl/graph_optimizer.html&gt;`_ to change the</span>
+<span class="sd">        default sorter.</span>
+<span class="sd">    simplifications: list of graph simplification functions</span>
+<span class="sd">        Pass a list of `graph simplification functions</span>
+<span class="sd">        &lt;https://www.nengo.ai/nengo-dl/graph_optimizer.html&gt;`_ to change the</span>
+<span class="sd">        default simplifications applied.</span>
+<span class="sd">    session_config: dict</span>
+<span class="sd">        Config options passed to ``tf.Session`` initialization (e.g., to change</span>
+<span class="sd">        the `GPU memory allocation method</span>
+<span class="sd">        &lt;https://www.tensorflow.org/programmers_guide/using_gpu#allowing_gpu_memory_growth&gt;`_</span>
+<span class="sd">        pass ``{&quot;gpu_options.allow_growth&quot;: True}``).</span>
+<span class="sd">    inference_only : bool</span>
+<span class="sd">        Set to True if the network will only be run in inference mode (i.e.,</span>
+<span class="sd">        no calls to :meth:`.Simulator.train`).  This may result in a small</span>
+<span class="sd">        increase in the inference speed.</span>
+<span class="sd">    lif_smoothing : float</span>
+<span class="sd">        If specified, use the smoothed :class:`~.neurons.SoftLIFRate` neuron</span>
+<span class="sd">        model, with the given smoothing parameter (``sigma``),</span>
+<span class="sd">        to compute the gradient for :class:`~nengo:nengo.LIF` neurons (as</span>
+<span class="sd">        opposed to using :class:`~nengo:nengo.LIFRate`).</span>
+<span class="sd">    dtype : ``tf.DType``</span>
+<span class="sd">        Set the floating point precision for simulation values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># get the toplevel network</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">Network</span><span class="o">.</span><span class="n">context</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">Network</span><span class="o">.</span><span class="n">context</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">config</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NetworkContextError</span><span class="p">(</span>
+            <span class="s2">&quot;`configure_settings` must be called within a Network context &quot;</span>
+            <span class="s2">&quot;(`with nengo.Network(): ...`)&quot;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="n">Network</span><span class="p">]</span>
+    <span class="k">except</span> <span class="n">ConfigError</span><span class="p">:</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">configures</span><span class="p">(</span><span class="n">Network</span><span class="p">)</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="n">Network</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">attr</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">attr</span> <span class="o">==</span> <span class="s2">&quot;trainable&quot;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="p">(</span><span class="n">Ensemble</span><span class="p">,</span> <span class="n">Connection</span><span class="p">,</span> <span class="n">ensemble</span><span class="o">.</span><span class="n">Neurons</span><span class="p">,</span> <span class="n">Network</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">obj_params</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span>
+                <span class="k">except</span> <span class="n">ConfigError</span><span class="p">:</span>
+                    <span class="n">config</span><span class="o">.</span><span class="n">configures</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+                    <span class="n">obj_params</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span>
+
+                <span class="n">obj_params</span><span class="o">.</span><span class="n">set_param</span><span class="p">(</span><span class="s2">&quot;trainable&quot;</span><span class="p">,</span> <span class="n">BoolParam</span><span class="p">(</span><span class="s2">&quot;trainable&quot;</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span>
+                                                            <span class="n">optional</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">attr</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;planner&quot;</span><span class="p">,</span> <span class="s2">&quot;sorter&quot;</span><span class="p">,</span> <span class="s2">&quot;simplifications&quot;</span><span class="p">,</span>
+                      <span class="s2">&quot;session_config&quot;</span><span class="p">,</span> <span class="s2">&quot;inference_only&quot;</span><span class="p">,</span> <span class="s2">&quot;lif_smoothing&quot;</span><span class="p">,</span>
+                      <span class="s2">&quot;dtype&quot;</span><span class="p">):</span>
+            <span class="n">params</span><span class="o">.</span><span class="n">set_param</span><span class="p">(</span><span class="n">attr</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">attr</span><span class="p">,</span> <span class="n">val</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ConfigError</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> is not a valid config parameter&quot;</span> <span class="o">%</span> <span class="n">attr</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_setting"><a class="viewcode-back" href="../../config.html#nengo_dl.config.get_setting">[docs]</a><span class="k">def</span> <span class="nf">get_setting</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">setting</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns config settings (created by :func:`.configure_settings`).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model : :class:`~nengo:nengo.builder.Model` or \</span>
+<span class="sd">            :class:`~nengo:nengo.Network`</span>
+<span class="sd">        Built model or Network containing all the config settings.</span>
+<span class="sd">    setting : str</span>
+<span class="sd">        Name of the config option to return</span>
+<span class="sd">    default</span>
+<span class="sd">        The default value to return if config option not set</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Value of ``setting`` if it has been specified, else ``default``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">Model</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">toplevel</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">default</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">toplevel</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">model</span><span class="p">],</span> <span class="n">setting</span><span class="p">,</span> <span class="n">default</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">ConfigError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">default</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015-2018, Applied Brain Research.
+      Last updated on Sep 05, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v1.2.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../../_modules/nengo_dl/config.html">latest</a></dd>
+            
+
+            
+                
+                    <dd>v1.2.0</dd>
+                
+            
+                
+                    <dd><a href="../../../v1.1.0/_modules/nengo_dl/config.html">v1.1.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v1.0.0/_modules/nengo_dl/config.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.2/_modules/nengo_dl/config.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.1/_modules/nengo_dl/config.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.0/_modules/nengo_dl/config.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.2/_modules/nengo_dl/config.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.1/_modules/nengo_dl/config.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.0/_modules/nengo_dl/config.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.4.0/_modules/nengo_dl/config.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.3.1/_modules/nengo_dl/config.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.3.0/_modules/nengo_dl/config.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.2.0/_modules/nengo_dl/config.html">v0.2.0</a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'1.2.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

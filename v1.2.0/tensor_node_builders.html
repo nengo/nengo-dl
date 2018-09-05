@@ -1,0 +1,457 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>TensorNodes &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="TensorFlow graph construction" href="tensor_graph.html" />
+    <link rel="prev" title="Processes" href="processes.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frontend.html">User documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="backend.html">Developer documentation</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="builder.html">Builder</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="operators.html">Operator build classes</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="op_builders.html">Basic operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="neurons.html">Neuron types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="learning_rules.html">Learning rules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="processes.html">Processes</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">TensorNodes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tensor_graph.html">TensorFlow graph construction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="signals.html">Signals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="graph_optimizer.html">Operator graph optimization tools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html">Miscellaneous utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="backend.html">Developer documentation</a> &raquo;</li>
+        
+          <li><a href="operators.html">Operator build classes</a> &raquo;</li>
+        
+      <li>TensorNodes</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/tensor_node_builders.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="tensornodes">
+<h1>TensorNodes<a class="headerlink" href="#tensornodes" title="Permalink to this headline">¶</a></h1>
+<p>To build <a class="reference internal" href="tensor_node.html#nengo_dl.tensor_node.TensorNode" title="nengo_dl.tensor_node.TensorNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNode</span></code></a> objects we need to define a new Nengo operator
+(<a class="reference internal" href="#nengo_dl.tensor_node.SimTensorNode" title="nengo_dl.tensor_node.SimTensorNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">tensor_node.SimTensorNode</span></code></a>), a build function that adds that operator
+into a Nengo graph (<a class="reference internal" href="#nengo_dl.tensor_node.build_tensor_node" title="nengo_dl.tensor_node.build_tensor_node"><code class="xref py py-func docutils literal notranslate"><span class="pre">tensor_node.build_tensor_node()</span></code></a>), and a NengoDL
+build class that maps that new Nengo operator to TensorFlow operations
+(<a class="reference internal" href="#nengo_dl.tensor_node.SimTensorNodeBuilder" title="nengo_dl.tensor_node.SimTensorNodeBuilder"><code class="xref py py-class docutils literal notranslate"><span class="pre">tensor_node.SimTensorNodeBuilder</span></code></a>).</p>
+<dl class="class">
+<dt id="nengo_dl.tensor_node.SimTensorNode">
+<em class="property">class </em><code class="descclassname">nengo_dl.tensor_node.</code><code class="descname">SimTensorNode</code><span class="sig-paren">(</span><em>func</em>, <em>time</em>, <em>input</em>, <em>output</em>, <em>tag=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/tensor_node.html#SimTensorNode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.tensor_node.SimTensorNode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Operator for TensorNodes (constructed by <a class="reference internal" href="#nengo_dl.tensor_node.build_tensor_node" title="nengo_dl.tensor_node.build_tensor_node"><code class="xref py py-func docutils literal notranslate"><span class="pre">build_tensor_node()</span></code></a>).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>func</strong> <span class="classifier-delimiter">:</span> <span class="classifier">callable</span></dt>
+<dd><p class="first last">The TensorNode function (<code class="docutils literal notranslate"><span class="pre">tensor_func</span></code>)</p>
+</dd>
+<dt><strong>time</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Signal" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></a></span></dt>
+<dd><p class="first last">Signal representing the current simulation time</p>
+</dd>
+<dt><strong>input</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Signal" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></a> or None</span></dt>
+<dd><p class="first last">Input Signal for the TensorNode (or None if size_in==0)</p>
+</dd>
+<dt><strong>output</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Signal" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></a></span></dt>
+<dd><p class="first last">Output Signal for the TensorNode</p>
+</dd>
+<dt><strong>tag</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">A label associated with the operator, for debugging</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<ol class="arabic simple">
+<li>sets <code class="docutils literal notranslate"><span class="pre">[output]</span></code></li>
+<li>incs <code class="docutils literal notranslate"><span class="pre">[]</span></code></li>
+<li>reads <code class="docutils literal notranslate"><span class="pre">[time]</span> <span class="pre">if</span> <span class="pre">input</span> <span class="pre">is</span> <span class="pre">None</span> <span class="pre">else</span> <span class="pre">[time,</span> <span class="pre">input]</span></code></li>
+<li>updates <code class="docutils literal notranslate"><span class="pre">[]</span></code></li>
+</ol>
+</dd></dl>
+
+<dl class="function">
+<dt id="nengo_dl.tensor_node.build_tensor_node">
+<code class="descclassname">nengo_dl.tensor_node.</code><code class="descname">build_tensor_node</code><span class="sig-paren">(</span><em>model</em>, <em>node</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/tensor_node.html#build_tensor_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.tensor_node.build_tensor_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the Nengo build function, so that Nengo knows what to do with
+TensorNodes.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="nengo_dl.tensor_node.SimTensorNodeBuilder">
+<em class="property">class </em><code class="descclassname">nengo_dl.tensor_node.</code><code class="descname">SimTensorNodeBuilder</code><span class="sig-paren">(</span><em>ops</em>, <em>signals</em>, <em>config</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/tensor_node.html#SimTensorNodeBuilder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.tensor_node.SimTensorNodeBuilder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Builds a <a class="reference internal" href="#nengo_dl.tensor_node.SimTensorNode" title="nengo_dl.tensor_node.SimTensorNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimTensorNode</span></code></a> operator into a NengoDL
+model.</p>
+<dl class="method">
+<dt id="nengo_dl.tensor_node.SimTensorNodeBuilder.build_step">
+<code class="descname">build_step</code><span class="sig-paren">(</span><em>signals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/tensor_node.html#SimTensorNodeBuilder.build_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.tensor_node.SimTensorNodeBuilder.build_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function builds whatever computations need to be executed in
+each simulation timestep.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>signals</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="signals.html#nengo_dl.signals.SignalDict" title="nengo_dl.signals.SignalDict"><code class="xref py py-class docutils literal notranslate"><span class="pre">signals.SignalDict</span></code></a></span></dt>
+<dd><p class="first last">Mapping from <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Signal" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></a> to
+<code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> (updated by operations)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>list of ``tf.Tensor``, optional</strong></dt>
+<dd><p class="first last">If not None, the returned tensors correspond to outputs with
+possible side-effects, i.e. computations that need to be executed
+in the TensorFlow graph even if their output doesn’t appear to be
+used</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nengo_dl.tensor_node.SimTensorNodeBuilder.build_post">
+<code class="descname">build_post</code><span class="sig-paren">(</span><em>ops</em>, <em>signals</em>, <em>sess</em>, <em>rng</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nengo_dl/tensor_node.html#SimTensorNodeBuilder.build_post"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nengo_dl.tensor_node.SimTensorNodeBuilder.build_post" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function will be called after the graph has been built and
+session/variables initialized.</p>
+<p>This should be used to build any random aspects of the operator.</p>
+<p>Note that this function may be called multiple times per session, so
+it should modify the graph in-place.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>ops</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Operator" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operator</span></code></a></span></dt>
+<dd><p class="first last">The operator group to build into the model</p>
+</dd>
+<dt><strong>signals</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="signals.html#nengo_dl.signals.SignalDict" title="nengo_dl.signals.SignalDict"><code class="xref py py-class docutils literal notranslate"><span class="pre">signals.SignalDict</span></code></a></span></dt>
+<dd><p class="first last">Mapping from <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.builder.Signal" title="(in Nengo v2.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signal</span></code></a> to
+<code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> (updated by operations)</p>
+</dd>
+<dt><strong>sess</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="docutils literal notranslate"><span class="pre">tf.Session</span></code></span></dt>
+<dd><p class="first last">The initialized simulation session</p>
+</dd>
+<dt><strong>rng</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.random.RandomState.html#numpy.random.RandomState" title="(in NumPy v1.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">RandomState</span></code></a></span></dt>
+<dd><p class="first last">Seeded random number generator</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="tensor_graph.html" class="btn btn-neutral float-right" title="TensorFlow graph construction" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="processes.html" class="btn btn-neutral" title="Processes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015-2018, Applied Brain Research.
+      Last updated on Sep 05, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v1.2.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../tensor_node_builders.html">latest</a></dd>
+            
+
+            
+                
+                    <dd>v1.2.0</dd>
+                
+            
+                
+                    <dd><a href="../v1.1.0/tensor_node_builders.html">v1.1.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v1.0.0/tensor_node_builders.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.2/tensor_node_builders.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.1/tensor_node_builders.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.6.0/tensor_node_builders.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.2/tensor_node_builders.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.1/tensor_node_builders.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.5.0/tensor_node_builders.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.4.0/tensor_node_builders.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.1/tensor_node_builders.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.3.0/tensor_node_builders.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../v0.2.0/tensor_node_builders.html">v0.2.0</a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1.2.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

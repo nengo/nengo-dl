@@ -1,0 +1,495 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>nengo_dl.builder &mdash; NengoDL documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> NengoDL
+          
+
+          
+            
+            <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../frontend.html">User documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.html">Developer documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../project.html">Project information</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">NengoDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>nengo_dl.builder</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for nengo_dl.builder</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">namedtuple</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">nengo</span> <span class="k">import</span> <span class="n">builder</span>
+<span class="kn">from</span> <span class="nn">nengo.exceptions</span> <span class="k">import</span> <span class="n">BuildError</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Builder"><a class="viewcode-back" href="../../builder.html#nengo_dl.builder.Builder">[docs]</a><span class="k">class</span> <span class="nc">Builder</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Manages the operator build classes known to the ``nengo_dl``</span>
+<span class="sd">    build process.&quot;&quot;&quot;</span>
+
+    <span class="n">builders</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="Builder.pre_build"><a class="viewcode-back" href="../../builder.html#nengo_dl.builder.Builder.pre_build">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">pre_build</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">op_builds</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Setup step for build classes, in which they compute any of the</span>
+<span class="sd">        values that are constant across simulation timesteps.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ops : tuple of :class:`~nengo:nengo.builder.Operator`</span>
+<span class="sd">            The operator group to build into the model</span>
+<span class="sd">        signals : :class:`.signals.SignalDict`</span>
+<span class="sd">            Mapping from :class:`~nengo:nengo.builder.Signal` to</span>
+<span class="sd">            ``tf.Tensor`` (updated by operations)</span>
+<span class="sd">        op_builds : dict of {tuple of :class:`~nengo.builder.Operator`, \</span>
+<span class="sd">                             :class:~`.op_builders.OpBuilder`}</span>
+<span class="sd">            ``pre_build`` will populate this dictionary with the OpBuilder</span>
+<span class="sd">            objects (which execute the pre-build step in their ``__init__``)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;===================&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;PRE BUILD </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">ops</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;sets </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">sets</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;incs </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">incs</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;reads </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">reads</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;updates </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">updates</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">builders</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BuildError</span><span class="p">(</span><span class="s2">&quot;No registered builder for operators of type </span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span>
+                             <span class="nb">type</span><span class="p">(</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+        <span class="n">BuildClass</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">builders</span><span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
+
+        <span class="n">op_builds</span><span class="p">[</span><span class="n">ops</span><span class="p">]</span> <span class="o">=</span> <span class="n">BuildClass</span><span class="p">(</span><span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Builder.build"><a class="viewcode-back" href="../../builder.html#nengo_dl.builder.Builder.build">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">op_builds</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build the computations implementing a single simulator timestep.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ops : tuple of :class:`~nengo:nengo.builder.Operator`</span>
+<span class="sd">            The operator group to build into the model</span>
+<span class="sd">        signals : :class:`.signals.SignalDict`</span>
+<span class="sd">            Mapping from :class:`~nengo:nengo.builder.Signal` to</span>
+<span class="sd">            ``tf.Tensor`` (updated by operations)</span>
+<span class="sd">        op_builds : dict of {tuple of :class:`~nengo.builder.Operator`, \</span>
+<span class="sd">                             :class:~`.op_builders.OpBuilder`}</span>
+<span class="sd">            Mapping from operator groups to the pre-built builder objects</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;===================&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;BUILD </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">ops</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">ops</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">op_builds</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BuildError</span><span class="p">(</span><span class="s2">&quot;Operators build has not been initialized &quot;</span>
+                             <span class="s2">&quot;(missed pre-build step)&quot;</span><span class="p">)</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="n">op_builds</span><span class="p">[</span><span class="n">ops</span><span class="p">]</span><span class="o">.</span><span class="n">build_step</span><span class="p">(</span><span class="n">signals</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">)):</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="p">[</span><span class="n">output</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output</span></div>
+
+<div class="viewcode-block" id="Builder.register"><a class="viewcode-back" href="../../builder.html#nengo_dl.builder.Builder.register">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">nengo_op</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;A decorator for adding a class to the build function registry.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        nengo_op : :class:`~nengo:nengo.builder.Operator`</span>
+<span class="sd">            The operator associated with the build function being decorated.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">register_builder</span><span class="p">(</span><span class="n">build_class</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">build_class</span><span class="p">,</span> <span class="n">OpBuilder</span><span class="p">):</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Build classes should inherit from OpBuilder&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">nengo_op</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">builders</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Operator &#39;</span><span class="si">%s</span><span class="s2">&#39; already has a builder. &quot;</span>
+                              <span class="s2">&quot;Overwriting.&quot;</span> <span class="o">%</span> <span class="n">nengo_op</span><span class="p">)</span>
+
+            <span class="bp">cls</span><span class="o">.</span><span class="n">builders</span><span class="p">[</span><span class="n">nengo_op</span><span class="p">]</span> <span class="o">=</span> <span class="n">build_class</span>
+            <span class="k">return</span> <span class="n">build_class</span>
+
+        <span class="k">return</span> <span class="n">register_builder</span></div></div>
+
+
+<div class="viewcode-block" id="BuildConfig"><a class="viewcode-back" href="../../builder.html#nengo_dl.builder.BuildConfig">[docs]</a><span class="k">class</span> <span class="nc">BuildConfig</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;BuildConfig&quot;</span><span class="p">,</span> <span class="p">(</span>
+        <span class="s2">&quot;inference_only&quot;</span><span class="p">,</span> <span class="s2">&quot;lif_smoothing&quot;</span><span class="p">))):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Stores configuration parameters that may be relevant to parts of the</span>
+<span class="sd">    build process.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    inference_only : bool</span>
+<span class="sd">        If True the network should be constructed in &quot;inference only&quot; mode</span>
+<span class="sd">        (not including any support for training operations).</span>
+<span class="sd">    lif_smoothing : float</span>
+<span class="sd">        Smoothing parameter for :class:`~nengo:nengo.LIF`</span>
+<span class="sd">        gradient approximation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="OpBuilder"><a class="viewcode-back" href="../../builder.html#nengo_dl.builder.OpBuilder">[docs]</a><span class="k">class</span> <span class="nc">OpBuilder</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+    <span class="sd">&quot;&quot;&quot;The constructor should set up any computations that are fixed for</span>
+<span class="sd">    this op (i.e., things that do not need to be recomputed each timestep).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ops : list of :class:`~nengo:nengo.builder.Operator`</span>
+<span class="sd">        The operator group to build into the model</span>
+<span class="sd">    signals : :class:`.signals.SignalDict`</span>
+<span class="sd">        Mapping from :class:`~nengo:nengo.builder.Signal` to</span>
+<span class="sd">        ``tf.Tensor`` (updated by operations)</span>
+<span class="sd">    config : :class:`~.builder.BuildConfig`</span>
+<span class="sd">        General repository for config information builders might want</span>
+<span class="sd">        (conglomerated into this object so that we can add/remove config data</span>
+<span class="sd">        without having to change the function signature all the time).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
+
+<div class="viewcode-block" id="OpBuilder.build_step"><a class="viewcode-back" href="../../builder.html#nengo_dl.builder.OpBuilder.build_step">[docs]</a>    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This function builds whatever computations need to be executed in</span>
+<span class="sd">        each simulation timestep.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        signals : :class:`.signals.SignalDict`</span>
+<span class="sd">            Mapping from :class:`~nengo:nengo.builder.Signal` to</span>
+<span class="sd">            ``tf.Tensor`` (updated by operations)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list of ``tf.Tensor``, optional</span>
+<span class="sd">            If not None, the returned tensors correspond to outputs with</span>
+<span class="sd">            possible side-effects, i.e. computations that need to be executed</span>
+<span class="sd">            in the TensorFlow graph even if their output doesn&#39;t appear to be</span>
+<span class="sd">            used</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="n">BuildError</span><span class="p">(</span><span class="s2">&quot;OpBuilders must implement a `build_step` function&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OpBuilder.build_post"><a class="viewcode-back" href="../../builder.html#nengo_dl.builder.OpBuilder.build_post">[docs]</a>    <span class="k">def</span> <span class="nf">build_post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">sess</span><span class="p">,</span> <span class="n">rng</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This function will be called after the graph has been built and</span>
+<span class="sd">        session/variables initialized.</span>
+
+<span class="sd">        This should be used to build any random aspects of the operator.</span>
+
+<span class="sd">        Note that this function may be called multiple times per session, so</span>
+<span class="sd">        it should modify the graph in-place.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ops : list of :class:`~nengo:nengo.builder.Operator`</span>
+<span class="sd">            The operator group to build into the model</span>
+<span class="sd">        signals : :class:`.signals.SignalDict`</span>
+<span class="sd">            Mapping from :class:`~nengo:nengo.builder.Signal` to</span>
+<span class="sd">            ``tf.Tensor`` (updated by operations)</span>
+<span class="sd">        sess : ``tf.Session``</span>
+<span class="sd">            The initialized simulation session</span>
+<span class="sd">        rng : :class:`~numpy:numpy.random.RandomState`</span>
+<span class="sd">            Seeded random number generator</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div></div>
+
+
+<span class="k">class</span> <span class="nc">NengoBuilder</span><span class="p">(</span><span class="n">builder</span><span class="o">.</span><span class="n">Builder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Copy of the default Nengo builder.</span>
+
+<span class="sd">    This class is here so that we can register new build functions for</span>
+<span class="sd">    Nengo DL without affecting the default Nengo build process.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">builders</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># first try building obj using any custom build functions that have</span>
+            <span class="c1"># been registered by Nengo DL</span>
+            <span class="k">return</span> <span class="n">builder</span><span class="o">.</span><span class="n">Builder</span><span class="o">.</span><span class="n">build</span><span class="o">.</span><span class="vm">__func__</span><span class="p">(</span>
+                <span class="n">NengoBuilder</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">BuildError</span><span class="p">:</span>
+            <span class="c1"># fallback on normal nengo builder</span>
+            <span class="k">return</span> <span class="n">builder</span><span class="o">.</span><span class="n">Builder</span><span class="o">.</span><span class="n">build</span><span class="o">.</span><span class="vm">__func__</span><span class="p">(</span>
+                <span class="n">builder</span><span class="o">.</span><span class="n">Builder</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015-2018, Applied Brain Research.
+      Last updated on Sep 05, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  <!-- adapted from sphinx_rtd_theme versions.html -->
+
+<div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> Versions</span>
+        v1.2.0
+        <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+        <dl>
+            
+            
+                <dd><a href="../../../_modules/nengo_dl/builder.html">latest</a></dd>
+            
+
+            
+                
+                    <dd>v1.2.0</dd>
+                
+            
+                
+                    <dd><a href="../../../v1.1.0/_modules/nengo_dl/builder.html">v1.1.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v1.0.0/_modules/nengo_dl/builder.html">v1.0.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.2/_modules/nengo_dl/builder.html">v0.6.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.1/_modules/nengo_dl/builder.html">v0.6.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.6.0/_modules/nengo_dl/builder.html">v0.6.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.2/_modules/nengo_dl/builder.html">v0.5.2</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.1/_modules/nengo_dl/builder.html">v0.5.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.5.0/_modules/nengo_dl/builder.html">v0.5.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.4.0/_modules/nengo_dl/builder.html">v0.4.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.3.1/_modules/nengo_dl/builder.html">v0.3.1</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.3.0/_modules/nengo_dl/builder.html">v0.3.0</a></dd>
+                
+            
+                
+                    <dd><a href="../../../v0.2.0/_modules/nengo_dl/builder.html">v0.2.0</a></dd>
+                
+            
+        </dl>
+    </div>
+</div>
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'1.2.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
