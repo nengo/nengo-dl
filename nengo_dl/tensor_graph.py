@@ -709,6 +709,11 @@ class TensorGraph(object):
         tensor_sig = self.signals[sig]
 
         base = self.base_vars[tensor_sig.key][0]
+
+        if "while/" in tensor_sig.tf_indices.name:
+            # rebuild tf indices outside the while loop
+            tensor_sig._tf_indices = None
+
         return tf.gather(base, tensor_sig.tf_indices)
 
     def mark_signals(self):

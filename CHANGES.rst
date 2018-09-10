@@ -37,6 +37,9 @@ Release History
 **Fixed**
 
 - Avoid backpropagating NaN gradients from spiking neurons.
+- Fixed an error that was thrown when calling ``get_tensor`` on a ``Signal``
+  that was first initialized inside the Simulation while loop
+  (`#56 <https://github.com/nengo/nengo-dl/issues/56>`_)
 
 1.2.0 (September 5, 2018)
 -------------------------

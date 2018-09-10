@@ -395,3 +395,24 @@ def test_create_signals_partition():
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
     assert len(graph.base_arrays_init) == 4
+
+
+def test_get_tensor(Simulator):
+    with nengo.Network() as net:
+        a = nengo.Node([1])
+        b = nengo.Ensemble(10, 1)
+        c = nengo.Connection(a, b.neurons, transform=np.arange(10)[:, None],
+                             synapse=None)
+        p = nengo.Probe(c)
+
+        # build a signal probe so that the indices get loaded into the sim
+        # (checks that the indices reloading works properly)
+        nengo.Probe(c, "weights")
+
+    with Simulator(net) as sim:
+        tensor = sim.tensor_graph.get_tensor(sim.model.sig[c]["weights"])
+
+        assert np.allclose(sim.sess.run(tensor), np.arange(10)[:, None])
+
+        sim.run_steps(10)
+        assert np.allclose(sim.data[p], np.arange(10)[None, :])
