@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import logging
 import os
 
 import nengo
@@ -491,9 +492,13 @@ def test_model_passing(Simulator, seed):
     assert np.allclose(sim.data[p], canonical)
 
 
-@pytest.mark.gpu
 @pytest.mark.parametrize("device", ["/cpu:0", "/gpu:0", None])
-def test_devices(Simulator, device, seed):
+def test_devices(Simulator, device, seed, caplog, pytestconfig):
+    if device == "/gpu:0" and not pytestconfig.getoption("--gpu"):
+        pytest.skip()
+
+    caplog.set_level(logging.INFO)
+
     with nengo.Network(seed=seed) as net:
         inp = nengo.Node([0])
         ens = nengo.Ensemble(10, 1)
@@ -507,6 +512,16 @@ def test_devices(Simulator, device, seed):
     with Simulator(net, device=device) as sim:
         sim.run_steps(50)
         assert np.allclose(sim.data[p], canonical)
+
+        if device == "/cpu:0":
+            assert "Running on CPU" in caplog.text
+        elif device == "/gpu:0":
+            assert "Running on GPU" in caplog.text
+        elif pytest.config.getoption("--gpu"):
+            assert "Running on CPU/GPU" in caplog.text
+        else:
+            # device is None but gpu not installed
+            assert "Running on CPU" in caplog.text
 
 
 def test_side_effects(Simulator):

@@ -30,6 +30,9 @@ Release History
 
 - Test Simulator parameters are now controlled through pytest arguments,
   rather than environment variables.
+- Disable INFO-level TensorFlow logging (from C side) on import.  Added a
+  NengoDL log message indicating the device the simulation will run on, as
+  a more concise replacement.
 
 **Fixed**
 

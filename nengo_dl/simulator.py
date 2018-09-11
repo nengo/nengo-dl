@@ -117,15 +117,16 @@ class Simulator(object):
 
         # TODO: multi-GPU support
 
-        if device is None:
-            # check GPU support
-            installed_dists = [d.project_name for d in
-                               pkg_resources.working_set]
-            if ("tensorflow-gpu" not in installed_dists and
-                    "tf-nightly-gpu" not in installed_dists):
-                warnings.warn(
-                    "No GPU support detected. It is recommended that you "
-                    "install tensorflow-gpu (`pip install tensorflow-gpu`).")
+        installed_dists = [d.project_name for d in pkg_resources.working_set]
+        if device is None and ("tensorflow-gpu" not in installed_dists and
+                               "tf-nightly-gpu" not in installed_dists):
+            warnings.warn(
+                "No GPU support detected. It is recommended that you "
+                "install tensorflow-gpu (`pip install tensorflow-gpu`).")
+            logger.info("Running on CPU")
+        else:
+            logger.info("Running on %s", "CPU/GPU" if device is None else (
+                "CPU" if "cpu" in device else "GPU"))
 
         ProgressBar = (utils.ProgressBar if progress_bar else
                        utils.NullProgressBar)
