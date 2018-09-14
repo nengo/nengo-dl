@@ -21,6 +21,10 @@ Release History
 1.2.1 (unreleased)
 ------------------
 
+**Changed**
+
+- Test Simulator parameters are now controlled through pytest arguments,
+  rather than environment variables.
 
 1.2.0 (September 5, 2018)
 -------------------------

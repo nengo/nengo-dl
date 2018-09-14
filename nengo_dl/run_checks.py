@@ -2,7 +2,6 @@ import os
 import sys
 import tempfile
 
-import nengo
 from pylint import epylint
 import pytest
 
@@ -19,12 +18,7 @@ epylint.py_run("../nengo_dl --rcfile=setup.cfg")
 
 # run nengo tests
 print("#" * 30, "NENGO TESTS", "#" * 30)
-pytest.main([
-    os.path.dirname(nengo.__file__),
-    "--simulator", "nengo_dl.tests.Simulator",
-    "--ref-simulator", "nengo_dl.tests.Simulator",
-    "--disable-warnings"
-])
+pytest.main(["--pyargs", "nengo"])
 
 # run local tests
 print("#" * 30, "NENGO_DL TESTS", "#" * 30)

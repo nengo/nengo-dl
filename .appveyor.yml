@@ -3,8 +3,6 @@ skip_branch_with_pr: true
 environment:
   MODE: test
   PYTHON_VERSION: C:\Miniconda36-x64
-  NENGO_DL_TEST_PRECISION: 32
-  NENGO_DL_TEST_UNROLL: 1
   NUMPY_VERSION: numpy<1.15
   TF_VERSION: tensorflow
   NENGO_VERSION: nengo
