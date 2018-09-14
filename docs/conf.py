@@ -20,7 +20,7 @@ templates_path = ["_templates"]
 
 # -- sphinx.ext.autodoc
 autoclass_content = 'both'  # class and __init__ docstrings are concatenated
-autodoc_default_flags = ['members']
+autodoc_default_options = {"members": None}
 autodoc_member_order = 'bysource'  # default is alphabetical
 
 # -- sphinx.ext.intersphinx

@@ -60,7 +60,7 @@ docs_require = [
     "nbsphinx>=0.2.13",
     "numpydoc>=0.6.0",
     "Pillow>=4.1.1",
-    "sphinx>=1.5.2",
+    "sphinx>=1.8.0",
     "sphinx_rtd_theme>=0.1.9",
 ]
 tests_require = [
