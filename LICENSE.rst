@@ -47,8 +47,6 @@ To build the documentation, NengoDL uses:
   `PIL license <https://github.com/python-pillow/Pillow/blob/master/LICENSE>`__
 * `Sphinx <http://www.sphinx-doc.org/en/stable/>`_ - Used under
   `BSD license <https://github.com/sphinx-doc/sphinx/blob/master/LICENSE>`__
-* `sphinx_rtd_theme <https://github.com/rtfd/sphinx_rtd_theme>`_ - Used under
-  `MIT license <https://github.com/rtfd/sphinx_rtd_theme/blob/master/LICENSE>`__
 
 To run the unit tests, NengoDL uses:
 

@@ -63,8 +63,7 @@ adds a number of unique features, such as:
 - inserting networks defined using TensorFlow (such as
   convolutional neural networks) directly into a Nengo model
 
-Documentation
-=============
+**Documentation**
 
 Check out the `documentation <https://www.nengo.ai/nengo-dl/>`_ for
 

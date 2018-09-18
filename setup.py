@@ -58,10 +58,10 @@ docs_require = [
     "matplotlib>=2.0.0",
     "nbconvert!=5.4",  # doesn't work with nbsphinx TODO: remove this once there's an upstream fix; https://github.com/jupyter/nbconvert/issues/878
     "nbsphinx>=0.2.13",
+    "nengo-sphinx-theme>=0.3.0",
     "numpydoc>=0.6.0",
     "Pillow>=4.1.1",
     "sphinx>=1.8.0",
-    "sphinx_rtd_theme>=0.4.2",
 ]
 tests_require = [
     "click>=6.7",

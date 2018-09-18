@@ -86,6 +86,8 @@ Release History
   than ``inputs`` and ``targets`` (see discussion in "Breaking API changes").
 - ``sim.training_step`` is now the same as
   ``tf.train.get_or_create_global_step()``.
+- Switched docs to new
+  `nengo-sphinx-theme <https://github.com/nengo/nengo-sphinx-theme>`_.
 
 1.2.1 (November 2, 2018)
 ------------------------
