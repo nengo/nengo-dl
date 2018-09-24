@@ -78,6 +78,8 @@ Release History
 - Added option to disable progress bar in ``sim.train`` and ``sim.loss``.
 - Added ``training`` argument to ``sim.loss`` to control whether the loss
   is evaluated in training or inference mode.
+- Added support for the new Nengo ``Transform`` API (see
+  https://github.com/nengo/nengo/pull/1481).
 
 **Changed**
 

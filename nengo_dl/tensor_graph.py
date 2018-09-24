@@ -22,6 +22,7 @@ from nengo.exceptions import SimulationError, ValidationError
 from nengo.neurons import Direct
 from nengo.utils.magic import decorator
 import numpy as np
+import pkg_resources
 import tensorflow as tf
 
 from nengo_dl import (builder, graph_optimizer, signals, utils, tensor_node,
@@ -216,7 +217,12 @@ class TensorGraph(object):
         self.op_builds = {}
         build_config = builder.BuildConfig(
             inference_only=self.inference_only,
-            lif_smoothing=config.get_setting(self.model, "lif_smoothing"))
+            lif_smoothing=config.get_setting(self.model, "lif_smoothing"),
+            cpu_only=(
+                self.device == "/cpu:0" or
+                len([d for d in pkg_resources.working_set if d.project_name in
+                     ("tensorflow-gpu", "tf-nightly-gpu")]) == 0),
+        )
         for ops in sub(self.plan):
             with self.graph.name_scope(utils.sanitize_name(
                     builder.Builder.builders[type(ops[0])].__name__)):

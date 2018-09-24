@@ -100,6 +100,11 @@ Processes
 
 .. automodule:: nengo_dl.process_builders
 
+Transforms
+**********
+
+.. automodule:: nengo_dl.transform_builders
+
 TensorNodes
 ***********
 

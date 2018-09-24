@@ -112,7 +112,7 @@ class Builder(object):
 
 
 class BuildConfig(namedtuple("BuildConfig", (
-        "inference_only", "lif_smoothing"))):
+        "inference_only", "lif_smoothing", "cpu_only"))):
     """
     Stores configuration parameters that may be relevant to parts of the
     build process.
@@ -124,6 +124,9 @@ class BuildConfig(namedtuple("BuildConfig", (
         (not including any support for training operations).
     lif_smoothing : float
         Smoothing parameter for `~nengo.LIF` gradient approximation.
+    cpu_only : bool
+        True if TensorFlow is only running on the CPU (because that was
+        specified by the user or because tensorflow-gpu is not installed).
     """
 
     __slots__ = ()

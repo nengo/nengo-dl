@@ -7,6 +7,7 @@ a model.
 from __future__ import print_function, division
 
 import collections
+import copy
 import datetime
 from distutils.version import LooseVersion
 import logging
@@ -33,6 +34,14 @@ from tensorflow.python.ops import gradient_checker
 from nengo_dl import utils, config
 from nengo_dl.builder import NengoBuilder, NengoModel
 from nengo_dl.tensor_graph import TensorGraph
+
+if LooseVersion(nengo_version) > "2.8.0":
+    from nengo.transforms import Convolution  # pylint: disable=ungrouped-imports
+else:
+    # using a version of Nengo before Convolution was added
+    class Convolution:
+        """Dummy convolution class."""
+        pass
 
 logger = logging.getLogger(__name__)
 
@@ -119,9 +128,9 @@ class Simulator(object):
 
         # TODO: multi-GPU support
 
-        installed_dists = [d.project_name for d in pkg_resources.working_set]
-        if device is None and ("tensorflow-gpu" not in installed_dists and
-                               "tf-nightly-gpu" not in installed_dists):
+        gpu_dists = [d for d in pkg_resources.working_set
+                     if d.project_name in ("tensorflow-gpu", "tf-nightly-gpu")]
+        if device is None and len(gpu_dists) == 0:
             warnings.warn(
                 "No GPU support detected. It is recommended that you "
                 "install tensorflow-gpu (`pip install tensorflow-gpu`).")
@@ -1115,6 +1124,13 @@ class Simulator(object):
                         "function": lambda x, weights=weights: np.zeros(
                             weights.shape[0]),
                         "transform": 1})
+                elif isinstance(obj.transform, Convolution):
+                    transform = copy.copy(obj.transform)
+                    # manually bypass the read-only check (we are sure that
+                    # nothing else has a handle to the new transform at this
+                    # point, so this won't cause any problems)
+                    Convolution.init.data[transform] = weights
+                    params.append({"transform": transform})
                 else:
                     if all(x == 1 for x in weights.shape):
                         weights = np.squeeze(weights)

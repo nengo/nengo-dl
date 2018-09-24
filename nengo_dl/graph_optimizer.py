@@ -12,6 +12,7 @@ from nengo.builder.operator import (SimPyFunc, ElementwiseInc, DotInc, Reset,
                                     Copy)
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.processes import SimProcess
+from nengo.builder.transforms import ConvInc
 from nengo.exceptions import BuildError
 from nengo.utils.compat import iteritems
 from nengo.utils.graphs import toposort, BidirectionalDAG
@@ -78,6 +79,7 @@ def mergeable(op, chosen_ops):
             return False
 
     # operator-specific checks
+    # TODO: move this logic into the respective builders
     if isinstance(op, ElementwiseInc):
         # for these operations we also enforce that the first dimensions
         # match (we know all the other dimensions match due to checks above).
@@ -150,6 +152,18 @@ def mergeable(op, chosen_ops):
             # for pes the error signals also have to have the same shape
             if op.error.shape[0] != c.error.shape[0]:
                 return False
+    elif isinstance(op, ConvInc):
+        # we allow convolutions to merge if they have the same input signal
+        # (as then we can efficiently apply several kernels to the same input)
+        if op.X is not c.X:
+            return False
+
+        # padding/strides/channels also have to match
+        if (op.conv.input_shape.shape != c.conv.input_shape.shape or
+                op.conv.strides != c.conv.strides or
+                op.conv.padding != c.conv.padding or
+                op.conv.channels_last != c.conv.channels_last):
+            return False
 
     return True
 

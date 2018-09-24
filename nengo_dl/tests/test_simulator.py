@@ -1,6 +1,7 @@
 # pylint: disable=missing-docstring
 
 from collections import OrderedDict
+from distutils.version import LooseVersion
 import logging
 import os
 
@@ -983,7 +984,10 @@ def test_simulation_data(Simulator, seed):
                            sim.data[b].scaled_encoders)
 
         # check connection weights
-        assert np.allclose(conn.transform, sim.data[conn].weights)
+        transform = conn.transform
+        if LooseVersion(nengo.__version__) > "2.8.0":
+            transform = transform.init
+        assert np.allclose(transform, sim.data[conn].weights)
 
         # check that batch dimension eliminated
         assert sim.data[conn].weights.shape == (d, N)
@@ -1092,6 +1096,9 @@ def test_get_nengo_params(Simulator, seed):
         e = nengo.Connection(n, b, transform=Uniform(-1, 1), label="e")
         f = nengo.Ensemble(5, 1, label="a")
         g = nengo.Ensemble(11, 1, neuron_type=nengo.Direct(), label="g")
+        if LooseVersion(nengo.__version__) > "2.8.0":
+            h = nengo.Connection(a.neurons, b, transform=nengo.Convolution(
+                1, (2, 2, 3), padding="same"), label="h")
         p = nengo.Probe(b.neurons)
 
     with Simulator(net, seed=seed) as sim:
@@ -1111,7 +1118,11 @@ def test_get_nengo_params(Simulator, seed):
         params = sim.get_nengo_params(d)
         assert params["transform"] == 1
 
-        params = sim.get_nengo_params([a.neurons, b, c, d, e], as_dict=True)
+        fetches = [a.neurons, b, c, d, e]
+        if LooseVersion(nengo.__version__) > "2.8.0":
+            fetches += [h]
+
+        params = sim.get_nengo_params(fetches, as_dict=True)
         sim.run_steps(100)
 
     with nengo.Network(seed=seed + 1) as net:
@@ -1121,6 +1132,8 @@ def test_get_nengo_params(Simulator, seed):
         nengo.Connection(a2.neurons[:5], b2[:2], **params["c"])
         nengo.Connection(a2, b2.neurons, **params["d"])
         nengo.Connection(n2, b2, **params["e"])
+        if LooseVersion(nengo.__version__) > "2.8.0":
+            nengo.Connection(a2.neurons, b2, **params["h"])
         p2 = nengo.Probe(b2.neurons)
 
     with Simulator(net, seed=seed) as sim2:
@@ -1416,7 +1429,7 @@ def test_synapse_warning(Simulator):
 
 @pytest.mark.training
 def test_concat_hang(Simulator, pytestconfig):
-    if ("1.11.0" <= tf.__version__ <= "1.12.0" and
+    if ("1.11.0" <= LooseVersion(tf.__version__) <= "1.12.0" and
             pytestconfig.getoption("--unroll_simulation") > 1):
         pytest.xfail(
             "There is a bug in TensorFlow that causes this test to hang; see "
