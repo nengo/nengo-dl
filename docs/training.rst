@@ -122,7 +122,7 @@ The optimizer is the algorithm that defines how to update the
 network parameters during training.  Any of the optimization methods
 implemented in TensorFlow can be used in NengoDL; more information can be found
 in the `TensorFlow documentation
-<https://www.tensorflow.org/api_guides/python/train#Optimizers>`_.
+<https://www.tensorflow.org/api_docs/python/tf/train>`_.
 
 An instance of the desired TensorFlow optimizer is created (specifying any
 arguments required by that optimizer), and that instance is then passed to
@@ -238,7 +238,7 @@ summaries
 
 It is often useful to view information about how aspects of a model are
 changing over the course of training.  TensorFlow has created `TensorBoard
-<https://www.tensorflow.org/programmers_guide/summaries_and_tensorboard>`_ to
+<https://www.tensorflow.org/guide/summaries_and_tensorboard>`_ to
 help visualize this kind of data, and the ``summaries`` argument can be used to
 specify the model data that you would like to export for TensorBoard.
 
@@ -254,7 +254,7 @@ collected over the course of training.
 
 Alternatively, you can manually create summaries using ``tf.summary.*`` ops for
 any Tensors you would like to track (see `the TensorFlow documentation
-<https://www.tensorflow.org/api_guides/python/summary>`_), and include those
+<https://www.tensorflow.org/api_docs/python/tf/summary>`_), and include those
 in the summaries list.
 
 TensorBoard can be used to view the exported data via the command
@@ -269,7 +269,7 @@ running you can view the data by opening a web browser and navigating to
 http://localhost:6006.
 
 For details on the usage of TensorBoard, consult the `TensorFlow documentation
-<https://www.tensorflow.org/programmers_guide/summaries_and_tensorboard>`__.
+<https://www.tensorflow.org/guide/summaries_and_tensorboard>`__.
 However, as a brief summary, you will find plots showing the loss values over
 the course of training in the ``Scalars`` tab at the top, and plots showing the
 distributions of weights/encoders/biases over time in the ``Distributions`` or

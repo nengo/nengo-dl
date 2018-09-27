@@ -41,7 +41,7 @@ more complicated but allows you to customize the installation to your
 computer, which can improve simulation speeds.
 
 `Instructions for installing on Ubuntu or Mac OS
-<https://www.tensorflow.org/install/install_sources>`_.
+<https://www.tensorflow.org/install/source>`_.
 
 `Instructions for installing on Windows
-<https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/cmake/README.md>`_.
+<https://www.tensorflow.org/install/source_windows>`_.
