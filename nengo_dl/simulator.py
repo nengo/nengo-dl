@@ -975,7 +975,7 @@ class Simulator(object):
             n_steps, {n: np.zeros((self.minibatch_size, n_steps, n.size_out))
                       for n in self.tensor_graph.invariant_inputs},
             {p: np.zeros((self.minibatch_size, n_steps, p.size_in))
-             for p in self.tensor_graph.target_phs})
+             for p in self.tensor_graph.target_phs}, training=True)
 
         if outputs is None:
             # note: the x + 0 is necessary because `gradient_checker`
@@ -1133,8 +1133,7 @@ class Simulator(object):
             feed_dict[self.tensor_graph.signals.training] = training
 
         # fill in input values
-        tmp = self._generate_inputs(inputs, n_steps)
-        feed_dict.update(tmp)
+        feed_dict.update(self._generate_inputs(inputs, n_steps))
 
         # fill in target values
         if targets is not None:

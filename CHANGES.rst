@@ -26,6 +26,10 @@ Release History
 - Test Simulator parameters are now controlled through pytest arguments,
   rather than environment variables.
 
+**Fixed**
+
+- Avoid backpropagating NaN gradients from spiking neurons.
+
 1.2.0 (September 5, 2018)
 -------------------------
 

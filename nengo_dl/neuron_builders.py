@@ -151,7 +151,10 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
         voltage -= n_spikes
         out = n_spikes * self.alpha
 
-        return out, voltage
+        # we use stop_gradient to avoid propagating any nans (those get
+        # propagated through the cond even if the spiking version isn't
+        # being used at all)
+        return tf.stop_gradient(out), tf.stop_gradient(voltage)
 
     def build_step(self, signals):
         J = signals.gather(self.J_data)
@@ -316,7 +319,11 @@ class LIFBuilder(SoftLIFRateBuilder):
         voltage = tf.where(spiked, self.zeros,
                            tf.maximum(voltage, self.min_voltage))
 
-        return spikes, voltage, refractory
+        # we use stop_gradient to avoid propagating any nans (those get
+        # propagated through the cond even if the spiking version isn't
+        # being used at all)
+        return (tf.stop_gradient(spikes), tf.stop_gradient(voltage),
+                tf.stop_gradient(refractory))
 
     def build_step(self, signals):
         J = signals.gather(self.J_data)
