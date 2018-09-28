@@ -2,7 +2,7 @@ skip_branch_with_pr: true
 
 environment:
   MODE: test
-  PYTHON_VERSION: C:\Miniconda36-x64
+  PYTHON_VERSION: C:\Miniconda35-x64  # TODO: switch back to 3.6 if it becomes available (Miniconda36 installs 3.7 for some reason)
   NUMPY_VERSION: numpy<1.15
   TF_VERSION: tensorflow
   NENGO_VERSION: nengo
