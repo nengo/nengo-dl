@@ -3,7 +3,7 @@ set -e -v
 
 if [[ $1 == "install" ]]; then
   pip install -e .[docs]
-  conda install pandoc
+  conda install -q pandoc
 elif [[ $1 == "script" ]]; then
   pylint nengo_dl --rcfile=setup.cfg
   codespell -q 3

@@ -3,7 +3,7 @@ set -e -v
 
 if [[ $1 == "install" ]]; then
   pip install -e .[docs]
-  conda install pandoc
+  conda install -q pandoc
 elif [[ $1 == "script" ]]; then
   git clone -b gh-pages-release https://github.com/nengo/nengo-dl.git ../nengo-dl-docs
   RELEASES=$(find ../nengo-dl-docs -maxdepth 1 -type d -name "v[0-9].*" -printf "%f;")
