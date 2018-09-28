@@ -12,7 +12,7 @@ env:
     - MODE="test"
     - PYTHON_VERSION="3.6"
     - NUMPY_VERSION="numpy<1.15"  # TODO: remove restriction once TensorFlow is compatible with >=1.15
-    - TF_VERSION="tensorflow"
+    - TF_VERSION="tensorflow==1.10.0"  # TODO: test on 1.11 once travis-ci hanging issues are resolved
     - NENGO_VERSION="nengo"
     - TEST_ARGS=""
 

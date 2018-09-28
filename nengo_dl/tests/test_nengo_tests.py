@@ -76,7 +76,7 @@ def test_entry_point():
     if tf.__version__ == "1.11.0":
         pytest.xfail("TensorFlow 1.11.0 has conflicting dependencies")
 
-    sims = [ep.load() for ep in
+    sims = [ep.load(require=False) for ep in
             pkg_resources.iter_entry_points(group='nengo.backends')]
     assert nengo_dl.Simulator in sims
 
