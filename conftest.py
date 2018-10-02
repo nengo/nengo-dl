@@ -1,3 +1,5 @@
+import pkg_resources
+
 import nengo.conftest
 from nengo.conftest import seed  # pylint: disable=unused-import
 from nengo.tests import test_synapses, test_learning_rules
@@ -9,8 +11,8 @@ from nengo_dl import config, simulator
 
 
 def pytest_runtest_setup(item):
-    if getattr(item.obj, "gpu", False) and not item.config.getvalue("--gpu"):
-        pytest.skip("GPU tests not requested")
+    if getattr(item.obj, "gpu", False) and not pytest.gpu_installed:
+        pytest.skip("This test requires tensorflow-gpu")
     elif (hasattr(item, "fixturenames") and
           "Simulator" not in item.fixturenames and
           item.config.getvalue("--simulator-only")):
@@ -21,8 +23,6 @@ def pytest_runtest_setup(item):
 
 
 def pytest_addoption(parser):
-    parser.addoption("--gpu", action="store_true", default=False,
-                     help="Run GPU tests")
     parser.addoption("--simulator-only", action="store_true", default=False,
                      help="Only run tests involving Simulator")
     parser.addoption("--inference-only", action="store_true", default=False,
@@ -34,6 +34,12 @@ def pytest_addoption(parser):
                      help="unroll_simulation value for Simulator")
     parser.addoption("--device", default=None,
                      help="device parameter for Simulator")
+
+
+def pytest_namespace():
+    installed_dists = [d.project_name for d in pkg_resources.working_set]
+    return {"gpu_installed": ("tensorflow-gpu" in installed_dists or
+                              "tf-nightly-gpu" in installed_dists)}
 
 
 @pytest.fixture(scope="session")

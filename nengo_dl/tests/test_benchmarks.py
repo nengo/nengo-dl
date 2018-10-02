@@ -3,6 +3,7 @@ import sys
 
 import pytest
 import nengo
+import tensorflow as tf
 
 from nengo_dl import benchmarks, SoftLIFRate
 
@@ -93,10 +94,15 @@ def _test_random(net, dimensions, neurons_per_d, neuron_type, n_ensembles,
 
 
 @pytest.mark.parametrize("train", (True, False))
-def test_run_profile(train):
+def test_run_profile(train, pytestconfig):
     net = benchmarks.integrator(3, 2, nengo.RectifiedLinear())
 
-    benchmarks.run_profile(net, train=train, n_steps=10, do_profile=False)
+    benchmarks.run_profile(
+        net, train=train, n_steps=10, do_profile=False,
+        device=pytestconfig.getvalue("--device"),
+        unroll_simulation=pytest.config.getvalue("--unroll_simulation"),
+        dtype=(tf.float32 if pytest.config.getvalue("dtype") == "float32" else
+               tf.float64))
 
     assert net.config[net].inference_only == (False if train else True)
 
