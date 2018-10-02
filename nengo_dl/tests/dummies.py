@@ -5,7 +5,7 @@ from collections import defaultdict
 import nengo
 import numpy as np
 
-from nengo_dl import builder, tensor_graph, signals
+from nengo_dl import builder, tensor_graph, signals, configure_settings
 
 
 class Signal(object):
@@ -85,3 +85,22 @@ class TensorGraph(tensor_graph.TensorGraph):
         self.minibatch_size = minibatch_size
 
         self.signals = signals.SignalDict(self.dtype, self.minibatch_size)
+
+
+def linear_net():
+    # a simple network with no nonlinearity
+    with nengo.Network() as net:
+        a = nengo.Node([1])
+
+        # note: in theory this would be nengo.Node(size_in=1), but due to
+        # https://github.com/tensorflow/tensorflow/issues/23383
+        # TensorFlow will hang
+        b = nengo.Ensemble(1, 1, neuron_type=nengo.RectifiedLinear(),
+                           gain=np.ones(1), bias=np.ones(1) * 1e-6)
+        configure_settings(trainable=None)
+        net.config[b.neurons].trainable = False
+        nengo.Connection(a, b.neurons, synapse=None)
+
+        p = nengo.Probe(b.neurons)
+
+    return net, a, p

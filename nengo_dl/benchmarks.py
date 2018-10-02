@@ -380,11 +380,11 @@ def run_profile(net, train=False, n_steps=150, do_profile=True, **kwargs):
             y = np.random.randn(sim.minibatch_size, n_steps, net.p.size_in)
 
             for _ in range(2):
-                sim.train({net.inp: x}, {net.p: y}, optimizer=opt, n_epochs=1,
+                sim.train({net.inp: x, net.p: y}, optimizer=opt, n_epochs=1,
                           profile=do_profile)
 
             start = time.time()
-            sim.train({net.inp: x}, {net.p: y}, optimizer=opt, n_epochs=1,
+            sim.train({net.inp: x, net.p: y}, optimizer=opt, n_epochs=1,
                       profile=do_profile)
             exec_time = time.time() - start
             print("Execution time:", exec_time)

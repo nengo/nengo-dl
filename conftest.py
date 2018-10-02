@@ -1,7 +1,7 @@
 import pkg_resources
 
 import nengo.conftest
-from nengo.conftest import seed  # pylint: disable=unused-import
+from nengo.conftest import seed, rng  # pylint: disable=unused-import
 from nengo.tests import test_synapses, test_learning_rules
 import numpy as np
 import pytest

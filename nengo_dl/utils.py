@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 def sanitize_name(name):
-    """Remove illegal TensorFlow name characters from string.
+    """
+    Remove illegal TensorFlow name characters from string.
 
     Valid TensorFlow name characters are ``[A-Za-z0-9_.\\-/]``
 
@@ -45,7 +46,8 @@ def sanitize_name(name):
 
 
 def function_name(func, sanitize=True):
-    """Get the name of the callable object ``func``.
+    """
+    Get the name of the callable object ``func``.
 
     Parameters
     ----------
@@ -68,7 +70,8 @@ def function_name(func, sanitize=True):
 
 
 def align_func(output_shape, output_dtype):
-    """Decorator that ensures the output of ``func`` is an
+    """
+    Decorator that ensures the output of ``func`` is an
     :class:`~numpy:numpy.ndarray` with the given shape and dtype.
 
     Parameters
@@ -116,7 +119,8 @@ def align_func(output_shape, output_dtype):
 
 
 def print_op(input, message):
-    """Inserts a print statement into the TensorFlow graph.
+    """
+    Inserts a print statement into the TensorFlow graph.
 
     Parameters
     ----------
@@ -149,7 +153,8 @@ def print_op(input, message):
 
 
 def find_non_differentiable(inputs, outputs):
-    """Searches through a TensorFlow graph to find non-differentiable elements
+    """
+    Searches through a TensorFlow graph to find non-differentiable elements
     between ``inputs`` and ``outputs`` (elements that would prevent us from
     computing ``d_outputs / d_inputs``.
 
@@ -183,7 +188,8 @@ def find_non_differentiable(inputs, outputs):
 
 
 class MessageBar(progressbar.BouncingBar):
-    """ProgressBar widget for progress bars with possibly unknown duration.
+    """
+    ProgressBar widget for progress bars with possibly unknown duration.
 
     Parameters
     ----------
@@ -219,7 +225,8 @@ class MessageBar(progressbar.BouncingBar):
 
 
 class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestors
-    """Handles progress bar display for some tracked process.
+    """
+    Handles progress bar display for some tracked process.
 
     Parameters
     ----------
@@ -305,7 +312,8 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
         super(ProgressBar, self).finish(**kwargs)
 
     def step(self, **vars):
-        """Advance the progress bar one step.
+        """
+        Advance the progress bar one step.
 
         Parameters
         ----------
@@ -319,7 +327,8 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
         self.value += 1
 
     def sub(self, msg=None, **kwargs):
-        """Creates a new progress bar for tracking a sub-process.
+        """
+        Creates a new progress bar for tracking a sub-process.
 
         Parameters
         ----------
@@ -368,7 +377,8 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
 
 
 class NullProgressBar(progressbar.NullBar):  # pylint: disable=too-many-ancestors
-    """A progress bar that does nothing.
+    """
+    A progress bar that does nothing.
 
     Used to replace ProgressBar when we want to disable output.
     """
@@ -384,20 +394,16 @@ class NullProgressBar(progressbar.NullBar):  # pylint: disable=too-many-ancestor
         pass
 
 
-def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
+def minibatch_generator(data, minibatch_size, shuffle=True,
                         truncation=None, rng=None):
-    """Generator to yield ``minibatch_sized`` subsets from ``inputs`` and
+    """
+    Generator to yield ``minibatch_sized`` subsets from ``inputs`` and
     ``targets``.
 
     Parameters
     ----------
-    inputs : dict of {:class:`~nengo:nengo.Node`: \
-                      :class:`~numpy:numpy.ndarray`}
-        Input values for Nodes in the network
-    targets : dict of {:class:`~nengo:nengo.Probe`: \
-                       :class:`~numpy:numpy.ndarray`}
-        Desired output value at Probes, corresponding to each value in
-        ``inputs``
+    data : dict of {``NengoObject``: :class:`~numpy:numpy.ndarray`}
+        Data arrays to be divided into minibatches.
     minibatch_size : int
         The number of items in each minibatch
     shuffle : bool, optional
@@ -424,25 +430,17 @@ def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
         ``minibatch_size`` elements along the first dimension
     """
 
-    n_inputs, n_steps = next(iter(inputs.values())).shape[:2]
+    if isinstance(data, int):
+        n_inputs = None
+        n_steps = data
+    else:
+        n_inputs, n_steps = next(iter(data.values())).shape[:2]
 
     if rng is None:
         rng = np.random
 
-    if shuffle:
-        perm = rng.permutation(n_inputs)
-    else:
-        perm = np.arange(n_inputs)
-
     if truncation is None:
         truncation = n_steps
-
-    if n_inputs % minibatch_size != 0:
-        warnings.warn(UserWarning(
-            "Number of inputs (%d) is not an even multiple of "
-            "minibatch size (%d); inputs will be truncated" %
-            (n_inputs, minibatch_size)))
-        perm = perm[:-(n_inputs % minibatch_size)]
 
     if n_steps % truncation != 0:
         warnings.warn(UserWarning(
@@ -450,11 +448,53 @@ def minibatch_generator(inputs, targets, minibatch_size, shuffle=True,
             "truncation length (%d); this may result in poor "
             "training results" % (n_steps, truncation)))
 
-    for i in range(0, n_inputs - n_inputs % minibatch_size, minibatch_size):
-        batch_inp = {n: inputs[n][perm[i:i + minibatch_size]] for n in inputs}
-        batch_tar = {p: targets[p][perm[i:i + minibatch_size]]
-                     for p in targets}
-
+    if n_inputs is None:
+        # no input to divide up, so we just return the
+        # number of steps to be run based on the truncation
         for j in range(0, n_steps, truncation):
-            yield (j, {n: batch_inp[n][:, j:j + truncation] for n in inputs},
-                   {p: batch_tar[p][:, j:j + truncation] for p in targets})
+            yield (j, min(truncation, n_steps - j))
+    else:
+        if shuffle:
+            perm = rng.permutation(n_inputs)
+        else:
+            perm = np.arange(n_inputs)
+
+        if n_inputs % minibatch_size != 0:
+            warnings.warn(UserWarning(
+                "Number of data elements (%d) is not an even multiple of "
+                "minibatch size (%d); inputs will be truncated" %
+                (n_inputs, minibatch_size)))
+            perm = perm[:-(n_inputs % minibatch_size)]
+
+        for i in range(0, n_inputs - n_inputs % minibatch_size,
+                       minibatch_size):
+            mini_data = {k: v[perm[i:i + minibatch_size]]
+                         for k, v in data.items()}
+
+            for j in range(0, n_steps, truncation):
+                yield (j, {k: v[:, j:j + truncation]
+                           for k, v in mini_data.items()})
+
+
+def mse(outputs, targets):
+    """
+    Compute Mean Squared Error between given outputs and targets.
+
+    If any values in ``targets`` are ``nan``, that will be treated as
+    zero error.
+
+    Parameters
+    ----------
+    outputs : ``tf.Tensor``
+        Output values from a Probe in a network.
+    targets : ``tf.Tensor``
+        Target values for a Probe in a network.
+
+    Returns
+    -------
+    ``tf.Tensor``
+        Tensor representing the mean squared error.
+    """
+
+    targets = tf.where(tf.is_nan(targets), outputs, targets)
+    return tf.reduce_mean(tf.square(targets - outputs))

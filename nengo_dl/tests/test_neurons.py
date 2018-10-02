@@ -100,7 +100,7 @@ def test_spiking_swap(Simulator, rate, spiking, seed):
             grads.append(sim.sess.run(
                 tf.gradients(sim.tensor_graph.probe_arrays[p],
                              tf.trainable_variables()),
-                feed_dict=sim._fill_feed(10, {}, training=True)))
+                feed_dict=sim._fill_feed(10, training=True)))
 
             sim.soft_reset()
             sim.run(0.5)

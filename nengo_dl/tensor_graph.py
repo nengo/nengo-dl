@@ -10,8 +10,9 @@ from nengo.builder.operator import TimeUpdate, SimPyFunc, Reset
 from nengo.builder.processes import SimProcess
 from nengo.config import ConfigError
 from nengo.ensemble import Neurons
-from nengo.exceptions import SimulationError
+from nengo.exceptions import SimulationError, ValidationError
 from nengo.neurons import Direct
+from nengo.utils.compat import getfullargspec
 from nengo.utils.magic import decorator
 import numpy as np
 import tensorflow as tf
@@ -150,7 +151,7 @@ class TensorGraph(object):
         """
 
         self.target_phs = {}
-        self.losses = {}
+        self.outputs = {}
         self.optimizers = {}
 
         # create these constants once here for reuse in different operators
@@ -172,6 +173,8 @@ class TensorGraph(object):
                     "training_step", dtype=tf.int64, shape=(),
                     trainable=False, initializer=tf.constant_initializer(0))
                 self.training_step_inc = tf.assign_add(self.training_step, 1)
+        else:
+            self.training_step = None
 
         # create base arrays
         sub = progress.sub("creating base arrays")
@@ -436,8 +439,7 @@ class TensorGraph(object):
                     self.dtype, (None, n.size_out, self.minibatch_size),
                     name="%s_ph" % utils.sanitize_name(n))
 
-    @with_self
-    def build_optimizer(self, optimizer, objective):
+    def build_optimizer_func(self, optimizer, objective):
         """
         Adds elements into the graph to execute the given optimizer.
 
@@ -458,31 +460,65 @@ class TensorGraph(object):
 
         Returns
         -------
-        ``tf.Tensor``
-            Operator implementing the given optimizer update
-        ``tf.Tensor`` or ``None``
-            Operator for initializing variables created by the optimizer
-            (``None`` if there is nothing to initialize, or if we're returning
-            a previously built optimizer that should already be initialized)
-        """
+        callable
+            A function that builds the operators required to implement the
+            given optimizer update.  Generally this function will then be
+            passed to :meth:`~.build_outputs`.
 
-        loss = self.build_loss(objective)
+        Notes
+        -----
+        This function caches its outputs, so if it is called again with the
+        same arguments then it will return the previous function.  This avoids
+        building duplicates of the same operations over and over.  This can
+        also be important functionally, e.g. if the optimizer has internal
+        state like momentum.  By caching the output we ensure that subsequent
+        calls share the same internal state.
+        """
 
         key = (optimizer, frozenset(objective.items()))
 
         try:
-            # return the cached optimizer if it exists
-            return self.optimizers[key], None
+            # return the cached optimizer function if it exists
+            return self.optimizers[key]
         except KeyError:
             pass
 
-        agg_method = tf.AggregationMethod.DEFAULT
+        # note: the standard workflow is that sim.train calls
+        # build_optimizer_func to get this function. it then passes the
+        # function to run_batch, which calls build_outputs to actually
+        # build these operations into the graph. we do this somewhat
+        # indirect method so that everything passes through build_output,
+        # allowing us to consolidate certain logic there (like capturing
+        # new variables)
+        def apply_optimizer(outputs, targets):
+            # note: we don't actually use outputs/targets, because the same
+            # data is pulled implicitly from `objective` below.
+            # we just check that outputs and targets match up with
+            # objective, to make sure there's nothing weird going on.
+            if not isinstance(outputs, tuple):
+                outputs = (outputs,)
+            if not isinstance(targets, tuple):
+                targets = (targets,)
+            assert set(outputs) == set(self.probe_arrays[p] for p in objective)
+            assert set(targets) == set(self.target_phs[p] for p in objective)
 
-        # compute gradients wrt loss
-        grads = []
-        vars = tf.trainable_variables()
-        with tf.variable_scope(tf.get_variable_scope()) as scope:
-            if loss is not None:
+            agg_method = tf.AggregationMethod.DEFAULT
+            grads = []
+            vars = tf.trainable_variables()
+
+            # compute loss
+            # note: we drop the `None` items in objective, because we
+            # want to treat those as direct gradients (rather than
+            # returning the probe value, which is the standard behaviour for
+            # build_outputs)
+            loss, _ = self.build_outputs(
+                {k: v for k, v in objective.items() if v is not None})
+
+            # compute gradients wrt loss
+            if len(loss) > 0:
+                # reduce loss to a scalar
+                loss = tf.reduce_sum([tf.reduce_sum(v) for v in loss.values()])
+
                 grads.append(tf.gradients(
                     loss, vars, aggregation_method=agg_method))
 
@@ -494,99 +530,122 @@ class TensorGraph(object):
                         self.probe_arrays[p], vars, grad_ys=self.target_phs[p],
                         aggregation_method=agg_method))
 
-            # get any new variables created by the gradient calculations
-            new_vars = scope.get_collection("gradient_vars")
+            # combine gradients for each variable
+            if len(grads) == 1:
+                grads = grads[0]
+            else:
+                grads = [tf.reduce_sum(gs, axis=0) for gs in zip(*grads)]
 
-        if len(grads) == 1:
-            grads = grads[0]
-        else:
-            grads = [tf.reduce_sum(gs, axis=0) for gs in zip(*grads)]
-
-        with tf.variable_scope(optimizer.get_name()) as scope:
-            # create optimizer operator
             opt_op = optimizer.apply_gradients(
                 zip(grads, tf.trainable_variables()))
 
-            # get any new variables created by the optimizer (so they
-            # can be initialized)
-            new_vars.extend(
-                scope.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
+            return opt_op, loss
 
-        if len(new_vars) > 0:
-            opt_slots_init = tf.variables_initializer(new_vars)
-        else:
-            opt_slots_init = None
+        self.optimizers[key] = apply_optimizer
 
-        self.optimizers[key] = opt_op
-
-        return opt_op, opt_slots_init
+        return apply_optimizer
 
     @with_self
-    def build_loss(self, objective):
+    def build_outputs(self, outputs):
         """
-        Adds elements into the graph to compute the given objective.
+        Adds elements into the graph to compute the given outputs.
 
         Parameters
         ----------
-        objective : dict of {:class:`~nengo:nengo.Probe`: ``"mse"`` or \
-                                                          callable or ``None``}
-            The objective used to compute loss for each probe. Passing
-            ``"mse"`` will use mean squared error. A custom function
-            ``f(output, target) -> loss`` can be passed that consumes the
-            actual output and target output for a probe in ``targets``
-            and returns a ``tf.Tensor`` representing the scalar loss value for
-            that Probe (loss will be summed across Probes).
+        outputs : dict of {(tuple of) :class:`~nengo:nengo.Probe`: \
+                           callable or None}
+            The output function to be applied to each probe or group of probes.
+            The function can accept one argument (the output of that probe) or
+            two (output and target values for that probe).  If a tuple of
+            Probes are given as the key, then those output/target parameters
+            will be the corresponding tuple of probe/target values.  The
+            function should return a ``tf.Tensor`` or tuple of Tensors
+            representing the output we want from those probes.  If ``None`` is
+            given instead of a function then the output will simply be the
+            output value from the corresponding probes.
 
         Returns
         -------
-        ``tf.Tensor``
-            Tensor representing the sum of the given objectives applied to
-            target probes
+        dict of {(tuple of) :class:`~nengo:nengo.Probe`: \
+                 (tuple of) ``tf.Tensor``}
+            Tensors representing the result of applying the output functions
+            to the probes.
+        ``tf.Tensor`` or None
+            Initialization op for any new variables created when building
+            the outputs.
+
+        Notes
+        -----
+        This function caches its outputs, so if it is called again with the
+        same arguments then it will return the previous Tensors.  This avoids
+        building duplicates of the same operations over and over.  This can
+        also be important functionally, e.g. if the outputs have internal
+        state.  By caching the output we ensure that subsequent
+        calls share the same internal state.
         """
 
-        key = frozenset(objective.items())
+        key = frozenset(outputs.items())
 
         try:
-            # return the cached loss tensor if it exists
-            return self.losses[key]
+            # return the cached outputs if they exist
+            return self.outputs[key], None
         except KeyError:
             pass
 
-        loss = []
-        for p, obj in objective.items():
-            # create a placeholder for the target values
-            if p not in self.target_phs:
-                self.target_phs[p] = tf.placeholder(
-                    self.dtype, (self.minibatch_size, None, p.size_in),
-                    name="%s_ph" % utils.sanitize_name(p))
+        output_vals = {}
+        new_vars = []
+        for probes, out in outputs.items():
+            is_tuple = isinstance(probes, tuple)
+            probe_arrays = (
+                tuple(self.probe_arrays[p] for p in probes) if is_tuple else
+                self.probe_arrays[probes])
 
-            # compute loss
-            if obj == "mse":
-                # note: nan targets converted to zero error
-                target = tf.where(tf.is_nan(self.target_phs[p]),
-                                  self.probe_arrays[p],
-                                  self.target_phs[p])
+            if out is None:
+                # return probe output value
+                output_vals[probes] = probe_arrays
+            elif callable(out):
+                # look up number of positional arguments for function
+                spec = getfullargspec(out)
+                args = (spec.args if spec.defaults is None else
+                        spec.args[:-len(spec.defaults)])
+                if len(args) == 1:
+                    args = [probe_arrays]
+                elif len(args) == 2:
+                    for p in probes if is_tuple else (probes,):
+                        # create a placeholder for the target values if one
+                        # hasn't been created yet
+                        if p not in self.target_phs:
+                            self.target_phs[p] = tf.placeholder(
+                                self.dtype,
+                                (self.minibatch_size, None, p.size_in),
+                                name="%s_ph" % utils.sanitize_name(p))
+                    target_phs = (tuple(self.target_phs[p] for p in probes)
+                                  if is_tuple else self.target_phs[probes])
+                    args = [probe_arrays, target_phs]
+                else:
+                    raise ValidationError(
+                        "Output functions must accept 1 or 2 arguments; found "
+                        "%s" % args, "outputs")
 
-                loss.append(tf.reduce_mean(
-                    tf.square(target - self.probe_arrays[p])))
-            elif callable(obj):
-                loss.append(obj(self.probe_arrays[p], self.target_phs[p]))
-            elif obj is None:
-                # user is directly specifying error, not using objective
-                continue
+                # apply output function
+                with tf.variable_scope(utils.function_name(out)) as scope:
+                    output_vals[probes] = out(*args)
+
+                # collect any new variables from building the outputs
+                for collection in [tf.GraphKeys.GLOBAL_VARIABLES,
+                                   tf.GraphKeys.LOCAL_VARIABLES,
+                                   "gradient_vars"]:
+                    new_vars.extend(scope.get_collection(collection))
             else:
-                raise NotImplementedError
+                raise ValidationError("Outputs must be callable or None)",
+                                      "outputs")
 
-        if len(loss) > 0:
-            # sum loss across probes (note: this will also sum across
-            # the output of `objective` if it doesn't return a scalar)
-            loss = tf.reduce_sum(loss)
-        else:
-            loss = None
+        new_vars_init = (tf.variables_initializer(new_vars)
+                         if len(new_vars) > 0 else None)
 
-        self.losses[key] = loss
+        self.outputs[key] = output_vals
 
-        return loss
+        return output_vals, new_vars_init
 
     @with_self
     def build_post(self, sess, rng):
@@ -655,21 +714,25 @@ class TensorGraph(object):
         """
 
         summary_ops = []
+        inits = []
         with tf.device("/cpu:0"):
             for obj in summaries:
                 if isinstance(obj, dict):
                     # overall loss
-                    loss = self.build_loss(obj)
+                    loss, init = self.build_outputs(obj)
+                    if init is not None:
+                        inits.append(init)
                     summary_ops.append(tf.summary.scalar(
-                        "loss", loss, family="loss"))
+                        "loss", tf.reduce_sum([tf.reduce_sum(v)
+                                               for v in loss.values()]),
+                        family="loss"))
 
                     if len(obj) > 1:
                         # get loss for each probe
-                        inputs = tf.unstack(loss.op.inputs[0])
-                        for p, t in zip(obj, inputs):
+                        for p, t in loss.items():
                             summary_ops.append(tf.summary.scalar(
                                 utils.sanitize_name("Probe_%s_loss" % p.label),
-                                t, family="loss"))
+                                tf.reduce_sum(t), family="loss"))
                 elif isinstance(obj, (Ensemble, Neurons, Connection)):
                     if isinstance(obj, Ensemble):
                         param = "encoders"
@@ -691,7 +754,8 @@ class TensorGraph(object):
                     raise SimulationError(
                         "Unknown summary object: %s" % obj)
 
-            return tf.summary.merge(summary_ops)
+            return tf.summary.merge(summary_ops), (None if len(inits) == 0 else
+                                                   inits)
 
     @with_self
     def get_tensor(self, sig):

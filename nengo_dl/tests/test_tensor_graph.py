@@ -1,5 +1,6 @@
 import nengo
 from nengo.builder.operator import Reset
+from nengo.exceptions import ValidationError
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -50,22 +51,34 @@ def test_gradients(Simulator, unroll, seed):
         sim.check_gradients(atol=1e-4)
 
 
-def test_build_loss(Simulator):
-    # check that the loss caching works
-
+def test_build_outputs(Simulator):
     with nengo.Network() as net:
         inp = nengo.Node([0])
         p = nengo.Probe(inp)
 
     with Simulator(net) as sim:
-        assert (sim.tensor_graph.build_loss({p: "mse"}) is
-                sim.tensor_graph.build_loss({p: "mse"}))
+        # check that the output caching works
+        assert (sim.tensor_graph.build_outputs({p: utils.mse})[0] is
+                sim.tensor_graph.build_outputs({p: utils.mse})[0])
 
-        def loss(*args):
-            return args[0]
+        def loss(x):
+            return x
 
-        assert (sim.tensor_graph.build_loss({p: loss}) is
-                sim.tensor_graph.build_loss({p: loss}))
+        assert (sim.tensor_graph.build_outputs({p: loss})[0] is
+                sim.tensor_graph.build_outputs({p: loss})[0])
+
+        # check function argument counting
+        def loss3(x, y, z):
+            return x
+
+        with pytest.raises(ValidationError):
+            sim.tensor_graph.build_outputs({p: loss3})
+
+        def loss3b(x, y, z=None):
+            return x
+
+        # no error for extra keyword arguments
+        sim.tensor_graph.build_outputs({p: loss3b})
 
 
 @pytest.mark.training
@@ -79,8 +92,8 @@ def test_build_optimizer(Simulator):
     # check optimizer caching
     with Simulator(net) as sim:
         opt = tf.train.GradientDescentOptimizer(0)
-        assert (sim.tensor_graph.build_optimizer(opt, {p: "mse"})[0] is
-                sim.tensor_graph.build_optimizer(opt, {p: "mse"})[0])
+        assert (sim.tensor_graph.build_optimizer_func(opt, {p: "mse"}) is
+                sim.tensor_graph.build_optimizer_func(opt, {p: "mse"}))
 
     # error when no trainable elements
     with nengo.Network() as net:
@@ -89,7 +102,22 @@ def test_build_optimizer(Simulator):
 
     with Simulator(net) as sim:
         with pytest.raises(ValueError):
-            sim.tensor_graph.build_optimizer(opt, {p: "mse"})
+            sim.tensor_graph.build_outputs(
+                {p: sim.tensor_graph.build_optimizer_func(opt, {p: "mse"})})
+
+    # capturing variables from nested loss function
+    def loss(x):
+        return abs(
+            tf.get_variable("two", initializer=tf.constant_initializer(2.0),
+                            shape=(), dtype=x.dtype) - x)
+
+    net, _, p = dummies.linear_net()
+
+    with Simulator(net) as sim:
+        sim.train(5, tf.train.GradientDescentOptimizer(0.1),
+                  objective={p: loss}, n_epochs=10)
+        sim.step()
+        assert np.allclose(sim.data[p], 2)
 
 
 def test_mark_signals():

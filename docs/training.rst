@@ -11,8 +11,7 @@ important features of NengoDL.  This functionality is accessed via the
         <construct the model>
 
     with nengo_dl.Simulator(net, ...) as sim:
-        sim.train(<inputs>, <targets>, <optimizer>, n_epochs=10,
-                  objective=<objective>)
+        sim.train(<data>, <optimizer>, n_epochs=10, objective=<objective>)
 
 When the ``Simulator`` is first constructed, all the parameters in the model
 (e.g., encoders, decoders, connection weights, biases) are initialized based
@@ -26,14 +25,19 @@ below.
 Simulator.train arguments
 -------------------------
 
-inputs
-^^^^^^
+data
+^^^^
 
-The first argument to the :meth:`.Simulator.train` function is the input data.
+The first argument to the :meth:`.Simulator.train` function is the training
+data.  This generally consists of two components: input values for Nodes, and
+target values for Probes.
+
+**inputs**
+
 We can think of a model as computing a function
 :math:`y = f(x, \theta)`, where :math:`f` is the model, mapping inputs
-:math:`x` to outputs :math:`y` with parameters :math:`\theta`.  This
-argument is specifying the values for :math:`x`.
+:math:`x` to outputs :math:`y` with parameters :math:`\theta`.  These values
+are specifying the values for :math:`x`.
 
 In practice what that means is specifying values for the input Nodes in the
 model.  A :class:`~nengo:nengo.Node` is a Nengo object that inserts values into
@@ -67,31 +71,28 @@ input nodes:
     n_steps = 10
 
     with nengo_dl.Simulator(net, minibatch_size=minibatch_size) as sim:
-        sim.train(inputs={a: np.random.randn(n_inputs, n_steps, 1),
-                          b: np.random.randn(n_inputs, n_steps, 3)},
+        sim.train(data={a: np.random.randn(n_inputs, n_steps, 1),
+                        b: np.random.randn(n_inputs, n_steps, 3),
+                        ...},
                   ...)
 
-Input values must be provided for at least one Node, but beyond that can be
-defined for as many Nodes as desired.  Any Nodes that don't have data provided
-will take on the values specified during model construction.  Also note that
-inputs can only be defined for Nodes with no incoming connections (i.e., Nodes
-with ``size_in == 0``).
+Note that inputs can only be defined for Nodes with no incoming connections
+(i.e., Nodes with ``size_in == 0``).  Any Nodes that don't have data provided
+will take on the values specified during model construction.
 
-targets
-^^^^^^^
+**targets**
 
 Returning to the network equation :math:`y = f(x, \theta)`, the goal in
-optimization is to find a set of parameter values such that given inputs
-:math:`x` the actual network outputs :math:`y` are as close as possible to
-some target values :math:`t`.  This argument is specifying those
-desired outputs :math:`t`.
+optimization is usually to find a set of parameter values such that given
+inputs :math:`x` and target values :math:`t`, an error value
+:math:`e = o(y, t)` is minimized.  These values are specifying those target
+values :math:`t`.
 
 This works very similarly to defining inputs, except instead of assigning
-input values to Nodes it assigns target values to Probes.  The structure of the
-argument is similar -- a dictionary of ``{<probe>: <array>, ...}``, where
-``<array>`` has shape ``(n_inputs, n_steps, probe.size_in)``.  Each entry
-in the target array defines the desired output for the corresponding entry in
-the input array.
+input values to Nodes it assigns target values to Probes.  We add
+``{<probe>: <array>, ...}`` entries to the ``data`` dictionary, where
+``<array>`` has shape ``(n_inputs, n_steps, probe.size_in)``.  Those target
+values will be passed to the objective function :math:`g` for each timestep.
 
 For example:
 
@@ -107,11 +108,11 @@ For example:
     n_steps = 10
 
     with nengo_dl.Simulator(net, minibatch_size=minibatch_size) as sim:
-        sim.train(targets={p: np.random.randn(n_inputs, n_steps, 2)},
+        sim.train(data={..., p: np.random.randn(n_inputs, n_steps, 2)},
                   ...)
 
 Note that these examples use random inputs/targets, for the sake of simplicity.
-In practice we would do something like ``targets={p: my_func(inputs)}``, where
+In practice we would do something like ``targets=my_func(inputs)``, where
 ``my_func`` is a function specifying what the ideal outputs are for the given
 inputs.
 
@@ -139,17 +140,18 @@ arguments required by that optimizer), and that instance is then passed to
 objective
 ^^^^^^^^^
 
-The goal in optimization is to minimize the error between the network's actual
-outputs :math:`y` and the targets :math:`t`.  The objective is the
-function :math:`e = o(y, t)` that computes an error value :math:`e`, given
-:math:`y` and :math:`t`.
+As mentioned, the goal in optimization is to minimize some error value
+:math:`e = o(y, t)`.  The objective is the function :math:`o` that computes an
+error value :math:`e`, given :math:`y` and :math:`t`.  This argument is
+specified as a dictionary mapping Probes to objective functions, indicating how
+the output of that probe is mapped to an error value.
 
 The default objective in NengoDL is the standard `mean squared error
 <https://en.wikipedia.org/wiki/Mean_squared_error>`_.  This will be used if
 the user doesn't specify an objective.
 
-Users can specify a custom objective by creating a function and passing that
-to the ``objective`` argument in :meth:`.Simulator.train`.  Note that the
+Users can specify a custom objective by creating a function that implements
+the :math:`o` function above.  Note that the
 objective is defined using TensorFlow operators.  It should accept Tensors
 representing outputs and targets as input (each with shape
 ``(minibatch_size, n_steps, probe.size_in)``) and return a scalar Tensor
@@ -164,32 +166,43 @@ rather than using the default:
         return tf.reduce_mean((targets - outputs) ** 2)
 
     with nengo_dl.Simulator(net, ...) as sim:
-        sim.train(objective=my_objective, ...)
+        sim.train(objective={p: my_objective}, ...)
 
 
-Finally, it is also possible to pass ``None`` as the objective.  This indicates
-that the error is being computed outside the simulation by the modeller.  In
-this case the modeller should directly specify the output error gradient as the
-``targets`` value.  For example, we could apply the same mean squared error
-update this way:
+Some objective functions may not require target values.  In this case the
+function can be defined with one argument
+
+.. code-block:: python
+
+    def my_objective(outputs):
+        ...
+
+
+Finally, it is also possible to specify ``None`` as the objective.  This
+indicates that the error is being computed outside the simulation by the
+modeller.  In this case the modeller should directly specify the output error
+gradient as the ``targets`` value.  For example, we could apply the same mean
+squared error update this way:
 
 .. code-block:: python
 
     with nengo_dl.Simulator(net, ...) as sim:
         sim.run(...)
         error = 2 * (sim.data[p] - my_targets)
-        sim.train(targets=error, objective=None, ...)
+        sim.train(data={..., p: error}, objective={p: None}, ...)
 
 
-If there are multiple output Probes defined in ``targets`` then by default the
-same objective will be used for all probes.  This can be overridden by passing
-a dictionary with the form
-``{my_probe0: my_objective0, my_probe1: my_objective1, ...}`` for the
-``objective``, specifying a different
-objective for each probe. In either case, the error will then be summed
-across the probes to produce an overall error value.
+Note that it is possible to specify multiple objective functions like
+``objective={p0: my_objective0, p1: my_objective1}``.  In this case the error
+will be summed across the probe objectives to produce an overall error
+value to be minimized.
+It is also possible to create objective functions that depend on multiple
+probe outputs, by specifying ``objective={(p0, p1): my_objective}``.  In this
+case, ``my_objective`` will still be passed parameters ``outputs`` and
+``targets``, but those parameters will be lists containing the output/target
+values for each of the specified probes.
 
-Note that :meth:`.Simulator.loss` can be used to check the loss
+:meth:`.Simulator.loss` can be used to check the loss
 (error) value for a given objective.
 
 .. _truncation:

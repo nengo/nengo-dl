@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import configure_settings, tensor_layer, dists, TensorNode
+from nengo_dl import configure_settings, tensor_layer, dists, TensorNode, utils
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
 
@@ -19,7 +19,7 @@ def test_persistent_state(Simulator, seed):
     """Make sure that state is preserved between runs."""
 
     with nengo.Network(seed=seed) as net:
-        inp = nengo.Node([1])
+        inp = nengo.Node(np.sin)
         ens = nengo.Ensemble(1000, 1)
         nengo.Connection(inp, ens)
         p = nengo.Probe(ens)
@@ -121,6 +121,15 @@ def test_input_feeds(Simulator):
         assert np.allclose(sim.data[p], val)
         assert np.allclose(sim.data[p2], val[..., :2])
 
+        # error for wrong minibatch size
+        with pytest.raises(ValidationError):
+            sim.run_steps(
+                10, input_feeds={inp: np.zeros((minibatch_size + 1, 10, 3))})
+        # error for wrong number of steps
+        with pytest.raises(ValidationError):
+            sim.run_steps(
+                10, input_feeds={inp: np.zeros((minibatch_size, 11, 3))})
+
 
 @pytest.mark.parametrize("neurons", (True, False))
 @pytest.mark.training
@@ -157,7 +166,7 @@ def test_train_ff(Simulator, neurons, seed):
         x = np.asarray([[[0, 0]], [[0, 1]], [[1, 0]], [[1, 1]]])
         y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
 
-        sim.train({inp_a: x[..., [0]], inp_b: x[..., [1]]}, {p: y},
+        sim.train({inp_a: x[..., [0]], inp_b: x[..., [1]], p: y},
                   tf.train.AdamOptimizer(0.01), n_epochs=500)
 
         sim.check_gradients(atol=5e-5)
@@ -194,10 +203,11 @@ def test_train_recurrent(Simulator, truncation, seed):
         y = np.outer(np.linspace(0, 1, batch_size),
                      np.linspace(0, 1, n_steps))[:, :, None]
 
-        sim.train({inp: x}, {p: y}, tf.train.RMSPropOptimizer(1e-3),
+        sim.train({inp: x, p: y}, tf.train.RMSPropOptimizer(1e-3),
                   n_epochs=200, truncation=truncation)
 
-        sim.check_gradients(sim.tensor_graph.build_loss({p: "mse"}))
+        sim.check_gradients(
+            sim.tensor_graph.build_outputs({p: utils.mse})[0][p])
 
         sim.run_steps(n_steps, input_feeds={inp: x[:minibatch_size]})
 
@@ -232,9 +242,9 @@ def test_train_objective(Simulator, unroll, seed):
         def obj(output, target):
             return tf.reduce_mean((output[:, -1] - 0.5 - target[:, -1]) ** 2)
 
-        sim.train({inp: x}, {p: y, p2: z},
+        sim.train({inp: x, p: y, p2: z},
                   tf.train.MomentumOptimizer(1e-2, 0.9),
-                  n_epochs=200, objective=obj)
+                  n_epochs=200, objective={p: obj, p2: obj})
 
         sim.check_gradients([p, p2])
 
@@ -269,7 +279,7 @@ def test_train_sparse(Simulator, seed):
                         [[1, 0, 0, 0, 0]], [[1, 0, 1, 0, 0]]])
         y = np.asarray([[[0, 1]], [[1, 0]], [[1, 0]], [[0, 1]]])
 
-        sim.train({inp: x}, {p: y},
+        sim.train({inp: x, p: y},
                   tf.train.MomentumOptimizer(0.1, 0.9, use_nesterov=True),
                   n_epochs=500)
 
@@ -278,6 +288,7 @@ def test_train_sparse(Simulator, seed):
         assert np.allclose(sim.data[p], y, atol=1e-3)
 
 
+@pytest.mark.training
 def test_train_errors(Simulator):
     with nengo.Network() as net:
         a = nengo.Node([0])
@@ -286,32 +297,55 @@ def test_train_errors(Simulator):
     n_steps = 20
     with Simulator(net) as sim:
         with pytest.raises(ValidationError):
-            sim.train({a: np.ones((1, n_steps + 1, 1))},
-                      {p: np.ones((1, n_steps, 1))}, None)
+            sim.train({a: np.ones((1, n_steps + 1, 1)),
+                       p: np.ones((1, n_steps, 1))}, None)
 
         with pytest.raises(ValidationError):
-            sim.train({a: np.ones((2, n_steps, 1))},
-                      {p: np.ones((1, n_steps, 1))}, None)
+            sim.train({a: np.ones((2, n_steps, 1)),
+                       p: np.ones((1, n_steps, 1))}, None)
+
+        with pytest.raises(ValidationError):
+            sim.train({a: np.ones((1, n_steps, 1)),
+                       p: np.ones((1, n_steps + 1, 1))}, None)
+
+        with pytest.raises(ValidationError):
+            sim.train({a: np.ones((1, n_steps, 1)),
+                       p: np.ones((2, n_steps, 1))}, None)
+
+        with pytest.raises(ValidationError):
+            sim.train({a: np.ones((1, n_steps, 1)),
+                       p: np.ones((1, n_steps, 1))}, None,
+                      objective="mse")
 
         with pytest.raises(ValidationError):
             sim.train({a: np.ones((1, n_steps, 1))},
-                      {p: np.ones((1, n_steps + 1, 1))}, None)
-
-        with pytest.raises(ValidationError):
-            sim.train({a: np.ones((1, n_steps, 1))},
-                      {p: np.ones((2, n_steps, 1))}, None)
+                      {p: np.ones((1, n_steps, 1))}, None)
 
     with pytest.raises(SimulatorClosed):
-        sim.train({None: np.zeros((1, 1))}, None, None)
+        sim.train({None: np.zeros((1, 1))}, None)
 
     with Simulator(net, unroll_simulation=2) as sim:
         with pytest.raises(ValidationError):
-            sim.train({a: np.ones((1, 1, 1))},
-                      {p: np.ones((1, 1, 1))}, None)
+            sim.train({a: np.ones((1, 1, 1)), p: np.ones((1, 1, 1))}, None)
 
         with pytest.raises(ValidationError):
-            sim.train({a: np.ones((1, 4, 1))}, {p: np.ones((1, 4, 1))}, None,
+            sim.train({a: np.ones((1, 4, 1)), p: np.ones((1, 4, 1))}, None,
                       truncation=3)
+
+
+@pytest.mark.training
+def test_train_no_data(Simulator):
+    net, _, p = dummies.linear_net()
+
+    with Simulator(net) as sim:
+        sim.train(5, tf.train.GradientDescentOptimizer(0.1),
+                  objective={p: lambda x: abs(2.0 - x)}, n_epochs=10)
+        sim.step()
+        assert np.allclose(sim.data[p], 2)
+
+        # must specify objective if no data
+        with pytest.raises(ValidationError):
+            sim.train(5, tf.train.GradientDescentOptimizer(0.1))
 
 
 def test_loss(Simulator):
@@ -326,38 +360,43 @@ def test_loss(Simulator):
         sim.run_steps(n_steps)
         data = sim.data[p]
 
-        assert np.allclose(sim.loss({inp: np.ones((4, n_steps, 1))},
-                                    {p: np.zeros((4, n_steps, 1))}, "mse"),
+        assert np.allclose(sim.loss({inp: np.ones((4, n_steps, 1)),
+                                     p: np.zeros((4, n_steps, 1))},
+                                    {p: "mse"}),
                            np.mean(data ** 2))
 
-        assert np.allclose(sim.loss({inp: np.ones((4, n_steps, 1))},
-                                    {p: np.zeros((4, n_steps, 1))},
-                                    objective=lambda x, y: tf.constant(2.0)),
+        assert np.allclose(sim.loss({inp: np.ones((4, n_steps, 1)),
+                                     p: np.zeros((4, n_steps, 1))},
+                                    {p: lambda x, y: tf.constant(2.0)}),
                            2)
 
         with pytest.raises(ValidationError):
-            sim.loss({inp: np.ones((1, n_steps + 1, 1))},
-                     {p: np.ones((1, n_steps, 1))}, None)
+            sim.loss({inp: np.ones((1, n_steps + 1, 1)),
+                      p: np.ones((1, n_steps, 1))}, {p: "mse"})
 
         with pytest.raises(ValidationError):
-            sim.loss({inp: np.ones((2, n_steps, 1))},
-                     {p: np.ones((1, n_steps, 1))}, None)
+            sim.loss({inp: np.ones((2, n_steps, 1)),
+                      p: np.ones((1, n_steps, 1))}, {p: "mse"})
 
         with pytest.raises(ValidationError):
-            sim.loss({inp: np.ones((1, n_steps, 1))},
-                     {p: np.ones((1, n_steps + 1, 1))}, None)
+            sim.loss({inp: np.ones((1, n_steps, 1)),
+                      p: np.ones((1, n_steps + 1, 1))}, {p: "mse"})
 
         with pytest.raises(ValidationError):
-            sim.loss({inp: np.ones((1, n_steps, 1))},
-                     {p: np.ones((2, n_steps, 1))}, None)
+            sim.loss({inp: np.ones((1, n_steps, 1)),
+                      p: np.ones((2, n_steps, 1))}, {p: "mse"})
+
+        with pytest.raises(ValidationError):
+            sim.loss({inp: np.ones((1, n_steps, 1)),
+                      p: np.ones((1, n_steps, 1))}, "mse")
 
     with pytest.raises(SimulatorClosed):
-        sim.loss({None: np.zeros((1, 1))}, None, None)
+        sim.loss({None: np.zeros((1, 1))}, {p: "mse"})
 
     with Simulator(net, unroll_simulation=2) as sim:
         with pytest.raises(ValidationError):
-            sim.loss({inp: np.ones((1, 1, 1))},
-                     {p: np.ones((1, 1, 1))}, None)
+            sim.loss({inp: np.ones((1, 1, 1)),
+                      p: np.ones((1, 1, 1))}, {p: "mse"})
 
 
 def test_generate_inputs(Simulator, seed):
@@ -563,9 +602,17 @@ def test_tensorboard(Simulator, tmpdir):
         with tf.device("/cpu:0"):
             summ = tf.summary.scalar("step_var", sim.training_step)
 
-        sim.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1)),
-                                              p2: np.zeros((1, 10, 1))},
+        def loss(x):
+            # uses a variable to test that variables from summaries get
+            # initialized correctly
+            return tf.get_variable(
+                "one", initializer=tf.constant_initializer(1.0), dtype=x.dtype,
+                shape=())
+
+        sim.train({a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1)),
+                   p2: np.zeros((1, 10, 1))},
                   tf.train.GradientDescentOptimizer(0.0),
+                  objective={p: loss, p2: "mse"},
                   summaries=["loss", b, b.neurons, c, summ],
                   n_epochs=3)
 
@@ -595,14 +642,14 @@ def test_tensorboard(Simulator, tmpdir):
     # check for warning if user requests summaries with tensorboard=None
     with pytest.warns(UserWarning):
         with Simulator(net, tensorboard=None) as sim:
-            sim.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1))},
+            sim.train({a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1))},
                       tf.train.GradientDescentOptimizer(0.0),
                       summaries=["loss"])
 
     # check for error on invalid object
     with pytest.raises(SimulationError):
         with Simulator(net, tensorboard=str(tmpdir)) as sim:
-            sim.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1))},
+            sim.train({a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1))},
                       tf.train.GradientDescentOptimizer(0.0),
                       summaries=[a])
 
@@ -615,11 +662,7 @@ def test_tensorboard(Simulator, tmpdir):
 @pytest.mark.parametrize("outfile", (None, "tmp.txt"))
 @pytest.mark.training
 def test_profile(Simulator, mode, outfile):
-    with nengo.Network() as net:
-        a = nengo.Node([0])
-        x = nengo.Ensemble(1, 1)
-        nengo.Connection(a, x)
-        p = nengo.Probe(x)
+    net, a, p = dummies.linear_net()
 
     if outfile is None:
         filename = "nengo_dl_profile.json"
@@ -637,7 +680,7 @@ def test_profile(Simulator, mode, outfile):
         if mode == "run":
             sim.run_steps(5, profile=prof)
         else:
-            sim.train({a: np.zeros((1, 5, 1))}, {p: np.zeros((1, 5, 1))},
+            sim.train({a: np.zeros((1, 5, 1)), p: np.zeros((1, 5, 1))},
                       tf.train.GradientDescentOptimizer(1), profile=prof)
 
         assert os.path.exists(filename)
@@ -725,6 +768,7 @@ def test_check_data(Simulator):
         n = nengo.Node(size_in=2)
         pa = nengo.Probe(inpa)
         pb = nengo.Probe(inpb)
+        e = nengo.Ensemble(10, 1)
 
     with nengo.Network():
         inp2 = nengo.Node([0, 0])
@@ -735,8 +779,8 @@ def test_check_data(Simulator):
         zeros2 = np.zeros((3, 1, 2))
 
         # make sure that valid inputs pass
-        sim._check_data({inpa: zeros2, inpb: zeros1}, mode="input")
-        sim._check_data({pa: zeros2, pb: zeros1}, mode="target")
+        sim._check_data({inpa: zeros2, inpb: zeros1})
+        sim._check_data({pa: zeros2, pb: zeros1})
 
         # invalid input objects
         with pytest.raises(ValidationError):
@@ -746,7 +790,7 @@ def test_check_data(Simulator):
 
         # invalid target object
         with pytest.raises(ValidationError):
-            sim._check_data({p2: zeros2}, mode="target")
+            sim._check_data({p2: zeros2})
 
         # mismatched input data
         with pytest.raises(ValidationError):
@@ -756,11 +800,9 @@ def test_check_data(Simulator):
 
         # mismatched target data
         with pytest.raises(ValidationError):
-            sim._check_data({pa: zeros2, pb: np.zeros((2, 1, 1))},
-                            mode="target")
+            sim._check_data({pa: zeros2, pb: np.zeros((2, 1, 1))})
         with pytest.raises(ValidationError):
-            sim._check_data({pa: zeros2, pb: np.zeros((1, 2, 1))},
-                            mode="target")
+            sim._check_data({pa: zeros2, pb: np.zeros((1, 2, 1))})
 
         # data that doesn't match explicit target
         with pytest.raises(ValidationError):
@@ -768,27 +810,31 @@ def test_check_data(Simulator):
         with pytest.raises(ValidationError):
             sim._check_data({inpa: zeros2}, n_steps=2)
         with pytest.raises(ValidationError):
-            sim._check_data({pa: zeros2}, n_batch=2, mode="target")
+            sim._check_data({pa: zeros2}, n_batch=2)
         with pytest.raises(ValidationError):
-            sim._check_data({pa: zeros2}, n_steps=2, mode="target")
+            sim._check_data({pa: zeros2}, n_steps=2)
 
         # data with wrong object dimensionality
         with pytest.raises(ValidationError):
             sim._check_data({inpa: zeros1})
         with pytest.raises(ValidationError):
-            sim._check_data({pa: zeros1}, mode="target")
+            sim._check_data({pa: zeros1})
 
         # data with batch size < minibatch_size
         with pytest.raises(ValidationError):
             sim._check_data({inpa: zeros2[[0]]})
         with pytest.raises(ValidationError):
-            sim._check_data({pa: zeros2[[0]]}, mode="target")
+            sim._check_data({pa: zeros2[[0]]})
 
         # data with incorrect rank
         with pytest.raises(ValidationError):
             sim._check_data({inpa: zeros2[0]})
         with pytest.raises(ValidationError):
-            sim._check_data({pa: zeros2[0]}, mode="target")
+            sim._check_data({pa: zeros2[0]})
+
+        # invalid object type in data
+        with pytest.raises(ValidationError):
+            sim._check_data({inpa: zeros2, e: zeros1})
 
 
 def test_matching_node_out(Simulator):
@@ -838,10 +884,11 @@ def test_train_state_save(Simulator):
     with Simulator(net) as sim2:
         sim2.run_steps(10)
 
-        sim2.train({u: np.ones((4, 10, 1))}, {p: np.ones((4, 10, 1))},
+        sim2.train({u: np.ones((4, 10, 1)), p: np.ones((4, 10, 1))},
                    optimizer=tf.train.GradientDescentOptimizer(0))
 
-        sim2.loss({u: np.ones((4, 10, 1))}, {p: np.ones((4, 10, 1))}, "mse")
+        sim2.loss({u: np.ones((4, 10, 1)), p: np.ones((4, 10, 1))},
+                  {p: "mse"})
 
         sim2.run_steps(10)
 
@@ -980,7 +1027,7 @@ def test_learning_rate_schedule(Simulator):
 
         for i in range(3):
             assert np.allclose(sim.sess.run(l_rate), vals[i])
-            sim.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1))},
+            sim.train({a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1))},
                       opt, n_epochs=5)
 
 
@@ -1007,18 +1054,18 @@ def test_multiple_objective(Simulator, seed):
         p_c = nengo.Probe(c)
 
     with Simulator(net, unroll_simulation=1) as sim:
-        inputs = {a: np.ones((10, 1, 1))}
-        targets = {p_b: np.zeros((10, 1, 1)), p_c: np.zeros((10, 1, 1))}
+        data = {a: np.ones((10, 1, 1)),
+                p_b: np.zeros((10, 1, 1)), p_c: np.zeros((10, 1, 1))}
         objective = {
             p_b: lambda x, y: x,
             p_c: lambda x, y: x * 0}
 
-        assert np.allclose(sim.loss(inputs, targets, objective), 1,
-                           atol=1e-3)
+        loss = sim.loss(data, objective)
+        assert np.allclose(loss, 1, atol=1e-3)
 
         b_bias = np.copy(sim.data[b].bias)
         c_bias = sim.data[c].bias
-        sim.train(inputs, targets, tf.train.GradientDescentOptimizer(1.0),
+        sim.train(data, tf.train.GradientDescentOptimizer(1.0),
                   objective=objective, n_epochs=10)
         assert np.allclose(sim.data[c].bias, c_bias)
         assert not np.allclose(sim.data[b].bias, b_bias)
@@ -1109,39 +1156,27 @@ def test_extra_feeds(Simulator):
             sim.run_steps(10)
         sim.run_steps(10, extra_feeds={b.tensor_func.ph: True})
 
-        inputs = {a: np.zeros((1, 10, 1))}
-        targets = {p: np.zeros((1, 10, 1))}
+        data = {a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1))}
         with pytest.raises(tf.errors.InvalidArgumentError):
-            sim.train(inputs, targets, tf.train.GradientDescentOptimizer(1))
-        sim.train(inputs, targets, tf.train.GradientDescentOptimizer(1),
+            sim.train(data, tf.train.GradientDescentOptimizer(1))
+        sim.train(data, tf.train.GradientDescentOptimizer(1),
                   extra_feeds={b.tensor_func.ph: True})
 
         with pytest.raises(tf.errors.InvalidArgumentError):
-            sim.loss(inputs, targets, "mse")
-        sim.loss(inputs, targets, "mse", extra_feeds={b.tensor_func.ph: True})
+            sim.loss(data, {p: "mse"})
+        sim.loss(data, {p: "mse"}, extra_feeds={b.tensor_func.ph: True})
 
 
 @pytest.mark.parametrize("mixed", (False, True))
 @pytest.mark.training
 def test_direct_grads(Simulator, mixed):
-    with nengo.Network() as net:
-        # note: we want to use nengo.Node(size_in=1) for b/c, but there is
-        # a bug in TensorFlow that will cause that network to hang (see
-        # https://github.com/tensorflow/tensorflow/issues/23383).  so we
-        # create something equivalent with a relu neuron, since that avoids
-        # the bug.
-        configure_settings(trainable=None)
-        net.config[nengo.ensemble.Neurons].trainable = False
+    net, a, p = dummies.linear_net()
 
-        a = nengo.Node([1])
-        b = nengo.Ensemble(1, 1, neuron_type=nengo.RectifiedLinear(),
-                           gain=np.ones(1), bias=np.zeros(1))
-        nengo.Connection(a, b.neurons, synapse=None)
-        p = nengo.Probe(b.neurons)
-
-        if mixed:
+    if mixed:
+        with net:
             c = nengo.Ensemble(1, 1, neuron_type=nengo.RectifiedLinear(),
-                               gain=np.ones(1), bias=np.zeros(1))
+                               gain=np.ones(1), bias=np.ones(1) * 1e-6)
+            net.config[c.neurons].trainable = False
             nengo.Connection(a, c.neurons, synapse=None)
             p2 = nengo.Probe(c.neurons)
 
@@ -1151,17 +1186,16 @@ def test_direct_grads(Simulator, mixed):
         for _ in range(10):
             sim.run_steps(n_steps)
 
-            targets = {p: (2. / n_steps) * (sim.data[p] - 2)}
+            data = {p: (2. / n_steps) * (sim.data[p] - 2)}
             obj = {p: None}
 
             if mixed:
-                targets[p2] = np.ones((1, n_steps, 1)) * 2
+                data[p2] = np.ones((1, n_steps, 1)) * 2
                 obj[p2] = "mse"
                 assert np.allclose(sim.data[p], sim.data[p2])
 
-            sim.train(
-                {a: np.ones((1, n_steps, 1))}, targets,
-                opt, objective=obj)
+            data[a] = np.ones((1, n_steps, 1))
+            sim.train(data, opt, objective=obj)
             sim.soft_reset(include_probes=True)
 
         sim.run_steps(n_steps)
@@ -1181,7 +1215,7 @@ def test_non_differentiable(Simulator):
 
     with Simulator(net) as sim:
         w0 = sim.data[c].weights
-        sim.train({a: np.ones((1, 10, 1))}, {p: np.ones((1, 10, 1))},
+        sim.train({a: np.ones((1, 10, 1)), p: np.ones((1, 10, 1))},
                   tf.train.GradientDescentOptimizer(100))
 
         # TODO: find another way to detect non-differentiable elements in graph
@@ -1254,7 +1288,7 @@ def test_freeze_train(Simulator):
         sim.step()
         assert np.allclose(sim.data[p], 1)
 
-        sim.train({a: np.ones((1, 1, 1))}, {p: np.ones((1, 1, 1)) * 2},
+        sim.train({a: np.ones((1, 1, 1)), p: np.ones((1, 1, 1)) * 2},
                   tf.train.GradientDescentOptimizer(0.5), n_epochs=10)
 
         sim.step()
@@ -1276,14 +1310,14 @@ def test_fill_feed(Simulator):
     with Simulator(net) as sim:
         # build an objective with p0 in it, so that it will be added to the
         # graph
-        sim.tensor_graph.build_loss({p0: "mse"})
+        sim.tensor_graph.build_outputs({p0: utils.mse})
 
         # filling p0 will work fine
-        sim._fill_feed(1, {}, targets={p0: np.zeros((1, 1, 1))})
+        sim._fill_feed(1, data={p0: np.zeros((1, 1, 1))})
 
         # validation error if filling p1
         with pytest.raises(ValidationError):
-            sim._fill_feed(1, {}, targets={p1: np.zeros((1, 1, 1))})
+            sim._fill_feed(1, data={p1: np.zeros((1, 1, 1))})
 
 
 @pytest.mark.parametrize("neuron_type", (nengo.SpikingRectifiedLinear(),
@@ -1316,7 +1350,7 @@ def test_inference_only(Simulator, neuron_type, seed):
 
         # validation checks (can't do train/gradients in inference-only mode)
         with pytest.raises(ValidationError):
-            sim2.train({a: np.zeros((1, 10, 1))}, {p: np.zeros((1, 10, 1))},
+            sim2.train({a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1))},
                        tf.train.GradientDescentOptimizer(1))
 
         with pytest.raises(ValidationError):
@@ -1341,8 +1375,8 @@ def test_synapse_warning(Simulator):
     def does_warn(n_steps=1):
         with Simulator(net, unroll_simulation=1) as sim:
             with pytest.warns(UserWarning) as rec:
-                sim.train({a: np.zeros((1, n_steps, 1))},
-                          {p: np.zeros((1, n_steps, 1))},
+                sim.train({a: np.zeros((1, n_steps, 1)),
+                           p: np.zeros((1, n_steps, 1))},
                           tf.train.GradientDescentOptimizer(0))
         return any(str(w.message).startswith("Training for one timestep")
                    for w in rec)
@@ -1379,5 +1413,33 @@ def test_concat_hang(Simulator, pytestconfig):
         p = nengo.Probe(x)
 
     with Simulator(net) as sim:
-        sim.train({a: np.zeros((1, 5, 1))}, {p: np.zeros((1, 5, 1))},
+        sim.train({a: np.zeros((1, 5, 1)), p: np.zeros((1, 5, 1))},
                   tf.train.GradientDescentOptimizer(1))
+
+
+def test_run_batch(Simulator, rng):
+    counter = 0
+
+    def count(t):
+        nonlocal counter
+        counter += 1
+        return [t]
+
+    with nengo.Network() as net:
+        a = nengo.Node(count, size_out=1)
+        p = nengo.Probe(a)
+
+    with Simulator(net, minibatch_size=2) as sim:
+        # check that run_batch works with empty outputs
+        sim.run_batch(10, {})
+        assert counter == 10
+
+        # check handling of output tuples
+        inp = rng.randn(10, 10, 1)
+        out = sim.run_batch({a: inp}, {p: lambda x: (x, x + 1)})[p]
+        assert len(out) == 2
+        assert isinstance(out, tuple)
+        assert out[0].shape == out[1].shape == (5, 2, 10, 1)
+        inp = np.reshape(inp, (5, 2, 10, 1))
+        assert np.allclose(out[0], inp)
+        assert np.allclose(out[1], inp + 1)

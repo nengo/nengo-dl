@@ -18,9 +18,71 @@ Release History
    - Deprecated
    - Removed
 
-1.2.2 (unreleased)
+2.0.0 (unreleased)
 ------------------
 
+**Breaking API changes**
+
+- ``sim.train`` and ``sim.loss`` now accept a single ``data`` argument, which
+  combines the previous ``inputs`` and ``targets`` arguments. For example,
+
+  .. code-block:: python
+
+    sim.train({my_node: x}, {my_probe: y} , ...)
+
+  is now equivalent to
+
+  .. code-block:: python
+
+    sim.train({my_node: x, my_probe: y}, ...)
+
+  The motivation for this change is that not all objective functions require
+  target values. Switching to the more generic ``data`` argument simplifies
+  the API and makes it more flexible, allowing users to specify whatever
+  training/loss data is actually required.
+- The ``objective`` argument in ``sim.train``/``sim.loss`` is now always
+  specified as a dictionary mapping probes to objective functions.  Note that
+  this was available but optional previously; it was also possible to pass
+  a single value for the objective function, which would be applied to all
+  probes in ``targets``.  The latter is no longer supported.  For example,
+
+  .. code-block:: python
+
+    sim.train(..., objective="mse")
+
+  must now be explicitly specified as
+
+  .. code-block:: python
+
+    sim.train(..., objective={my_probe: "mse"})
+
+  The motivation for this change is that, especially with the other new
+  features introduced in the 2.0 update, there were a lot of different ways to
+  specify the ``objective`` argument.  This made it somewhat unclear how
+  exactly this argument worked, and the automatic "broadcasting" was also
+  ambiguous (e.g., should the single objective be applied to each probe
+  individually, or to all of them together?).  Making the argument explicit
+  helps clarify the mental model.
+
+**Added**
+
+- An integer number of steps can now be passed for the
+  ``sim.loss``/``sim.train`` data argument, if no input/target data is
+  required.
+- The ``objective`` dict in ``sim.train``/``sim.loss`` can now contain
+  tuples of probes as the keys, in which case the objective function will be 
+  called with a corresponding tuple of probe/target values as each argument.
+- Added the ``sim.run_batch`` function.  This exposes all the functionality
+  that the ``sim.run``/``sim.train``/``sim.loss`` functions are based on,
+  allowing advanced users full control over how to run a NengoDL simulation.
+
+**Changed**
+
+- Custom objective functions passed to ``sim.train``/``sim.loss`` can now
+  accept a single argument (``my_objective(outputs): ...`` instead of
+  ``my_objective(outputs, targets): ...``) if no target values are required.
+- ``utils.minibatch_generator`` now accepts a single ``data`` argument rather
+  than ``inputs`` and ``targets`` (see discussion in "Breaking API changes").
 
 1.2.1 (November 2, 2018)
 ------------------------
