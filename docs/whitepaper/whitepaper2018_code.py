@@ -39,11 +39,11 @@ targets = inputs**2
 
 with nengo_dl.Simulator(net, minibatch_size=10) as sim:
     sim.train(
-        inputs={a: inputs},
-        targets={p: targets},
+        data={a: inputs,
+              p: targets},
         optimizer=tf.train.AdamOptimizer(),
         n_epochs=2,
-        objective="mse")
+        objective={p: "mse"})
 
 # snippet 6 (section 3.3)
 with net:

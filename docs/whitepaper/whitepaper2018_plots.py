@@ -1,4 +1,3 @@
-import contextlib
 from functools import partial
 import gzip
 from urllib.request import urlretrieve
@@ -447,10 +446,10 @@ def spiking_mnist(ctx, n_epochs):
     with net:
         out_p = nengo.Probe(out)
 
-    train_inputs = {inp: train_data[0][:, None, :]}
-    train_targets = {out_p: train_data[1][:, None, :]}
-    test_inputs = {inp: test_data[0][:, None, :]}
-    test_targets = {out_p: test_data[1][:, None, :]}
+    train_data = {inp: train_data[0][:, None, :],
+                  out_p: train_data[1][:, None, :]}
+    test_data = {inp: test_data[0][:, None, :],
+                 out_p: test_data[1][:, None, :]}
 
     # construct the spiking network
     spk_net, spk_inp, spk_out = build_network(
@@ -462,10 +461,9 @@ def spiking_mnist(ctx, n_epochs):
         spk_out_p = nengo.Probe(spk_out, synapse=0.1)
 
     n_steps = 50
-    test_inputs_time = {
-        spk_inp: np.tile(test_data[0][:, None, :], (1, n_steps, 1))}
-    test_targets_time = {spk_out_p: np.tile(v, (1, n_steps, 1)) for v in
-                         test_targets.values()}
+    test_data_time = {
+        spk_inp: np.tile(test_data[inp], (1, n_steps, 1)),
+        spk_out_p: np.tile(test_data[out_p], (1, n_steps, 1))}
 
     for _ in range(reps):
         # construct the simulator
@@ -483,18 +481,18 @@ def spiking_mnist(ctx, n_epochs):
                             tf.float32))
 
             results["pre"].append(sim.loss(
-                test_inputs, test_targets, classification_error))
+                test_data, {out_p: classification_error}))
             print("error before training: %.2f%%" % results["pre"][-1])
 
             # run training
-            sim.train(train_inputs, train_targets, opt, objective=objective,
+            sim.train(train_data, opt, objective={out_p: objective},
                       n_epochs=n_epochs)
 
             # save the parameters to file
             sim.save_params("./mnist_params")
 
             results["post"].append(sim.loss(
-                test_inputs, test_targets, classification_error))
+                test_data, {out_p: classification_error}))
             print("error after training: %.2f%%" % results["post"][-1])
 
         with nengo_dl.Simulator(spk_net, minibatch_size=minibatch_size,
@@ -502,7 +500,7 @@ def spiking_mnist(ctx, n_epochs):
             sim.load_params("./mnist_params")
 
             results["spiking"].append(sim.loss(
-                test_inputs_time, test_targets_time, classification_error))
+                test_data_time, {spk_out_p: classification_error}))
             print("spiking neuron error: %.2f%%" % results["spiking"][-1])
 
         with open("spiking_mnist_data.pkl", "wb") as f:
@@ -661,30 +659,29 @@ def spa_optimization(ctx, dimensions, n_epochs):
             print("neurons_per_d", n)
 
             net = build_network(n, seed)
-            train_inputs = {net.role_inp: train_roles,
-                            net.fill_inp: train_fills,
-                            net.cue_inp: train_cues}
-            train_outputs = {net.output_probe: train_targets,
-                             net.conv_probe: train_binding,
-                             net.memory_probe: train_memory}
+            train_data = {
+                net.role_inp: train_roles, net.fill_inp: train_fills,
+                net.cue_inp: train_cues,
+                net.output_probe: train_targets, net.conv_probe: train_binding,
+                net.memory_probe: train_memory}
 
-            test_inputs = {net.role_inp: test_roles, net.fill_inp: test_fills,
-                           net.cue_inp: test_cues}
-            test_outputs = {net.output_probe: test_targets}
+            test_data = {
+                net.role_inp: test_roles, net.fill_inp: test_fills,
+                net.cue_inp: test_cues,
+                net.output_probe: test_targets}
 
             with nengo_dl.Simulator(
                     net, seed=seed, minibatch_size=minibatch_size,
                     progress_bar=False) as sim:
                 results[i]["pre_retrieval"].append(sim.loss(
-                    test_inputs, test_outputs, acc))
+                    test_data, {net.output_probe: acc}))
                 print('pre retrieval:', results[i]["pre_retrieval"][-1])
 
                 results[i]["pre_mse"].append(sim.loss(
-                    test_inputs, test_outputs, "mse"))
+                    test_data, {net.output_probe: "mse"}))
                 print('pre mse:', results[i]["pre_mse"][-1])
 
-                sim.train(train_inputs, train_outputs, optimizer,
-                          n_epochs=n_epochs,
+                sim.train(train_data, optimizer, n_epochs=n_epochs,
                           objective={net.output_probe: weighted_mse,
                                      net.conv_probe: partial(weighted_mse,
                                                              weight=0.25),
@@ -692,11 +689,11 @@ def spa_optimization(ctx, dimensions, n_epochs):
                                                                weight=0.25)})
 
                 results[i]["post_mse"].append(sim.loss(
-                    test_inputs, test_outputs, "mse"))
+                    test_data, {net.output_probe: "mse"}))
                 print('post mse:', results[i]["post_mse"][-1])
 
                 results[i]["post_retrieval"].append(sim.loss(
-                    test_inputs, test_outputs, acc))
+                    test_data, {net.output_probe: acc}))
                 print('post retrieval:', results[i]["post_retrieval"][-1])
 
         with open("spa_optimization_data.pkl", "wb") as f:
@@ -734,22 +731,17 @@ def all_figures(ctx):
 @main.command()
 @click.pass_context
 def test(ctx):
-    with open(os.devnull, "w") as devnull:
-        print("running compare_backends")
-        with contextlib.redirect_stdout(devnull):
-            ctx.invoke(compare_backends, n_neurons=960)
+    print("running compare_backends")
+    ctx.invoke(compare_backends, n_neurons=960)
 
-        print("running compare_optimizations")
-        with contextlib.redirect_stdout(devnull):
-            ctx.invoke(compare_optimizations, dimensions=1, unroll=5)
+    print("running compare_optimizations")
+    ctx.invoke(compare_optimizations, dimensions=1, unroll=5)
 
-        print("running spiking_mnist")
-        with contextlib.redirect_stdout(devnull):
-            ctx.invoke(spiking_mnist, n_epochs=1)
+    print("running spiking_mnist")
+    ctx.invoke(spiking_mnist, n_epochs=1)
 
-        print("running spa_optimization")
-        with contextlib.redirect_stdout(devnull):
-            ctx.invoke(spa_optimization, dimensions=2, n_epochs=1)
+    print("running spa_optimization")
+    ctx.invoke(spa_optimization, dimensions=2, n_epochs=1)
 
 
 if __name__ == "__main__":
