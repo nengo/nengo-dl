@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 from collections import OrderedDict, defaultdict
+from inspect import getfullargspec
 import itertools
 import logging
 import warnings
@@ -12,7 +13,6 @@ from nengo.config import ConfigError
 from nengo.ensemble import Neurons
 from nengo.exceptions import SimulationError, ValidationError
 from nengo.neurons import Direct
-from nengo.utils.compat import getfullargspec
 from nengo.utils.magic import decorator
 import numpy as np
 import tensorflow as tf

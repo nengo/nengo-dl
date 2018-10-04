@@ -32,11 +32,10 @@ jobs:
          NENGO_VERSION="nengo==2.7.0"
          TF_VERSION="tensorflow==1.4.0"
          NUMPY_VERSION="numpy==1.12.1"
-         PYTHON_VERSION="2.7"
+         PYTHON_VERSION="3.4"
   - env: TEST_ARGS="--dtype float64 --simulator-only"
   - env: TEST_ARGS="--unroll_simulation 5 --simulator-only"
   - env: TEST_ARGS="--inference-only --simulator-only"
-  - env: PYTHON_VERSION="3.4"
   - env: MODE="examples"
     language: generic  # needed for xvfb
   - stage: deploy

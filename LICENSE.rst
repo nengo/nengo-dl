@@ -32,8 +32,6 @@ NengoDL imports several open source libraries:
   `Apache license <https://github.com/tensorflow/tensorflow/blob/master/LICENSE>`__
 * `Progressbar 2 <https://progressbar-2.readthedocs.io/en/latest/>`_ - Used under
   `BSD license <https://github.com/WoLpH/python-progressbar/blob/develop/LICENSE>`__
-* `backports.tempfile <https://github.com/pjdelport/backports.tempfile>`_ - Used under
-  `PSF license <https://github.com/pjdelport/backports.tempfile/blob/master/setup.py>`__
 
 To build the documentation, NengoDL uses:
 

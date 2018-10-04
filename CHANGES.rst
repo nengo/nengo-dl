@@ -118,6 +118,11 @@ Release History
   step (in certain race conditions it would sometimes update part-way through
   the optimization step).
 
+**Removed**
+
+- NengoDL no longer supports Python 2 (see https://python3statement.org/ for
+  more information)
+
 1.2.0 (September 5, 2018)
 -------------------------
 

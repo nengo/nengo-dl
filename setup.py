@@ -51,7 +51,6 @@ install_requires = [
     "numpy>=1.12.1",
     "%s>=1.4.0" % tf_req,
     "progressbar2>=3.37.1",
-    "backports.tempfile>=1.0;python_version<'3.4'",
 ]
 docs_require = [
     "ipykernel<5.0.0",  # doesn't work with jupyter TODO: remove this once there's an upstream fix; https://github.com/jupyter/jupyter/issues/370
@@ -93,6 +92,7 @@ setup(
         "docs": docs_require,
         "tests": tests_require,
     },
+    python_requires=">=3.4",
     entry_points={"nengo.backends": ["dl = nengo_dl:Simulator"]},
     classifiers=[
         'Development Status :: 5 - Production/Stable',
@@ -101,7 +101,6 @@ setup(
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX :: Linux',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',

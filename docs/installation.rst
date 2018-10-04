@@ -13,7 +13,7 @@ That's it!
 
 Requirements
 ------------
-NengoDL works with Python 2.7 or >=3.4.  ``pip`` will do its best to install
+NengoDL works with Python 3.4 or later.  ``pip`` will do its best to install
 all of NengoDL's requirements when it installs NengoDL.  However, if anything
 goes wrong during this process you can install the requirements manually and
 then try to ``pip install nengo-dl`` again.

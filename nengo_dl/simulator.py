@@ -4,7 +4,6 @@ import collections
 import datetime
 import logging
 import os
-import sys
 import tempfile
 import time
 import warnings
@@ -30,9 +29,6 @@ from nengo_dl.builder import NengoBuilder
 from nengo_dl.tensor_graph import TensorGraph
 
 logger = logging.getLogger(__name__)
-
-if sys.version_info < (3, 4):
-    from backports import tempfile
 
 
 class Simulator(object):

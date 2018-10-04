@@ -433,10 +433,7 @@ def build(obj, benchmark, dimensions, neurons_per_d, neuron_type,
     # add the special cli kwargs if applicable; note we could just do
     # everything through --kwarg, but it is convenient to have a
     # direct option for the common arguments
-    if sys.version_info[0] < 3:
-        params = inspect.getargspec(benchmark).args  # pylint: disable=deprecated-method
-    else:
-        params = inspect.signature(benchmark).parameters
+    params = inspect.signature(benchmark).parameters
     for kw in ("benchmark", "dimensions", "neurons_per_d", "neuron_type"):
         if kw in params:
             kwargs[kw] = locals()[kw]

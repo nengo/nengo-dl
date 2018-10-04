@@ -1,3 +1,4 @@
+from importlib import reload
 import sys
 
 from nengo import version as nengo_version
@@ -5,9 +6,6 @@ import pytest
 
 import nengo_dl
 from nengo_dl import version
-
-if sys.version_info >= (3, 4):
-    from importlib import reload
 
 
 def test_nengo_version_check():
