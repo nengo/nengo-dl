@@ -59,7 +59,7 @@ To run the unit tests, NengoDL uses:
 * `codespell <https://github.com/codespell-project/codespell>`_ - Used under
   `GPL license <https://github.com/codespell-project/codespell/blob/master/COPYING>`__
 * `Coverage.py <https://coverage.readthedocs.io/en/latest/>`_ - Used under
-  `Apache license <https://bitbucket.org/ned/coveragepy/src/default/NOTICE.txt?fileviewer=file-view-default>`__
+  `Apache license <https://github.com/nedbat/coveragepy/blob/master/LICENSE.txt>`__
 * `matplotlib <https://matplotlib.org/>`_ - Used under
   `modified PSF license <https://matplotlib.org/users/license.html>`__
 * `nbval <https://github.com/computationalmodelling/nbval>`_ - Used under
