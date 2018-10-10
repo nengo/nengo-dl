@@ -12,6 +12,7 @@ from nengo.config import ConfigError
 from nengo.ensemble import Neurons
 from nengo.exceptions import SimulationError
 from nengo.neurons import Direct
+from nengo.utils.magic import decorator
 import numpy as np
 import tensorflow as tf
 
@@ -21,15 +22,13 @@ from nengo_dl import (builder, graph_optimizer, signals, utils, tensor_node,
 logger = logging.getLogger(__name__)
 
 
-def with_self(func):
+@decorator
+def with_self(wrapped, instance, args, kwargs):
     """A decorator that can be used to ensure that any ops created within the
     wrapped method will be added to the TensorGraph object's graph."""
 
-    def func_with_self(self, *args, **kwargs):
-        with self.graph.as_default(), self.graph.device(self.device):
-            return func(self, *args, **kwargs)
-
-    return func_with_self
+    with instance.graph.as_default(), instance.graph.device(instance.device):
+        return wrapped(*args, **kwargs)
 
 
 class TensorGraph(object):
