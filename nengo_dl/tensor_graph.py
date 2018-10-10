@@ -916,8 +916,10 @@ class TensorGraph(object):
                 dtype = float_type
             elif np.issubdtype(sig.dtype, np.integer):
                 dtype = np.int32
+            elif np.issubdtype(sig.dtype, np.bool_):
+                dtype = sig.dtype
             else:
-                raise NotImplementedError
+                raise NotImplementedError("Unsupported signal dtype")
 
             # resize scalars to length 1 vectors
             shape = sig.shape if sig.shape != () else (1,)

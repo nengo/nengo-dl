@@ -33,6 +33,8 @@ Release History
 - Disable INFO-level TensorFlow logging (from C side) on import.  Added a
   NengoDL log message indicating the device the simulation will run on, as
   a more concise replacement.
+- Boolean signals are now supported
+  (`#61 <https://github.com/nengo/nengo-dl/issues/61>`_)
 
 **Fixed**
 

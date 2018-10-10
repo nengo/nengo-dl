@@ -339,6 +339,13 @@ def test_create_signals():
     graph.create_signals(sigs)
     assert list(graph.base_arrays_init.values())[0][0].shape == (5, 10)
 
+    # check that boolean signals are handled correctly
+    sigs = [dummies.Signal(dtype=np.bool, shape=())]
+    plan = [(dummies.Op(reads=sigs),)]
+    graph = dummies.TensorGraph(plan, tf.float32, 1)
+    graph.create_signals(sigs)
+    assert list(graph.base_arrays_init.values())[0][0].dtype == np.bool
+
 
 def test_create_signals_views():
     sigs = [dummies.Signal(shape=(2, 2), base_shape=(4,)),
