@@ -62,7 +62,7 @@ docs_require = [
     "numpydoc>=0.6.0",
     "Pillow>=4.1.1",
     "sphinx>=1.8.0",
-    "sphinx_rtd_theme>=0.1.9",
+    "sphinx_rtd_theme>=0.4.2",
 ]
 tests_require = [
     "click>=6.7",
