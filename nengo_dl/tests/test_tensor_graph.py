@@ -371,7 +371,7 @@ def test_create_signals_partition():
     assert graph.signals[sigs[1]].key != graph.signals[sigs[2]].key
     assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
 
-    # check that signals are partioned for different read blocks
+    # check that signals are partitioned for different read blocks
     plan = [tuple(dummies.Op(reads=[sigs[i], sigs[2 + i]]) for i in range(2))]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
@@ -379,7 +379,7 @@ def test_create_signals_partition():
     assert graph.signals[sigs[1]].key != graph.signals[sigs[2]].key
     assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
 
-    # check that signals are partioned for different sig types
+    # check that signals are partitioned for different sig types
     plan = [tuple(dummies.Op(reads=[sigs[i]], sets=[sigs[2 + i]])
                   for i in range(2))]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
