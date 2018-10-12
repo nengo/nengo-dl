@@ -1,4 +1,4 @@
-language: python
+language: generic
 notifications:
   email:
     on_success: change
@@ -34,10 +34,14 @@ env:
     - TEST_ARGS="--inference-only --simulator-only"
     - PYTHON_VERSION="2.7"
 
-#matrix:
-#  include:
-#    - dist: xenial # gives us a more up-to-date glibc (required by tensorflow)
-#      env: TF_VERSION="tf-nightly" NENGO_VERSION="git+https://github.com/nengo/nengo.git"
+matrix:
+  include:
+    - os: windows
+      env: MODE="test"
+    - os: windows
+      env: NENGO_VERSION="git+https://github.com/nengo/nengo.git" TF_VERSION="tensorflow --pre"
+    - os: windows
+      env: NENGO_VERSION="nengo==2.7.0" TF_VERSION="tensorflow==1.4.0" NUMPY_VERSION="numpy==1.12.1" PYTHON_VERSION="3.4"
 
 # set up miniconda
 before_install:
