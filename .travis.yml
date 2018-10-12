@@ -29,17 +29,12 @@ env:
     - MODE="coverage"
       NENGO_VERSION="nengo==2.7.0"
       TF_VERSION="tensorflow==1.4.0"
+      NUMPY_VERSION="numpy==1.12.1"
       PYTHON_VERSION="2.7"
     - TEST_ARGS="--dtype float64 --simulator-only"
     - TEST_ARGS="--unroll_simulation 5 --simulator-only"
     - TEST_ARGS="--inference-only --simulator-only"
-    - NENGO_VERSION="git+https://github.com/nengo/nengo.git"
-      TF_VERSION="tensorflow --pre"
-    - NENGO_VERSION="nengo==2.7.0"
-      TF_VERSION="tensorflow==1.4.0"
-      NUMPY_VERSION="numpy==1.12.1"
-      PYTHON_VERSION="3.4"
-    - PYTHON_VERSION="2.7"
+    - PYTHON_VERSION="3.4"
 
 matrix:
   include:
