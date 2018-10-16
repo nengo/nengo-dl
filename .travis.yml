@@ -1,8 +1,11 @@
-language: python
+language: minimal
 notifications:
   email:
     on_success: change
     on_failure: change
+cache:
+  directories:
+  - $HOME/miniconda
 
 sudo: required
 dist: trusty
@@ -11,7 +14,7 @@ env:
   global:
     - MODE="test"
     - PYTHON_VERSION="3.6"
-    - NUMPY_VERSION="numpy<1.15"  # TODO: remove restriction once TensorFlow is compatible with >=1.15
+    - NUMPY_VERSION="numpy<=1.14.5"  # TODO: remove restriction once TensorFlow is compatible with >1.14.5
     - TF_VERSION="tensorflow==1.10.0"  # TODO: test on 1.11 once travis-ci hanging issues are resolved
     - NENGO_VERSION="nengo"
     - TEST_ARGS=""
@@ -27,7 +30,6 @@ env:
       NENGO_VERSION="nengo==2.7.0"
       TF_VERSION="tensorflow==1.4.0"
       PYTHON_VERSION="2.7"
-    - MODE="examples"
     - TEST_ARGS="--dtype float64 --simulator-only"
     - TEST_ARGS="--unroll_simulation 5 --simulator-only"
     - TEST_ARGS="--inference-only --simulator-only"
@@ -39,16 +41,20 @@ env:
       PYTHON_VERSION="3.4"
     - PYTHON_VERSION="2.7"
 
-#matrix:
-#  include:
-#    - dist: xenial # gives us a more up-to-date glibc (required by tensorflow)
-#      env: TF_VERSION="tf-nightly" NENGO_VERSION="git+https://github.com/nengo/nengo.git"
+matrix:
+  include:
+  - language: generic  # needed for xvfb
+    env: MODE="examples"
 
 # set up miniconda
 before_install:
-  - wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-  - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
+  - if ! [[ -d $HOME/miniconda/envs/test ]]; then
+      rm -rf $HOME/miniconda;
+      wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh;
+      bash miniconda.sh -b -p $HOME/miniconda;
+      conda create -q -y -n test python=$PYTHON_VERSION pip;
+    fi
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
@@ -56,17 +62,15 @@ before_install:
 
 # install python requirements
 install:
-  - conda create -q -n test python=$PYTHON_VERSION pip
   - source activate test
-  # note: we install things in reverse dependency order, so that we can be
+  - export PIP_UPGRADE=true  # always upgrade to latest version
+  - pip install pip
+  # note: we install packages in reverse dependency order, so that we can be
   # sure we end up with the version we specify (and not the version specified
   # by a downstream dependency)
   - pip install -e .[tests]
   - .ci/$MODE.sh install
-  - pip install $TF_VERSION
-  - pip install $NENGO_VERSION
-  - pip uninstall -y numpy  # can conflict with conda numpy install
-  - conda install -q $NUMPY_VERSION
+  - pip install $TF_VERSION $NENGO_VERSION $NUMPY_VERSION
   - conda list -e
   - pip freeze
 
