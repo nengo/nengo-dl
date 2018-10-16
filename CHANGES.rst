@@ -118,6 +118,11 @@ Release History
   step (in certain race conditions it would sometimes update part-way through
   the optimization step).
 
+**Deprecated**
+
+- The ``sim.run`` ``input_feeds`` argument has been renamed to ``data`` (for
+  consistency with other simulator functions).
+
 **Removed**
 
 - NengoDL no longer supports Python 2 (see https://python3statement.org/ for

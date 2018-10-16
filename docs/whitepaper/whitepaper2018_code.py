@@ -28,7 +28,7 @@ with nengo_dl.Simulator(net) as sim:
 import numpy as np
 
 with nengo_dl.Simulator(net, minibatch_size=10) as sim:
-    sim.run(1.0, input_feeds={a: np.random.randn(10, 1000, 1)})
+    sim.run(1.0, data={a: np.random.randn(10, 1000, 1)})
     print(sim.data[p])
 
 # snippet 5 (section 3.2)

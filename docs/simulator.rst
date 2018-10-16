@@ -89,7 +89,7 @@ specifies how many inputs will be processed at a time.  The default is
 processed at a time (as in standard Nengo simulators).
 
 In order to take advantage of the parallel inputs, multiple inputs need to
-be passed to :meth:`.Simulator.run` via the ``input_feeds`` argument.  This
+be passed to :meth:`.Simulator.run` via the ``data`` argument.  This
 is discussed in more detail :ref:`below <sim-run>`.
 
 When using :meth:`.Simulator.train`, this parameter controls how many items
@@ -129,8 +129,8 @@ Simulator.run arguments
 :meth:`.Simulator.run_steps`) also have some optional parameters beyond those
 in the standard Nengo simulator.
 
-input_feeds
-^^^^^^^^^^^
+data
+^^^^
 
 This parameter can be used to override the value of any
 input :class:`~nengo:nengo.Node` in a model (an input node is defined as
@@ -158,7 +158,7 @@ will execute the model in the standard way, and if we check the output of
 we see that it is all zero, as defined.
 
 
-``input_feeds`` is specified as a
+``data`` is specified as a
 dictionary of ``{my_node: override_value}`` pairs, where ``my_node`` is the
 Node to be overridden and ``override_value`` is a numpy array with shape
 ``(minibatch_size, n_steps, my_node.size_out)`` that gives the Node output
@@ -166,14 +166,14 @@ value on each simulation step. For example, if we instead run the model via
 
 .. code-block:: python
 
-    sim.run_steps(n_steps, input_feeds={node: np.ones((1, n_steps, 1))})
+    sim.run_steps(n_steps, data={node: np.ones((1, n_steps, 1))})
     print(sim.data[p])
     >>> [[ 1.] [ 1.] [ 1.] [ 1.] [ 1.]]
 
 we see that the output of ``node`` is all ones, which is the override
 value we specified.
 
-``input_feeds`` are usually used in concert with the minibatching feature of
+``data`` is usually used in concert with the minibatching feature of
 ``nengo_dl`` (:ref:`see above <minibatch_size>`).  ``nengo_dl`` allows multiple
 inputs to be processed simultaneously, but when we construct a
 :class:`~nengo:nengo.Node` we can only specify one value.  For example, if we
@@ -200,7 +200,7 @@ minibatch:
 .. code-block:: python
 
     with nengo_dl.Simulator(net, minibatch_size=mini) as sim:
-        sim.run_steps(n_steps, input_feeds={
+        sim.run_steps(n_steps, data={
             node: np.zeros((mini, n_steps, 1)) + np.arange(mini)[:, None, None]})
         print(sim.data[p])
     >>> [[[ 0.] [ 0.] [ 0.] [ 0.] [ 0.]]

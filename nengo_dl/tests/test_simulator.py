@@ -117,18 +117,25 @@ def test_input_feeds(Simulator):
 
     with Simulator(net, minibatch_size=minibatch_size) as sim:
         val = np.random.randn(minibatch_size, 50, 3)
-        sim.run_steps(50, input_feeds={inp: val, inp2: val})
+        sim.run_steps(50, data={inp: val, inp2: val})
         assert np.allclose(sim.data[p], val)
         assert np.allclose(sim.data[p2], val[..., :2])
 
         # error for wrong minibatch size
         with pytest.raises(ValidationError):
             sim.run_steps(
-                10, input_feeds={inp: np.zeros((minibatch_size + 1, 10, 3))})
+                10, data={inp: np.zeros((minibatch_size + 1, 10, 3))})
         # error for wrong number of steps
         with pytest.raises(ValidationError):
             sim.run_steps(
-                10, input_feeds={inp: np.zeros((minibatch_size, 11, 3))})
+                10, data={inp: np.zeros((minibatch_size, 11, 3))})
+
+        # check that deprecated input_feeds argument also works
+        sim.soft_reset(include_probes=True)
+        with pytest.warns(DeprecationWarning):
+            sim.run_steps(50, input_feeds={inp: val, inp2: val})
+        assert np.allclose(sim.data[p], val)
+        assert np.allclose(sim.data[p2], val[..., :2])
 
 
 @pytest.mark.parametrize("neurons", (True, False))
@@ -171,7 +178,7 @@ def test_train_ff(Simulator, neurons, seed):
 
         sim.check_gradients(atol=5e-5)
 
-        sim.step(input_feeds={inp_a: x[..., [0]], inp_b: x[..., [1]]})
+        sim.step(data={inp_a: x[..., [0]], inp_b: x[..., [1]]})
 
         assert np.allclose(sim.data[p], y, atol=1e-3)
 
@@ -209,7 +216,7 @@ def test_train_recurrent(Simulator, truncation, seed):
         sim.check_gradients(
             sim.tensor_graph.build_outputs({p: utils.mse})[0][p])
 
-        sim.run_steps(n_steps, input_feeds={inp: x[:minibatch_size]})
+        sim.run_steps(n_steps, data={inp: x[:minibatch_size]})
 
     assert np.sqrt(np.mean((sim.data[p] - y[:minibatch_size]) ** 2)) < (
         0.1 if truncation else 0.05)
@@ -248,7 +255,7 @@ def test_train_objective(Simulator, unroll, seed):
 
         sim.check_gradients([p, p2])
 
-        sim.run_steps(n_steps, input_feeds={inp: x})
+        sim.run_steps(n_steps, data={inp: x})
 
         assert np.allclose(sim.data[p][:, -1], y[:, -1] + 0.5, atol=1e-3)
         assert np.allclose(sim.data[p2][:, -1], z[:, -1] + 0.5, atol=1e-3)
@@ -283,7 +290,7 @@ def test_train_sparse(Simulator, seed):
                   tf.train.MomentumOptimizer(0.1, 0.9, use_nesterov=True),
                   n_epochs=500)
 
-        sim.step(input_feeds={inp: x})
+        sim.step(data={inp: x})
 
         assert np.allclose(sim.data[p], y, atol=1e-3)
 
@@ -416,7 +423,7 @@ def test_generate_inputs(Simulator, seed):
         assert len(feed) == len(inp)
 
         sim.reset()
-        sim.run_steps(3, input_feeds={inp[0]: np.zeros((2, 3, 1))})
+        sim.run_steps(3, data={inp[0]: np.zeros((2, 3, 1))})
 
         vals = [np.zeros((3, 1, 2)),
                 np.tile(np.sin(sim.trange())[:, None, None], (1, 1, 2)),

@@ -308,7 +308,7 @@ class Simulator(object):
         else:
             self.run_steps(steps, **kwargs)
 
-    def run_steps(self, n_steps, input_feeds=None, profile=False,
+    def run_steps(self, n_steps, data=None, input_feeds=None, profile=False,
                   progress_bar=True, extra_feeds=None):
         """
         Simulate for the given number of steps.
@@ -317,10 +317,13 @@ class Simulator(object):
         ----------
         n_steps : int
             The number of simulation steps to be executed
-        input_feeds : dict of {:class:`~nengo:nengo.Node`: \
-                               :class:`~numpy:numpy.ndarray`}
+        data : dict of {:class:`~nengo:nengo.Node`: \
+                        :class:`~numpy:numpy.ndarray`}
             Override the values of input Nodes with the given data.  Arrays
             should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
+        input_feeds : dict of {:class:`~nengo:nengo.Node`: \
+                               :class:`~numpy:numpy.ndarray`}
+            Deprecated, use ``data`` instead.
         profile : bool, optional
             If True, collect TensorFlow profiling information while the
             simulation is running (this will slow down the simulation).
@@ -349,24 +352,32 @@ class Simulator(object):
                 "which may have unintended side effects." %
                 (n_steps, self.unroll, actual_steps), RuntimeWarning)
 
-        if input_feeds is None:
-            input_feeds = actual_steps
+        if input_feeds is not None:
+            # TODO: remove this in 3.0.0
+            warnings.warn(
+                "The `input_feeds` argument has been renamed; please use "
+                "`data` instead, as `input_feeds` will not be supported in a "
+                "future version.", DeprecationWarning)
+            assert data is None
+            data = input_feeds
+
+        if data is None:
+            data = actual_steps
         else:
             # note: we only need to check the shape of the first item, because
             # check_data (inside run_batch) will ensure that all the items
             # have the same shape
-            batch_size, input_steps = next(iter(
-                input_feeds.values())).shape[:2]
+            batch_size, input_steps = next(iter(data.values())).shape[:2]
             if batch_size != self.minibatch_size:
                 raise ValidationError(
-                    "Input feeds must have batch size == sim.minibatch_size "
+                    "Input data must have batch size == sim.minibatch_size "
                     "(%d != %d)" % (batch_size, self.minibatch_size),
-                    "input_feeds")
+                    "data")
             if input_steps != actual_steps:
                 raise ValidationError(
-                    "Number of timesteps in input feed data (%d) does not "
+                    "Number of timesteps in input data (%d) does not "
                     "match requested number of steps (%d)" %
-                    (input_steps, n_steps), "input_feeds")
+                    (input_steps, n_steps), "data")
 
         def callback(_, extra_vals):
             assert extra_vals == actual_steps
@@ -380,7 +391,7 @@ class Simulator(object):
             # simulation will always run for the given number of steps, even
             # if there are no output probes
             probe_data = self.run_batch(
-                input_feeds, {p: None for p in self.model.probes},
+                data, {p: None for p in self.model.probes},
                 extra_feeds=extra_feeds,
                 extra_fetches=self.tensor_graph.steps_run,
                 combine=lambda x: x[0], isolate_state=False,
@@ -1356,15 +1367,15 @@ class Simulator(object):
 
         return feed_dict
 
-    def _generate_inputs(self, input_feeds, n_steps):
+    def _generate_inputs(self, data, n_steps):
         """
         Generate inputs for the network (the output values of each Node with
         no incoming connections).
 
         Parameters
         ----------
-        input_feeds : dict of {:class:`~nengo:nengo.Node`: \
-                               :class:`~numpy:numpy.ndarray`}
+        data : dict of {:class:`~nengo:nengo.Node`: \
+                        :class:`~numpy:numpy.ndarray`}
             Override the values of input Nodes with the given data.  Arrays
             should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
         n_steps : int
@@ -1378,9 +1389,9 @@ class Simulator(object):
 
         feed_vals = {}
         for n, output in self.tensor_graph.input_funcs.items():
-            if n in input_feeds:
+            if n in data:
                 # move minibatch dimension to the end
-                feed_val = np.moveaxis(input_feeds[n], 0, -1)
+                feed_val = np.moveaxis(data[n], 0, -1)
             elif isinstance(output, np.ndarray):
                 # tile to n_steps/minibatch size
                 feed_val = np.tile(output[None, :, None],
