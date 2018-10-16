@@ -107,12 +107,12 @@ class TensorNode(Node):
     ----------
     tensor_func : callable
         A function that maps node inputs to outputs
-    size_in : int, optional (Default: 0)
+    size_in : int (Default: 0)
         The number of elements in the input vector
-    size_out : int, optional (Default: None)
+    size_out : int (Default: None)
         The number of elements in the output vector (if None, value will be
         inferred by calling ``tensor_func``)
-    label : str, optional (Default: None)
+    label : str (Default: None)
         A name for the node, used for debugging and visualization
     """
 
@@ -177,7 +177,7 @@ class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
         Input Signal for the TensorNode (or None if size_in==0)
     output : :class:`~nengo:nengo.builder.Signal`
         Output Signal for the TensorNode
-    tag : str, optional
+    tag : str
         A label associated with the operator, for debugging
 
     Notes
@@ -296,15 +296,15 @@ def tensor_layer(input, layer_func, shape_in=None, synapse=None,
         A function that takes the value from ``input`` (represented as a
         ``tf.Tensor``) and maps it to some output value, or a Nengo neuron
         type, defining a nonlinearity that will be applied to ``input``.
-    shape_in : tuple of int, optional
+    shape_in : tuple of int
         If not None, reshape the input to the given shape
-    synapse : float or :class:`~nengo:nengo.synapses.Synapse`, optional
+    synapse : float or :class:`~nengo:nengo.synapses.Synapse`
         Synapse to apply on connection from ``input`` to this layer
-    transform : :class:`~numpy:numpy.ndarray`, optional
+    transform : :class:`~numpy:numpy.ndarray`
         Transform matrix to apply on connection from ``input`` to this layer
-    return_conn : bool, optional
+    return_conn : bool
         If True, also return the connection linking this layer to ``input``
-    layer_args : dict, optional
+    layer_args : dict
         These arguments will be passed to ``layer_func`` if it is callable, or
         :class:`~nengo:nengo.Ensemble` if ``layer_func`` is a
         :class:`~nengo:nengo.neurons.NeuronType`

@@ -29,7 +29,7 @@ class TensorSignal(object):
     constant : callable
         A function that returns a TensorFlow constant (will be provided
         by :meth:`.signals.SignalDict.get_tensor_signal`)
-    label : str, optional
+    label : str
         Name for this signal, used to make debugging easier
     """
 
@@ -332,7 +332,7 @@ class SignalDict(Mapping):
         ----------
         src : :class:`.TensorSignal`
             Signal indicating the data to be read from base array
-        force_copy : bool, optional
+        force_copy : bool
             If True, always perform a gather, not a slice (this forces a
             copy). Note that setting ``force_copy=False`` does not guarantee
             that a copy won't be performed.
@@ -401,7 +401,7 @@ class SignalDict(Mapping):
         sigs : list of :class:`.TensorSignal` or \
                        :class:`~nengo:nengo.builder.Signal`
             Signals to be combined
-        label : str, optional
+        label : str
             Name for combined signal (to help with debugging)
 
         Returns
@@ -476,10 +476,10 @@ class SignalDict(Mapping):
             View shape of this signal (may differ from shape of base array)
         minibatched : bool
             Whether or not this signal contains a minibatch dimension
-        signal : :class:`~nengo:nengo.builder.Signal`, optional
+        signal : :class:`~nengo:nengo.builder.Signal`
             If not None, associate the new ``TensorSignal`` with the given
             ``Signal`` in the ``sig_map``
-        label : str, optional
+        label : str
             Name for this signal, used to make debugging easier
 
         Returns
@@ -515,10 +515,10 @@ class SignalDict(Mapping):
         ----------
         value : :class:`~numpy:numpy.ndarray`
             Array containing the value of the constant
-        dtype : ``tf.DType``, optional
+        dtype : ``tf.DType``
             The type for the constant (if ``None``, the dtype of ``value``
             will be used)
-        cutoff : int, optional
+        cutoff : int
             The size of constant (in bytes) for which we will switch from
             ``tf.constant`` to ``tf.Variable``
 

@@ -11,11 +11,11 @@ class TruncatedNormal(Distribution):
 
     Parameters
     ----------
-    mean : float, optional
+    mean : float
         Mean of the normal distribution
-    stddev : float, optional
+    stddev : float
         Standard deviation of the normal distribution
-    limit : float, optional
+    limit : float
         Resample any values more than this distance from the mean. If None,
         then limit will be set to 2 standard deviations.
     """
@@ -38,11 +38,11 @@ class TruncatedNormal(Distribution):
         ----------
         n : int
             Number samples to take.
-        d : int or None, optional
+        d : int or None
             The number of dimensions to return. If this is an int, the return
             value will be of shape ``(n, d)``. If None, the return
             value will be of shape ``(n,)``.
-        rng : :class:`numpy:numpy.random.RandomState`, optional
+        rng : :class:`numpy:numpy.random.RandomState`
             Random number generator state (if None, will use the default
             numpy random number generator).
 
@@ -75,12 +75,12 @@ class VarianceScaling(Distribution):
 
     Parameters
     ----------
-    scale : float, optional
+    scale : float
         Overall scale on values
-    mode : "fan_in" or "fan_out" or "fan_avg", optional
+    mode : "fan_in" or "fan_out" or "fan_avg"
         Whether to scale based on input or output dimensionality, or average of
         the two
-    distribution: "uniform" or "normal", optional
+    distribution: "uniform" or "normal"
         Whether to use a uniform or normal distribution for weights
     """
 
@@ -102,11 +102,11 @@ class VarianceScaling(Distribution):
         ----------
         n : int
             Number samples to take.
-        d : int or None, optional
+        d : int or None
             The number of dimensions to return. If this is an int, the return
             value will be of shape ``(n, d)``. If None, the return
             value will be of shape ``(n,)``.
-        rng : :class:`numpy:numpy.random.RandomState`, optional
+        rng : :class:`numpy:numpy.random.RandomState`
             Random number generator state (if None, will use the default
             numpy random number generator).
 
@@ -147,10 +147,10 @@ class Glorot(VarianceScaling):
 
     Parameters
     ----------
-    scale : float, optional
+    scale : float
         Scale on weight distribution. For rectified linear units this should
         be sqrt(2), otherwise usually 1.
-    distribution: "uniform" or "normal", optional
+    distribution: "uniform" or "normal"
         Whether to use a uniform or normal distribution for weights
 
     References
@@ -171,10 +171,10 @@ class He(VarianceScaling):
 
     Parameters
     ----------
-    scale : float, optional
+    scale : float
         Scale on weight distribution. For rectified linear units this should
         be sqrt(2), otherwise usually 1.
-    distribution: "uniform" or "normal", optional
+    distribution: "uniform" or "normal"
         Whether to use a uniform or normal distribution for weights
 
     References

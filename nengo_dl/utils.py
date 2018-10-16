@@ -53,7 +53,7 @@ def function_name(func, sanitize=True):
     ----------
     func : callable
         Callable object (e.g., function, callable class)
-    sanitize : bool, optional
+    sanitize : bool
         If True, remove any illegal TensorFlow name characters from name
 
     Returns
@@ -193,9 +193,9 @@ class MessageBar(progressbar.BouncingBar):
 
     Parameters
     ----------
-    msg : str, optional
+    msg : str
         A message to be displayed in the middle of the progress bar
-    finish_msg : str, optional
+    finish_msg : str
         A message to be displayed when the progress bar is finished
     """
 
@@ -230,14 +230,14 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
 
     Parameters
     ----------
-    present : str, optional
+    present : str
         Description of process in present (e.g., "Simulating")
-    past : str, optional
+    past : str
         Description of process in past (e.g., "Simulation")
-    max_value : int or None, optional
+    max_value : int or None
         The maximum number of steps in the tracked process (or ``None`` if
         the maximum number of steps is unknown)
-    vars : list of str, optional
+    vars : list of str
         Extra variables that will be displayed at the end of the progress bar
 
     Notes
@@ -332,7 +332,7 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
 
         Parameters
         ----------
-        msg : str, optional
+        msg : str
             Description of sub-process
         """
 
@@ -406,13 +406,13 @@ def minibatch_generator(data, minibatch_size, shuffle=True,
         Data arrays to be divided into minibatches.
     minibatch_size : int
         The number of items in each minibatch
-    shuffle : bool, optional
+    shuffle : bool
         If True, the division of items into minibatches will be randomized each
         time the generator is created
-    truncation : int, optional
+    truncation : int
         If not None, divide the data up into sequences of ``truncation``
         timesteps.
-    rng : :class:`~numpy:numpy.random.RandomState`, optional
+    rng : :class:`~numpy:numpy.random.RandomState`
         Seeded random number generator
 
     Yields

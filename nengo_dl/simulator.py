@@ -40,28 +40,28 @@ class Simulator(object):
     network : :class:`~nengo:nengo.Network` or None
         A network object to be built and then simulated. If None,
         then a built model must be passed to ``model`` instead
-    dt : float, optional
+    dt : float
         Length of a simulator timestep, in seconds
-    seed : int, optional
+    seed : int
         Seed for all stochastic operators used in this simulator
-    model : :class:`~nengo:nengo.builder.Model`, optional
+    model : :class:`~nengo:nengo.builder.Model`
         Pre-built model object
-    dtype : ``tf.DType``, optional
+    dtype : ``tf.DType``
         Deprecated, use ``nengo_dl.configure_settings(dtype=...)`` instead.
-    device : None or ``"/cpu:0"`` or ``"/gpu:[0-n]"``, optional
+    device : None or ``"/cpu:0"`` or ``"/gpu:[0-n]"``
         Device on which to execute computations (if None then uses the
         default device as determined by TensorFlow)
-    unroll_simulation : int, optional
+    unroll_simulation : int
         Unroll simulation loop by explicitly building the given number of
         iterations into the computation graph (improves simulation speed
         but increases build time)
-    minibatch_size : int, optional
+    minibatch_size : int
         The number of simultaneous inputs that will be passed through the
         network
-    tensorboard : str, optional
+    tensorboard : str
         If not None, save network output in the TensorFlow summary format to
         the given directory, which can be loaded into TensorBoard
-    progress_bar : bool, optional
+    progress_bar : bool
         If True (default), display progress information when building a model
     """
 
@@ -214,7 +214,7 @@ class Simulator(object):
 
         Parameters
         ----------
-        seed : int, optional
+        seed : int
             If not None, overwrite the default simulator seed with this value
             (note: this becomes the new default simulator seed)
         """
@@ -246,10 +246,10 @@ class Simulator(object):
 
         Parameters
         ----------
-        include_trainable : bool, optional
+        include_trainable : bool
             If True, also reset any training that has been performed on
             network parameters (e.g., connection weights)
-        include_probes : bool, optional
+        include_probes : bool
             If True, also clear probe data
         """
 
@@ -324,12 +324,12 @@ class Simulator(object):
         input_feeds : dict of {:class:`~nengo:nengo.Node`: \
                                :class:`~numpy:numpy.ndarray`}
             Deprecated, use ``data`` instead.
-        profile : bool, optional
+        profile : bool
             If True, collect TensorFlow profiling information while the
             simulation is running (this will slow down the simulation).
             Can also pass a string specifying a non-default filename for the
             saved profile data.
-        progress_bar : bool, optional
+        progress_bar : bool
             If True, print information about the simulation status to standard
             output.
         extra_feeds : dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}
@@ -438,11 +438,11 @@ class Simulator(object):
         optimizer : ``tf.train.Optimizer``
             TensorFlow optimizer, e.g.
             ``tf.train.GradientDescentOptimizer(learning_rate=0.1)``
-        n_epochs : int, optional
+        n_epochs : int
             Run training for the given number of epochs (complete passes
             through ``data``)
         objective : dict of {(tuple of) :class:`~nengo:nengo.Probe`: \
-                             ``"mse"`` or callable or ``None``}, optional
+                             ``"mse"`` or callable or ``None``}
             The objective to be minimized. Passing ``"mse"`` will train with
             mean squared error. A custom function ``f(output, target) -> loss``
             can be passed that consumes the actual output and target output for
@@ -457,23 +457,23 @@ class Simulator(object):
             will be the sum across all the objectives specified.  The default
             behaviour if no objective is provided is to use "mse" for each
             probe in ``data``.
-        shuffle : bool, optional
+        shuffle : bool
             If True, randomize the data into different minibatches each epoch
-        truncation: int, optional
+        truncation: int
             If not None, use truncated backpropagation when training the
             network, with the given truncation length.
         summaries : list of :class:`~nengo:nengo.Connection` or \
                             :class:`~nengo:nengo.Ensemble` or \
                             :class:`~nengo:nengo.ensemble.Neurons` or \
                             ``"loss"`` or \
-                            ``tf.Tensor``}
+                            ``tf.Tensor``
             If not None, collect data during the training process using
             TensorFlow's ``tf.summary`` format.  The summary objects can be a
             Connection (in which case data on the corresponding weights will be
             collected), Ensemble (encoders), Neurons (biases), or ``"loss"``
             (the loss value for ``objective``).  The user can also create their
             own summaries and pass in the Tensors representing the summary ops.
-        profile : bool, optional
+        profile : bool
             If True, collect TensorFlow profiling information while the
             simulation is running (this will slow down the simulation).
             Can also pass a string specifying a non-default filename for the
@@ -692,31 +692,31 @@ class Simulator(object):
             Can be used to fetch arbitrary (structures of) Tensor values from
             the simulation (will be fetched directly from the TensorFlow
             session).
-        n_epochs : int, optional
+        n_epochs : int
             Repeat ``data`` for ``n_epochs`` iterations.
-        truncation : int, optional
+        truncation : int
             If not None, run the simulation ``truncation`` timesteps at a time.
             Outputs from each truncation block will be passed sequentially to
             ``combine``, in the same way as minibatch blocks.  Note
             that the simulation state is preserved between truncation blocks,
             so the sequence forms one continuous run within each minibatch.
-        shuffle : bool, optional
+        shuffle : bool
             If True, randomize the data into different minibatches each epoch.
-        profile : bool, optional
+        profile : bool
             If True, collect TensorFlow profiling information while the
             simulation is running (this will slow down the simulation).
             Can also pass a string specifying a non-default filename for the
             saved profile data.
-        training : bool, optional
+        training : bool
             If True, run the network in training mode, otherwise run it in
             inference mode (this can affect things like the neuron model
             used).
-        callback : callable, optional
+        callback : callable
             A function that will be called after each minibatch is evaluated.
             The function is passed two arguments; the first is a dictionary
             corresponding to ``outputs`` with the output values from each
             function, and the second is the value of ``extra_feeds``.
-        combine : callable, optional
+        combine : callable
             The function that will be used to combine the outputs from each
             minibatch/truncation block.  The values from each output function
             on each minibatch will be formed into a list and passed to
@@ -724,7 +724,7 @@ class Simulator(object):
             this function.  Note that if the output function returns multiple
             values, then ``combine`` will be applied separately to each of
             those outputs across the minibatches.
-        isolate_state : bool, optional
+        isolate_state : bool
             If True (default), isolate the simulation state for this run
             from the rest of the simulation (so the execution of this run
             is not affected by previous runs and will not affect future runs).
@@ -881,9 +881,9 @@ class Simulator(object):
         ----------
         path : str
             Filepath of parameter output file
-        include_global : bool, optional
+        include_global : bool
             If True (default True), save global/trainable network variables
-        include_local : bool, optional
+        include_local : bool
             If True (default False), save local (non-trainable) network
             variables
 
@@ -917,9 +917,9 @@ class Simulator(object):
         ----------
         path : str
             Filepath of parameter input file
-        include_global : bool, optional
+        include_global : bool
             If True (default True), load global (trainable) network variables
-        include_local : bool, optional
+        include_local : bool
             If True (default False), load local (non-trainable) network
             variables
 
@@ -1043,7 +1043,7 @@ class Simulator(object):
                                :class:`~nengo:nengo.Connection`
             A single object or list of objects for which we want to get the
             parameters.
-        as_dict : bool, optional
+        as_dict : bool
             If True, return the values as a dictionary keyed by object label,
             instead of a list (the default).  Note that in this case labels
             must be unique.
@@ -1163,9 +1163,9 @@ class Simulator(object):
                   list of :class:`~nengo:nengo.Probe`
             Compute gradients wrt this output (if None, computes wrt each
             output probe)
-        atol : float, optional
+        atol : float
             Absolute error tolerance
-        rtol : float, optional
+        rtol : float
             Relative (to numeric grad) error tolerance
 
         Notes
@@ -1265,7 +1265,7 @@ class Simulator(object):
 
         Parameters
         ----------
-        sample_every : float, optional (Default: None)
+        sample_every : float (Default: None)
             The sampling period of the probe to create a range for.
             If None, a time value for every ``dt`` will be produced.
         """
@@ -1317,13 +1317,13 @@ class Simulator(object):
             The number of execution steps
         data : dict of {:class:`~nengo:nengo.Node` or
                         :class:`~nengo:nengo.Probe` : \
-                        :class:`~numpy:numpy.ndarray`}, optional
+                        :class:`~numpy:numpy.ndarray`}
             Input values for Nodes and target values for Probes.  Arrays
             should have shape ``(sim.minibatch_size, n_steps,
             node.size_out/probe.size_in)``.
-        start : int, optional
+        start : int
             Initial value of simulator timestep
-        training : bool, optional
+        training : bool
             Whether we are running in training or inference mode
 
         Returns
@@ -1429,10 +1429,10 @@ class Simulator(object):
                         :class:`~numpy:numpy.ndarray`}
             Array of data associated with given objects in model (Nodes or
             Probes)
-        n_batch : int, optional
+        n_batch : int
             Number of elements in batch (if None, will just verify that all
             data items have same batch size)
-        n_steps : int, optional
+        n_steps : int
             Number of simulation steps (if None, will just verify that all
             data items have same number of steps)
         """

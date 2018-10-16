@@ -158,7 +158,7 @@ class SimPES(Operator):  # pylint: disable=abstract-method
         The synaptic weight change to be applied, :math:`\Delta \omega_{ij}`.
     learning_rate : float
         The scalar learning rate, :math:`\kappa`.
-    tag : str, optional (Default: None)
+    tag : str (Default: None)
         A label associated with the operator, for debugging purposes.
 
     Attributes
@@ -171,7 +171,7 @@ class SimPES(Operator):  # pylint: disable=abstract-method
         The synaptic weight change to be applied, :math:`\Delta \omega_{ij}`.
     learning_rate : float
         The scalar learning rate, :math:`\kappa`.
-    tag : str, optional (Default: None)
+    tag : str (Default: None)
         A label associated with the operator, for debugging purposes.
 
     Notes

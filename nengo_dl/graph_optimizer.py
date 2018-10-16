@@ -242,7 +242,7 @@ def tree_planner(op_list, max_depth=3):
     ----------
     op_list : list of :class:`~nengo:nengo.builder.Operator`
         All the ``nengo`` operators in a model (unordered)
-    max_depth : int, optional
+    max_depth : int
         The planner will search this many steps ahead before selecting which
         group to schedule next
 
@@ -613,7 +613,7 @@ def order_signals(plan, n_passes=10):
     ----------
     plan : list of tuple of :class:`~nengo:nengo.builder.Operator`
         Operator execution plan (e.g., output from ``greedy_planner``)
-    n_passes : int, optional
+    n_passes : int
         Number of repeated passes through the operator reordering stage
 
     Returns

@@ -355,12 +355,12 @@ def run_profile(net, train=False, n_steps=150, do_profile=True, **kwargs):
     ----------
     net : :class:`~nengo:nengo.Network`
         The nengo Network to be profiled.
-    train : bool, optional
+    train : bool
         If True, profile the ``sim.train`` function. Otherwise, profile the
         ``sim.run`` function.
-    n_steps : int, optional
+    n_steps : int
         The number of timesteps to run the simulation.
-    do_profile : bool, optional
+    do_profile : bool
         Whether or not to run profiling
 
     Notes
