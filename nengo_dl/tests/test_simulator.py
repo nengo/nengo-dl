@@ -617,7 +617,7 @@ def test_tensorboard(Simulator, tmpdir):
 def test_profile(Simulator, mode, outfile):
     with nengo.Network() as net:
         a = nengo.Node([0])
-        x = nengo.Node(size_in=1)
+        x = nengo.Ensemble(1, 1)
         nengo.Connection(a, x)
         p = nengo.Probe(x)
 
@@ -1125,15 +1125,25 @@ def test_extra_feeds(Simulator):
 @pytest.mark.training
 def test_direct_grads(Simulator, mixed):
     with nengo.Network() as net:
+        # note: we want to use nengo.Node(size_in=1) for b/c, but there is
+        # a bug in TensorFlow that will cause that network to hang (see
+        # https://github.com/tensorflow/tensorflow/issues/23383).  so we
+        # create something equivalent with a relu neuron, since that avoids
+        # the bug.
+        configure_settings(trainable=None)
+        net.config[nengo.ensemble.Neurons].trainable = False
+
         a = nengo.Node([1])
-        b = nengo.Node(size_in=1)
-        nengo.Connection(a, b, synapse=None)
-        p = nengo.Probe(b)
+        b = nengo.Ensemble(1, 1, neuron_type=nengo.RectifiedLinear(),
+                           gain=np.ones(1), bias=np.zeros(1))
+        nengo.Connection(a, b.neurons, synapse=None)
+        p = nengo.Probe(b.neurons)
 
         if mixed:
-            c = nengo.Node(size_in=1)
-            nengo.Connection(a, c, synapse=None)
-            p2 = nengo.Probe(c)
+            c = nengo.Ensemble(1, 1, neuron_type=nengo.RectifiedLinear(),
+                               gain=np.ones(1), bias=np.zeros(1))
+            nengo.Connection(a, c.neurons, synapse=None)
+            p2 = nengo.Probe(c.neurons)
 
     with Simulator(net, minibatch_size=1) as sim:
         n_steps = 10
@@ -1352,3 +1362,22 @@ def test_synapse_warning(Simulator):
     p.synapse = None
     p2.synapse = 1
     assert not does_warn()
+
+
+@pytest.mark.training
+def test_concat_hang(Simulator, pytestconfig):
+    if ("1.11.0" <= tf.__version__ <= "1.12.0" and
+            pytestconfig.getoption("--unroll_simulation") > 1):
+        pytest.xfail(
+            "There is a bug in TensorFlow that causes this test to hang; see "
+            "https://github.com/tensorflow/tensorflow/issues/23383")
+
+    with nengo.Network() as net:
+        a = nengo.Node([0])
+        x = nengo.Node(size_in=1)
+        nengo.Connection(a, x)
+        p = nengo.Probe(x)
+
+    with Simulator(net) as sim:
+        sim.train({a: np.zeros((1, 5, 1))}, {p: np.zeros((1, 5, 1))},
+                  tf.train.GradientDescentOptimizer(1))

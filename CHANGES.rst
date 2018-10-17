@@ -43,6 +43,11 @@ Release History
   that was first initialized inside the Simulation while loop
   (`#56 <https://github.com/nengo/nengo-dl/issues/56>`_)
 - Allow TensorNodes to run in Nengo GUI.
+- Avoid bug in TensorFlow 1.11.0 that prevents certain models from
+  running (see https://github.com/tensorflow/tensorflow/issues/23383). Note
+  that this doesn't prevent this from occurring in user models, as we cannot
+  control the model structure there. If your model hangs indefinitely when
+  you call ``sim.train``, try downgrading to TensorFlow 1.10.0.
 
 1.2.0 (September 5, 2018)
 -------------------------

@@ -162,7 +162,8 @@ class TensorGraph(object):
         if not self.inference_only:
             # this variable controls behaviour in the simulation that is
             # conditional on whether we are doing training or inference
-            self.signals.training = tf.placeholder(tf.bool, shape=())
+            self.signals.training = tf.placeholder(tf.bool, shape=(),
+                                                   name="training")
 
         # variable to track training step
         with tf.device("/cpu:0"):
@@ -186,7 +187,7 @@ class TensorGraph(object):
             # feed in the initial values when the init op is called. this
             # prevents TensorFlow from storing large constants in the graph
             # def, which can cause problems for large models
-            ph = tf.placeholder(v.dtype, v.shape)
+            ph = tf.placeholder(v.dtype, v.shape, name="%s_init" % name)
 
             if trainable:
                 with tf.variable_scope("trainable_vars", reuse=False):
@@ -430,7 +431,8 @@ class TensorGraph(object):
             if self.model.sig[n]["out"] in self.signals:
                 # set up a placeholder input for this node
                 self.input_ph[n] = tf.placeholder(
-                    self.dtype, (None, n.size_out, self.minibatch_size))
+                    self.dtype, (None, n.size_out, self.minibatch_size),
+                    name="%s_ph" % utils.sanitize_name(n))
 
     @with_self
     def build_optimizer(self, optimizer, objective):
@@ -554,7 +556,7 @@ class TensorGraph(object):
             if p not in self.target_phs:
                 self.target_phs[p] = tf.placeholder(
                     self.dtype, (self.minibatch_size, None, p.size_in),
-                    name="targets")
+                    name="%s_ph" % utils.sanitize_name(p))
 
             # compute loss
             if obj == "mse":
