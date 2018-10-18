@@ -19,27 +19,46 @@ env:
     - NENGO_VERSION="nengo"
     - TEST_ARGS=""
 
-  matrix:
-    - MODE="static"
-    - MODE="docs"
-    - # default build
-    - MODE="coverage"
-      NENGO_VERSION="git+https://github.com/nengo/nengo.git"
-      TF_VERSION="tensorflow --pre"
-    - MODE="coverage"
-      NENGO_VERSION="nengo==2.7.0"
-      TF_VERSION="tensorflow==1.4.0"
-      NUMPY_VERSION="numpy==1.12.1"
-      PYTHON_VERSION="2.7"
-    - TEST_ARGS="--dtype float64 --simulator-only"
-    - TEST_ARGS="--unroll_simulation 5 --simulator-only"
-    - TEST_ARGS="--inference-only --simulator-only"
-    - PYTHON_VERSION="3.4"
-
-matrix:
+jobs:
   include:
-  - language: generic  # needed for xvfb
-    env: MODE="examples"
+  - stage: test
+    env: MODE="static"
+  - env: MODE="docs"
+  - env: MODE="test"
+  - env: MODE="coverage"
+         NENGO_VERSION="git+https://github.com/nengo/nengo.git"
+         TF_VERSION="tensorflow --pre"
+  - env: MODE="coverage"
+         NENGO_VERSION="nengo==2.7.0"
+         TF_VERSION="tensorflow==1.4.0"
+         NUMPY_VERSION="numpy==1.12.1"
+         PYTHON_VERSION="2.7"
+  - env: TEST_ARGS="--dtype float64 --simulator-only"
+  - env: TEST_ARGS="--unroll_simulation 5 --simulator-only"
+  - env: TEST_ARGS="--inference-only --simulator-only"
+  - env: PYTHON_VERSION="3.4"
+  - env: MODE="examples"
+    language: generic  # needed for xvfb
+  - stage: deploy
+    if: branch =~ ^release-candidate-* OR tag =~ ^v[0-9]*
+    env: MODE="deploy"
+    deploy:
+      - provider: pypi
+        server: https://test.pypi.org/legacy/
+        user: drasmuss
+        password: $PYPI_TOKEN
+        distributions: "sdist bdist_wheel"
+        on:
+          all_branches: true
+          condition: $TRAVIS_BRANCH =~ ^release-candidate-*
+          condition: $TRAVIS_TAG = ""
+      - provider: pypi
+        user: drasmuss
+        password: $PYPI_TOKEN
+        distributions: "sdist bdist_wheel"
+        on:
+          all_branches: true
+          condition: $TRAVIS_TAG =~ ^v[0-9]*
 
 # set up miniconda
 before_install:
