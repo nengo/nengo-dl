@@ -1,7 +1,7 @@
 from nengo import Node, Connection, Ensemble, builder
 from nengo.base import NengoObject
 from nengo.builder.operator import Reset
-from nengo.exceptions import ValidationError, BuildError
+from nengo.exceptions import ValidationError, SimulationError
 from nengo.neurons import NeuronType
 from nengo.params import Default, IntParam, Parameter
 import numpy as np
@@ -133,10 +133,13 @@ class TensorNode(Node):
 
     @property
     def output(self):
-        raise BuildError(
-            "TensorNode does not have an `output` attribute (this probably "
-            "means you are trying to use a TensorNode inside a Simulator "
-            "other than Nengo DL)")
+        def output_func(*_):
+            raise SimulationError(
+                "Cannot call TensorNode output function (this probably means "
+                "you are trying to use a TensorNode inside a Simulator other "
+                "than NengoDL)")
+
+        return output_func
 
 
 @NengoBuilder.register(TensorNode)

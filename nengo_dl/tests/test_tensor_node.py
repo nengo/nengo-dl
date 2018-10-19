@@ -1,5 +1,5 @@
 import nengo
-from nengo.exceptions import ValidationError, BuildError
+from nengo.exceptions import ValidationError, SimulationError
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -37,9 +37,11 @@ def test_validation(Simulator):
         n = TensorNode(lambda t: tf.zeros((5, 2)))
         assert n.size_out == 2
 
-    # can't build tensornode in regular Nengo simulator
-    with pytest.raises(BuildError):
-        nengo.Simulator(net)
+    # can't run tensornode in regular Nengo simulator
+    with nengo.Simulator(net) as sim:
+        with pytest.raises(SimulationError):
+            sim.step()
+
 
     # these tensornodes won't be validated at creation, because size_out
     # is specified. instead the validation occurs when the network is built
