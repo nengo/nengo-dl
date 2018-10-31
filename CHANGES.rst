@@ -48,6 +48,9 @@ Release History
   that this doesn't prevent this from occurring in user models, as we cannot
   control the model structure there. If your model hangs indefinitely when
   you call ``sim.train``, try downgrading to TensorFlow 1.10.0.
+- Ensure that ``sim.training_step`` is always updated after the optimization
+  step (in certain race conditions it would sometimes update part-way through
+  the optimization step).
 
 1.2.0 (September 5, 2018)
 -------------------------

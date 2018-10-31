@@ -528,8 +528,8 @@ class Simulator(object):
         if opt_slots_init is not None:
             self.sess.run(opt_slots_init)
 
-        # increment training step
-        fetches.append(self.tensor_graph.training_step_inc)
+        # get training step
+        fetches.append(self.tensor_graph.training_step)
 
         # get loss op
         loss = self.tensor_graph.build_loss(objective)
@@ -582,6 +582,9 @@ class Simulator(object):
                     outputs = self.sess.run(
                         fetches, feed_dict=feed,
                         options=run_options, run_metadata=run_metadata)
+
+                    # increment training step
+                    self.sess.run(self.tensor_graph.training_step_inc)
 
                     if summary_op is not None:
                         self.summary.add_summary(outputs[-1], outputs[1])

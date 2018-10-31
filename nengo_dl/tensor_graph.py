@@ -165,13 +165,13 @@ class TensorGraph(object):
             self.signals.training = tf.placeholder(tf.bool, shape=(),
                                                    name="training")
 
-        # variable to track training step
-        with tf.device("/cpu:0"):
-            with tf.variable_scope("misc_vars", reuse=False):
+            # variable to track training step
+            with tf.device("/cpu:0"), tf.variable_scope("misc_vars",
+                                                        reuse=False):
                 self.training_step = tf.get_variable(
-                    "training_step", initializer=tf.constant_initializer(0),
-                    dtype=tf.int64, shape=(), trainable=False)
-            self.training_step_inc = tf.assign_add(self.training_step, 1)
+                    "training_step", dtype=tf.int64, shape=(),
+                    trainable=False, initializer=tf.constant_initializer(0))
+                self.training_step_inc = tf.assign_add(self.training_step, 1)
 
         # create base arrays
         sub = progress.sub("creating base arrays")
@@ -223,7 +223,9 @@ class TensorGraph(object):
         self.build_loop(sub)
 
         # ops for initializing variables (will be called by simulator)
-        trainable_vars = tf.trainable_variables() + [self.training_step]
+        trainable_vars = tf.trainable_variables()
+        if not self.inference_only:
+            trainable_vars.append(self.training_step)
         self.trainable_init_op = tf.variables_initializer(trainable_vars)
         self.local_init_op = tf.local_variables_initializer()
         self.global_init_op = tf.variables_initializer(
@@ -764,11 +766,13 @@ class TensorGraph(object):
 
             for subnet in net.networks:
                 mark_network(net_config, subnet,
-                             get_trainable(net_config, subnet, network_trainable))
+                             get_trainable(net_config, subnet,
+                                           network_trainable))
 
             # encoders and biases are trainable
             for ens in net.ensembles:
-                ens_trainable = get_trainable(net_config, ens, network_trainable)
+                ens_trainable = get_trainable(net_config, ens,
+                                              network_trainable)
 
                 self.model.sig[ens]["encoders"].trainable = ens_trainable
                 self.model.sig[ens]["encoders"].minibatched = False
