@@ -627,7 +627,7 @@ class Simulator(object):
         """
 
         batch_size = (self.minibatch_size if isinstance(data, int) else
-                      next(iter(data.values())).shape[1])
+                      next(iter(data.values())).shape[0])
 
         if not isinstance(objective, dict):
             raise ValidationError("Must be a dictionary mapping Probes to "
