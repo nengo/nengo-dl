@@ -545,7 +545,7 @@ class SignalDict(Mapping):
                 # that would increase the size a lot, so we allow the variable
                 # to be created on the CPU if necessary, and then move it to
                 # the GPU with the identity
-                # TODO: double check if this is still true in 1.9.0
+                # TODO: double check if this is still true in the future
                 with tf.device(None):
                     const_var = tf.get_variable(
                         "constant_%d" % len(self.constant_phs),

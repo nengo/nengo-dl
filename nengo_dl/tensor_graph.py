@@ -167,12 +167,7 @@ class TensorGraph(object):
                                                    name="training")
 
             # variable to track training step
-            with tf.device("/cpu:0"), tf.variable_scope("misc_vars",
-                                                        reuse=False):
-                self.training_step = tf.get_variable(
-                    "training_step", dtype=tf.int64, shape=(),
-                    trainable=False, initializer=tf.constant_initializer(0))
-                self.training_step_inc = tf.assign_add(self.training_step, 1)
+            self.training_step = tf.train.get_or_create_global_step()
         else:
             self.training_step = None
 
@@ -537,7 +532,8 @@ class TensorGraph(object):
                 grads = [tf.reduce_sum(gs, axis=0) for gs in zip(*grads)]
 
             opt_op = optimizer.apply_gradients(
-                zip(grads, tf.trainable_variables()))
+                zip(grads, tf.trainable_variables()),
+                global_step=self.training_step)
 
             return opt_op, loss
 

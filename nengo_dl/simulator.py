@@ -580,10 +580,6 @@ class Simulator(object):
                 self.summary.add_summary(extra_vals["summaries"],
                                          extra_vals["training_step"])
 
-            # increment training step
-            # TODO: find a way to run this at the right time with one call
-            self.sess.run(self.tensor_graph.training_step_inc)
-
         # run training
         with progress:
             self.run_batch(

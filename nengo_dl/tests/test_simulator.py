@@ -633,7 +633,7 @@ def test_tensorboard(Simulator, tmpdir):
             # metadata stuff
             continue
 
-        assert event.step == i - 3
+        assert event.step == i - 2
         tags = [s.tag for s in event.summary.value]
         assert len(tags) == 7
         assert "loss/loss" in tags[0]

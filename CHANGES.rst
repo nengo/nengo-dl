@@ -28,7 +28,7 @@ Release History
 
   .. code-block:: python
 
-    sim.train({my_node: x}, {my_probe: y} , ...)
+    sim.train({my_node: x}, {my_probe: y}, ...)
 
   is now equivalent to
 
@@ -83,6 +83,8 @@ Release History
   ``my_objective(outputs, targets): ...``) if no target values are required.
 - ``utils.minibatch_generator`` now accepts a single ``data`` argument rather
   than ``inputs`` and ``targets`` (see discussion in "Breaking API changes").
+- ``sim.training_step`` is now the same as
+  ``tf.train.get_or_create_global_step()``.
 
 1.2.1 (November 2, 2018)
 ------------------------
