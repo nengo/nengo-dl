@@ -82,7 +82,10 @@ class Builder(builder.OpBuilder):
     """
     Mock-up builder for `.Op`.
     """
-    pass
+
+    @staticmethod
+    def mergeable(x, y):
+        return True
 
 
 class Probe(nengo.Probe):

@@ -95,6 +95,7 @@ Release History
 - Reorganized documentation into "User guide" and "API reference" sections.
 - Improve build speed of models with large constants
   (`#69 <https://github.com/nengo/nengo-dl/pull/69>`_)
+- Moved op-specific merge logic into the ``OpBuilder`` classes.
 
 **Deprecated**
 

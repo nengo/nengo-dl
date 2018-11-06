@@ -69,6 +69,10 @@ class ResetBuilder(OpBuilder):
         for data, val in self.scatters:
             signals.scatter(data, val, mode=self.mode)
 
+    @staticmethod
+    def mergeable(x, y):
+        return True
+
 
 @Builder.register(Copy)
 class CopyBuilder(OpBuilder):
@@ -105,6 +109,10 @@ class CopyBuilder(OpBuilder):
     def build_step(self, signals):
         signals.scatter(self.dst_data, signals.gather(self.src_data),
                         mode=self.mode)
+
+    @staticmethod
+    def mergeable(x, y):
+        return True
 
 
 # class ElementwiseSet(ElementwiseInc):
@@ -157,6 +165,22 @@ class ElementwiseIncBuilder(OpBuilder):
         result = tf.multiply(A, X)
 
         signals.scatter(self.Y_data, result, mode=self.mode)
+
+    @staticmethod
+    def mergeable(x, y):
+        # for these operations we enforce that the first dimensions
+        # match (we know all the other dimensions match due to the generic
+        # checks).
+        # this allows us to stack all the arguments into continuous array
+        # blocks, allowing for more efficient multiplication (mainly
+        # because it allows us to take advantage of broadcasting)
+        for s0, s1 in zip(x.all_signals, y.all_signals):
+            shape0 = s0.shape[0] if s0.shape != () else 1
+            shape1 = s1.shape[0] if s1.shape != () else 1
+            if shape0 != shape1:
+                return False
+
+        return True
 
 
 # class DotSet(DotInc):
@@ -252,6 +276,19 @@ class DotIncBuilder(OpBuilder):
         #     dot = tf.reduce_sum(dot, axis=reduce_axis)
 
         signals.scatter(self.Y_data, dot, mode=self.mode)
+
+    @staticmethod
+    def mergeable(x, y):
+        # if the matrix (A) is minibatched, then the first dimensions need
+        # to match up (to allow us to transpose the dimensions)
+        if x.A.minibatched:
+            for s0, s1 in zip(x.all_signals, y.all_signals):
+                shape0 = s0.shape[0] if s0.shape != () else 1
+                shape1 = s1.shape[0] if s1.shape != () else 1
+                if shape0 != shape1:
+                    return False
+
+        return True
 
 
 @Builder.register(DotInc)
@@ -419,3 +456,11 @@ class SimPyFuncBuilder(OpBuilder):
         # assignment operator. if the result of the assignment is actually
         # used anywhere, then it will be run as part of the normal graph.
         return node_outputs
+
+    @staticmethod
+    def mergeable(x, y):
+        # for these we need to make a special check that the functions
+        # all do/do not get time as input, otherwise we could end
+        # up confusing a node that only gets a scalar float input with
+        # a node that only gets time as input
+        return x.t == y.t

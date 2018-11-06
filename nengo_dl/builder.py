@@ -25,7 +25,8 @@ class Builder(object):
 
     @classmethod
     def pre_build(cls, ops, signals, op_builds, config):
-        """Setup step for build classes, in which they compute any of the
+        """
+        Setup step for build classes, in which they compute any of the
         values that are constant across simulation timesteps.
 
         Parameters
@@ -57,7 +58,8 @@ class Builder(object):
 
     @classmethod
     def build(cls, ops, signals, op_builds):
-        """Build the computations implementing a single simulator timestep.
+        """
+        Build the computations implementing a single simulator timestep.
 
         Parameters
         ----------
@@ -89,7 +91,8 @@ class Builder(object):
 
     @classmethod
     def register(cls, nengo_op):
-        """A decorator for adding a class to the build function registry.
+        """
+        A decorator for adding a class to the build function registry.
 
         Parameters
         ----------
@@ -200,6 +203,28 @@ class OpBuilder(object):  # pragma: no cover
             Seeded random number generator
         """
         pass
+
+    @staticmethod
+    def mergeable(x, y):
+        """
+        Compute the mergeability of two operators of this builder's type.
+
+        Parameters
+        ----------
+        x : :class:`~nengo:nengo.builder.Operator`
+            The operator being tested
+        y : :class:`~nengo:nengo.builder.Operator`
+            The operator being merged into (this is representative of a group
+            of operators that have already been merged)
+
+        Returns
+        -------
+        mergeable : bool
+            True if ``x`` and ``y`` can be merged into a single built op,
+            else ``False``.
+        """
+
+        return False
 
 
 class NengoBuilder(builder.Builder):

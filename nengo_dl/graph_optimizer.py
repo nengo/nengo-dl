@@ -6,13 +6,7 @@ can be simulated more efficiently when converted into a TensorFlow graph.
 from collections import OrderedDict, defaultdict
 import logging
 
-from nengo.synapses import Lowpass, LinearFilter
-from nengo.builder.learning_rules import SimVoja, SimOja, SimBCM
-from nengo.builder.operator import (SimPyFunc, ElementwiseInc, DotInc, Reset,
-                                    Copy)
-from nengo.builder.neurons import SimNeurons
-from nengo.builder.processes import SimProcess
-from nengo.builder.transforms import ConvInc
+from nengo.builder.operator import ElementwiseInc, DotInc, Reset, Copy
 from nengo.exceptions import BuildError
 from nengo.utils.compat import iteritems
 from nengo.utils.graphs import toposort, BidirectionalDAG
@@ -79,93 +73,7 @@ def mergeable(op, chosen_ops):
             return False
 
     # operator-specific checks
-    # TODO: move this logic into the respective builders
-    if isinstance(op, ElementwiseInc):
-        # for these operations we also enforce that the first dimensions
-        # match (we know all the other dimensions match due to checks above).
-        # this allows us to stack all the arguments into continuous array
-        # blocks, allowing for more efficient multiplication (mainly
-        # because it allows us to take advantage of broadcasting)
-        for s0, s1 in zip(op.all_signals, c.all_signals):
-            shape0 = s0.shape[0] if s0.shape != () else 1
-            shape1 = s1.shape[0] if s1.shape != () else 1
-            if shape0 != shape1:
-                return False
-    elif isinstance(op, DotInc):
-        # if the matrix (A) is minibatched, then the first dimensions need
-        # to match up (to allow us to transpose the dimensions)
-        if op.A.minibatched:
-            for s0, s1 in zip(op.all_signals, c.all_signals):
-                shape0 = s0.shape[0] if s0.shape != () else 1
-                shape1 = s1.shape[0] if s1.shape != () else 1
-                if shape0 != shape1:
-                    return False
-    elif isinstance(op, SimPyFunc):
-        # for these we need to make a special check that the functions
-        # all do/do not get time as input, otherwise we could end
-        # up confusing a node that only gets a scalar float input with
-        # a node that only gets time as input
-        if op.t != c.t:
-            return False
-    elif isinstance(op, SimNeurons):
-        # neuron ops must all have the same type
-        if type(c.neurons) != type(op.neurons):
-            return False
-    elif isinstance(op, SimProcess):
-        # we can merge ops if they have a custom implementation, or merge
-        # generic processes, but can't mix the two
-        custom_impl = tuple(
-            process_builders.SimProcessBuilder.TF_PROCESS_IMPL.keys())
-        if isinstance(op.process, custom_impl):
-            if type(op.process) == Lowpass:
-                # lowpass ops can only be merged with other lowpass ops, since
-                # they have a custom implementation
-                if type(c.process) != Lowpass:
-                    return False
-            elif isinstance(op.process, LinearFilter):
-                # we can only merge linearfilters that have the same state
-                # dimensionality and the same signal dimensionality
-                if (not isinstance(c.process, LinearFilter) or
-                        len(c.process.den) != len(op.process.den) or
-                        op.input.shape[0] != c.input.shape[0]):
-                    return False
-            else:
-                raise NotImplementedError
-        elif isinstance(c.process, custom_impl):
-            return False
-    elif isinstance(op, tensor_node.SimTensorNode):
-        # not possible to merge TensorNodes, since each one can be performing
-        # an entirely different function. and unlike SimPyFunc, there is no
-        # point trying to execute all those functions at once, because they're
-        # already integrated into the TensorFlow graph.
-        return False
-    elif isinstance(op, (learning_rule_builders.SimPES, SimVoja, SimOja,
-                         SimBCM)):
-        # pre inputs must have the same dimensionality so that we can broadcast
-        # them when computing the outer product
-        attr = ("pre_decoded" if isinstance(op, SimVoja) else
-                "pre_filtered")
-        if getattr(op, attr).shape[0] != getattr(c, attr).shape[0]:
-            return False
-
-        if isinstance(op, learning_rule_builders.SimPES):
-            # for pes the error signals also have to have the same shape
-            if op.error.shape[0] != c.error.shape[0]:
-                return False
-    elif isinstance(op, ConvInc):
-        # we allow convolutions to merge if they have the same input signal
-        # (as then we can efficiently apply several kernels to the same input)
-        if op.X is not c.X:
-            return False
-
-        # padding/strides/channels also have to match
-        if (op.conv.input_shape.shape != c.conv.input_shape.shape or
-                op.conv.strides != c.conv.strides or
-                op.conv.padding != c.conv.padding or
-                op.conv.channels_last != c.conv.channels_last):
-            return False
-
-    return True
+    return builder.Builder.builders[type(op)].mergeable(op, c)
 
 
 def greedy_planner(operators):

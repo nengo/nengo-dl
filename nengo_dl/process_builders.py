@@ -342,3 +342,28 @@ class SimProcessBuilder(OpBuilder):
     def build_post(self, ops, signals, sess, rng):
         if isinstance(self.built_process, GenericProcessBuilder):
             self.built_process.build_post(ops, signals, sess, rng)
+
+    @staticmethod
+    def mergeable(x, y):
+        # we can merge ops if they have a custom implementation, or merge
+        # generic processes, but can't mix the two
+        custom_impl = tuple(SimProcessBuilder.TF_PROCESS_IMPL.keys())
+        if isinstance(x.process, custom_impl):
+            if type(x.process) == Lowpass:
+                # lowpass ops can only be merged with other lowpass ops, since
+                # they have a custom implementation
+                if type(y.process) != Lowpass:
+                    return False
+            elif isinstance(x.process, LinearFilter):
+                # we can only merge linearfilters that have the same state
+                # dimensionality and the same signal dimensionality
+                if (not isinstance(y.process, LinearFilter) or
+                        len(y.process.den) != len(x.process.den) or
+                        x.input.shape[0] != y.input.shape[0]):
+                    return False
+            else:
+                raise NotImplementedError()
+        elif isinstance(y.process, custom_impl):
+            return False
+
+        return True

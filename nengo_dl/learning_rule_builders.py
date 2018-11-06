@@ -50,6 +50,12 @@ class SimBCMBuilder(OpBuilder):
 
         signals.scatter(self.output_data, post * pre)
 
+    @staticmethod
+    def mergeable(x, y):
+        # pre inputs must have the same dimensionality so that we can broadcast
+        # them when computing the outer product
+        return x.pre_filtered.shape[0] == y.pre_filtered.shape[0]
+
 
 @Builder.register(SimOja)
 class SimOjaBuilder(OpBuilder):
@@ -92,6 +98,12 @@ class SimOjaBuilder(OpBuilder):
         update += alpha * post * pre
 
         signals.scatter(self.output_data, update)
+
+    @staticmethod
+    def mergeable(x, y):
+        # pre inputs must have the same dimensionality so that we can broadcast
+        # them when computing the outer product
+        return x.pre_filtered.shape[0] == y.pre_filtered.shape[0]
 
 
 @Builder.register(SimVoja)
@@ -137,6 +149,12 @@ class SimVojaBuilder(OpBuilder):
         update = alpha * (self.scale * post * pre - post * scaled_encoders)
 
         signals.scatter(self.output_data, update)
+
+    @staticmethod
+    def mergeable(x, y):
+        # pre inputs must have the same dimensionality so that we can broadcast
+        # them when computing the outer product
+        return x.pre_decoded.shape[0] == y.pre_decoded.shape[0]
 
 
 class SimPES(Operator):  # pylint: disable=abstract-method
@@ -305,3 +323,11 @@ class SimPESBuilder(OpBuilder):
         update = error * pre_filtered
 
         signals.scatter(self.output_data, update)
+
+    @staticmethod
+    def mergeable(x, y):
+        # pre inputs must have the same dimensionality so that we can broadcast
+        # them when computing the outer product.
+        # the error signals also have to have the same shape.
+        return (x.pre_filtered.shape[0] == y.pre_filtered.shape[0] and
+                x.error.shape[0] == y.error.shape[0])

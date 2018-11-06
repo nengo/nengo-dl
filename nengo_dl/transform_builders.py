@@ -151,3 +151,14 @@ class ConvIncBuilder(OpBuilder):
         Y = tf.transpose(Y, self.perm_y)
 
         signals.scatter(self.Y_data, Y, mode="inc")
+
+    @staticmethod
+    def mergeable(x, y):
+        # we allow convolutions to merge if they have the same input signal
+        # (as then we can efficiently apply several kernels to the same input).
+        # padding/strides/channels/shape also have to match.
+        return (x.X is y.X and
+                x.conv.input_shape.shape == y.conv.input_shape.shape and
+                x.conv.strides == y.conv.strides and
+                x.conv.padding == y.conv.padding and
+                x.conv.channels_last == y.conv.channels_last)

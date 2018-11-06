@@ -398,3 +398,8 @@ class SimNeuronsBuilder(OpBuilder):
 
     def build_step(self, signals):
         self.built_neurons.build_step(signals)
+
+    @staticmethod
+    def mergeable(x, y):
+        # neuron ops must all have the same type
+        return type(x.neurons) == type(y.neurons)
