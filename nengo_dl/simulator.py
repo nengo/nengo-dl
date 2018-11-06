@@ -419,7 +419,7 @@ class Simulator(object):
 
     def train(self, data, optimizer, n_epochs=1, objective=None,
               shuffle=True, truncation=None, summaries=None, profile=False,
-              extra_feeds=None):
+              extra_feeds=None, progress_bar=True):
         """
         Optimize the trainable parameters of the network using the given
         optimization method, minimizing the objective value over the given
@@ -481,6 +481,9 @@ class Simulator(object):
         extra_feeds : dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}
             Can be used to feed a value for arbitrary Tensors in the simulation
             (will be passed directly to the TensorFlow session)
+        progress_bar : bool
+            If True, print information about the simulation status to standard
+            output.
 
         Notes
         -----
@@ -559,11 +562,12 @@ class Simulator(object):
                     self.sess.run(init)
                 extra_fetches["summaries"] = summary_op
 
-        progress = utils.ProgressBar(
-            "Training",
-            max_value=(n_epochs * (batch_size // self.minibatch_size) *
-                       (1 if truncation is None else (n_steps // truncation))),
-            vars=["loss"])
+        progress = (
+            utils.ProgressBar(
+                "Training", max_value=(
+                        n_epochs * (batch_size // self.minibatch_size) *
+                        (1 if truncation is None else n_steps // truncation)),
+                vars=["loss"]) if progress_bar else utils.NullProgressBar())
 
         objective_probes = tuple(objective.keys())
 
@@ -589,7 +593,8 @@ class Simulator(object):
                 truncation=truncation, profile=profile, shuffle=shuffle,
                 training=True, callback=callback)
 
-    def loss(self, data, objective, combine=np.mean, extra_feeds=None):
+    def loss(self, data, objective, combine=np.mean, extra_feeds=None,
+             progress_bar=True):
         """
         Compute the loss value for the given objective and inputs/targets.
 
@@ -619,6 +624,9 @@ class Simulator(object):
         extra_feeds : dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}
             Can be used to feed a value for arbitrary Tensors in the simulation
             (will be passed directly to the TensorFlow session)
+        progress_bar : bool
+            If True, print information about the simulation status to standard
+            output.
 
         Returns
         -------
@@ -638,9 +646,10 @@ class Simulator(object):
             if o == "mse":
                 objective[p] = utils.mse
 
-        progress = utils.ProgressBar(
-            "Calculating loss", "Calculation",
-            max_value=batch_size // self.minibatch_size)
+        progress = (
+            utils.ProgressBar("Calculating loss", "Calculation",
+                              max_value=batch_size // self.minibatch_size)
+            if progress_bar else utils.NullProgressBar())
         with progress:
             loss = self.run_batch(data, objective, extra_feeds=extra_feeds,
                                   callback=lambda *_: progress.step(),

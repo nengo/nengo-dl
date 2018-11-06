@@ -75,6 +75,7 @@ Release History
 - Added the ``sim.run_batch`` function.  This exposes all the functionality
   that the ``sim.run``/``sim.train``/``sim.loss`` functions are based on,
   allowing advanced users full control over how to run a NengoDL simulation.
+- Added option to disable progress bar in ``sim.train`` and ``sim.loss``.
 
 **Changed**
 
