@@ -58,8 +58,7 @@ def patch_state_grads():
 
         updates_grad = array_ops.gather(grad, indices)
 
-        # TODO: the dynamic_stitch approach might be faster if there were
-        # a GPU dynamic_stitch implementation. should be available in tf 1.4
+        # dynamic stitch approach (this seems to be a bit slower)
         # grad_range = math_ops.range(grad.get_shape()[0].value)
         # var_grad = data_flow_ops.dynamic_stitch(
         #     [grad_range, indices],
@@ -73,20 +72,25 @@ def patch_state_grads():
                 array_ops.expand_dims(indices, 1), updates_grad,
                 var.get_shape())
         else:
-            key = (tuple(grad.get_shape().as_list()), grad.dtype.base_dtype)
+            shape = tuple(grad.get_shape().as_list())
+            dtype = grad.dtype.base_dtype
 
             with variable_scope.variable_scope(
                     "gradient_vars", reuse=variable_scope.AUTO_REUSE):
                 var_grad = variable_scope.get_variable(
                     "tmp" + "_%s" * (len(grad.get_shape()) + 1) % (
-                        key[0] + (key[1].name,)),
-                    shape=key[0], dtype=key[1], trainable=False,
+                        shape + (dtype.name,)),
+                    shape=shape, dtype=dtype, trainable=False,
                     collections=["gradient_vars"])
 
             var_grad = state_ops.assign(var_grad, grad)
             var_grad = state_ops.scatter_update(
                 var_grad, indices, array_ops.zeros_like(updates))
-            var_grad = var_grad + 0  # TODO: why is this necessary?
+
+            # we need to force a copy so that any future assignments to the
+            # variable will not affect the value we return here
+            # TODO: check if this is still necessary in TensorFlow 2.0
+            var_grad = var_grad + 0
 
         return var_grad, None, updates_grad
 
