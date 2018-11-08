@@ -93,5 +93,8 @@ before_script:
 script:
   - .ci/$MODE.sh script
 
+before_cache:
+  - conda clean --all
+
 after_success:
   - .ci/$MODE.sh after_success
