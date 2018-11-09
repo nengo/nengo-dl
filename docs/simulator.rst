@@ -10,15 +10,16 @@ normal).
 In addition, the Simulator exposes features unique to the
 ``nengo_dl`` backend, such as :meth:`.Simulator.train`.
 
+The full class documentation can be viewed in the
+:ref:`API Reference <sim-api>`; here we will explain the practical usage of
+the Simulator in more depth.
+
 Simulator arguments
 -------------------
 
-
 The ``nengo_dl`` :class:`.Simulator` has a number of optional arguments, beyond
 those in :class:`nengo:nengo.Simulator`, which control features specific to
-the ``nengo_dl`` backend.  The full class documentation can be viewed
-:ref:`below <sim-doc>`; here we will explain the practical usage of these
-parameters.
+the ``nengo_dl`` backend.
 
 device
 ^^^^^^
@@ -73,7 +74,6 @@ and then data will be truncated to the correct number of steps.  However, those
 extra steps could still change the internal state of the simulation, which
 will affect any subsequent calls to ``sim.run``.  So it is recommended that the
 number of steps always be evenly divisible by ``unroll_simulation``.
-
 
 .. _minibatch_size:
 
@@ -230,15 +230,3 @@ filename can be passed instead of ``True``, to change the output filename.
 Note that in order for GPU profiling to work, you need to manually add
 ``<cuda>\extras\CUPTI\libx64`` to the `LD_LIBRARY_PATH` (where ``<cuda>`` is
 your CUDA installation directory).
-
-.. _sim-doc:
-
-API
----
-
-.. autoclass:: nengo_dl.simulator.Simulator
-    :exclude-members: unsupported, dt
-
-.. autoclass:: nengo_dl.simulator.SimulationData
-    :special-members:
-    :exclude-members: __weakref__

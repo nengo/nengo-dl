@@ -10,15 +10,11 @@ Python code they execute arbitrary TensorFlow code.
 designed to mimic the layer-based model construction style of many deep
 learning packages.
 
+See the :ref:`TensorNode API <tensornode-api>` for more details, or the
+examples below for demonstrations of using TensorNodes in practice.
+
 Examples
 --------
 
 * :doc:`examples/pretrained_model`
 * :doc:`examples/spiking_mnist`
-
-API
----
-
-.. autoclass:: nengo_dl.tensor_node.TensorNode
-
-.. autofunction:: nengo_dl.tensor_node.tensor_layer

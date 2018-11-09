@@ -7,9 +7,9 @@ NengoDL
     Introduction <introduction>
     installation
     frontend
+    reference
     examples
     resources
-    backend
     project
 
 `Github <https://github.com/nengo/nengo-dl>`_ |

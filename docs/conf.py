@@ -1,3 +1,4 @@
+import errno
 import os
 
 import nengo_sphinx_theme
@@ -66,3 +67,57 @@ html_show_sphinx = False
 html_favicon = os.path.join("_static", "favicon.ico")
 html_logo = os.path.join("_static", "logo.png")
 html_sidebars = {"**": ["sidebar.html"]}
+
+redirects = [
+    ("frontend.html", "user_guide.html"),
+    ("backend.html", "reference.html#developers"),
+    ("builder.html", "reference.html#builder"),
+    ("extra_objects.html", "reference.html#neuron-types"),
+    ("graph_optimizer.html", "reference.html#graph-optimization"),
+    ("operators.html", "reference.html#operator-builders"),
+    ("learning_rules.html", "reference.html#operator-builders"),
+    ("neurons.html", "reference.html#operator-builders"),
+    ("op_builders.html", "reference.html#operator-builders"),
+    ("processes.html", "reference.html#operator-builders"),
+    ("tensor_node_builders.html", "reference.html#operator-builders"),
+    ("signals.html", "reference.html#signals"),
+    ("tensor_graph.html", "reference.html#graph-construction"),
+    ("utils.html", "reference.html#utilities"),
+]
+
+def setup(app):
+    def mkdir_p(path):
+        try:
+            os.makedirs(path)
+        except OSError as exc:
+            if exc.errno == errno.EEXIST and os.path.isdir(path):
+                pass
+            else:
+                raise
+
+    def redirect_pages(app, docname):
+        redirects = app.config.redirects
+        if app.builder.name == "html":
+            for src, dst in redirects:
+                srcfile = os.path.join(app.outdir, src)
+                dsturl = "/".join(
+                    [".." for _ in range(src.count("/"))] + [dst])
+                mkdir_p(os.path.dirname(srcfile))
+                with open(srcfile, "w") as fp:
+                    fp.write("\n".join([
+                        '<!DOCTYPE html>',
+                        '<html>',
+                        ' <head><title>This page has moved</title></head>',
+                        ' <body>',
+                        '  <script type="text/javascript">',
+                        '   window.location.replace("{0}");',
+                        '  </script>',
+                        '  <noscript>',
+                        '   <meta http-equiv="refresh" content="0; url={0}">',
+                        '  </noscript>',
+                        ' </body>',
+                        '</html>',
+                    ]).format(dsturl))
+
+    app.add_config_value("redirects", [], "")
+    app.connect("build-finished", redirect_pages)

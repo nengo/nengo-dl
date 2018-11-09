@@ -1,5 +1,5 @@
-Configuration system
-====================
+Configuration options
+=====================
 
 NengoDL uses Nengo's `config system <https://www.nengo.ai/nengo/config.html>`_
 to allow users to control more fine-grained aspects of the simulation.  In
@@ -35,13 +35,10 @@ the top-level network.  All of the same effects could be achieved by setting
 those ``config`` attributes directly, ``configure_settings`` simply makes this
 an easier process.
 
-Options
--------
-
 .. _config-trainable:
 
 trainable
-^^^^^^^^^
+---------
 
 The ``trainable`` config attribute can be used to control which parts of a
 model will be optimized by the :meth:`.Simulator.train` process.
@@ -133,7 +130,7 @@ which differ from the standard config behaviour:
                net.config[my_ens].trainable = False
 
 planner/sorter/simplifications
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------------
 
 These options can be used to change the algorithm used for different aspects
 of the graph optimization stage.  For example, we could change the planning
@@ -147,7 +144,7 @@ algorithm to the :func:`.graph_optimizer.transitive_planner` via
         nengo_dl.configure_settings(planner=transitive_planner)
 
 session_config
-^^^^^^^^^^^^^^
+--------------
 
 TensorFlow has its own `configuration options
 <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/protobuf/config.proto>`_
@@ -170,7 +167,7 @@ the equivalent in NengoDL would be
         session_config={"gpu_options.allow_growth": True})
 
 inference_only
-^^^^^^^^^^^^^^
+--------------
 
 By default, NengoDL models are built to support both training and inference.
 However, sometimes we may know that we'll only be using a simulation for
@@ -182,7 +179,7 @@ of the aspects related to training.  Setting
 to be built in inference-only mode.
 
 lif_smoothing
-^^^^^^^^^^^^^
+-------------
 
 During training, NengoDL automatically replaces the non-differentiable
 spiking :class:`~nengo:nengo.LIF` neuron model with the differentiable
@@ -200,7 +197,7 @@ gradients to be approximated by ``SoftLIFRate`` instead of ``LIFRate``, with
 ``sigma=x``.
 
 dtype
-^^^^^
+-----
 
 This specifies the floating point precision to be used for the simulator's
 internal computations.  It can be either ``tf.float32`` or ``tf.float64``,
@@ -208,8 +205,3 @@ for 32 or 64-bit precision, respectively.  32-bit precision is the default,
 as it is faster, will use less memory, and in most cases will not make a
 difference in the results of the simulation.  However, if very precise outputs
 are required then this can be changed to ``tf.float64``.
-
-API
----
-
-.. automodule:: nengo_dl.config
