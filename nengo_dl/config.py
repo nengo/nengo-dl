@@ -102,7 +102,8 @@ def get_setting(model, setting, default=None):
 
     Returns
     -------
-    Value of ``setting`` if it has been specified, else ``default``.
+    config_val
+        Value of ``setting`` if it has been specified, else ``default``.
     """
 
     if isinstance(model, Model):

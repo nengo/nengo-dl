@@ -455,7 +455,7 @@ class TensorGraph(object):
 
         Returns
         -------
-        callable
+        apply_optimizer : callable
             A function that builds the operators required to implement the
             given optimizer update.  Generally this function will then be
             passed to :meth:`~.build_outputs`.
@@ -562,11 +562,11 @@ class TensorGraph(object):
 
         Returns
         -------
-        dict of {(tuple of) :class:`~nengo:nengo.Probe`: \
-                 (tuple of) ``tf.Tensor``}
+        output_vals : dict of {(tuple of) :class:`~nengo:nengo.Probe`: \
+                               (tuple of) ``tf.Tensor``}
             Tensors representing the result of applying the output functions
             to the probes.
-        ``tf.Tensor`` or None
+        new_vars_init : ``tf.Tensor`` or None
             Initialization op for any new variables created when building
             the outputs.
 
@@ -705,7 +705,7 @@ class TensorGraph(object):
 
         Returns
         -------
-        ``tf.Tensor``
+        op : ``tf.Tensor``
             Merged summary op for the given summaries
         """
 
@@ -765,7 +765,7 @@ class TensorGraph(object):
 
         Returns
         -------
-        ``tf.Tensor``
+        tensor : ``tf.Tensor``
             Tensor containing the value of the given Signal
         """
 

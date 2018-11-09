@@ -30,7 +30,7 @@ def sanitize_name(name):
 
     Returns
     -------
-    str
+    sanitized : str
         Sanitized name
     """
 
@@ -58,7 +58,7 @@ def function_name(func, sanitize=True):
 
     Returns
     -------
-    str
+    name : str
         Name of ``func`` (optionally sanitized)
     """
 
@@ -132,7 +132,7 @@ def print_op(input, message):
 
     Returns
     -------
-    ``tf.Tensor``
+    op : ``tf.Tensor``
         New tensor representing the print operation applied to ``input``
 
     Notes
@@ -492,7 +492,7 @@ def mse(outputs, targets):
 
     Returns
     -------
-    ``tf.Tensor``
+    mse : ``tf.Tensor``
         Tensor representing the mean squared error.
     """
 

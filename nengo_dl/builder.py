@@ -158,7 +158,7 @@ class OpBuilder(object):  # pragma: no cover
 
         Returns
         -------
-        list of ``tf.Tensor``
+        side_effects : list of ``tf.Tensor``
             If not None, the returned tensors correspond to outputs with
             possible side-effects, i.e. computations that need to be executed
             in the TensorFlow graph even if their output doesn't appear to be

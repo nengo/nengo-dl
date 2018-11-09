@@ -31,7 +31,7 @@ def cconv(dimensions, neurons_per_d, neuron_type):
 
     Returns
     -------
-    :class:`nengo:nengo.Network`
+    net : :class:`nengo:nengo.Network`
         benchmark network
     """
 
@@ -68,7 +68,7 @@ def integrator(dimensions, neurons_per_d, neuron_type):
 
     Returns
     -------
-    :class:`nengo:nengo.Network`
+    net : :class:`nengo:nengo.Network`
         benchmark network
     """
 
@@ -103,7 +103,7 @@ def pes(dimensions, neurons_per_d, neuron_type):
 
     Returns
     -------
-    :class:`nengo:nengo.Network`
+    net : :class:`nengo:nengo.Network`
         benchmark network
     """
 
@@ -144,7 +144,7 @@ def basal_ganglia(dimensions, neurons_per_d, neuron_type):
 
     Returns
     -------
-    :class:`nengo:nengo.Network`
+    net : :class:`nengo:nengo.Network`
         benchmark network
     """
 
@@ -171,7 +171,7 @@ def mnist(use_tensor_layer=True):
 
     Returns
     -------
-    :class:`nengo:nengo.Network`
+    net : :class:`nengo:nengo.Network`
         benchmark network
     """
 
@@ -261,7 +261,7 @@ def spaun(dimensions):
 
     Returns
     -------
-    :class:`nengo:nengo.Network`
+    net : :class:`nengo:nengo.Network`
         benchmark network
 
     References
@@ -320,7 +320,7 @@ def random_network(dimensions, neurons_per_d, neuron_type, n_ensembles,
 
     Returns
     -------
-    :class:`nengo:nengo.Network`
+    net : :class:`nengo:nengo.Network`
         benchmark network
     """
 

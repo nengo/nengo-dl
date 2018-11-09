@@ -78,7 +78,7 @@ class TensorSignal(object):
 
         Returns
         -------
-        :class:`.signals.TensorSignal`
+        sig : :class:`.signals.TensorSignal`
             A new TensorSignal representing the subset of this TensorSignal
         """
 
@@ -103,7 +103,7 @@ class TensorSignal(object):
 
         Returns
         -------
-        :class:`.signals.TensorSignal`
+        sig : :class:`.signals.TensorSignal`
             New TensorSignal representing the same data as this signal but
             with the given shape
         """
@@ -141,7 +141,7 @@ class TensorSignal(object):
 
         Returns
         -------
-        :class:`.signals.TensorSignal`
+        sig : :class:`.signals.TensorSignal`
             TensorSignal with new broadcasted shape
         """
 
@@ -339,7 +339,7 @@ class SignalDict(Mapping):
 
         Returns
         -------
-        ``tf.Tensor``
+        gathered : ``tf.Tensor``
             Tensor object corresponding to a dense subset of data from the
             base array
         """
@@ -406,7 +406,7 @@ class SignalDict(Mapping):
 
         Returns
         -------
-        :class:`.TensorSignal`
+        sig : :class:`.TensorSignal`
             New TensorSignal representing the concatenation of the data in
             ``sigs``
         """
@@ -484,7 +484,7 @@ class SignalDict(Mapping):
 
         Returns
         -------
-        :class:`.TensorSignal`
+        sig : :class:`.TensorSignal`
             A new ``TensorSignal`` with the given properties
         """
 
@@ -524,7 +524,7 @@ class SignalDict(Mapping):
 
         Returns
         -------
-        ``tf.Tensor``
+        constant : ``tf.Tensor``
             A tensor representing the given value
         """
         value = np.asarray(value)
@@ -576,7 +576,7 @@ class SignalDict(Mapping):
 
         Returns
         -------
-        ``tf.Tensor``
+        constant : ``tf.Tensor``
             Tensor containing the values of ``attr`` for the given ops.  This
             will be a scalar if all the ops have the same parameter value, or
             an array giving the parameter value for each element in each op.

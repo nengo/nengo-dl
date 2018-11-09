@@ -266,7 +266,7 @@ def reshaped(shape_in):
 
     Returns
     -------
-    callable
+    reshaper : callable
         The decorated function
     """
 
@@ -311,10 +311,13 @@ def tensor_layer(input, layer_func, shape_in=None, synapse=None,
 
     Returns
     -------
-    :class:`.TensorNode` or :class:`~nengo:nengo.ensemble.Neurons`
+    node : :class:`.TensorNode` or :class:`~nengo:nengo.ensemble.Neurons`
         A TensorNode that implements the given layer function (if
         ``layer_func`` was a callable), or a Neuron object with the given
         neuron type, connected to ``input``
+    conn : :class:`~nengo:nengo.Connection`
+        If ``return_conn`` is True, also returns the connection object linking
+        ``input`` and ``node``.
     """
 
     if isinstance(transform, np.ndarray) and transform.ndim == 2:

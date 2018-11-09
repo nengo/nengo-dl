@@ -32,7 +32,7 @@ def mergeable(op, chosen_ops):
 
     Returns
     -------
-    bool
+    mergeable : bool
         True if ``op`` can be merged into ``chosen_ops``, else False
     """
 
@@ -161,7 +161,7 @@ def greedy_planner(operators):
 
     Returns
     -------
-    list of tuple of :class:`~nengo:nengo.builder.Operator`
+    plan : list of tuple of :class:`~nengo:nengo.builder.Operator`
         Operators combined into mergeable groups and in execution order
 
     Notes
@@ -248,7 +248,7 @@ def tree_planner(op_list, max_depth=3):
 
     Returns
     -------
-    list of tuple of :class:`~nengo:nengo.builder.Operator`
+    plan : list of tuple of :class:`~nengo:nengo.builder.Operator`
         Operators combined into mergeable groups and in execution order
     """
 
@@ -398,7 +398,7 @@ def transitive_planner(op_list):
 
     Returns
     -------
-    list of tuple of :class:`~nengo:nengo.builder.Operator`
+    plan : list of tuple of :class:`~nengo:nengo.builder.Operator`
         Operators combined into mergeable groups and in execution order
     """
 
@@ -591,7 +591,7 @@ def noop_planner(operators):
 
     Returns
     -------
-    list of tuple of :class:`~nengo:nengo.builder.Operator`
+    plan : list of tuple of :class:`~nengo:nengo.builder.Operator`
         Operators in execution order
     """
 
@@ -618,10 +618,10 @@ def order_signals(plan, n_passes=10):
 
     Returns
     -------
-    list of :class:`~nengo:nengo.builder.Signal`
+    signals : list of :class:`~nengo:nengo.builder.Signal`
         Signals organized into the order in which we want them arranged in
         memory
-    list of tuple of :class:`~nengo:nengo.builder.Operator`
+    plan : list of tuple of :class:`~nengo:nengo.builder.Operator`
         Input plan with operators reordered within groups to align with order
         of signals
     """
@@ -793,7 +793,7 @@ def hamming_sort(blocks):
 
     Returns
     -------
-    dict of {:class:`~nengo:nengo.builder.Signal`: int}
+    sort_idxs : dict of {:class:`~nengo:nengo.builder.Signal`: int}
         Indices indicating where each signal should be in the sorted list
     """
 
@@ -1082,7 +1082,7 @@ def remove_unmodified_resets(operators):
 
     Returns
     -------
-    list of :class:`~nengo:nengo.builder.Operator`
+    new_operators : list of :class:`~nengo:nengo.builder.Operator`
         Modified list of operators
     """
 
@@ -1119,7 +1119,7 @@ def remove_zero_incs(operators):
 
     Returns
     -------
-    list of :class:`~nengo:nengo.builder.Operator`
+    new_operators : list of :class:`~nengo:nengo.builder.Operator`
         Modified list of operators
     """
 
@@ -1179,7 +1179,7 @@ def remove_zero_incs(operators):
 #
 #     Returns
 #     -------
-#     list of :class:`~nengo:nengo.builder.Operator`
+#     new_operators : list of :class:`~nengo:nengo.builder.Operator`
 #         modified list of operators
 #
 #     Notes
@@ -1224,7 +1224,7 @@ def remove_constant_copies(operators):
 
     Returns
     -------
-    list of :class:`~nengo:nengo.builder.Operator`
+    new_operators : list of :class:`~nengo:nengo.builder.Operator`
         Modified list of operators
     """
 
@@ -1296,7 +1296,7 @@ def remove_identity_muls(operators):
 
     Returns
     -------
-    list of :class:`~nengo:nengo.builder.Operator`
+    new_operators : list of :class:`~nengo:nengo.builder.Operator`
         Modified list of operators
     """
 
@@ -1363,6 +1363,7 @@ def signal_io_dicts(operators):
         Operators in the model
 
     Returns
+    -------
     sets : dict of {:class:`~nengo:nengo.builder.Signal`: \
                     list of :class:`~nengo:nengo.builder.Operator`}
         A dictionary indicating all the Operators that set each signal.
@@ -1412,7 +1413,7 @@ def display_signal_blocks(operators, all_signals):
 
     Returns
     -------
-    str
+    signal_blocks : str
         A string where each row corresponds to one operator group, and the
         non-blank characters in the line indicate that the operator group
         reads/writes that signal (with a number used to distinguish the

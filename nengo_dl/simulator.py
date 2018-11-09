@@ -630,7 +630,7 @@ class Simulator(object):
 
         Returns
         -------
-        float
+        loss : float
             Sum of computed error values for each function in ``objective``.
         """
 
@@ -740,8 +740,8 @@ class Simulator(object):
 
         Returns
         -------
-        dict of {(tuple of) :class:`~nengo:nengo.Probe`: \
-                 (tuple of) :class:`~numpy:numpy.ndarray`}
+        output_vals : dict of {(tuple of) :class:`~nengo:nengo.Probe`: \
+                               (tuple of) :class:`~numpy:numpy.ndarray`}
             The result of computing ``outputs`` on simulation probe values,
             given ``data``.  This pseudocode may help to understand how the
             return values are constructed given the various parameters of this
@@ -749,14 +749,14 @@ class Simulator(object):
 
             .. code-block:: python
 
-                return_vals = {}
+                output_vals = {}
                 for probe, func in outputs.items():
-                    output_values = []
+                    probe_vals = []
                     for i in range(n_epochs):
                         for minibatch in data:
                             network_output = run_network(minibatch)
-                            output_values.append(func(network_output[probe]))
-                    return_vals[probe] = combine(output_values)
+                            probe_vals.append(func(network_output[probe]))
+                    output_vals[probe] = combine(output_values)
 
             Note that this is not how the values are computed in practice,
             as it would be quite inefficient.  This pseudocode also omits
@@ -1036,8 +1036,8 @@ class Simulator(object):
             with nengo.Network() as new_net:
                 # < build some other network >
 
-                # now we want to insert two connected ensembles with the same
-                # parameters as our previous network:
+                # now we want to insert two connected ensembles with
+                # the same parameters as our previous network:
                 d = nengo.Ensemble(10, 1, **params[0])
                 e = nengo.Ensemble(10, 1, **params[1])
                 f = nengo.Connection(d, e, **params[2])
@@ -1055,7 +1055,7 @@ class Simulator(object):
 
         Returns
         -------
-        (list or dict) of dicts
+        params : (list or dict) of dicts
             kwarg dicts corresponding to ``nengo_objs`` (passing these
             dicts as kwargs when creating new Nengo objects will result in a
             new object with the same parameters as the source object).  A
@@ -1333,7 +1333,7 @@ class Simulator(object):
 
         Returns
         -------
-        dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}
+        feed_dict : dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}
             Feed values for placeholder tensors in the network
         """
 
@@ -1388,7 +1388,8 @@ class Simulator(object):
 
         Returns
         -------
-        dict of {:class:`~nengo:nengo.Node`: :class:`~numpy:numpy.ndarray}
+        feed_vals : dict of {:class:`~nengo:nengo.Node`: \
+                             :class:`~numpy:numpy.ndarray}
             Simulation values for all the input Nodes in the network.
         """
 
@@ -1599,9 +1600,9 @@ class SimulationData(collections.Mapping):
 
         Returns
         -------
-        :class:`~numpy:numpy.ndarray` or \
-                :class:`~nengo:nengo.builder.ensemble.BuiltEnsemble` or \
-                :class:`~nengo:nengo.builder.connection.BuiltConnection`
+        data : :class:`~numpy:numpy.ndarray` or \
+               :class:`~nengo:nengo.builder.ensemble.BuiltEnsemble` or \
+               :class:`~nengo:nengo.builder.connection.BuiltConnection`
             Array containing probed data if ``obj`` is a
             :class:`~nengo:nengo.Probe`, otherwise the corresponding
             parameter object
@@ -1668,7 +1669,7 @@ class SimulationData(collections.Mapping):
 
         Returns
         -------
-        list of :class:`~numpy:numpy.ndarray`
+        params : list of :class:`~numpy:numpy.ndarray`
             Current values of the requested parameters
 
         Notes
