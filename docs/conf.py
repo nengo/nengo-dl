@@ -68,8 +68,10 @@ html_favicon = os.path.join("_static", "favicon.ico")
 html_logo = os.path.join("_static", "logo.png")
 html_sidebars = {"**": ["sidebar.html"]}
 
+# create redirect pages (from_page, to_page)
+# TODO: we can remove these redirects after a few releases
 redirects = [
-    ("frontend.html", "user_guide.html"),
+    ("frontend.html", "user-guide.html"),
     ("backend.html", "reference.html#developers"),
     ("builder.html", "reference.html#builder"),
     ("extra_objects.html", "reference.html#neuron-types"),
@@ -83,7 +85,14 @@ redirects = [
     ("signals.html", "reference.html#signals"),
     ("tensor_graph.html", "reference.html#graph-construction"),
     ("utils.html", "reference.html#utilities"),
+    ("tensor_node.html", "tensor-node.html"),
+    ("examples/nef_init.html", "examples/nef-init.html"),
+    ("examples/pretrained_model.html", "examples/pretrained-model.html"),
+    ("examples/spa_memory.html", "examples/spa-memory.html"),
+    ("examples/spa_retrieval.html", "examples/spa-retrieval.html"),
+    ("examples/spiking_mnist.html", "examples/spiking-mnist.html"),
 ]
+
 
 def setup(app):
     def mkdir_p(path):

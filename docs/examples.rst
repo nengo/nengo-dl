@@ -10,8 +10,8 @@ the
 .. toctree::
     :maxdepth: 1
 
-    examples/nef_init
-    examples/pretrained_model
-    examples/spiking_mnist
-    examples/spa_retrieval
-    examples/spa_memory
+    examples/nef-init
+    examples/pretrained-model
+    examples/spiking-mnist
+    examples/spa-retrieval
+    examples/spa-memory

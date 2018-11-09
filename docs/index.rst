@@ -6,7 +6,7 @@ NengoDL
 
     Introduction <introduction>
     installation
-    frontend
+    user-guide
     reference
     examples
     resources

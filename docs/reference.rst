@@ -3,7 +3,7 @@ API reference
 
 This section details the functions, modules, and classes available in
 NengoDL.  For a more in-depth description of how to use these objects,
-see the :doc:`User Guide <frontend>`.
+see the :doc:`user-guide`.
 
 Users
 -----

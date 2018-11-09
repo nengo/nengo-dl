@@ -385,7 +385,7 @@ training, do some analysis, and then run more training):
 We can also use ``save/load_params`` to reuse parameters between models, as
 long as the structure of the two models match exactly (for example,
 reusing parameters from a rate version of a model in a spiking version;
-see the :doc:`spiking MNIST example <examples/spiking_mnist>`).
+see the :doc:`spiking MNIST example <examples/spiking-mnist>`).
 
 This method is quick and convenient, but not as flexible as other options.
 
@@ -421,5 +421,5 @@ on custom neuromorphic hardware).
 Examples
 --------
 
-* :doc:`examples/nef_init`
-* :doc:`examples/spiking_mnist`
+* :doc:`examples/nef-init`
+* :doc:`examples/spiking-mnist`
