@@ -76,6 +76,8 @@ Release History
   that the ``sim.run``/``sim.train``/``sim.loss`` functions are based on,
   allowing advanced users full control over how to run a NengoDL simulation.
 - Added option to disable progress bar in ``sim.train`` and ``sim.loss``.
+- Added ``training`` argument to ``sim.loss`` to control whether the loss
+  is evaluated in training or inference mode.
 
 **Changed**
 

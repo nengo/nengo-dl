@@ -594,7 +594,7 @@ class Simulator(object):
                 training=True, callback=callback)
 
     def loss(self, data, objective, combine=np.mean, extra_feeds=None,
-             progress_bar=True):
+             progress_bar=True, training=False):
         """
         Compute the loss value for the given objective and inputs/targets.
 
@@ -627,6 +627,10 @@ class Simulator(object):
         progress_bar : bool
             If True, print information about the simulation status to standard
             output.
+        training : bool
+            If True, run the network in training mode (where, e.g., spiking
+            neuron models are swapped for the equivalent differentiable
+            approximation).
 
         Returns
         -------
@@ -653,7 +657,7 @@ class Simulator(object):
         with progress:
             loss = self.run_batch(data, objective, extra_feeds=extra_feeds,
                                   callback=lambda *_: progress.step(),
-                                  combine=combine)
+                                  combine=combine, training=training)
 
         # sum across objectives
         loss = np.sum(list(loss.values()))
