@@ -91,6 +91,8 @@ Release History
 - Switched documentation to new
   `nengo-sphinx-theme <https://github.com/nengo/nengo-sphinx-theme>`_.
 - Reorganized documentation into "User guide" and "API reference" sections.
+- Improve build speed of models with large constants
+  (`#69 <https://github.com/nengo/nengo-dl/pull/69>`_)
 
 1.2.1 (November 2, 2018)
 ------------------------

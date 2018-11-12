@@ -580,14 +580,18 @@ class SignalDict(Mapping):
             an array giving the parameter value for each element in each op.
         """
 
-        val0 = getattr(ops[0], attr)
-        if np.allclose([getattr(op, attr) for op in ops], val0):
-            return tf.constant(val0, dtype=dtype)
+        vals = [getattr(op, attr) for op in ops]
+        if np.allclose(vals, vals[0]):
+            return tf.constant(vals[0], dtype=dtype)
 
-        return self.constant(
-            [np.reshape(getattr(op, attr), [1] * (ndims - 1))
-             for i, op in enumerate(ops) for _ in range(op_sizes[i])],
-            dtype=dtype)
+        assert len(op_sizes) == len(ops)
+        v = np.zeros([sum(op_sizes)] + [1] * (ndims - 1),
+                     dtype=dtype.as_numpy_dtype())
+        k = 0
+        for val, size in zip(vals, op_sizes):
+            v[k:k + size] = val
+            k += size
+        return self.constant(v, dtype=dtype)
 
     def __getitem__(self, sig):
         return self.sig_map[sig]
