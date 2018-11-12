@@ -38,7 +38,7 @@ class TensorGraph(object):
 
     Parameters
     ----------
-    model : :class:`~nengo:nengo.builder.Model`
+    model : `~nengo.builder.Model`
         Pre-built Nengo model describing the network to be simulated
     dt : float
         Length of a simulator timestep, in seconds
@@ -53,7 +53,7 @@ class TensorGraph(object):
     device : None or ``"/cpu:0"`` or ``"/gpu:[0-n]"``
         Device on which to execute computations (if None then uses the
         default device as determined by TensorFlow)
-    progress : :class:`.utils.ProgressBar`
+    progress : `.utils.ProgressBar`
         Progress bar for optimization stage
     """
 
@@ -146,7 +146,7 @@ class TensorGraph(object):
         """
         Constructs a new graph to simulate the model.
 
-        progress : :class:`.utils.ProgressBar`
+        progress : `.utils.ProgressBar`
             Progress bar for construction stage
         """
 
@@ -253,7 +253,7 @@ class TensorGraph(object):
             Probe
         side_effects : list of ``tf.Tensor``
             The output Tensors of computations that may have side-effects
-            (e.g., :class:`~nengo:nengo.Node` functions), meaning that they
+            (e.g., `~nengo.Node` functions), meaning that they
             must be executed each time step even if their output doesn't appear
             to be used in the simulation
         """
@@ -323,7 +323,7 @@ class TensorGraph(object):
 
         Parameters
         ----------
-        progress : :class:`.utils.ProgressBar`
+        progress : `.utils.ProgressBar`
             Progress bar for loop construction
         """
 
@@ -422,7 +422,7 @@ class TensorGraph(object):
 
         Parameters
         ----------
-        progress : :class:`.utils.ProgressBar`
+        progress : `.utils.ProgressBar`
             Progress bar for input construction
         """
 
@@ -442,8 +442,7 @@ class TensorGraph(object):
         ----------
         optimizer : ``tf.train.Optimizer``
             Instance of a TensorFlow optimizer class
-        objective : dict of {:class:`~nengo:nengo.Probe`: ``"mse"`` or \
-                                                          callable or ``None``}
+        objective : dict of {`~nengo.Probe`: ``"mse"`` or callable or ``None``}
             The objective to be minimized for each probe. Passing
             ``"mse"`` will train with mean squared error. A custom function
             ``f(output, target) -> loss`` can be passed that consumes the
@@ -458,7 +457,7 @@ class TensorGraph(object):
         apply_optimizer : callable
             A function that builds the operators required to implement the
             given optimizer update.  Generally this function will then be
-            passed to :meth:`~.build_outputs`.
+            passed to `~.build_outputs`.
 
         Notes
         -----
@@ -548,8 +547,7 @@ class TensorGraph(object):
 
         Parameters
         ----------
-        outputs : dict of {(tuple of) :class:`~nengo:nengo.Probe`: \
-                           callable or None}
+        outputs : dict of {(tuple of) `~nengo.Probe`: callable or None}
             The output function to be applied to each probe or group of probes.
             The function can accept one argument (the output of that probe) or
             two (output and target values for that probe).  If a tuple of
@@ -562,7 +560,7 @@ class TensorGraph(object):
 
         Returns
         -------
-        output_vals : dict of {(tuple of) :class:`~nengo:nengo.Probe`: \
+        output_vals : dict of {(tuple of) `~nengo.Probe`: \
                                (tuple of) ``tf.Tensor``}
             Tensors representing the result of applying the output functions
             to the probes.
@@ -656,7 +654,7 @@ class TensorGraph(object):
         ----------
         sess : ``tf.Session``
             The TensorFlow session for the simulator
-        rng : :class:`~numpy:numpy.random.RandomState`
+        rng : `~numpy.random.RandomState`
             Seeded random number generator
         """
 
@@ -693,9 +691,9 @@ class TensorGraph(object):
         Parameters
         ----------
         summaries : list of dict or \
-                            :class:`~nengo:nengo.Connection` or \
-                            :class:`~nengo:nengo.Ensemble` or \
-                            :class:`~nengo:nengo.ensemble.Neurons` or \
+                            `~nengo.Connection` or \
+                            `~nengo.Ensemble` or \
+                            `~nengo.ensemble.Neurons` or \
                             ``tf.Tensor``}
             List of objects for which we want to collect data.  Object can be a
             Connection (in which case data on weights will be collected),
@@ -760,7 +758,7 @@ class TensorGraph(object):
 
         Parameters
         ----------
-        sig : :class:`~nengo:nengo.builder.Signal`
+        sig : `~nengo.builder.Signal`
             A signal in the model
 
         Returns
@@ -931,9 +929,9 @@ class TensorGraph(object):
 
         Parameters
         ----------
-        sigs : list of :class:`~nengo:nengo.builder.Signal`
+        sigs : list of `~nengo.builder.Signal`
             Base signals arranged into the order in which they should reside in
-            memory (e.g., output from :func:`.graph_optimizer.order_signals`)
+            memory (e.g., output from `.graph_optimizer.order_signals`)
         """
 
         float_type = self.dtype.as_numpy_dtype

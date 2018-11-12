@@ -26,12 +26,12 @@ def cconv(dimensions, neurons_per_d, neuron_type):
         Number of dimensions for vector values
     neurons_per_d : int
         Number of neurons to use per vector dimension
-    neuron_type : :class:`~nengo:nengo.neurons.NeuronType`
+    neuron_type : `~nengo.neurons.NeuronType`
         Simulation neuron type
 
     Returns
     -------
-    net : :class:`nengo:nengo.Network`
+    net : `nengo.Network`
         benchmark network
     """
 
@@ -63,12 +63,12 @@ def integrator(dimensions, neurons_per_d, neuron_type):
         Number of dimensions for vector values
     neurons_per_d : int
         Number of neurons to use per vector dimension
-    neuron_type : :class:`~nengo:nengo.neurons.NeuronType`
+    neuron_type : `~nengo.neurons.NeuronType`
         Simulation neuron type
 
     Returns
     -------
-    net : :class:`nengo:nengo.Network`
+    net : `nengo.Network`
         benchmark network
     """
 
@@ -98,12 +98,12 @@ def pes(dimensions, neurons_per_d, neuron_type):
         Number of dimensions for vector values
     neurons_per_d : int
         Number of neurons to use per vector dimension
-    neuron_type : :class:`~nengo:nengo.neurons.NeuronType`
+    neuron_type : `~nengo.neurons.NeuronType`
         Simulation neuron type
 
     Returns
     -------
-    net : :class:`nengo:nengo.Network`
+    net : `nengo.Network`
         benchmark network
     """
 
@@ -139,12 +139,12 @@ def basal_ganglia(dimensions, neurons_per_d, neuron_type):
         Number of dimensions for vector values
     neurons_per_d : int
         Number of neurons to use per vector dimension
-    neuron_type : :class:`~nengo:nengo.neurons.NeuronType`
+    neuron_type : `~nengo.neurons.NeuronType`
         Simulation neuron type
 
     Returns
     -------
-    net : :class:`nengo:nengo.Network`
+    net : `nengo.Network`
         benchmark network
     """
 
@@ -171,7 +171,7 @@ def mnist(use_tensor_layer=True):
 
     Returns
     -------
-    net : :class:`nengo:nengo.Network`
+    net : `nengo.Network`
         benchmark network
     """
 
@@ -261,7 +261,7 @@ def spaun(dimensions):
 
     Returns
     -------
-    net : :class:`nengo:nengo.Network`
+    net : `nengo.Network`
         benchmark network
 
     References
@@ -311,7 +311,7 @@ def random_network(dimensions, neurons_per_d, neuron_type, n_ensembles,
         Number of dimensions for vector values
     neurons_per_d : int
         Number of neurons to use per vector dimension
-    neuron_type : :class:`~nengo:nengo.neurons.NeuronType`
+    neuron_type : `~nengo.neurons.NeuronType`
         Simulation neuron type
     n_ensembles : int
         Number of ensembles in the network
@@ -320,7 +320,7 @@ def random_network(dimensions, neurons_per_d, neuron_type, n_ensembles,
 
     Returns
     -------
-    net : :class:`nengo:nengo.Network`
+    net : `nengo.Network`
         benchmark network
     """
 
@@ -353,7 +353,7 @@ def run_profile(net, train=False, n_steps=150, do_profile=True, **kwargs):
 
     Parameters
     ----------
-    net : :class:`~nengo:nengo.Network`
+    net : `~nengo.Network`
         The nengo Network to be profiled.
     train : bool
         If True, profile the ``sim.train`` function. Otherwise, profile the
@@ -365,7 +365,7 @@ def run_profile(net, train=False, n_steps=150, do_profile=True, **kwargs):
 
     Notes
     -----
-    kwargs will be passed on to :class:`.Simulator`
+    kwargs will be passed on to `.Simulator`
     """
 
     with net:

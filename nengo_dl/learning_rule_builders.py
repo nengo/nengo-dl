@@ -12,7 +12,7 @@ from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
 
 @Builder.register(SimBCM)
 class SimBCMBuilder(OpBuilder):
-    """Build a group of :class:`~nengo:nengo.builder.learning_rules.SimBCM`
+    """Build a group of `~nengo.builder.learning_rules.SimBCM`
     operators."""
 
     def __init__(self, ops, signals, config):
@@ -47,7 +47,7 @@ class SimBCMBuilder(OpBuilder):
 
 @Builder.register(SimOja)
 class SimOjaBuilder(OpBuilder):
-    """Build a group of :class:`~nengo:nengo.builder.learning_rules.SimOja`
+    """Build a group of `~nengo.builder.learning_rules.SimOja`
         operators."""
 
     def __init__(self, ops, signals, config):
@@ -90,7 +90,7 @@ class SimOjaBuilder(OpBuilder):
 
 @Builder.register(SimVoja)
 class SimVojaBuilder(OpBuilder):
-    """Build a group of :class:`~nengo:nengo.builder.learning_rules.SimVoja`
+    """Build a group of `~nengo.builder.learning_rules.SimVoja`
         operators."""
 
     def __init__(self, ops, signals, config):
@@ -204,7 +204,7 @@ class SimPES(Operator):  # pylint: disable=abstract-method
 @NengoBuilder.register(PES)
 def build_pes(model, pes, rule):
     """
-    Builds a `.PES` object into a model.
+    Builds a `nengo.PES` object into a model.
 
     Parameters
     ----------
@@ -218,7 +218,7 @@ def build_pes(model, pes, rule):
     Notes
     -----
     Does not modify ``model.params[]`` and can therefore be called
-    more than once with the same `.PES` instance.
+    more than once with the same `nengo.PES` instance.
     """
 
     conn = rule.connection
@@ -272,7 +272,7 @@ PES.probeable = ("error", "activities", "delta")
 
 @Builder.register(SimPES)
 class SimPESBuilder(OpBuilder):
-    """Build a group of :class:`.SimPES` operators."""
+    """Build a group of `.SimPES` operators."""
 
     def __init__(self, ops, signals, config):
         super(SimPESBuilder, self).__init__(ops, signals, config)

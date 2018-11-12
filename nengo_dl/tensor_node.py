@@ -68,7 +68,7 @@ class TensorFuncParam(Parameter):
 
 class TensorNode(Node):
     """Inserts TensorFlow code into a Nengo model.  A TensorNode operates in
-    much the same way as a :class:`~nengo:nengo.Node`, except its inputs and
+    much the same way as a `~nengo.Node`, except its inputs and
     outputs are defined using TensorFlow operations.
 
     The TensorFlow code is defined in a function or callable class
@@ -165,17 +165,17 @@ def build_tensor_node(model, node):
 
 
 class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
-    """Operator for TensorNodes (constructed by :func:`.build_tensor_node`).
+    """Operator for TensorNodes (constructed by `.build_tensor_node`).
 
     Parameters
     ----------
     func : callable
         The TensorNode function (``tensor_func``)
-    time : :class:`~nengo:nengo.builder.Signal`
+    time : `~nengo.builder.Signal`
         Signal representing the current simulation time
-    input : :class:`~nengo:nengo.builder.Signal` or None
+    input : `~nengo.builder.Signal` or None
         Input Signal for the TensorNode (or None if size_in==0)
-    output : :class:`~nengo:nengo.builder.Signal`
+    output : `~nengo.builder.Signal`
         Output Signal for the TensorNode
     tag : str
         A label associated with the operator, for debugging
@@ -203,7 +203,7 @@ class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
 
 @Builder.register(SimTensorNode)
 class SimTensorNodeBuilder(OpBuilder):
-    """Builds a :class:`~.tensor_node.SimTensorNode` operator into a NengoDL
+    """Builds a `~.tensor_node.SimTensorNode` operator into a NengoDL
     model."""
 
     def __init__(self, ops, signals, config):
@@ -292,30 +292,29 @@ def tensor_layer(input, layer_func, shape_in=None, synapse=None,
     ----------
     input : ``NengoObject``
         Object providing input to the layer
-    layer_func : callable or :class:`~nengo:nengo.neurons.NeuronType`
+    layer_func : callable or `~nengo.neurons.NeuronType`
         A function that takes the value from ``input`` (represented as a
         ``tf.Tensor``) and maps it to some output value, or a Nengo neuron
         type, defining a nonlinearity that will be applied to ``input``.
     shape_in : tuple of int
         If not None, reshape the input to the given shape
-    synapse : float or :class:`~nengo:nengo.synapses.Synapse`
+    synapse : float or `~nengo.synapses.Synapse`
         Synapse to apply on connection from ``input`` to this layer
-    transform : :class:`~numpy:numpy.ndarray`
+    transform : `~numpy.ndarray`
         Transform matrix to apply on connection from ``input`` to this layer
     return_conn : bool
         If True, also return the connection linking this layer to ``input``
     layer_args : dict
         These arguments will be passed to ``layer_func`` if it is callable, or
-        :class:`~nengo:nengo.Ensemble` if ``layer_func`` is a
-        :class:`~nengo:nengo.neurons.NeuronType`
+        `~nengo.Ensemble` if ``layer_func`` is a `~nengo.neurons.NeuronType`
 
     Returns
     -------
-    node : :class:`.TensorNode` or :class:`~nengo:nengo.ensemble.Neurons`
+    node : `.TensorNode` or `~nengo.ensemble.Neurons`
         A TensorNode that implements the given layer function (if
         ``layer_func`` was a callable), or a Neuron object with the given
         neuron type, connected to ``input``
-    conn : :class:`~nengo:nengo.Connection`
+    conn : `~nengo.Connection`
         If ``return_conn`` is True, also returns the connection object linking
         ``input`` and ``node``.
     """

@@ -37,14 +37,14 @@ class Simulator(object):
 
     Parameters
     ----------
-    network : :class:`~nengo:nengo.Network` or None
+    network : `~nengo.Network` or None
         A network object to be built and then simulated. If None,
         then a built model must be passed to ``model`` instead
     dt : float
         Length of a simulator timestep, in seconds
     seed : int
         Seed for all stochastic operators used in this simulator
-    model : :class:`~nengo:nengo.builder.Model`
+    model : `~nengo.builder.Model`
         Pre-built model object
     dtype : ``tf.DType``
         Deprecated, use ``nengo_dl.configure_settings(dtype=...)`` instead.
@@ -272,7 +272,7 @@ class Simulator(object):
         Parameters
         ----------
         kwargs : dict
-            See :meth:`.run_steps`
+            See `.run_steps`
 
         Notes
         -----
@@ -292,7 +292,7 @@ class Simulator(object):
         time_in_seconds : float
             Run the simulator for the given number of simulated seconds
         kwargs : dict
-            See :meth:`.run_steps`
+            See `.run_steps`
         """
 
         if time_in_seconds < 0:
@@ -317,12 +317,10 @@ class Simulator(object):
         ----------
         n_steps : int
             The number of simulation steps to be executed
-        data : dict of {:class:`~nengo:nengo.Node`: \
-                        :class:`~numpy:numpy.ndarray`}
+        data : dict of {`~nengo.Node`: `~numpy.ndarray`}
             Override the values of input Nodes with the given data.  Arrays
             should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
-        input_feeds : dict of {:class:`~nengo:nengo.Node`: \
-                               :class:`~numpy:numpy.ndarray`}
+        input_feeds : dict of {`~nengo.Node`: `~numpy.ndarray`}
             Deprecated, use ``data`` instead.
         profile : bool
             If True, collect TensorFlow profiling information while the
@@ -332,7 +330,7 @@ class Simulator(object):
         progress_bar : bool
             If True, print information about the simulation status to standard
             output.
-        extra_feeds : dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}
+        extra_feeds : dict of {``tf.Tensor``: `~numpy.ndarray`}
             Can be used to feed a value for arbitrary Tensors in the simulation
             (will be passed directly to the TensorFlow session)
 
@@ -427,9 +425,8 @@ class Simulator(object):
 
         Parameters
         ----------
-        data : dict of {:class:`~nengo:nengo.Node` or \
-                            :class:`~nengo:nengo.Probe`: \
-                        :class:`~numpy:numpy.ndarray`} or int
+        data : dict of {`~nengo.Node` or `~nengo.Probe`: \
+                        `~numpy.ndarray`} or int
             Input values for Nodes in the network or target values for Probes;
             arrays should have shape ``(batch_size, n_steps,
             node.size_out/probe.size_in)``.  If no input data is required,
@@ -441,7 +438,7 @@ class Simulator(object):
         n_epochs : int
             Run training for the given number of epochs (complete passes
             through ``data``)
-        objective : dict of {(tuple of) :class:`~nengo:nengo.Probe`: \
+        objective : dict of {(tuple of) `~nengo.Probe`: \
                              ``"mse"`` or callable or ``None``}
             The objective to be minimized. Passing ``"mse"`` will train with
             mean squared error. A custom function ``f(output, target) -> loss``
@@ -462,9 +459,9 @@ class Simulator(object):
         truncation: int
             If not None, use truncated backpropagation when training the
             network, with the given truncation length.
-        summaries : list of :class:`~nengo:nengo.Connection` or \
-                            :class:`~nengo:nengo.Ensemble` or \
-                            :class:`~nengo:nengo.ensemble.Neurons` or \
+        summaries : list of `~nengo.Connection` or \
+                            `~nengo.Ensemble` or \
+                            `~nengo.ensemble.Neurons` or \
                             ``"loss"`` or \
                             ``tf.Tensor``
             If not None, collect data during the training process using
@@ -478,7 +475,7 @@ class Simulator(object):
             simulation is running (this will slow down the simulation).
             Can also pass a string specifying a non-default filename for the
             saved profile data.
-        extra_feeds : dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}
+        extra_feeds : dict of {``tf.Tensor``: `~numpy.ndarray`}
             Can be used to feed a value for arbitrary Tensors in the simulation
             (will be passed directly to the TensorFlow session)
         progress_bar : bool
@@ -490,11 +487,11 @@ class Simulator(object):
         Most deep learning methods require the network to be differentiable,
         which means that trying to train a network with non-differentiable
         elements will result in an error.  Examples of common
-        non-differentiable elements include :class:`~nengo:nengo.LIF`,
-        :class:`~nengo:nengo.Direct`, or processes/neurons that don't have a
+        non-differentiable elements include `~nengo.LIF`,
+        `~nengo.Direct`, or processes/neurons that don't have a
         custom TensorFlow implementation (see
-        :class:`.process_builders.SimProcessBuilder`/
-        :class:`.neuron_builders.SimNeuronsBuilder`)
+        `.process_builders.SimProcessBuilder`/
+        `.neuron_builders.SimNeuronsBuilder`)
         """
 
         if isinstance(data, int):
@@ -600,15 +597,14 @@ class Simulator(object):
 
         Parameters
         ----------
-        data : dict of {:class:`~nengo:nengo.Node` or \
-                            :class:`~nengo:nengo.Probe`: \
-                        :class:`~numpy:numpy.ndarray`} or int
+        data : dict of {`~nengo.Node` or `~nengo.Probe`: \
+                        `~numpy.ndarray`} or int
             Input values for Nodes in the network or target values for Probes;
             arrays should have shape ``(batch_size, n_steps,
             node.size_out/probe.size_in)``.  If no input data is required,
             an integer can be given specifying the number of timesteps to
             run the simulation.
-        objective : dict of {(tuple of) :class:`~nengo:nengo.Probe`: \
+        objective : dict of {(tuple of) `~nengo.Probe`: \
                              ``"mse"`` or callable}
             The objective used to compute loss. Passing ``"mse"`` will use
             mean squared error. A custom function ``f(output, target) -> loss``
@@ -621,7 +617,7 @@ class Simulator(object):
             function.
         combine : callable
             Function used to combine objective values from each minibatch.
-        extra_feeds : dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}
+        extra_feeds : dict of {``tf.Tensor``: `~numpy.ndarray`}
             Can be used to feed a value for arbitrary Tensors in the simulation
             (will be passed directly to the TensorFlow session)
         progress_bar : bool
@@ -674,16 +670,14 @@ class Simulator(object):
 
         Parameters
         ----------
-        data : dict of {:class:`~nengo:nengo.Node` or \
-                            :class:`~nengo:nengo.Probe`: \
-                        :class:`~numpy:numpy.ndarray`} or int
+        data : dict of {`~nengo.Node` or `~nengo.Probe`: \
+                        `~numpy.ndarray`} or int
             Input values for Nodes in the network or target values for Probes;
             arrays should have shape ``(batch_size, n_steps,
             node.size_out/probe.size_in)``.  If no input data is required,
             an integer can be given specifying the number of timesteps to
             run the simulation.
-        outputs : dict of {(tuple of) :class:`~nengo:nengo.Probe`: callable \
-                                                                   or None}
+        outputs : dict of {(tuple of) `~nengo.Probe`: callable or None}
             Functions to apply to probe outputs.  Functions can accept one
             positional argument (the output from that probe on one minibatch)
             or two (also passed the corresponding target value from ``data``).
@@ -694,7 +688,7 @@ class Simulator(object):
             which will be evaluated on each minibatch of data.  If ``None``
             is given then the return value will be the output value from that
             probe.
-        extra_feeds : dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}
+        extra_feeds : dict of {``tf.Tensor``: `~numpy.ndarray`}
             Can be used to feed a value for arbitrary Tensors in the simulation
             (will be passed directly to the TensorFlow session)
         extra_fetches : (list/tuple/dict of) ``tf.Tensor``
@@ -744,8 +738,8 @@ class Simulator(object):
 
         Returns
         -------
-        output_vals : dict of {(tuple of) :class:`~nengo:nengo.Probe`: \
-                               (tuple of) :class:`~numpy:numpy.ndarray`}
+        output_vals : dict of {(tuple of) `~nengo.Probe`: \
+                               (tuple of) `~numpy.ndarray`}
             The result of computing ``outputs`` on simulation probe values,
             given ``data``.  This pseudocode may help to understand how the
             return values are constructed given the various parameters of this
@@ -769,7 +763,7 @@ class Simulator(object):
         Notes
         -----
         In general, users should call one of the wrappers for this function
-        (e.g., :meth:`.run_steps`, :meth:`.train`, or :meth:`.loss`),
+        (e.g., `.run_steps`, `.train`, or `.loss`),
         according to their use case.  However, this function can be called
         directly to run the simulation in a customized way.
         """
@@ -900,7 +894,7 @@ class Simulator(object):
         -----
         This function is useful for saving/loading entire models; for
         saving/loading individual objects within a model, see
-        :meth:`.get_nengo_params`.
+        `.get_nengo_params`.
         """
         if self.closed:
             raise SimulatorClosed("Simulation has been closed, cannot save "
@@ -936,7 +930,7 @@ class Simulator(object):
         -----
         This function is useful for saving/loading entire models; for
         saving/loading individual objects within a model, see
-        :meth:`.get_nengo_params`.
+        `.get_nengo_params`.
         """
         if self.closed:
             raise SimulatorClosed("Simulation has been closed, cannot load "
@@ -1048,8 +1042,7 @@ class Simulator(object):
 
         Parameters
         ----------
-        nengo_objs : (list of) :class:`~nengo:nengo.Ensemble` or \
-                               :class:`~nengo:nengo.Connection`
+        nengo_objs : (list of) `~nengo.Ensemble` or `~nengo.Connection`
             A single object or list of objects for which we want to get the
             parameters.
         as_dict : bool
@@ -1169,7 +1162,7 @@ class Simulator(object):
         Parameters
         ----------
         outputs : ``tf.Tensor`` or list of ``tf.Tensor`` or \
-                  list of :class:`~nengo:nengo.Probe`
+                  list of `~nengo.Probe`
             Compute gradients wrt this output (if None, computes wrt each
             output probe)
         atol : float
@@ -1180,7 +1173,7 @@ class Simulator(object):
         Notes
         -----
         Calling this function will reset all values in the network, so it
-        should not be intermixed with calls to :meth:`.Simulator.run`.
+        should not be intermixed with calls to `.Simulator.run`.
         """
 
         if self.tensor_graph.inference_only:
@@ -1324,9 +1317,7 @@ class Simulator(object):
         ----------
         n_steps : int
             The number of execution steps
-        data : dict of {:class:`~nengo:nengo.Node` or
-                        :class:`~nengo:nengo.Probe` : \
-                        :class:`~numpy:numpy.ndarray`}
+        data : dict of {`~nengo.Node` or `~nengo.Probe` : `~numpy.ndarray`}
             Input values for Nodes and target values for Probes.  Arrays
             should have shape ``(sim.minibatch_size, n_steps,
             node.size_out/probe.size_in)``.
@@ -1337,7 +1328,7 @@ class Simulator(object):
 
         Returns
         -------
-        feed_dict : dict of {``tf.Tensor``: :class:`~numpy:numpy.ndarray`}
+        feed_dict : dict of {``tf.Tensor``: `~numpy.ndarray`}
             Feed values for placeholder tensors in the network
         """
 
@@ -1383,8 +1374,7 @@ class Simulator(object):
 
         Parameters
         ----------
-        data : dict of {:class:`~nengo:nengo.Node`: \
-                        :class:`~numpy:numpy.ndarray`}
+        data : dict of {`~nengo.Node`: `~numpy.ndarray`}
             Override the values of input Nodes with the given data.  Arrays
             should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
         n_steps : int
@@ -1392,8 +1382,7 @@ class Simulator(object):
 
         Returns
         -------
-        feed_vals : dict of {:class:`~nengo:nengo.Node`: \
-                             :class:`~numpy:numpy.ndarray}
+        feed_vals : dict of {`~nengo.Node`: `~numpy.ndarray}
             Simulation values for all the input Nodes in the network.
         """
 
@@ -1434,9 +1423,7 @@ class Simulator(object):
 
         Parameters
         ----------
-        data : dict of {:class:`~nengo:nengo.Node` or \
-                            :class:`~nengo:nengo.Probe`: \
-                        :class:`~numpy:numpy.ndarray`}
+        data : dict of {`~nengo.Node` or `~nengo.Probe`: `~numpy.ndarray`}
             Array of data associated with given objects in model (Nodes or
             Probes)
         n_batch : int
@@ -1572,13 +1559,13 @@ class SimulationData(collections.Mapping):
     The main use case for this is to access Probe data; for example,
     ``probe_data = sim.data[my_probe]``.  However, it is also
     used to access the parameters of objects in the model; for example, after
-    the model has been optimized via :meth:`.Simulator.train`, the updated
+    the model has been optimized via `.Simulator.train`, the updated
     encoder values for an ensemble can be accessed via
     ``trained_encoders = sim.data[my_ens].encoders``.
 
     Parameters
     ----------
-    sim : :class:`.Simulator`
+    sim : `.Simulator`
         The simulator from which data will be drawn
     minibatched : bool
         If False, discard the minibatch dimension on probe data
@@ -1598,17 +1585,16 @@ class SimulationData(collections.Mapping):
 
         Parameters
         ----------
-        obj : :class:`~nengo:nengo.Probe` or :class:`~nengo:nengo.Ensemble` \
-              or :class:`~nengo:nengo.Connection`
+        obj : `~nengo.Probe` or `~nengo.Ensemble` or `~nengo.Connection`
             Object whose simulation data is being accessed
 
         Returns
         -------
-        data : :class:`~numpy:numpy.ndarray` or \
-               :class:`~nengo:nengo.builder.ensemble.BuiltEnsemble` or \
-               :class:`~nengo:nengo.builder.connection.BuiltConnection`
+        data : `~numpy.ndarray` or \
+               `~nengo.builder.ensemble.BuiltEnsemble` or \
+               `~nengo.builder.connection.BuiltConnection`
             Array containing probed data if ``obj`` is a
-            :class:`~nengo:nengo.Probe`, otherwise the corresponding
+            `~nengo.Probe`, otherwise the corresponding
             parameter object
         """
 
@@ -1673,7 +1659,7 @@ class SimulationData(collections.Mapping):
 
         Returns
         -------
-        params : list of :class:`~numpy:numpy.ndarray`
+        params : list of `~numpy.ndarray`
             Current values of the requested parameters
 
         Notes

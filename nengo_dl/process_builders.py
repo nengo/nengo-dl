@@ -98,7 +98,7 @@ class GenericProcessBuilder(OpBuilder):
 
 
 class LowpassBuilder(OpBuilder):
-    """Build a group of :class:`~nengo:nengo.Lowpass` synapse operators."""
+    """Build a group of `~nengo.Lowpass` synapse operators."""
 
     def __init__(self, ops, signals, config):
         super(LowpassBuilder, self).__init__(ops, signals, config)
@@ -168,8 +168,7 @@ class LowpassBuilder(OpBuilder):
 
 
 class LinearFilterBuilder(OpBuilder):
-    """Build a group of :class:`~nengo:nengo.LinearFilter` synapse
-    operators."""
+    """Build a group of `~nengo.LinearFilter` synapse operators."""
 
     def __init__(self, ops, signals, config):
         super(LinearFilterBuilder, self).__init__(ops, signals, config)
@@ -296,15 +295,13 @@ class LinearFilterBuilder(OpBuilder):
 @Builder.register(SimProcess)
 class SimProcessBuilder(OpBuilder):
     """
-    Builds a group of :class:`~nengo:nengo.builder.processes.SimProcess`
-    operators.
+    Builds a group of `~nengo.builder.processes.SimProcess` operators.
 
     Calls the appropriate sub-build class for the different process types.
 
     Attributes
     ----------
-    TF_PROCESS_IMPL : dict of {:class:`~nengo:nengo.Process`: \
-                               :class:`.builder.OpBuilder`}
+    TF_PROCESS_IMPL : dict of {`~nengo.Process`: `.builder.OpBuilder`}
         Mapping from process types to custom build classes (processes without
         a custom builder will use the generic builder).
     """

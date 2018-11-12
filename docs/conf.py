@@ -45,6 +45,7 @@ suppress_warnings = ["image.nonlocal_uri"]
 linkcheck_ignore = [r"http://localhost:\d+"]
 linkcheck_anchors = True
 nitpicky = True
+default_role = "py:obj"
 
 project = u"NengoDL"
 authors = u"Applied Brain Research"

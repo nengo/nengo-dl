@@ -16,8 +16,8 @@ Simulator
 ^^^^^^^^^
 
 The Simulator class is the access point for the main features of
-NengoDL, including :meth:`running <.Simulator.run_steps>` and
-:meth:`training <.Simulator.train>` a model.
+NengoDL, including `running <.Simulator.run_steps>` and
+`training <.Simulator.train>` a model.
 
 .. autoclass:: nengo_dl.simulator.Simulator
     :exclude-members: unsupported, dt
@@ -115,11 +115,11 @@ Processes
 TensorNodes
 ***********
 
-To build :class:`.TensorNode` objects we need to define a new Nengo operator
-(:class:`.tensor_node.SimTensorNode`), a build function that adds that operator
-into a Nengo graph (:func:`.tensor_node.build_tensor_node`), and a NengoDL
+To build `.TensorNode` objects we need to define a new Nengo operator
+(`.tensor_node.SimTensorNode`), a build function that adds that operator
+into a Nengo graph (`.tensor_node.build_tensor_node`), and a NengoDL
 build class that maps that new Nengo operator to TensorFlow operations
-(:class:`.tensor_node.SimTensorNodeBuilder`).
+(`.tensor_node.SimTensorNodeBuilder`).
 
 .. autoclass:: nengo_dl.tensor_node.SimTensorNode
 

@@ -7,7 +7,7 @@ general, most users will not need to worry about these options, and can leave
 them at their default settings.  However, these options may be useful in
 some scenarios.
 
-:func:`.configure_settings` is a utility function that can be used to set these
+`.configure_settings` is a utility function that can be used to set these
 configuration options.  It needs to be called within a Network context, as in:
 
 .. code-block:: python
@@ -41,7 +41,7 @@ trainable
 ---------
 
 The ``trainable`` config attribute can be used to control which parts of a
-model will be optimized by the :meth:`.Simulator.train` process.
+model will be optimized by the `.Simulator.train` process.
 ``configure_settings(trainable=None)`` will add a configurable ``trainable``
 attribute to the objects in a network.  Setting ``trainable=None`` will use the
 default trainability settings, or ``trainable=True/False`` can be used to
@@ -134,7 +134,7 @@ planner/sorter/simplifications
 
 These options can be used to change the algorithm used for different aspects
 of the graph optimization stage.  For example, we could change the planning
-algorithm to the :func:`.graph_optimizer.transitive_planner` via
+algorithm to the `.graph_optimizer.transitive_planner` via
 
 .. code-block:: python
 
@@ -182,13 +182,13 @@ lif_smoothing
 -------------
 
 During training, NengoDL automatically replaces the non-differentiable
-spiking :class:`~nengo:nengo.LIF` neuron model with the differentiable
-:class:`~nengo:nengo.LIFRate` approximation.
+spiking `~nengo.LIF` neuron model with the differentiable
+`~nengo.LIFRate` approximation.
 However, although ``LIFRate`` is generally differentiable, it has a sharp
 discontinuity at the firing threshold.  In some cases this can lead to
 difficulties during the training process, and performance can be improved by
 smoothing the ``LIFRate`` response around the firing threshold.  This is
-known as the :class:`~.neurons.SoftLIFRate` neuron model.
+known as the `~.neurons.SoftLIFRate` neuron model.
 
 ``SoftLIFRate`` has a parameter ``sigma`` that controls the degree of smoothing
 (``SoftLIFRate`` approaches ``LIFRate`` as ``sigma`` goes to zero).  Setting

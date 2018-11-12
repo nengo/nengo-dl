@@ -25,9 +25,9 @@ def mergeable(op, chosen_ops):
 
     Parameters
     ----------
-    op : :class:`~nengo:nengo.builder.Operator`
+    op : `~nengo.builder.Operator`
         The operator to be merged
-    chosen_ops : list of :class:`~nengo:nengo.builder.Operator`
+    chosen_ops : list of `~nengo.builder.Operator`
         The operator group to be merged in to
 
     Returns
@@ -156,12 +156,12 @@ def greedy_planner(operators):
 
     Parameters
     ----------
-    operators : list of :class:`~nengo:nengo.builder.Operator`
+    operators : list of `~nengo.builder.Operator`
         All the ``nengo`` operators in a model (unordered)
 
     Returns
     -------
-    plan : list of tuple of :class:`~nengo:nengo.builder.Operator`
+    plan : list of tuple of `~nengo.builder.Operator`
         Operators combined into mergeable groups and in execution order
 
     Notes
@@ -235,12 +235,12 @@ def tree_planner(op_list, max_depth=3):
 
     The ``max_depth`` parameter scales the planner between full tree search
     and greedy search.  ``max_depth==1`` is equivalent to
-    :func:`.greedy_planner`, and ``max_depth==len(op_list)`` is full tree
+    `.greedy_planner`, and ``max_depth==len(op_list)`` is full tree
     search (guaranteed to find the optimal plan, but likely very slow).
 
     Parameters
     ----------
-    op_list : list of :class:`~nengo:nengo.builder.Operator`
+    op_list : list of `~nengo.builder.Operator`
         All the ``nengo`` operators in a model (unordered)
     max_depth : int
         The planner will search this many steps ahead before selecting which
@@ -248,7 +248,7 @@ def tree_planner(op_list, max_depth=3):
 
     Returns
     -------
-    plan : list of tuple of :class:`~nengo:nengo.builder.Operator`
+    plan : list of tuple of `~nengo.builder.Operator`
         Operators combined into mergeable groups and in execution order
     """
 
@@ -387,18 +387,18 @@ def transitive_planner(op_list):
     """
     Create merged execution plan through transitive closure construction.
 
-    This is something like a middle ground between :func:`.greedy_planner` and
-    :func:`.tree_planner`; it can improve simulation time over the greedy
+    This is something like a middle ground between `.greedy_planner` and
+    `.tree_planner`; it can improve simulation time over the greedy
     planner, but comes with potentially significant build time increases.
 
     Parameters
     ----------
-    op_list : list of :class:`~nengo:nengo.builder.Operator`
+    op_list : list of `~nengo.builder.Operator`
         All the ``nengo`` operators in a model (unordered)
 
     Returns
     -------
-    plan : list of tuple of :class:`~nengo:nengo.builder.Operator`
+    plan : list of tuple of `~nengo.builder.Operator`
         Operators combined into mergeable groups and in execution order
     """
 
@@ -534,7 +534,7 @@ def transitive_closure_recurse(dg, ops, trans, builder_type, builder_types,
         The transitive closure for the graph (will be filled in-place)
     builder_type : type
         One of the ``nengo_dl`` build classes (e.g.,
-        :class:`~.op_builders.CopyBuilder`), specifying the type of operators
+        `~.op_builders.CopyBuilder`), specifying the type of operators
         to include in the transitive closure
     builder_types : list of type
         The build class for each operator
@@ -546,7 +546,7 @@ def transitive_closure_recurse(dg, ops, trans, builder_type, builder_types,
     -----
     This function uses ints to refer to operators, where the int indicates
     the index of the operator in the overall op list (this is done to save
-    memory).  See :func:`.transitive_planner`.
+    memory).  See `.transitive_planner`.
     """
 
     for op in ops:
@@ -586,12 +586,12 @@ def noop_planner(operators):
 
     Parameters
     ----------
-    operators : list of :class:`~nengo:nengo.builder.Operator`
+    operators : list of `~nengo.builder.Operator`
         All the ``nengo`` operators in a model (unordered)
 
     Returns
     -------
-    plan : list of tuple of :class:`~nengo:nengo.builder.Operator`
+    plan : list of tuple of `~nengo.builder.Operator`
         Operators in execution order
     """
 
@@ -611,17 +611,17 @@ def order_signals(plan, n_passes=10):
 
     Parameters
     ----------
-    plan : list of tuple of :class:`~nengo:nengo.builder.Operator`
+    plan : list of tuple of `~nengo.builder.Operator`
         Operator execution plan (e.g., output from ``greedy_planner``)
     n_passes : int
         Number of repeated passes through the operator reordering stage
 
     Returns
     -------
-    signals : list of :class:`~nengo:nengo.builder.Signal`
+    signals : list of `~nengo.builder.Signal`
         Signals organized into the order in which we want them arranged in
         memory
-    plan : list of tuple of :class:`~nengo:nengo.builder.Operator`
+    plan : list of tuple of `~nengo.builder.Operator`
         Input plan with operators reordered within groups to align with order
         of signals
     """
@@ -788,12 +788,12 @@ def hamming_sort(blocks):
 
     Parameters
     ----------
-    blocks : dict of {:class:`~nengo:nengo.builder.Signal`: frozenset of int}
+    blocks : dict of {`~nengo.builder.Signal`: frozenset of int}
         Dictionary indicating which io blocks each signal is a part of
 
     Returns
     -------
-    sort_idxs : dict of {:class:`~nengo:nengo.builder.Signal`: int}
+    sort_idxs : dict of {`~nengo.builder.Signal`: int}
         Indices indicating where each signal should be in the sorted list
     """
 
@@ -896,31 +896,31 @@ def sort_ops_by_signals(sorted_io, sigs, sig_idxs, new_plan, blocks, op_sigs):
 
     Parameters
     ----------
-    sorted_io : list of tuple of (:class:`~nengo:nengo.builder.Operator`, int)
+    sorted_io : list of tuple of (`~nengo.builder.Operator`, int)
         The operators that form each io block, sorted by increasing size of
         the block. In the case that a group of operators participate in
         multiple io blocks, the integer distinguishes which one of those
         blocks this block is associated with.
-    sigs : list of :class:`~nengo:nengo.builder.Signal`
+    sigs : list of `~nengo.builder.Signal`
         Signals that have been arranged into a given order by other parts
         of the algorithm
-    sig_idxs : dict of {:class:`~nengo:nengo.builder.Signal`: int}
+    sig_idxs : dict of {`~nengo.builder.Signal`: int}
         Sorted indices of signals
-    new_plan : dict of {tuple of :class:`~nengo:nengo.builder.Operator`: \
-                        tuple of :class:`~nengo:nengo.builder.Operator`}
+    new_plan : dict of {tuple of `~nengo.builder.Operator`: \
+                        tuple of `~nengo.builder.Operator`}
         Mapping from original operator group to the sorted operators
-    blocks : dict of {:class:`~nengo:nengo.builder.Signal`: frozenset of int}
+    blocks : dict of {`~nengo.builder.Signal`: frozenset of int}
         Indicates which io blocks each signal participates in
-    op_sigs : dict of {:class:`~nengo:nengo.builder.Operator`: \
-                       list of :class:`~nengo:nengo.builder.Signal`}
+    op_sigs : dict of {`~nengo.builder.Operator`: \
+                       list of `~nengo.builder.Signal`}
         The signals accessed by each operator
 
     Returns
     -------
-    new_plan : dict of {tuple of :class:`~nengo:nengo.builder.Operator`: \
-                        tuple of :class:`~nengo:nengo.builder.Operator`}
+    new_plan : dict of {tuple of `~nengo.builder.Operator`: \
+                        tuple of `~nengo.builder.Operator`}
         Mapping from original operator group to the sorted operators
-    sig_idxs : dict of {:class:`~nengo:nengo.builder.Signal`: int}
+    sig_idxs : dict of {`~nengo.builder.Signal`: int}
         Signal indices, possibly updated to match new op order
     """
 
@@ -975,28 +975,28 @@ def sort_signals_by_ops(sorted_io, sigs, sig_idxs, new_plan, blocks, op_sigs):
 
     Parameters
     ----------
-    sorted_io : list of tuple of (:class:`~nengo:nengo.builder.Operator`, \
+    sorted_io : list of tuple of (`~nengo.builder.Operator`, \
                                      int)
         The operators that form each io block, sorted by increasing size of
         the io block. In the case that a group of operators participate in
         multiple io blocks, the integer distinguishes which one of those
         blocks this block is associated with.
-    sigs : list of :class:`~nengo:nengo.builder.Signal`
+    sigs : list of `~nengo.builder.Signal`
         Signals to be sorted
-    sig_idxs : dict of {:class:`~nengo:nengo.builder.Signal`: int}
+    sig_idxs : dict of {`~nengo.builder.Signal`: int}
         Sorted indices of signals
-    new_plan : dict of {tuple of :class:`~nengo:nengo.builder.Operator`: \
-                        tuple of :class:`~nengo:nengo.builder.Operator`}
+    new_plan : dict of {tuple of `~nengo.builder.Operator`: \
+                        tuple of `~nengo.builder.Operator`}
         Mapping from original operator group to the sorted operators
-    blocks : dict of {:class:`~nengo:nengo.builder.Signal`: frozenset of int}
+    blocks : dict of {`~nengo.builder.Signal`: frozenset of int}
         Indicates which io blocks each signal participates in
-    op_sigs : dict of {:class:`~nengo:nengo.builder.Operator`: \
-                     list of :class:`~nengo:nengo.builder.Signal`}
+    op_sigs : dict of {`~nengo.builder.Operator`: \
+                       list of `~nengo.builder.Signal`}
         The signals accessed by each operator
 
     Returns
     -------
-    sig_idxs : dict of {:class:`~nengo:nengo.builder.Signal`: int}
+    sig_idxs : dict of {`~nengo.builder.Signal`: int}
         Sorted indices of signals
     """
 
@@ -1057,7 +1057,7 @@ def sort_signals_by_ops(sorted_io, sigs, sig_idxs, new_plan, blocks, op_sigs):
 
 
 def noop_order_signals(plan, **_):
-    """A version of :func:`.graph_optimizer.order_signals` that doesn't do any
+    """A version of `.graph_optimizer.order_signals` that doesn't do any
     reordering, for debugging."""
 
     all_signals = list({s.base for ops in plan for op in ops
@@ -1077,12 +1077,12 @@ def remove_unmodified_resets(operators):
 
     Parameters
     ----------
-    operators : list of :class:`~nengo:nengo.builder.Operator`
+    operators : list of `~nengo.builder.Operator`
         Operators in the model
 
     Returns
     -------
-    new_operators : list of :class:`~nengo:nengo.builder.Operator`
+    new_operators : list of `~nengo.builder.Operator`
         Modified list of operators
     """
 
@@ -1114,12 +1114,12 @@ def remove_zero_incs(operators):
 
     Parameters
     ----------
-    operators : list of :class:`~nengo:nengo.builder.Operator`
+    operators : list of `~nengo.builder.Operator`
         Operators in the model
 
     Returns
     -------
-    new_operators : list of :class:`~nengo:nengo.builder.Operator`
+    new_operators : list of `~nengo.builder.Operator`
         Modified list of operators
     """
 
@@ -1174,12 +1174,12 @@ def remove_zero_incs(operators):
 #
 #     Parameters
 #     ----------
-#     operators : list of :class:`~nengo:nengo.builder.Operator`
+#     operators : list of `~nengo.builder.Operator`
 #         operators in the model
 #
 #     Returns
 #     -------
-#     new_operators : list of :class:`~nengo:nengo.builder.Operator`
+#     new_operators : list of `~nengo.builder.Operator`
 #         modified list of operators
 #
 #     Notes
@@ -1219,12 +1219,12 @@ def remove_constant_copies(operators):
 
     Parameters
     ----------
-    operators : list of :class:`~nengo:nengo.builder.Operator`
+    operators : list of `~nengo.builder.Operator`
         Operators in the model
 
     Returns
     -------
-    new_operators : list of :class:`~nengo:nengo.builder.Operator`
+    new_operators : list of `~nengo.builder.Operator`
         Modified list of operators
     """
 
@@ -1291,12 +1291,12 @@ def remove_identity_muls(operators):
 
     Parameters
     ----------
-    operators : list of :class:`~nengo:nengo.builder.Operator`
+    operators : list of `~nengo.builder.Operator`
         Operators in the model
 
     Returns
     -------
-    new_operators : list of :class:`~nengo:nengo.builder.Operator`
+    new_operators : list of `~nengo.builder.Operator`
         Modified list of operators
     """
 
@@ -1359,22 +1359,22 @@ def signal_io_dicts(operators):
 
     Parameters
     ----------
-    operators : list of :class:`~nengo:nengo.builder.Operator`
+    operators : list of `~nengo.builder.Operator`
         Operators in the model
 
     Returns
     -------
-    sets : dict of {:class:`~nengo:nengo.builder.Signal`: \
-                    list of :class:`~nengo:nengo.builder.Operator`}
+    sets : dict of {`~nengo.builder.Signal`: \
+                    list of `~nengo.builder.Operator`}
         A dictionary indicating all the Operators that set each signal.
-    incs : dict of {:class:`~nengo:nengo.builder.Signal`: \
-                    list of :class:`~nengo:nengo.builder.Operator`}
+    incs : dict of {`~nengo.builder.Signal`: \
+                    list of `~nengo.builder.Operator`}
         A dictionary indicating all the Operators that inc each signal.
-    reads : dict of {:class:`~nengo:nengo.builder.Signal`: \
-                     list of :class:`~nengo:nengo.builder.Operator`}
+    reads : dict of {`~nengo.builder.Signal`: \
+                     list of `~nengo.builder.Operator`}
         A dictionary indicating all the Operators that read each signal.
-    updates : dict of {:class:`~nengo:nengo.builder.Signal`: \
-                       list of :class:`~nengo:nengo.builder.Operator`}
+    updates : dict of {`~nengo.builder.Signal`: \
+                       list of `~nengo.builder.Operator`}
         A dictionary indicating all the Operators that update each signal.
     """
 
@@ -1406,9 +1406,9 @@ def display_signal_blocks(operators, all_signals):
 
     Parameters
     ----------
-    operators : list of tuple of :class:`~nengo:nengo.builder.Operator`
+    operators : list of tuple of `~nengo.builder.Operator`
         Operator execution plan
-    all_signals : list of :class:`~nengo:nengo.builder.Signal`
+    all_signals : list of `~nengo.builder.Signal`
         Base signals arranged into some order
 
     Returns

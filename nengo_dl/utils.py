@@ -72,19 +72,19 @@ def function_name(func, sanitize=True):
 def align_func(output_shape, output_dtype):
     """
     Decorator that ensures the output of ``func`` is an
-    :class:`~numpy:numpy.ndarray` with the given shape and dtype.
+    `~numpy.ndarray` with the given shape and dtype.
 
     Parameters
     ----------
     output_shape : tuple of int
         Desired shape for function output (must have the same size as actual
         function output)
-    output_dtype : ``tf.DType`` or :class:`~numpy:numpy.dtype`
+    output_dtype : ``tf.DType`` or `~numpy.dtype`
         Desired dtype of function output
 
     Raises
     ------
-    :class:`~nengo:nengo.exceptions.SimulationError`
+    `~nengo.exceptions.SimulationError`
         If the function returns ``None`` or a non-finite value.
     """
 
@@ -402,7 +402,7 @@ def minibatch_generator(data, minibatch_size, shuffle=True,
 
     Parameters
     ----------
-    data : dict of {``NengoObject``: :class:`~numpy:numpy.ndarray`}
+    data : dict of {``NengoObject``: `~numpy.ndarray`}
         Data arrays to be divided into minibatches.
     minibatch_size : int
         The number of items in each minibatch
@@ -412,7 +412,7 @@ def minibatch_generator(data, minibatch_size, shuffle=True,
     truncation : int
         If not None, divide the data up into sequences of ``truncation``
         timesteps.
-    rng : :class:`~numpy:numpy.random.RandomState`
+    rng : `~numpy.random.RandomState`
         Seeded random number generator
 
     Yields
@@ -420,12 +420,10 @@ def minibatch_generator(data, minibatch_size, shuffle=True,
     offset : int
         The simulation step at which the returned data begins (will only be
         nonzero if ``truncation`` is not ``None``).
-    inputs : dict of {:class:`~nengo:nengo.Node`: \
-                      :class:`~numpy:numpy.ndarray`}
+    inputs : dict of {`~nengo.Node`: `~numpy.ndarray`}
         The same structure as ``inputs``, but with each array reduced to
         ``minibatch_size`` elements along the first dimension
-    targets : dict of {:class:`~nengo:nengo.Probe`: \
-                       :class:`~numpy:numpy.ndarray`}
+    targets : dict of {`~nengo.Probe`: `~numpy.ndarray`}
         The same structure as ``targets``, but with each array reduced to
         ``minibatch_size`` elements along the first dimension
     """

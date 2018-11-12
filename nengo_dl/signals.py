@@ -14,12 +14,12 @@ class TensorSignal(object):
 
     Parameters
     ----------
-    indices : tuple or list or :class:`~numpy:numpy.ndarray` of int
+    indices : tuple or list or `~numpy.ndarray` of int
         Indices along the first axis of the base array corresponding to the
         data for this signal
     key : object
         Key mapping to the base array that contains the data for this signal
-    dtype : :class:`~numpy:numpy.dtype`
+    dtype : `~numpy.dtype`
         dtype of the values represented by this signal
     shape : tuple of int
         View shape of this signal (may differ from shape of base array)
@@ -28,7 +28,7 @@ class TensorSignal(object):
         given size
     constant : callable
         A function that returns a TensorFlow constant (will be provided
-        by :meth:`.signals.SignalDict.get_tensor_signal`)
+        by `.signals.SignalDict.get_tensor_signal`)
     label : str
         Name for this signal, used to make debugging easier
     """
@@ -78,7 +78,7 @@ class TensorSignal(object):
 
         Returns
         -------
-        sig : :class:`.signals.TensorSignal`
+        sig : `.signals.TensorSignal`
             A new TensorSignal representing the subset of this TensorSignal
         """
 
@@ -103,7 +103,7 @@ class TensorSignal(object):
 
         Returns
         -------
-        sig : :class:`.signals.TensorSignal`
+        sig : `.signals.TensorSignal`
             New TensorSignal representing the same data as this signal but
             with the given shape
         """
@@ -141,7 +141,7 @@ class TensorSignal(object):
 
         Returns
         -------
-        sig : :class:`.signals.TensorSignal`
+        sig : `.signals.TensorSignal`
             TensorSignal with new broadcasted shape
         """
 
@@ -209,8 +209,7 @@ class TensorSignal(object):
 
 
 class SignalDict(Mapping):
-    """Handles the mapping from :class:`~nengo:nengo.builder.Signal`
-    to ``tf.Tensor``.
+    """Handles the mapping from `~nengo.builder.Signal` to ``tf.Tensor``.
 
     Takes care of gather/scatter logic to read/write signals within the base
     arrays.
@@ -242,7 +241,7 @@ class SignalDict(Mapping):
 
         Parameters
         ----------
-        dst : :class:`.TensorSignal`
+        dst : `.TensorSignal`
             Signal indicating the data to be modified in base array
         val : ``tf.Tensor``
             Update data (same shape as ``dst``, i.e. a dense array <= the size
@@ -330,7 +329,7 @@ class SignalDict(Mapping):
 
         Parameters
         ----------
-        src : :class:`.TensorSignal`
+        src : `.TensorSignal`
             Signal indicating the data to be read from base array
         force_copy : bool
             If True, always perform a gather, not a slice (this forces a
@@ -386,7 +385,7 @@ class SignalDict(Mapping):
 
         Parameters
         ----------
-        src : :class:`.TensorSignal`
+        src : `.TensorSignal`
             Signal indicating the data being read
         """
 
@@ -398,15 +397,14 @@ class SignalDict(Mapping):
 
         Parameters
         ----------
-        sigs : list of :class:`.TensorSignal` or \
-                       :class:`~nengo:nengo.builder.Signal`
+        sigs : list of `.TensorSignal` or `~nengo.builder.Signal`
             Signals to be combined
         label : str
             Name for combined signal (to help with debugging)
 
         Returns
         -------
-        sig : :class:`.TensorSignal`
+        sig : `.TensorSignal`
             New TensorSignal representing the concatenation of the data in
             ``sigs``
         """
@@ -460,23 +458,23 @@ class SignalDict(Mapping):
 
         This should be used rather than instantiating a new TensorSignal
         directly, as it handles some extra book-keeping (e.g., using the
-        custom :meth:`.constant` function).
+        custom `.constant` function).
 
         Parameters
         ----------
-        indices : tuple or list or :class:`~numpy:numpy.ndarray` of int
+        indices : tuple or list or `~numpy.ndarray` of int
             Indices along the first axis of the base array corresponding to the
             data for this signal
         key : object
             Key mapping to the base array that contains the data for this
             signal
-        dtype : :class:`~numpy:numpy.dtype`
+        dtype : `~numpy.dtype`
             dtype of the values represented by this signal
         shape : tuple of int
             View shape of this signal (may differ from shape of base array)
         minibatched : bool
             Whether or not this signal contains a minibatch dimension
-        signal : :class:`~nengo:nengo.builder.Signal`
+        signal : `~nengo.builder.Signal`
             If not None, associate the new ``TensorSignal`` with the given
             ``Signal`` in the ``sig_map``
         label : str
@@ -484,7 +482,7 @@ class SignalDict(Mapping):
 
         Returns
         -------
-        sig : :class:`.TensorSignal`
+        sig : `.TensorSignal`
             A new ``TensorSignal`` with the given properties
         """
 
@@ -513,7 +511,7 @@ class SignalDict(Mapping):
 
         Parameters
         ----------
-        value : :class:`~numpy:numpy.ndarray`
+        value : `~numpy.ndarray`
             Array containing the value of the constant
         dtype : ``tf.DType``
             The type for the constant (if ``None``, the dtype of ``value``

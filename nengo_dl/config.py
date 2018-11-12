@@ -16,7 +16,7 @@ def configure_settings(**kwargs):
     ----------
     trainable : bool or None
         Adds a parameter to Nengo Ensembles/Connections/Networks that controls
-        whether or not they will be optimized by :meth:`.Simulator.train`.
+        whether or not they will be optimized by `.Simulator.train`.
         Passing ``None`` will use the default ``nengo_dl`` trainable settings,
         or True/False will override the default for all objects.  In either
         case trainability can be further configured on a per-object basis (e.g.
@@ -42,13 +42,13 @@ def configure_settings(**kwargs):
         pass ``{"gpu_options.allow_growth": True}``).
     inference_only : bool
         Set to True if the network will only be run in inference mode (i.e.,
-        no calls to :meth:`.Simulator.train`).  This may result in a small
+        no calls to `.Simulator.train`).  This may result in a small
         increase in the inference speed.
     lif_smoothing : float
-        If specified, use the smoothed :class:`~.neurons.SoftLIFRate` neuron
+        If specified, use the smoothed `~.neurons.SoftLIFRate` neuron
         model, with the given smoothing parameter (``sigma``),
-        to compute the gradient for :class:`~nengo:nengo.LIF` neurons (as
-        opposed to using :class:`~nengo:nengo.LIFRate`).
+        to compute the gradient for `~nengo.LIF` neurons (as
+        opposed to using `~nengo.LIFRate`).
     dtype : ``tf.DType``
         Set the floating point precision for simulation values.
     """
@@ -88,12 +88,11 @@ def configure_settings(**kwargs):
 
 def get_setting(model, setting, default=None):
     """
-    Returns config settings (created by :func:`.configure_settings`).
+    Returns config settings (created by `.configure_settings`).
 
     Parameters
     ----------
-    model : :class:`~nengo:nengo.builder.Model` or \
-            :class:`~nengo:nengo.Network`
+    model : `~nengo.builder.Model` or `~nengo.Network`
         Built model or Network containing all the config settings.
     setting : str
         Name of the config option to return

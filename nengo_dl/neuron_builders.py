@@ -104,7 +104,7 @@ class GenericNeuronBuilder(OpBuilder):
 
 
 class RectifiedLinearBuilder(OpBuilder):
-    """Build a group of :class:`~nengo:nengo.RectifiedLinear`
+    """Build a group of `~nengo.RectifiedLinear`
     neuron operators."""
 
     def __init__(self, ops, signals, config):
@@ -133,7 +133,7 @@ class RectifiedLinearBuilder(OpBuilder):
 
 
 class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
-    """Build a group of :class:`~nengo:nengo.SpikingRectifiedLinear` neuron
+    """Build a group of `~nengo.SpikingRectifiedLinear` neuron
        operators."""
 
     def __init__(self, ops, signals, config):
@@ -177,7 +177,7 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
 
 
 class SigmoidBuilder(OpBuilder):
-    """Build a group of :class:`~nengo:nengo.Sigmoid` neuron operators."""
+    """Build a group of `~nengo.Sigmoid` neuron operators."""
 
     def __init__(self, ops, signals, config):
         super(SigmoidBuilder, self).__init__(ops, signals, config)
@@ -195,7 +195,7 @@ class SigmoidBuilder(OpBuilder):
 
 
 class LIFRateBuilder(OpBuilder):
-    """Build a group of :class:`~nengo:nengo.LIFRate` neuron operators."""
+    """Build a group of `~nengo.LIFRate` neuron operators."""
 
     def __init__(self, ops, signals, config):
         super(LIFRateBuilder, self).__init__(ops, signals, config)
@@ -240,7 +240,7 @@ class LIFRateBuilder(OpBuilder):
 
 
 class SoftLIFRateBuilder(LIFRateBuilder):
-    """Build a group of :class:`.SoftLIFRate` neuron operators."""
+    """Build a group of `.SoftLIFRate` neuron operators."""
 
     def __init__(self, ops, signals, config):
         super(SoftLIFRateBuilder, self).__init__(ops, signals, config)
@@ -279,7 +279,7 @@ class SoftLIFRateBuilder(LIFRateBuilder):
 
 
 class LIFBuilder(SoftLIFRateBuilder):
-    """Build a group of :class:`~nengo:nengo.LIF` neuron operators."""
+    """Build a group of `~nengo.LIF` neuron operators."""
 
     def __init__(self, ops, signals, config):
         # note: we skip the SoftLIFRateBuilder init
@@ -355,15 +355,14 @@ class LIFBuilder(SoftLIFRateBuilder):
 @Builder.register(SimNeurons)
 class SimNeuronsBuilder(OpBuilder):
     """
-    Builds a group of :class:`~nengo:nengo.builder.neurons.SimNeurons`
-    operators.
+    Builds a group of `~nengo.builder.neurons.SimNeurons` operators.
 
     Calls the appropriate sub-build class for the different neuron types.
 
     Attributes
     ----------
-    TF_NEURON_IMPL : dict of {:class:`~nengo:nengo.neurons.NeuronType`, \
-                              :class:`.builder.OpBuilder`}
+    TF_NEURON_IMPL : dict of {`~nengo.neurons.NeuronType`, \
+                              `.builder.OpBuilder`}
         Mapping from neuron types to custom build classes (neurons without
         a custom builder will use the generic builder).
     """

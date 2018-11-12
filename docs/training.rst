@@ -3,7 +3,7 @@ Optimizing a NengoDL model
 
 Optimizing Nengo models via deep learning training methods is one of the
 important features of NengoDL.  This functionality is accessed via the
-:meth:`.Simulator.train` method.  For example:
+`.Simulator.train` method.  For example:
 
 .. code-block:: python
 
@@ -17,7 +17,7 @@ When the ``Simulator`` is first constructed, all the parameters in the model
 (e.g., encoders, decoders, connection weights, biases) are initialized based
 on the functions/distributions specified during model construction (see the
 `Nengo documentation <https://www.nengo.ai/nengo/>`_ for more detail on
-how that works).  What the :meth:`.Simulator.train` method does is then
+how that works).  What the `.Simulator.train` method does is then
 further optimize those parameters based on some inputs and desired
 outputs.  We'll go through each of those components in more detail
 below.
@@ -28,7 +28,7 @@ Simulator.train arguments
 data
 ^^^^
 
-The first argument to the :meth:`.Simulator.train` function is the training
+The first argument to the `.Simulator.train` function is the training
 data.  This generally consists of two components: input values for Nodes, and
 target values for Probes.
 
@@ -40,9 +40,9 @@ We can think of a model as computing a function
 are specifying the values for :math:`x`.
 
 In practice what that means is specifying values for the input Nodes in the
-model.  A :class:`~nengo:nengo.Node` is a Nengo object that inserts values into
+model.  A `~nengo.Node` is a Nengo object that inserts values into
 a Network, usually used
-to define external inputs.  :meth:`.Simulator.train` will override the normal
+to define external inputs.  `.Simulator.train` will override the normal
 Node values with the training data that is provided.  This is specified as a
 dictionary ``{<node>: <array>, ...}``, where ``<node>`` is the input node
 for which training data is being defined, and ``<array>`` is a numpy array
@@ -127,7 +127,7 @@ in the `TensorFlow documentation
 
 An instance of the desired TensorFlow optimizer is created (specifying any
 arguments required by that optimizer), and that instance is then passed to
-:meth:`.Simulator.train`.  For example:
+`.Simulator.train`.  For example:
 
 .. code-block:: python
 
@@ -202,7 +202,7 @@ case, ``my_objective`` will still be passed parameters ``outputs`` and
 ``targets``, but those parameters will be lists containing the output/target
 values for each of the specified probes.
 
-:meth:`.Simulator.loss` can be used to check the loss
+`.Simulator.loss` can be used to check the loss
 (error) value for a given objective.
 
 .. _truncation:
@@ -257,10 +257,10 @@ specify the model data that you would like to export for TensorBoard.
 
 It is specified as a list of objects for which we want to collect
 data.  The data collected depends on the object: if it is a
-:class:`~nengo:nengo.Connection` then data will be collected about the
+`~nengo.Connection` then data will be collected about the
 distribution of the connection weights over the course of training; passing an
-:class:`~nengo:nengo.Ensemble` will collect data about the distribution of
-encoders, and :class:`~nengo:nengo.ensemble.Neurons` will collect data about
+`~nengo.Ensemble` will collect data about the distribution of
+encoders, and `~nengo.ensemble.Neurons` will collect data about
 the distribution of biases. Additionally, the string ``"loss"`` can be passed,
 in which case the training error for the given objective will be
 collected over the course of training.
@@ -313,7 +313,7 @@ By default, NengoDL will optimize the following elements in a model:
 3. Neuron biases
 
 These elements will *not* be optimized if they are targeted by an online
-learning rule.  For example, :class:`nengo:nengo.PES` modifies connection
+learning rule.  For example, `nengo.PES` modifies connection
 weights as a model is running.  If we also tried to optimize those weights with
 some offline training method then those two processes would conflict
 with each other, likely resulting in unintended effects.  So NengoDL will
@@ -334,7 +334,7 @@ sim.data
 ^^^^^^^^
 
 The most basic way to access model parameters is through the
-:class:`sim.data <.simulator.SimulationData>`
+`sim.data <.simulator.SimulationData>`
 data structure.  This provides access to the parameters of any Nengo object,
 returning them as ``numpy`` arrays.  For example:
 
@@ -363,8 +363,8 @@ themselves for each parameter.
 sim.save_params/sim.load_params
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-On the opposite end of the spectrum, :meth:`~.Simulator.save_params`/
-:meth:`~.Simulator.load_params` can be used to save all the parameters of a
+On the opposite end of the spectrum, `~.Simulator.save_params`/
+`~.Simulator.load_params` can be used to save all the parameters of a
 model to file (using TensorFlow's checkpointing system).  This is
 convenient if we want to save and resume the state of a model (e.g., run some
 training, do some analysis, and then run more training):
@@ -394,7 +394,7 @@ sim.freeze_params
 
 Rather than saving model parameters using TensorFlow's checkpoint system,
 we can store live parameters back into the model definition using
-:meth:`~.Simulator.freeze_params`.  We can freeze the parameters of individual
+`~.Simulator.freeze_params`.  We can freeze the parameters of individual
 Ensembles and Connections, or pass a Network to freeze all the Ensembles and
 Connections in that Network.
 

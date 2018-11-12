@@ -22,13 +22,12 @@ class Builder(object):
 
         Parameters
         ----------
-        ops : tuple of :class:`~nengo:nengo.builder.Operator`
+        ops : tuple of `~nengo.builder.Operator`
             The operator group to build into the model
-        signals : :class:`.signals.SignalDict`
-            Mapping from :class:`~nengo:nengo.builder.Signal` to
+        signals : `.signals.SignalDict`
+            Mapping from `~nengo.builder.Signal` to
             ``tf.Tensor`` (updated by operations)
-        op_builds : dict of {tuple of :class:`~nengo.builder.Operator`, \
-                             :class:~`.op_builders.OpBuilder`}
+        op_builds : dict of {tuple of `~nengo.builder.Operator`, `.OpBuilder`}
             ``pre_build`` will populate this dictionary with the OpBuilder
             objects (which execute the pre-build step in their ``__init__``)
         """
@@ -54,13 +53,13 @@ class Builder(object):
 
         Parameters
         ----------
-        ops : tuple of :class:`~nengo:nengo.builder.Operator`
+        ops : tuple of `~nengo.builder.Operator`
             The operator group to build into the model
-        signals : :class:`.signals.SignalDict`
-            Mapping from :class:`~nengo:nengo.builder.Signal` to
+        signals : `.signals.SignalDict`
+            Mapping from `~nengo.builder.Signal` to
             ``tf.Tensor`` (updated by operations)
-        op_builds : dict of {tuple of :class:`~nengo.builder.Operator`, \
-                             :class:~`.op_builders.OpBuilder`}
+        op_builds : dict of {tuple of `~nengo.builder.Operator`, \
+                             ~`.op_builders.OpBuilder`}
             Mapping from operator groups to the pre-built builder objects
         """
 
@@ -86,7 +85,7 @@ class Builder(object):
 
         Parameters
         ----------
-        nengo_op : :class:`~nengo:nengo.builder.Operator`
+        nengo_op : `~nengo.builder.Operator`
             The operator associated with the build function being decorated.
         """
 
@@ -116,8 +115,7 @@ class BuildConfig(namedtuple("BuildConfig", (
         If True the network should be constructed in "inference only" mode
         (not including any support for training operations).
     lif_smoothing : float
-        Smoothing parameter for :class:`~nengo:nengo.LIF`
-        gradient approximation.
+        Smoothing parameter for `~nengo.LIF` gradient approximation.
     """
 
     __slots__ = ()
@@ -129,12 +127,12 @@ class OpBuilder(object):  # pragma: no cover
 
     Parameters
     ----------
-    ops : list of :class:`~nengo:nengo.builder.Operator`
+    ops : list of `~nengo.builder.Operator`
         The operator group to build into the model
-    signals : :class:`.signals.SignalDict`
-        Mapping from :class:`~nengo:nengo.builder.Signal` to
+    signals : `.signals.SignalDict`
+        Mapping from `~nengo.builder.Signal` to
         ``tf.Tensor`` (updated by operations)
-    config : :class:`~.builder.BuildConfig`
+    config : `~.builder.BuildConfig`
         General repository for config information builders might want
         (conglomerated into this object so that we can add/remove config data
         without having to change the function signature all the time).
@@ -152,8 +150,8 @@ class OpBuilder(object):  # pragma: no cover
 
         Parameters
         ----------
-        signals : :class:`.signals.SignalDict`
-            Mapping from :class:`~nengo:nengo.builder.Signal` to
+        signals : `.signals.SignalDict`
+            Mapping from `~nengo.builder.Signal` to
             ``tf.Tensor`` (updated by operations)
 
         Returns
@@ -177,14 +175,14 @@ class OpBuilder(object):  # pragma: no cover
 
         Parameters
         ----------
-        ops : list of :class:`~nengo:nengo.builder.Operator`
+        ops : list of `~nengo.builder.Operator`
             The operator group to build into the model
-        signals : :class:`.signals.SignalDict`
-            Mapping from :class:`~nengo:nengo.builder.Signal` to
+        signals : `.signals.SignalDict`
+            Mapping from `~nengo.builder.Signal` to
             ``tf.Tensor`` (updated by operations)
         sess : ``tf.Session``
             The initialized simulation session
-        rng : :class:`~numpy:numpy.random.RandomState`
+        rng : `~numpy.random.RandomState`
             Seeded random number generator
         """
         pass

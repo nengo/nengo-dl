@@ -23,7 +23,7 @@ class ResetInc(Reset):
 @Builder.register(Reset)
 @Builder.register(ResetInc)
 class ResetBuilder(OpBuilder):
-    """Build a group of :class:`~nengo:nengo.builder.operator.Reset`
+    """Build a group of `~nengo.builder.operator.Reset`
     operators."""
 
     def __init__(self, ops, signals, config):
@@ -64,7 +64,7 @@ class ResetBuilder(OpBuilder):
 
 @Builder.register(Copy)
 class CopyBuilder(OpBuilder):
-    """Build a group of :class:`~nengo:nengo.builder.operator.Copy`
+    """Build a group of `~nengo.builder.operator.Copy`
     operators."""
 
     def __init__(self, ops, signals, config):
@@ -107,7 +107,7 @@ class CopyBuilder(OpBuilder):
 @Builder.register(ElementwiseInc)
 # @Builder.register(ElementwiseSet)
 class ElementwiseIncBuilder(OpBuilder):
-    """Build a group of :class:`~nengo:nengo.builder.operator.ElementwiseInc`
+    """Build a group of `~nengo.builder.operator.ElementwiseInc`
     operators."""
 
     def __init__(self, ops, signals, config):
@@ -157,7 +157,7 @@ class ElementwiseIncBuilder(OpBuilder):
 
 # @Builder.register(DotInc)
 class DotIncBuilder(OpBuilder):
-    """Build a group of :class:`~nengo:nengo.builder.operator.DotInc`
+    """Build a group of `~nengo.builder.operator.DotInc`
     operators."""
 
     def __init__(self, ops, signals, config):
@@ -246,7 +246,7 @@ class DotIncBuilder(OpBuilder):
 @Builder.register(DotInc)
 # @Builder.register(DotSet)
 class SparseDotIncBuilder(DotIncBuilder):
-    """Build a group of :class:`~nengo:nengo.builder.operator.DotInc`
+    """Build a group of `~nengo.builder.operator.DotInc`
     operators."""
 
     def __init__(self, ops, signals, config):
@@ -332,7 +332,7 @@ class SparseDotIncBuilder(DotIncBuilder):
 
 @Builder.register(SimPyFunc)
 class SimPyFuncBuilder(OpBuilder):
-    """Build a group of :class:`~nengo:nengo.builder.operator.SimPyFunc`
+    """Build a group of `~nengo.builder.operator.SimPyFunc`
     operators."""
 
     def __init__(self, ops, signals, config):

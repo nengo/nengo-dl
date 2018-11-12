@@ -8,7 +8,7 @@ backend.  This can be used as a drop-in replacement for ``nengo.Simulator``
 normal).
 
 In addition, the Simulator exposes features unique to the
-``nengo_dl`` backend, such as :meth:`.Simulator.train`.
+NengoDL backend, such as `.Simulator.train`.
 
 The full class documentation can be viewed in the
 :ref:`API Reference <sim-api>`; here we will explain the practical usage of
@@ -17,8 +17,8 @@ the Simulator in more depth.
 Simulator arguments
 -------------------
 
-The ``nengo_dl`` :class:`.Simulator` has a number of optional arguments, beyond
-those in :class:`nengo:nengo.Simulator`, which control features specific to
+The NengoDL `.Simulator` has a number of optional arguments, beyond
+those in `nengo.Simulator`, which control features specific to
 the ``nengo_dl`` backend.
 
 device
@@ -89,10 +89,10 @@ specifies how many inputs will be processed at a time.  The default is
 processed at a time (as in standard Nengo simulators).
 
 In order to take advantage of the parallel inputs, multiple inputs need to
-be passed to :meth:`.Simulator.run` via the ``data`` argument.  This
+be passed to `.Simulator.run` via the ``data`` argument.  This
 is discussed in more detail :ref:`below <sim-run>`.
 
-When using :meth:`.Simulator.train`, this parameter controls how many items
+When using `.Simulator.train`, this parameter controls how many items
 from the training data will be used for each optimization iteration.
 
 tensorboard
@@ -125,15 +125,15 @@ subfolders according to run number (e.g., ``<tensorboard_dir>/run_0``).
 Simulator.run arguments
 -----------------------
 
-:meth:`.Simulator.run` (and its variations :meth:`.Simulator.step`/
-:meth:`.Simulator.run_steps`) also have some optional parameters beyond those
+`.Simulator.run` (and its variations `.Simulator.step`/
+`.Simulator.run_steps`) also have some optional parameters beyond those
 in the standard Nengo simulator.
 
 data
 ^^^^
 
 This parameter can be used to override the value of any
-input :class:`~nengo:nengo.Node` in a model (an input node is defined as
+input `~nengo.Node` in a model (an input node is defined as
 a node with no incoming connections).  For example
 
 .. code-block:: python
@@ -176,7 +176,7 @@ value we specified.
 ``data`` is usually used in concert with the minibatching feature of
 ``nengo_dl`` (:ref:`see above <minibatch_size>`).  ``nengo_dl`` allows multiple
 inputs to be processed simultaneously, but when we construct a
-:class:`~nengo:nengo.Node` we can only specify one value.  For example, if we
+`~nengo.Node` we can only specify one value.  For example, if we
 use minibatching on the above network
 
 .. code-block:: python
@@ -228,5 +228,5 @@ can be viewed by opening a Chrome browser, navigating to
 filename can be passed instead of ``True``, to change the output filename.
 
 Note that in order for GPU profiling to work, you need to manually add
-``<cuda>\extras\CUPTI\libx64`` to the `LD_LIBRARY_PATH` (where ``<cuda>`` is
-your CUDA installation directory).
+``<cuda>/extras/CUPTI/libx64`` to the ``LD_LIBRARY_PATH`` environment variable
+(where ``<cuda>`` is your CUDA installation directory).
