@@ -94,6 +94,16 @@ Release History
 - Improve build speed of models with large constants
   (`#69 <https://github.com/nengo/nengo-dl/pull/69>`_)
 
+**Deprecated**
+
+- The ``sim.run`` ``input_feeds`` argument has been renamed to ``data`` (for
+  consistency with other simulator functions).
+
+**Removed**
+
+- NengoDL no longer supports Python 2 (see https://python3statement.org/ for
+  more information)
+
 1.2.1 (November 2, 2018)
 ------------------------
 
@@ -127,16 +137,6 @@ Release History
 - Ensure that ``sim.training_step`` is always updated after the optimization
   step (in certain race conditions it would sometimes update part-way through
   the optimization step).
-
-**Deprecated**
-
-- The ``sim.run`` ``input_feeds`` argument has been renamed to ``data`` (for
-  consistency with other simulator functions).
-
-**Removed**
-
-- NengoDL no longer supports Python 2 (see https://python3statement.org/ for
-  more information)
 
 1.2.0 (September 5, 2018)
 -------------------------
