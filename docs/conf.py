@@ -15,6 +15,7 @@ extensions = [
     "nengo_sphinx_theme.ext.versions",
     "numpydoc",
     "nbsphinx",
+    "sphinx_click.ext",
 ]
 
 templates_path = ["_templates"]

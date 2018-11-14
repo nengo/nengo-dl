@@ -407,17 +407,19 @@ def run_profile(net, train=False, n_steps=150, do_profile=True, **kwargs):
 
 @click.group(chain=True)
 def main():
+    """Command-line interface for benchmarks."""
     pass
 
 
 @main.command()
 @click.pass_obj
-@click.option("--benchmark", default="cconv", help="Benchmark network")
+@click.option("--benchmark", default="cconv", help="Name of benchmark network")
 @click.option("--dimensions", default=128, help="Number of dimensions")
 @click.option("--neurons_per_d", default=64, help="Neurons per dimension")
 @click.option("--neuron_type", default="RectifiedLinear",
               help="Nengo neuron model")
-@click.option("--kwarg", type=str, multiple=True)
+@click.option("--kwarg", type=str, multiple=True,
+              help="Arbitrary kwarg to pass to benchmark network (key=value)")
 def build(obj, benchmark, dimensions, neurons_per_d, neuron_type,
           kwarg):
     """Builds one of the benchmark networks"""
@@ -461,7 +463,8 @@ def build(obj, benchmark, dimensions, neurons_per_d, neuron_type,
               help="TensorFlow device on which to run the simulation")
 @click.option("--unroll", default=25,
               help="Number of steps for which to unroll the simulation")
-@click.option("--time-only", is_flag=True, default=False)
+@click.option("--time-only", is_flag=True, default=False,
+              help="Only count total time, rather than profiling internals")
 def profile(obj, train, n_steps, batch_size, device, unroll, time_only):
     """Runs profiling on a network (call after 'build')"""
 

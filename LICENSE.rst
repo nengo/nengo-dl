@@ -47,6 +47,8 @@ To build the documentation, NengoDL uses:
   `PIL license <https://github.com/python-pillow/Pillow/blob/master/LICENSE>`__
 * `Sphinx <http://www.sphinx-doc.org/en/stable/>`_ - Used under
   `BSD license <https://github.com/sphinx-doc/sphinx/blob/master/LICENSE>`__
+* `sphinx-click <https://sphinx-click.readthedocs.io/en/latest/>`_ - Used under
+  `MIT license <https://github.com/click-contrib/sphinx-click/blob/master/LICENSE>`__
 
 To run the unit tests, NengoDL uses:
 

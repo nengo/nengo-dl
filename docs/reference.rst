@@ -143,3 +143,13 @@ Benchmarks
 ^^^^^^^^^^
 
 .. automodule:: nengo_dl.benchmarks
+
+Interface
+*********
+
+The benchmark module also includes a command-line interface for building and
+running the benchmarks:
+
+.. click:: nengo_dl.benchmarks:main
+    :prog: benchmarks
+    :show-nested:
