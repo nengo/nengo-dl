@@ -53,7 +53,6 @@ install_requires = [
     "progressbar2>=3.37.1",
 ]
 docs_require = [
-    "ipykernel<5.0.0",  # doesn't work with jupyter TODO: remove this once there's an upstream fix; https://github.com/jupyter/jupyter/issues/370
     "jupyter>=1.0.0",
     "matplotlib>=2.0.0",
     "nbconvert!=5.4",  # doesn't work with nbsphinx TODO: remove this once there's an upstream fix; https://github.com/jupyter/nbconvert/issues/878
