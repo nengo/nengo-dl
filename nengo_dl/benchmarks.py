@@ -1,3 +1,7 @@
+"""
+Benchmark networks and utilities for evaluating NengoDL's performance.
+"""
+
 import inspect
 import itertools
 import os

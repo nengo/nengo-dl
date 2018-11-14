@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring
+
 from nengo import ensemble, Network, Ensemble, Connection
 from nengo.builder import Model
 from nengo.exceptions import ValidationError, ConfigError, NetworkContextError

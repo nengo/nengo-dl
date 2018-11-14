@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring
+
 import nengo
 from nengo.exceptions import ValidationError, SimulationError
 import numpy as np

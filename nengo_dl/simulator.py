@@ -1,3 +1,9 @@
+"""
+The Simulator class is the access point for the main features of NengoDL,
+including `running <.Simulator.run_steps>` and `training <.Simulator.train>`
+a model.
+"""
+
 from __future__ import print_function, division
 
 import collections
@@ -1514,7 +1520,7 @@ class Simulator(object):
 
     @property
     def dt(self):
-        """(float) The time step of the simulator."""
+        """The time (in seconds) represented by one simulation timestep."""
         return self.model.dt
 
     @dt.setter
@@ -1523,6 +1529,7 @@ class Simulator(object):
 
     @property
     def training_step(self):
+        """The number of training iterations that have been executed."""
         return self.tensor_graph.training_step
 
     def __enter__(self):
@@ -1541,7 +1548,8 @@ class Simulator(object):
         self.close()
 
     def __del__(self):
-        """Raise a RuntimeWarning if the Simulator is deallocated while open.
+        """
+        Raise a RuntimeWarning if the Simulator is deallocated while open.
         """
 
         if self.closed is not None and not self.closed:

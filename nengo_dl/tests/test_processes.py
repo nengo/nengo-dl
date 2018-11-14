@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring
+
 import nengo
 from nengo.synapses import Alpha, LinearFilter
 from nengo.tests.test_synapses import run_synapse, allclose

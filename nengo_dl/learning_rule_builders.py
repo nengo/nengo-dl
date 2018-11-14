@@ -1,3 +1,7 @@
+"""
+Build classes for Nengo learning rule operators.
+"""
+
 from nengo import Lowpass
 from nengo.builder import Signal
 from nengo.builder.learning_rules import SimBCM, SimOja, SimVoja, get_post_ens

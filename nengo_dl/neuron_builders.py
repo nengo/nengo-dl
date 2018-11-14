@@ -1,3 +1,7 @@
+"""
+Build classes for Nengo neuron operators.
+"""
+
 import logging
 
 from nengo.builder.neurons import SimNeurons

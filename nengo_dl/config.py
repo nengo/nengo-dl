@@ -1,3 +1,8 @@
+"""
+The configuration system is used to change NengoDL's default behaviour in
+various ways.
+"""
+
 from nengo import Connection, Ensemble, Network, ensemble
 from nengo.builder import Model
 from nengo.exceptions import ConfigError, NetworkContextError

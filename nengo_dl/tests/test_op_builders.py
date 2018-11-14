@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring
+
 from nengo import builder
 from nengo.builder import signal, operator
 

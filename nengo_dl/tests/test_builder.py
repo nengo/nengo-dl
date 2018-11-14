@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring
+
 from nengo.exceptions import BuildError
 import pytest
 

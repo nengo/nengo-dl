@@ -1,3 +1,8 @@
+"""
+These functions are used to restructure the Nengo operator graph so that it
+can be simulated more efficiently when converted into a TensorFlow graph.
+"""
+
 from collections import OrderedDict, defaultdict
 import logging
 

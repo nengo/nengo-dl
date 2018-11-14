@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring
+
 from nengo.exceptions import BuildError
 from nengo.neurons import LIF, LIFRate, Izhikevich, AdaptiveLIF
 from nengo.synapses import Lowpass, Triangle, Alpha, LinearFilter

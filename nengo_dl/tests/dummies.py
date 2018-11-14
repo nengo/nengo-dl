@@ -9,6 +9,9 @@ from nengo_dl import builder, tensor_graph, signals, configure_settings
 
 
 class Signal(object):
+    """
+    Mock-up for `nengo.builder.Signal`.
+    """
     def __init__(self, shape=None, dtype=None, base_shape=None, offset=0,
                  trainable=False, label="", initial_value=0):
         self.shape = (1,) if shape is None else shape
@@ -27,9 +30,13 @@ class Signal(object):
 
     @property
     def initial_value(self):
+        """Initial value for signal."""
+
         return np.full(self.base.shape, self.init, dtype=self.dtype)
 
     def may_share_memory(self, _):
+        """Whether or not this signal shares memory with another."""
+
         return False
 
     def __repr__(self):
@@ -37,6 +44,9 @@ class Signal(object):
 
 
 class Op(object):
+    """
+    Mock-up for `nengo.builder.Operator`.
+    """
     def __init__(self, sets=None, incs=None, reads=None, updates=None):
         self.sets = [] if sets is None else sets
         self.incs = [] if incs is None else incs
@@ -61,25 +71,38 @@ class Op(object):
 
 @builder.Builder.register(Op)
 class Builder(builder.OpBuilder):
+    """
+    Mock-up builder for `.Op`.
+    """
     pass
 
 
 class Probe(nengo.Probe):
-    # pylint: disable=super-init-not-called
+    """
+    Mock-up for `nengo.Probe`.
+    """
+
     def __init__(self, target=None):
+        # pylint: disable=super-init-not-called
         if target is not None:
             # bypass target validation
             nengo.Probe.target.data[self] = target
 
 
 class Simulator(object):
+    """
+    Mock-up for `nengo.Simulator`.
+    """
     model = nengo.builder.Model()
     model.sig = defaultdict(lambda: defaultdict(lambda: Signal()))
 
 
 class TensorGraph(tensor_graph.TensorGraph):
-    # pylint: disable=super-init-not-called
+    """
+    Mock-up for `.tensor_graph.TensorGraph`.
+    """
     def __init__(self, plan=None, dtype=None, minibatch_size=None):
+        # pylint: disable=super-init-not-called
         self.plan = plan
         self.dtype = dtype
         self.minibatch_size = minibatch_size
@@ -88,7 +111,10 @@ class TensorGraph(tensor_graph.TensorGraph):
 
 
 def linear_net():
-    # a simple network with no nonlinearity
+    """
+    A simple network with an input, output, and no nonlinearity.
+    """
+
     with nengo.Network() as net:
         a = nengo.Node([1])
 

@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring
+
 from importlib import reload
 import sys
 

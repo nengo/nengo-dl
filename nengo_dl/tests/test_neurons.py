@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring
+
 import nengo
 import numpy as np
 import pytest

@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring
+
 from collections import defaultdict
 import sys
 

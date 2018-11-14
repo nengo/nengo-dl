@@ -1,3 +1,8 @@
+"""
+TensorNodes allow parts of a model to be defined using TensorFlow and smoothly
+integrated with the rest of a Nengo model.
+"""
+
 from nengo import Node, Connection, Ensemble, builder
 from nengo.base import NengoObject
 from nengo.builder.operator import Reset
@@ -11,6 +16,21 @@ from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
 
 
 def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
+    """
+    Performs validation on the output of a TensorNode ``tensor_func``.
+
+    Parameters
+    ----------
+    output : ``tf.Tensor``
+        Output from the ``tensor_func``.
+    minibatch_size : int
+        Expected minibatch size for the simulation.
+    output_d
+        Expected output dimensionality for the function.
+    dtype
+        Expected dtype of the function output.
+    """
+
     if not isinstance(output, tf.Tensor):
         raise ValidationError("TensorNode function must return a Tensor "
                               "(got %s)" % type(output), attr="tensor_func")
@@ -42,66 +62,31 @@ class TensorFuncParam(Parameter):
         output = super(TensorFuncParam, self).coerce(node, func)
 
         if node.size_out is None:
-            node.size_out = self.check_size_out(node, func)
+            if not callable(func):
+                raise ValidationError("TensorNode output must be a function",
+                                      attr=self.name, obj=node)
+
+            with tf.Graph().as_default():
+                t, x = tf.constant(0.0), tf.zeros((1, node.size_in))
+                args = (t, x) if node.size_in > 0 else (t,)
+                try:
+                    result = func(*args)
+                except Exception as e:
+                    raise ValidationError(
+                        "Calling TensorNode function with arguments %s "
+                        "produced an error:\n%s" % (args, e),
+                        attr=self.name, obj=node)
+
+            validate_output(result)
+
+            node.size_out = result.get_shape()[1].value
 
         return output
 
-    def check_size_out(self, node, func):
-        if not callable(func):
-            raise ValidationError("TensorNode output must be a function",
-                                  attr=self.name, obj=node)
-
-        with tf.Graph().as_default():
-            t, x = tf.constant(0.0), tf.zeros((1, node.size_in))
-            args = (t, x) if node.size_in > 0 else (t,)
-            try:
-                result = func(*args)
-            except Exception as e:
-                raise ValidationError(
-                    "Calling TensorNode function with arguments %s produced "
-                    "an error:\n%s" % (args, e), attr=self.name, obj=node)
-
-        validate_output(result)
-
-        return result.get_shape()[1].value
-
 
 class TensorNode(Node):
-    """Inserts TensorFlow code into a Nengo model.  A TensorNode operates in
-    much the same way as a `~nengo.Node`, except its inputs and
-    outputs are defined using TensorFlow operations.
-
-    The TensorFlow code is defined in a function or callable class
-    (``tensor_func``).  This function accepts the current simulation time as
-    input, or the current simulation time and a Tensor ``x`` if
-    ``node.size_in > 0``.  ``x`` will have shape
-    ``(sim.minibatch_size, node.size_in``), and the function should return a
-    Tensor with shape ``(sim.minibatch_size, node.size_out)``.
-    ``node.size_out`` will be inferred by calling the function once and
-    checking the output, if it isn't set when the Node is created.
-
-    If ``tensor_func`` has a ``pre_build`` attribute, that function will be
-    called once when the model is constructed.  This can be used to compute any
-    constant values or set up variables -- things that don't need to
-    execute every simulation timestep.
-
-    .. code-block:: python
-
-        def pre_build(shape_in, shape_out):
-            print(shape_in)  # (minibatch_size, node.size_in)
-            print(shape_out)  # (minibatch_size, node.size_out)
-
-    If ``tensor_func`` has a ``post_build`` attribute, that function will be
-    called after the simulator is created and whenever it is reset.  This can
-    be used to set any random elements in the TensorNode or perform any
-    post-initialization setup required by the node (e.g., loading pretrained
-    weights).
-
-    .. code-block:: python
-
-        def post_build(sess, rng):
-            print(sess)  # the TensorFlow simulation session object
-            print(rng)  # random number generator (np.random.RandomState)
+    """
+    Inserts TensorFlow code into a Nengo model.
 
     Parameters
     ----------
@@ -133,6 +118,11 @@ class TensorNode(Node):
 
     @property
     def output(self):
+        """
+        Ensure that nothing tries to evaluate the `output` attribute
+        (indicating that something is trying to simulate this as a regular
+        `nengo.Node` rather than a TensorNode.
+        """
         def output_func(*_):
             raise SimulationError(
                 "Cannot call TensorNode output function (this probably means "

@@ -1,3 +1,7 @@
+"""
+Applies monkey-patches to TensorFlow to fix bugs or add functionality.
+"""
+
 import copy
 import traceback
 
@@ -10,7 +14,7 @@ saved_registry = copy.copy(ops._gradient_registry._registry)
 
 def patch_dynamic_stitch_grad():
     """Tensorflow's current gradient implementation for `tf.dynamic_stitch` is
-    incorrect.  This monkey-patches Tensorflow to fix the bug."""
+    incorrect.  This monkey-patches TensorFlow to fix the bug."""
 
     def DynamicStitchGrads(op, grad):
         num_values = len(op.inputs) // 2

@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring
+
 from functools import partial
 
 import nengo

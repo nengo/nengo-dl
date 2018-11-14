@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring
+
 import nengo
 import tensorflow as tf
 

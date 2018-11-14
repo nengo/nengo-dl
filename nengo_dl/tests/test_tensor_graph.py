@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring
+
 import nengo
 from nengo.builder.operator import Reset
 from nengo.exceptions import ValidationError

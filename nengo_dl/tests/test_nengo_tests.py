@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring
+
 import pkg_resources
 
 import nengo

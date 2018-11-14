@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring
+
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.signal import Signal
 from nengo.exceptions import BuildError

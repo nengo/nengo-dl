@@ -1,3 +1,7 @@
+"""
+Build classes for basic Nengo operators.
+"""
+
 from collections import defaultdict
 from distutils.version import LooseVersion
 import logging
@@ -15,6 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 class ResetInc(Reset):
+    """
+    A version of Reset that increments the target value rather than setting it.
+    """
     @property
     def dst(self):
         return self.incs[0]
@@ -23,8 +30,9 @@ class ResetInc(Reset):
 @Builder.register(Reset)
 @Builder.register(ResetInc)
 class ResetBuilder(OpBuilder):
-    """Build a group of `~nengo.builder.operator.Reset`
-    operators."""
+    """
+    Build a group of `~nengo.builder.operator.Reset` operators.
+    """
 
     def __init__(self, ops, signals, config):
         super(ResetBuilder, self).__init__(ops, signals, config)
@@ -64,8 +72,9 @@ class ResetBuilder(OpBuilder):
 
 @Builder.register(Copy)
 class CopyBuilder(OpBuilder):
-    """Build a group of `~nengo.builder.operator.Copy`
-    operators."""
+    """
+    Build a group of `~nengo.builder.operator.Copy` operators.
+    """
 
     def __init__(self, ops, signals, config):
         super(CopyBuilder, self).__init__(ops, signals, config)
@@ -107,8 +116,9 @@ class CopyBuilder(OpBuilder):
 @Builder.register(ElementwiseInc)
 # @Builder.register(ElementwiseSet)
 class ElementwiseIncBuilder(OpBuilder):
-    """Build a group of `~nengo.builder.operator.ElementwiseInc`
-    operators."""
+    """
+    Build a group of `~nengo.builder.operator.ElementwiseInc` operators.
+    """
 
     def __init__(self, ops, signals, config):
         super(ElementwiseIncBuilder, self).__init__(ops, signals, config)
@@ -157,8 +167,9 @@ class ElementwiseIncBuilder(OpBuilder):
 
 # @Builder.register(DotInc)
 class DotIncBuilder(OpBuilder):
-    """Build a group of `~nengo.builder.operator.DotInc`
-    operators."""
+    """
+    Build a group of `~nengo.builder.operator.DotInc` operators.
+    """
 
     def __init__(self, ops, signals, config):
         super(DotIncBuilder, self).__init__(ops, signals, config)
@@ -246,8 +257,9 @@ class DotIncBuilder(OpBuilder):
 @Builder.register(DotInc)
 # @Builder.register(DotSet)
 class SparseDotIncBuilder(DotIncBuilder):
-    """Build a group of `~nengo.builder.operator.DotInc`
-    operators."""
+    """
+    Build a group of `~nengo.builder.operator.DotInc` operators.
+    """
 
     def __init__(self, ops, signals, config):
         # note: bypassing the DotIncBuilder init
@@ -332,8 +344,9 @@ class SparseDotIncBuilder(DotIncBuilder):
 
 @Builder.register(SimPyFunc)
 class SimPyFuncBuilder(OpBuilder):
-    """Build a group of `~nengo.builder.operator.SimPyFunc`
-    operators."""
+    """
+    Build a group of `~nengo.builder.operator.SimPyFunc` operators.
+    """
 
     def __init__(self, ops, signals, config):
         super(SimPyFuncBuilder, self).__init__(ops, signals, config)

@@ -1,3 +1,7 @@
+"""
+Additions to the `neuron types included with Nengo <nengo.neurons.NeuronType>`.
+"""
+
 from nengo.neurons import LIFRate
 from nengo.params import NumberParam
 import numpy as np

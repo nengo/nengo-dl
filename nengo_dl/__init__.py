@@ -1,4 +1,4 @@
-# pylint: disable=wrong-import-order,wrong-import-position
+# pylint: disable=wrong-import-order,wrong-import-position,missing-docstring
 
 __copyright__ = "2015-2018, Applied Brain Research"
 __license__ = "Free for non-commercial use; see LICENSE.rst"

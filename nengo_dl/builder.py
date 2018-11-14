@@ -1,3 +1,9 @@
+"""
+The builder manages the mapping between (groups of) Nengo operators and the
+builder objects that know how to translate those operators into a
+TensorFlow graph.
+"""
+
 from collections import namedtuple
 import logging
 import warnings
@@ -122,7 +128,8 @@ class BuildConfig(namedtuple("BuildConfig", (
 
 
 class OpBuilder(object):  # pragma: no cover
-    """The constructor should set up any computations that are fixed for
+    """
+    The constructor should set up any computations that are fixed for
     this op (i.e., things that do not need to be recomputed each timestep).
 
     Parameters
@@ -145,7 +152,8 @@ class OpBuilder(object):  # pragma: no cover
         self.config = config
 
     def build_step(self, signals):
-        """This function builds whatever computations need to be executed in
+        """
+        This function builds whatever computations need to be executed in
         each simulation timestep.
 
         Parameters
@@ -165,7 +173,8 @@ class OpBuilder(object):  # pragma: no cover
         raise BuildError("OpBuilders must implement a `build_step` function")
 
     def build_post(self, ops, signals, sess, rng):
-        """This function will be called after the graph has been built and
+        """
+        This function will be called after the graph has been built and
         session/variables initialized.
 
         This should be used to build any random aspects of the operator.
@@ -189,7 +198,8 @@ class OpBuilder(object):  # pragma: no cover
 
 
 class NengoBuilder(builder.Builder):
-    """Copy of the default Nengo builder.
+    """
+    Copy of the default Nengo builder.
 
     This class is here so that we can register new build functions for
     Nengo DL without affecting the default Nengo build process.
@@ -199,6 +209,24 @@ class NengoBuilder(builder.Builder):
 
     @classmethod
     def build(cls, model, obj, *args, **kwargs):
+        """
+        Build ``obj`` into ``model``.
+
+        This method looks up the appropriate build function for ``obj`` and
+        calls it with the model and other arguments provided.
+
+        In addition to the parameters listed below, further positional and
+        keyword arguments will be passed unchanged into the build function.
+
+        Parameters
+        ----------
+        model : Model
+            The `~nengo.builder.Model` instance in which to store build
+            artifacts.
+        obj : object
+            The object to build into the model.
+        """
+
         try:
             # first try building obj using any custom build functions that have
             # been registered by Nengo DL

@@ -1,3 +1,7 @@
+"""
+Build classes for Nengo process operators.
+"""
+
 from collections import OrderedDict
 from distutils.version import LooseVersion
 import logging

@@ -1,3 +1,7 @@
+"""
+Utility objects used throughout the code base.
+"""
+
 from __future__ import print_function
 
 from functools import partial
@@ -348,6 +352,10 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
 
     @property
     def max_steps(self):
+        """
+        Alias for max_value to allow this to work with Nengo progress bar
+        interface.
+        """
         return self.max_value
 
     @max_steps.setter
@@ -388,9 +396,15 @@ class NullProgressBar(progressbar.NullBar):  # pylint: disable=too-many-ancestor
         super(NullProgressBar, self).__init__(max_value=max_value, **kwargs)
 
     def sub(self, *args, **kwargs):
+        """
+        Noop for creating a sub-progress bar.
+        """
         return self
 
     def step(self, **kwargs):
+        """
+        Noop for incrementing the progress bar.
+        """
         pass
 
 

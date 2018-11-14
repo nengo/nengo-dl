@@ -1,3 +1,7 @@
+"""
+Represents and manages the internal simulation signals.
+"""
+
 from collections import defaultdict, OrderedDict, Mapping
 import logging
 
@@ -10,7 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 class TensorSignal(object):
-    """Represents a tensor as an indexed view into a base array.
+    """
+    Represents a tensor as an indexed view into a base array.
 
     Parameters
     ----------
@@ -53,6 +58,9 @@ class TensorSignal(object):
 
     @property
     def indices(self):
+        """
+        The indices containing the data for this signal in the base array.
+        """
         return self._indices
 
     @indices.setter
@@ -61,6 +69,9 @@ class TensorSignal(object):
 
     @property
     def ndim(self):
+        """
+        The rank of this signal.
+        """
         return len(self.shape)
 
     def __repr__(self):
@@ -68,7 +79,8 @@ class TensorSignal(object):
             self.key, self.shape, self.label)
 
     def __getitem__(self, indices):
-        """Create a new TensorSignal representing a subset (slice or advanced
+        """
+        Create a new TensorSignal representing a subset (slice or advanced
         indexing) of the indices of this TensorSignal.
 
         Parameters
@@ -92,7 +104,8 @@ class TensorSignal(object):
             self.constant, label=self.label + ".slice")
 
     def reshape(self, shape):
-        """Create a new TensorSignal representing a reshaped view of the
+        """
+        Create a new TensorSignal representing a reshaped view of the
         same data in this TensorSignal (size of data must remain unchanged).
 
         Parameters
@@ -127,7 +140,8 @@ class TensorSignal(object):
             self.constant, label=self.label + ".reshape(%s)" % (shape,))
 
     def broadcast(self, axis, length):
-        """Add a new dimension by broadcasting this signal along ``axis``
+        """
+        Add a new dimension by broadcasting this signal along ``axis``
         for the given length.
 
         Parameters
@@ -165,6 +179,9 @@ class TensorSignal(object):
 
     @property
     def tf_shape(self):
+        """
+        A ``tf.Tensor`` representing the shape of this signal.
+        """
         if self._tf_shape is None:
             self._tf_shape = tf.constant(self.full_shape, dtype=tf.int32)
 
@@ -172,6 +189,9 @@ class TensorSignal(object):
 
     @property
     def tf_indices(self):
+        """
+        A ``tf.Tensor`` representing the indices of this signal.
+        """
         if self._tf_indices is None:
             self._tf_indices = self.constant(self.indices, dtype=tf.int32)
 
@@ -179,6 +199,13 @@ class TensorSignal(object):
 
     @property
     def tf_slice(self):
+        """
+        A tuple of ``tf.Tensors`` representing the ``(start, stop, stride)``
+        slice within the base array containing the data for this signal.
+
+        This can be used as a more efficient representation of
+        `.TensorSignal.tf_indices`.
+        """
         if self._tf_slice == -1:
             start = self.indices[0]
             stop = self.indices[-1] + 1
@@ -196,7 +223,7 @@ class TensorSignal(object):
 
     @property
     def full_shape(self):
-        """Shape including the minibatch dimension."""
+        """Shape of the signal including the minibatch dimension."""
 
         return (self.shape + (self.minibatch_size,) if self.minibatched else
                 self.shape)
@@ -209,7 +236,8 @@ class TensorSignal(object):
 
 
 class SignalDict(Mapping):
-    """Handles the mapping from `~nengo.builder.Signal` to ``tf.Tensor``.
+    """
+    Handles the mapping from `~nengo.builder.Signal` to ``tf.Tensor``.
 
     Takes care of gather/scatter logic to read/write signals within the base
     arrays.
@@ -237,7 +265,8 @@ class SignalDict(Mapping):
         self.write_types = defaultdict(int)
 
     def scatter(self, dst, val, mode="update"):
-        """Updates the base data corresponding to ``dst``.
+        """
+        Updates the base data corresponding to ``dst``.
 
         Parameters
         ----------
@@ -274,7 +303,29 @@ class SignalDict(Mapping):
         # write (note: this is only any reads that have happened since the
         # last write, since each write changes the base array object)
         with tf.control_dependencies(self.reads_by_base[self.bases[dst.key]]):
-            self.bases[dst.key] = self._scatter_f_var(dst, val, mode=mode)
+            var = self.bases[dst.key]
+
+            if (dst.tf_slice is not None and
+                    var.get_shape().is_compatible_with(val.get_shape()) and
+                    dst.indices[0] == 0 and
+                    dst.indices[-1] == var.get_shape()[0].value - 1 and
+                    len(dst.indices) == var.get_shape()[0]):
+                if mode == "inc":
+                    result = tf.assign_add(var, val, use_locking=False)
+                    self.write_types["assign_add"] += 1
+                else:
+                    result = tf.assign(var, val, use_locking=False)
+                    self.write_types["assign"] += 1
+            elif mode == "inc":
+                result = tf.scatter_add(var, dst.tf_indices, val,
+                                        use_locking=False)
+                self.write_types["scatter_add"] += 1
+            else:
+                result = tf.scatter_update(var, dst.tf_indices, val,
+                                           use_locking=False)
+                self.write_types["scatter_update"] += 1
+
+            self.bases[dst.key] = result
 
         # update reads_by_base. the general workflow is
         # gather -> computation -> scatter
@@ -288,44 +339,9 @@ class SignalDict(Mapping):
 
         logger.debug("new dst base %s", self.bases[dst.key])
 
-    def _scatter_f_var(self, dst, src, mode="update"):
-        # create a temporary variable for dst so that we can use the sparse
-        # variable updates. despite this looking incredibly inefficient, it is
-        # actually faster than the scatter_nd approach
-        # from tensorflow.python.ops import gen_state_ops
-        # var = gen_state_ops._temporary_variable(
-        #     self.bases[dst.key].get_shape(), self.bases[dst.key].dtype)
-        # var_name = var.op.name
-        # var = tf.assign(var, self.bases[dst.key])
-
-        var = self.bases[dst.key]
-
-        if (dst.tf_slice is not None and
-                var.get_shape().is_compatible_with(src.get_shape()) and
-                dst.indices[0] == 0 and
-                dst.indices[-1] == var.get_shape()[0].value - 1 and
-                len(dst.indices) == var.get_shape()[0]):
-            if mode == "inc":
-                result = tf.assign_add(var, src, use_locking=False)
-                self.write_types["assign_add"] += 1
-            else:
-                result = tf.assign(var, src, use_locking=False)
-                self.write_types["assign"] += 1
-        elif mode == "inc":
-            result = tf.scatter_add(var, dst.tf_indices, src,
-                                    use_locking=False)
-            self.write_types["scatter_add"] += 1
-        else:
-            result = tf.scatter_update(var, dst.tf_indices, src,
-                                       use_locking=False)
-            self.write_types["scatter_update"] += 1
-
-        # result = gen_state_ops._destroy_temporary_variable(var, var_name)
-
-        return result
-
     def gather(self, src, force_copy=False):
-        """Fetches the data corresponding to ``src`` from the base array.
+        """
+        Fetches the data corresponding to ``src`` from the base array.
 
         Parameters
         ----------
@@ -380,7 +396,8 @@ class SignalDict(Mapping):
         return result
 
     def mark_gather(self, src):
-        """Marks ``src`` as being gathered, but doesn't actually perform a
+        """
+        Marks ``src`` as being gathered, but doesn't actually perform a
         gather.  Used to indicate that some computation relies on ``src``.
 
         Parameters
@@ -392,7 +409,8 @@ class SignalDict(Mapping):
         self.gather_bases += [self.bases[src.key]]
 
     def combine(self, sigs, label="Combine"):
-        """Combines several TensorSignals into one by concatenating along
+        """
+        Combines several TensorSignals into one by concatenating along
         the first axis.
 
         Parameters
@@ -437,6 +455,26 @@ class SignalDict(Mapping):
         return output
 
     def make_internal(self, name, shape, minibatched=True):
+        """
+        Creates a variable to represent an internal simulation signal.
+
+        This is to handle the case where we want to add a signal that is
+        not represented as a `nengo.builder.Signal` in the Nengo op graph.
+
+        Parameters
+        ----------
+        name : str
+            Name for the signal/variable.
+        shape : tuple of int
+            Shape of the signal/variable.
+        minibatched : bool
+            Whether or not this signal contains a minibatch dimension.
+
+        Returns
+        -------
+        sig : `.TensorSignal`
+            A TensorSignal representing the newly created variable.
+        """
         sig = self.get_tensor_signal(
             np.arange(shape[0]), object(), self.dtype, shape,
             minibatched, label=name)
