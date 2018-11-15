@@ -2,12 +2,14 @@
 Build classes for Nengo learning rule operators.
 """
 
+from distutils.version import LooseVersion
+
 from nengo import Lowpass
 from nengo.builder import Signal
 from nengo.builder.learning_rules import SimBCM, SimOja, SimVoja, get_post_ens
 from nengo.builder.operator import Operator, Reset, DotInc, Copy
 from nengo.learning_rules import PES
-from nengo.version import version_info as nengo_version
+from nengo.version import version as nengo_version
 import numpy as np
 import tensorflow as tf
 
@@ -232,7 +234,7 @@ def build_pes(model, pes, rule):
     model.add_op(Reset(error))
     model.sig[rule]['in'] = error  # error connection will attach here
 
-    if nengo_version < (2, 7, 1):
+    if LooseVersion(nengo_version) < "2.7.1":
         acts = model.build(
             Lowpass(pes.pre_tau), model.sig[conn.pre_obj]["out"])
     else:

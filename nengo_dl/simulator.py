@@ -8,6 +8,7 @@ from __future__ import print_function, division
 
 import collections
 import datetime
+from distutils.version import LooseVersion
 import logging
 import os
 import tempfile
@@ -15,7 +16,7 @@ import time
 import warnings
 
 from nengo import Ensemble, Connection, Probe, Network, Direct, Node
-from nengo import version as nengo_version
+from nengo.version import version as nengo_version
 from nengo.builder import Model
 from nengo.builder.connection import BuiltConnection
 from nengo.builder.ensemble import BuiltEnsemble
@@ -144,7 +145,7 @@ class Simulator(object):
             self.model = model
 
         if network is not None:
-            if nengo_version.version_info < (2, 7, 1):
+            if LooseVersion(nengo_version) < "2.7.1":
                 print("Building network")
                 start = time.time()
                 self.model.build(network, progress_bar=None)

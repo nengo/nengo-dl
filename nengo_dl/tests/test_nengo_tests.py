@@ -1,5 +1,6 @@
 # pylint: disable=missing-docstring
 
+from distutils.version import LooseVersion
 import pkg_resources
 
 import nengo
@@ -75,7 +76,7 @@ def test_signal_init_values(Simulator):
 
 
 def test_entry_point():
-    if tf.__version__ == "1.11.0":
+    if LooseVersion(tf.__version__) == "1.11.0":
         pytest.xfail("TensorFlow 1.11.0 has conflicting dependencies")
 
     sims = [ep.load(require=False) for ep in
