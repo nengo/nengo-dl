@@ -8,7 +8,7 @@ import numpy as np
 from nengo_dl import builder, tensor_graph, signals, configure_settings
 
 
-class Signal(object):
+class Signal:
     """
     Mock-up for `nengo.builder.Signal`.
     """
@@ -43,7 +43,7 @@ class Signal(object):
         return "DummySignal(%s)" % self.name
 
 
-class Op(object):
+class Op:
     """
     Mock-up for `nengo.builder.Operator`.
     """
@@ -100,7 +100,7 @@ class Probe(nengo.Probe):
             nengo.Probe.target.data[self] = target
 
 
-class Simulator(object):
+class Simulator:
     """
     Mock-up for `nengo.Simulator`.
     """

@@ -17,7 +17,7 @@ import tensorflow as tf
 logger = logging.getLogger(__name__)
 
 
-class Builder(object):
+class Builder:
     """Manages the operator build classes known to the ``nengo_dl``
     build process."""
 
@@ -135,7 +135,7 @@ class BuildConfig(namedtuple("BuildConfig", (
     __slots__ = ()
 
 
-class OpBuilder(object):  # pragma: no cover
+class OpBuilder:  # pragma: no cover
     """
     The constructor should set up any computations that are fixed for
     this op (i.e., things that do not need to be recomputed each timestep).

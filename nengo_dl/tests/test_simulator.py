@@ -1163,7 +1163,7 @@ def test_progress_bar(Simulator, progress):
 def test_extra_feeds(Simulator):
     # set up a tensornode that will fail unless a value is fed in for the
     # placeholder
-    class NodeFunc(object):
+    class NodeFunc:
         def pre_build(self, *_):
             self.ph = tf.placeholder_with_default(False, ())
 

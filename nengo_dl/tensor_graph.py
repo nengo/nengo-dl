@@ -40,7 +40,7 @@ def with_self(wrapped, instance, args, kwargs):
         return wrapped(*args, **kwargs)
 
 
-class TensorGraph(object):
+class TensorGraph:
     """
     Manages the construction of the TensorFlow symbolic computation graph.
 

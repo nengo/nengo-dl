@@ -25,7 +25,7 @@ def test_warn_on_opensim_del(Simulator):
 
 
 def test_args(Simulator):
-    class Fn(object):
+    class Fn:
         def __init__(self):
             self.last_x = None
 

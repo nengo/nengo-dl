@@ -46,7 +46,7 @@ else:
 logger = logging.getLogger(__name__)
 
 
-class Simulator(object):
+class Simulator:
     """
     Simulate network using the ``nengo_dl`` backend.
 

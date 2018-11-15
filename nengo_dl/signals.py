@@ -13,7 +13,7 @@ import tensorflow as tf
 logger = logging.getLogger(__name__)
 
 
-class TensorSignal(object):
+class TensorSignal:
     """
     Represents a tensor as an indexed view into a base array.
 

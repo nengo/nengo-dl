@@ -8,7 +8,7 @@ from nengo_dl.tests import dummies
 
 
 def test_custom_builder():
-    class TestOp(object):
+    class TestOp:
         sets = None
         incs = None
         reads = None
