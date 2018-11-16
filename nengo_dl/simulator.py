@@ -17,7 +17,6 @@ import warnings
 
 from nengo import Ensemble, Connection, Probe, Network, Direct, Node
 from nengo.version import version as nengo_version
-from nengo.builder import Model
 from nengo.builder.connection import BuiltConnection
 from nengo.builder.ensemble import BuiltEnsemble
 from nengo.ensemble import Neurons
@@ -32,7 +31,7 @@ from tensorflow.python.client.timeline import Timeline
 from tensorflow.python.ops import gradient_checker
 
 from nengo_dl import utils, config
-from nengo_dl.builder import NengoBuilder
+from nengo_dl.builder import NengoBuilder, NengoModel
 from nengo_dl.tensor_graph import TensorGraph
 
 logger = logging.getLogger(__name__)
@@ -136,8 +135,9 @@ class Simulator(object):
 
         # build model (uses default nengo builder)
         if model is None:
-            self.model = Model(dt=float(dt), label="%s, dt=%f" % (network, dt),
-                               builder=NengoBuilder())
+            self.model = NengoModel(
+                dt=float(dt), label="%s, dt=%f" % (network, dt),
+                builder=NengoBuilder(), fail_fast=False)
         else:
             if dt != model.dt:
                 warnings.warn("Model dt (%g) does not match Simulator "

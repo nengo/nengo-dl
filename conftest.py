@@ -37,9 +37,9 @@ def pytest_addoption(parser):
 
 
 def pytest_namespace():
-    installed_dists = [d.project_name for d in pkg_resources.working_set]
-    return {"gpu_installed": ("tensorflow-gpu" in installed_dists or
-                              "tf-nightly-gpu" in installed_dists)}
+    gpu_dists = [d for d in pkg_resources.working_set
+                 if d.project_name in ("tensorflow-gpu", "tf-nightly-gpu")]
+    return {"gpu_installed": len(gpu_dists) > 0}
 
 
 @pytest.fixture(scope="session")

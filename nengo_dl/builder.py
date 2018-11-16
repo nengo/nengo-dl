@@ -9,7 +9,9 @@ import logging
 import warnings
 
 from nengo import builder
+from nengo.builder import signal
 from nengo.exceptions import BuildError
+import numpy as np
 import tensorflow as tf
 
 logger = logging.getLogger(__name__)
@@ -236,3 +238,46 @@ class NengoBuilder(builder.Builder):
             # fallback on normal nengo builder
             return builder.Builder.build.__func__(
                 builder.Builder, model, obj, *args, **kwargs)
+
+
+class NengoModel(builder.Model):
+    """
+    Copy of the default Nengo model.
+
+    This allows us to override certain model behaviours.
+
+    Parameters
+    ----------
+    fail_fast : bool
+        If True, try to call ``op.make_step`` when ops are added to the model.
+        Note that NengoDL doesn't actually use ``make_step``, so errors in that
+        function are not necessarily errors in NengoDL (which is why we want to
+        disable that check). But it might still be useful when debugging
+        new op/build functions, which is why we leave the option.
+    """
+
+    def __init__(self, *args, fail_fast=True, **kwargs):
+        self.fail_fast = fail_fast
+        super(NengoModel, self).__init__(*args, **kwargs)
+
+    def add_op(self, op):
+        """
+        Add an operator to the model.
+
+        Parameters
+        ----------
+        op : `~nengo.builder.Operator`
+            Operator being added to the model.
+
+        Notes
+        -----
+        This is a copy of the parent `nengo.builder.Model.add_op`, with the
+        addition of the ``if self.fail_fast`` condition.
+        """
+
+        self.operators.append(op)
+        if self.fail_fast:
+            # Fail fast by trying make_step with a temporary sigdict
+            signals = signal.SignalDict()
+            op.init_signals(signals)
+            op.make_step(signals, self.dt, np.random)

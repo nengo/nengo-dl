@@ -68,6 +68,14 @@ class Op(object):
         rep += ")"
         return rep
 
+    def make_step(self, *args):
+        """Raises an error (since this shouldn't be called)."""
+        raise NotImplementedError()
+
+    def init_signals(self, *args):
+        """Raises an error (since this shouldn't be called)."""
+        raise NotImplementedError()
+
 
 @builder.Builder.register(Op)
 class Builder(builder.OpBuilder):

@@ -3,7 +3,8 @@
 from nengo.exceptions import BuildError
 import pytest
 
-from nengo_dl.builder import Builder, OpBuilder
+from nengo_dl.builder import Builder, OpBuilder, NengoModel
+from nengo_dl.tests import dummies
 
 
 def test_custom_builder():
@@ -60,3 +61,15 @@ def test_custom_builder():
 
     op_builds[ops].build_post(None, None, None, None)
     assert op_builds[ops].post_built
+
+
+@pytest.mark.parametrize("fail_fast", (True, False))
+def test_custom_model(fail_fast):
+    model = NengoModel(fail_fast=fail_fast)
+
+    try:
+        model.add_op(dummies.Op())
+    except NotImplementedError:
+        assert fail_fast
+    else:
+        assert not fail_fast
