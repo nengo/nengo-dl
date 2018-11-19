@@ -578,8 +578,8 @@ class Simulator:
         progress = (
             utils.ProgressBar(
                 "Training", max_value=(
-                        n_epochs * (batch_size // self.minibatch_size) *
-                        (1 if truncation is None else n_steps // truncation)),
+                    n_epochs * (batch_size // self.minibatch_size) *
+                    (1 if truncation is None else n_steps // truncation)),
                 vars=["loss"]) if progress_bar else utils.NullProgressBar())
 
         objective_probes = tuple(objective.keys())

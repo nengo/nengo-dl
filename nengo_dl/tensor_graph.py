@@ -345,8 +345,9 @@ class TensorGraph:
 
         def loop_body(step, stop, loop_i, probe_arrays, base_vars):
             self.signals.bases = OrderedDict(
-                [(k, v) for k, v in zip(itertools.chain(
-                    self.base_vars.keys(), self.signals.internal_vars.keys()),
+                [(k, v) for k, v in zip(
+                    itertools.chain(self.base_vars.keys(),
+                                    self.signals.internal_vars.keys()),
                     base_vars)])
 
             for iter in progress(range(self.unroll)):

@@ -53,7 +53,7 @@ class GenericNeuronBuilder(OpBuilder):
                 op_states = []
                 for j, s in enumerate(op.states):
                     op_states += [states[j][state_offset[j]:
-                                  state_offset[j] + s.shape[0]]]
+                                            state_offset[j] + s.shape[0]]]
                     state_offset[j] += s.shape[0]
 
                 # call step_math function
