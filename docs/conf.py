@@ -53,7 +53,7 @@ authors = u"Applied Brain Research"
 copyright = nengo_dl.__copyright__
 # version = ".".join(nengo_dl.__version__.split(".")[:2])  # Short X.Y version
 release = nengo_dl.__version__  # Full version, with tags
-pygments_style = "default"
+pygments_style = "friendly"
 
 # -- Options for HTML output --------------------------------------------------
 
