@@ -344,11 +344,13 @@ class TensorGraph:
             return step < stop
 
         def loop_body(step, stop, loop_i, probe_arrays, base_vars):
-            self.signals.bases = OrderedDict(
-                [(k, v) for k, v in zip(
-                    itertools.chain(self.base_vars.keys(),
-                                    self.signals.internal_vars.keys()),
-                    base_vars)])
+            # fill in signals.bases (note: we need to do this here because we
+            # need to use the versions of the base vars from inside the
+            # loop, not the static variables in self.base_vars)
+            assert len(self.signals.bases) == 0
+            for i, key in enumerate(itertools.chain(
+                    self.base_vars.keys(), self.signals.internal_vars.keys())):
+                self.signals.bases[key] = base_vars[i]
 
             for iter in progress(range(self.unroll)):
                 logger.debug("BUILDING ITERATION %d", iter)

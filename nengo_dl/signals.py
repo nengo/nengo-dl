@@ -254,7 +254,7 @@ class SignalDict(Mapping):
         self.dtype = dtype
         self.minibatch_size = minibatch_size
         self.sig_map = {}
-        self.bases = None
+        self.bases = OrderedDict()  # will be filled in tensor_graph.build_loop
         self.reads_by_base = defaultdict(list)
         self.gather_bases = []
         self.internal_vars = OrderedDict()

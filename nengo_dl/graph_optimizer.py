@@ -334,7 +334,7 @@ def transitive_planner(op_list):
     dg = operator_dependency_graph(op_list)
     op_codes = {op: np.uint32(i) for i, op in enumerate(op_list)}
     dg = {op_codes[k]: set(op_codes[x] for x in v) for k, v in dg.items()}
-    op_codes = None  # so it will get garbage collected
+    op_codes = {}  # so it will get garbage collected
     dg = BidirectionalDAG(dg)
 
     # fail fast here if the op graph has cycles
