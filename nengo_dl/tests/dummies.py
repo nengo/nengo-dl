@@ -105,7 +105,7 @@ class Simulator:
     Mock-up for `nengo.Simulator`.
     """
     model = nengo.builder.Model()
-    model.sig = defaultdict(lambda: defaultdict(lambda: Signal()))
+    model.sig = defaultdict(lambda: defaultdict(Signal))
 
 
 class TensorGraph(tensor_graph.TensorGraph):

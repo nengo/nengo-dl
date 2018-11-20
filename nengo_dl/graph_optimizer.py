@@ -130,7 +130,7 @@ def greedy_planner(operators):
             raise BuildError("Cycle detected during graph optimization")
 
         # pick the group that has the largest number of available ops
-        groups = sorted(groups, key=lambda x: len(x))
+        groups = sorted(groups, key=len)
         chosen = groups[-1]
         groups = groups[:-1]
 
