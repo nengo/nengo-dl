@@ -1,8 +1,6 @@
 import errno
 import os
 
-import nengo_sphinx_theme
-
 import nengo_dl
 
 extensions = [
