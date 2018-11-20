@@ -18,6 +18,8 @@ env:
     - TF_VERSION="tensorflow"
     - NENGO_VERSION="nengo"
     - TEST_ARGS=""
+    - PIP_UPGRADE="true"  # always upgrade to latest version
+    - PIP_UPGRADE_STRATEGY="eager"
 
 jobs:
   include:
@@ -34,6 +36,7 @@ jobs:
          TF_VERSION="tensorflow==1.4.0"
          NUMPY_VERSION="numpy==1.12.1"
          PYTHON_VERSION="3.4"
+         PIP_UPGRADE_STRATEGY="only-if-needed"
   - env: TEST_ARGS="--dtype float64 --simulator-only"
   - env: TEST_ARGS="--unroll_simulation 5 --simulator-only"
   - env: TEST_ARGS="--inference-only --simulator-only"
@@ -77,7 +80,6 @@ before_install:
 # install python requirements
 install:
   - source activate test
-  - export PIP_UPGRADE=true  # always upgrade to latest version
   - pip install pip
   # note: we install packages in reverse dependency order, so that we can be
   # sure we end up with the version we specify (and not the version specified
