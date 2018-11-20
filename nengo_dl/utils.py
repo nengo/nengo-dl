@@ -4,7 +4,6 @@ Utility objects used throughout the code base.
 
 from __future__ import print_function
 
-from functools import partial
 import logging
 import re
 import sys
@@ -343,10 +342,9 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
         if self.sub_bar is not None and self.sub_bar.finished is False:
             self.sub_bar.finish()
 
-        self.sub_bar = ProgressBar(
+        self.sub_bar = SubProgressBar(
             present="%s: %s" % (self.present, msg) if msg else self.present,
             **kwargs)
-        self.sub_bar.finish = partial(self.sub_bar.finish, end="\r")
 
         return self.sub_bar
 
@@ -381,7 +379,15 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
             self.finish()
             raise
 
-    next = __next__  # for python 2.x
+
+class SubProgressBar(ProgressBar):  # pylint: disable=too-many-ancestors
+    """
+    A progress bar representing a sub-task within an overall progress bar.
+    """
+
+    def finish(self):
+        """Finishing a sub-progress bar doesn't start a new line."""
+        super(SubProgressBar, self).finish(end="\r")
 
 
 class NullProgressBar(progressbar.NullBar):  # pylint: disable=too-many-ancestors
