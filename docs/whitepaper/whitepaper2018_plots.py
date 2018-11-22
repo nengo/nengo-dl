@@ -385,38 +385,44 @@ def spiking_mnist(ctx, n_epochs):
     load = ctx.obj["load"]
     reps = ctx.obj["reps"]
 
-    def build_network(neuron_type, ens_params):
-        with nengo.Network() as net:
-            nengo_dl.configure_settings(trainable=False)
+    neuron_type = nengo.LIF(amplitude=0.01)
+    ens_params = dict(max_rates=nengo.dists.Choice([100]),
+             intercepts=nengo.dists.Choice([0]))
+    minibatch_size = 200
+    n_steps = 50
 
-            inp = nengo.Node([0] * 28 * 28)
+    with nengo.Network() as net:
+        nengo_dl.configure_settings(trainable=False)
 
-            x = nengo_dl.tensor_layer(
-                inp, tf.layers.conv2d, shape_in=(28, 28, 1), filters=32,
-                kernel_size=3)
-            x = nengo_dl.tensor_layer(x, neuron_type, **ens_params)
+        inp = nengo.Node([0] * 28 * 28)
 
-            x = nengo_dl.tensor_layer(
-                x, tf.layers.conv2d, shape_in=(26, 26, 32),
-                filters=64, kernel_size=3)
-            x = nengo_dl.tensor_layer(x, neuron_type, **ens_params)
+        x = nengo_dl.tensor_layer(
+            inp, tf.layers.conv2d, shape_in=(28, 28, 1), filters=32,
+            kernel_size=3)
+        x = nengo_dl.tensor_layer(x, neuron_type, **ens_params)
 
-            x = nengo_dl.tensor_layer(
-                x, tf.layers.average_pooling2d, shape_in=(24, 24, 64),
-                pool_size=2, strides=2)
+        x = nengo_dl.tensor_layer(
+            x, tf.layers.conv2d, shape_in=(26, 26, 32),
+            filters=64, kernel_size=3)
+        x = nengo_dl.tensor_layer(x, neuron_type, **ens_params)
 
-            x = nengo_dl.tensor_layer(
-                x, tf.layers.conv2d, shape_in=(12, 12, 64),
-                filters=128, kernel_size=3)
-            x = nengo_dl.tensor_layer(x, neuron_type, **ens_params)
+        x = nengo_dl.tensor_layer(
+            x, tf.layers.average_pooling2d, shape_in=(24, 24, 64),
+            pool_size=2, strides=2)
 
-            x = nengo_dl.tensor_layer(
-                x, tf.layers.average_pooling2d, shape_in=(10, 10, 128),
-                pool_size=2, strides=2)
+        x = nengo_dl.tensor_layer(
+            x, tf.layers.conv2d, shape_in=(12, 12, 64),
+            filters=128, kernel_size=3)
+        x = nengo_dl.tensor_layer(x, neuron_type, **ens_params)
 
-            x = nengo_dl.tensor_layer(x, tf.layers.dense, units=10)
+        x = nengo_dl.tensor_layer(
+            x, tf.layers.average_pooling2d, shape_in=(10, 10, 128),
+            pool_size=2, strides=2)
 
-        return net, inp, x
+        out = nengo_dl.tensor_layer(x, tf.layers.dense, units=10)
+
+        out_p = nengo.Probe(out)
+        spk_out_p = nengo.Probe(out, synapse=0.1)
 
     if load:
         with open("spiking_mnist_data_saved.pkl", "rb") as f:
@@ -435,34 +441,12 @@ def spiking_mnist(ctx, n_epochs):
         one_hot[np.arange(data[0].shape[0]), data[1]] = 1
         data[1] = one_hot
 
-    minibatch_size = 200
-
-    # construct the rate network
-    net, inp, out = build_network(
-        nengo.LIFRate(amplitude=0.01),
-        dict(max_rates=nengo.dists.Choice([100]),
-             intercepts=nengo.dists.Choice([0]))
-    )
-    with net:
-        out_p = nengo.Probe(out)
-
     train_data = {inp: train_data[0][:, None, :],
                   out_p: train_data[1][:, None, :]}
     test_data = {inp: test_data[0][:, None, :],
                  out_p: test_data[1][:, None, :]}
-
-    # construct the spiking network
-    spk_net, spk_inp, spk_out = build_network(
-        nengo.LIF(amplitude=0.01),
-        dict(max_rates=nengo.dists.Choice([100]),
-             intercepts=nengo.dists.Choice([0]))
-    )
-    with spk_net:
-        spk_out_p = nengo.Probe(spk_out, synapse=0.1)
-
-    n_steps = 50
     test_data_time = {
-        spk_inp: np.tile(test_data[inp], (1, n_steps, 1)),
+        inp: np.tile(test_data[inp], (1, n_steps, 1)),
         spk_out_p: np.tile(test_data[out_p], (1, n_steps, 1))}
 
     for _ in range(reps):
@@ -480,27 +464,24 @@ def spiking_mnist(ctx, n_epochs):
                                          tf.argmax(targets[:, -1], axis=-1)),
                             tf.float32))
 
+            # collect error before training
             results["pre"].append(sim.loss(
-                test_data, {out_p: classification_error}))
+                test_data, {out_p: classification_error}, training=True))
             print("error before training: %.2f%%" % results["pre"][-1])
 
             # run training
             sim.train(train_data, opt, objective={out_p: objective},
                       n_epochs=n_epochs)
 
-            # save the parameters to file
-            sim.save_params("./mnist_params")
-
+            # collect error after training
             results["post"].append(sim.loss(
-                test_data, {out_p: classification_error}))
+                test_data, {out_p: classification_error}, training=True))
             print("error after training: %.2f%%" % results["post"][-1])
 
-        with nengo_dl.Simulator(spk_net, minibatch_size=minibatch_size,
-                                unroll_simulation=10) as sim:
-            sim.load_params("./mnist_params")
-
+            # collect spiking error
             results["spiking"].append(sim.loss(
-                test_data_time, {spk_out_p: classification_error}))
+                test_data_time, {spk_out_p: classification_error},
+                training=False))
             print("spiking neuron error: %.2f%%" % results["spiking"][-1])
 
         with open("spiking_mnist_data.pkl", "wb") as f:
