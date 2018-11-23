@@ -97,6 +97,11 @@ Release History
   (`#69 <https://github.com/nengo/nengo-dl/pull/69>`_)
 - Moved op-specific merge logic into the ``OpBuilder`` classes.
 
+**Fixed**
+
+- Ensure that training step is always updated before TensorBoard events are
+  added (previously it could update before or after depending on the platform).
+
 **Deprecated**
 
 - The ``sim.run`` ``input_feeds`` argument has been renamed to ``data`` (for

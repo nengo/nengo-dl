@@ -557,9 +557,6 @@ class Simulator:
 
         extra_fetches = dict()
 
-        # get training step
-        extra_fetches["training_step"] = self.tensor_graph.training_step
-
         # add summaries
         if summaries is not None:
             if self.summary is None:
@@ -594,8 +591,10 @@ class Simulator:
 
             # export summaries to tensorboard
             if "summaries" in extra_vals:
+                # note: the first output value is the new value of the
+                # global training_step
                 self.summary.add_summary(extra_vals["summaries"],
-                                         extra_vals["training_step"])
+                                         out_vals[objective_probes][0])
 
         # run training
         with progress:

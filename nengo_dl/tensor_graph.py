@@ -550,6 +550,11 @@ class TensorGraph:
                 zip(grads, tf.trainable_variables()),
                 global_step=self.training_step)
 
+            # this is the op that increments the global step. we set it to
+            # be the output value of that op, rather than the op itself, so
+            # that it returns the global step value.
+            opt_op = opt_op.outputs[0]
+
             return opt_op, loss
 
         self.optimizers[key] = apply_optimizer
