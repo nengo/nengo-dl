@@ -411,7 +411,6 @@ class NullProgressBar(progressbar.NullBar):  # pylint: disable=too-many-ancestor
         """
         Noop for incrementing the progress bar.
         """
-        pass
 
 
 def minibatch_generator(data, minibatch_size, shuffle=True,

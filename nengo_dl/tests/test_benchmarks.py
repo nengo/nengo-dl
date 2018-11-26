@@ -106,7 +106,7 @@ def test_run_profile(train, pytestconfig):
         dtype=(tf.float32 if pytest.config.getvalue("dtype") == "float32" else
                tf.float64))
 
-    assert net.config[net].inference_only == (False if train else True)
+    assert net.config[net].inference_only == (not train)
 
 
 def test_cli():

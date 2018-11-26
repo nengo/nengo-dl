@@ -202,7 +202,6 @@ class OpBuilder:  # pragma: no cover
         rng : `~numpy.random.RandomState`
             Seeded random number generator
         """
-        pass
 
     @staticmethod
     def mergeable(x, y):

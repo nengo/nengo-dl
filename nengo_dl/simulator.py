@@ -41,7 +41,6 @@ else:
     # using a version of Nengo before Convolution was added
     class Convolution:
         """Dummy convolution class."""
-        pass
 
 logger = logging.getLogger(__name__)
 

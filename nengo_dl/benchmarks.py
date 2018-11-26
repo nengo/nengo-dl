@@ -408,7 +408,6 @@ def run_profile(net, train=False, n_steps=150, do_profile=True, **kwargs):
 @click.group(chain=True)
 def main():
     """Command-line interface for benchmarks."""
-    pass
 
 
 @main.command()
