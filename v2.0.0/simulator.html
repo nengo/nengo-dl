@@ -1,0 +1,509 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>NengoDL Simulator &#8212; NengoDL documentation</title>
+    <link rel="stylesheet" href="_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+    <link rel="stylesheet" href="_static/css/normalize.css" type="text/css" />
+    <link rel="stylesheet" href="_static/css/bootstrap.css" type="text/css" />
+    <link rel="stylesheet" href="_static/css/mmenu.all.css" type="text/css" />
+    <link rel="stylesheet" href="_static/css/components.css" type="text/css" />
+    <link rel="stylesheet" href="_static/css/nengo.css" type="text/css" />
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<!--[if lte IE 9]><script src="https://cdnjs.cloudflare.com/ajax/libs/placeholders/3.0.2/placeholders.min.js"></script><![endif]-->
+<script type="text/javascript" src="https://cdn.crate.io/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="_static/js/modernizr.js"></script>
+    <script type="text/javascript" src="_static/js/underscore.min.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/js/searchtools.js"></script>
+    <script type="text/javascript" src="_static/js/webflow.js"></script>
+    <script type="text/javascript" src="_static/js/bootstrap.js"></script>
+    <script type="text/javascript" src="_static/js/mmenu.all.min.js"></script>
+    <script type="text/javascript" src="_static/js/fontawesome.js"></script>
+    <script type="text/javascript" src="_static/js/custom.js"></script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Optimizing a NengoDL model" href="training.html" />
+    <link rel="prev" title="User guide" href="user-guide.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+  </head><body>
+<header class="header-nav">
+  <div class="container">
+    <div class="navbar w-nav" data-animation="default" data-collapse="small" data-contain="1" data-duration="400">
+      <a class="brand w-nav-brand" href="https://www.nengo.ai/">
+        <img src="https://www.nengo.ai/design/_images/full-light.svg" width="120">
+      </a>
+      <nav class="w-nav-menu main-nav" role="navigation">
+        <div class="dropdownBackground">
+          <span class="arrow"></span>
+        </div>
+        <ul id="menu-top-navigation" class="menu">
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/overview.html">Overview</a>
+            <ul class="sub-menu">
+                <li class="menu-item"><a href="https://www.nengo.ai/quickstart.html">Quick Start</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/documentation.html">Documentation</a>
+            <table class="sub-menu">
+              <tr>
+                <td class="menu-heading">Core</td>
+                <td class="menu-heading">Backends</td>
+                <td class="menu-heading">Add-ons</td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo">Nengo</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-fpga">Nengo FPGA</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-examples">Nengo Examples</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-dl/">Nengo DL</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-loihi">Nengo Loihi</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-extras/">Nengo Extras</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-gui">Nengo GUI</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-mpi">Nengo MPI</a></td>
+                <td class="menu-item"><a href="https://arvoelke.github.io/nengolib-docs/">Nengo Lib</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-spa/">Nengo SPA</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-ocl">Nengo OpenCL</a></td>
+                <td class="menu-item"></td>
+              </tr>
+              <tr>
+                <td class="menu-item"></td>
+                <td class="menu-item"><a href="https://github.com/project-rig/nengo_spinnaker">Nengo SpiNNaker</a></td>
+                <td class="menu-item"></td>
+              </tr>
+            </table>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/community.html">Community</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://forum.nengo.ai/">Forum</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/publications.html">Publications</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/summerschool.html">Summer School</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/videos.html">Videos</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/people.html">People</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/projects.html">Development</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/contributing.html">Contributor Guide</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/projects.html">Ecosystem</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/README.html">About</a></li>
+          <li class="btn-link w-nav-link menu-item"><a href="https://www.nengo.ai/download.html">Download</a></li>
+        </ul>
+      </nav>
+
+      <div id="mobile-nav" class="mm-menu">
+        <ul class="offcanvas-menu">
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/overview.html">Overview</a></li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/documentation.html">Documentation</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/quickstart.html">Quick Start</a></li>
+              <li class="menu-item"><a href="http://www.nengo.ai/nengo">NengoCore</a></li>
+              <li class="menu-item"><a href="https://github.com/nengo/nengo-gui#nengo-gui">NengoGUI</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/community.html">Community</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://forum.nengo.ai/">Forum</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/summerschool.html">Summer School</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/people.html">People</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/projects.html">Development</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/contributing.html">Contributor Guide</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/projects.html">Ecosystem</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/README.html">About</a></li>
+          <li class="btn-link w-nav-link menu-item"><a href="https://www.nengo.ai/download.html">Download</a></li>
+        </ul>
+      </div>
+
+      <a href="#mobile-nav" class="fa fa-bars mobile-nav-button"></a>
+    </div>
+  </div>
+</header>
+
+<div class="w-section section border-top">
+  <div class="container">
+    <div class="row" id="simulator">
+      <div class="col-md-4 col-lg-3">
+        <aside class="wrapper-navleft"><div role="complementary" class="bs-docs-sidebar hidden-print" id="nav-affix">
+  <ul class="bs-docs-sidenav bs-sidenav nav" role="complementary">
+
+    
+
+    
+      
+<a href="index.html">
+  <img class="logo" src="_static/logo.png" alt="NengoDL" width="120" />
+</a>
+<ul class="toctree nav nav-list">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="user-guide.html">User guide</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">NengoDL Simulator</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#simulator-arguments">Simulator arguments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#simulator-run-arguments">Simulator.run arguments</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="training.html">Optimizing a NengoDL model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tensor-node.html">TensorNodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html">Configuration options</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a></li>
+</ul>
+
+</ul>
+    
+
+    
+      
+      
+    
+
+    
+    
+
+  </ul>
+</div>
+          
+        </aside>
+      </div>
+      <div class="col-md-8 col-lg-9">
+        <div class="wrapper-content-right">
+          
+<div class="version-select-container">
+    <div data-delay="0" class="w-dropdown">
+        <div class="w-dropdown-toggle toggle">
+            <div class="toggle-text">v2.0.0</div>
+            <div class="w-icon-dropdown-toggle toggle-icon"></div>
+        </div>
+        <nav class="w-dropdown-list dropdown-list">
+            
+            
+                <a href="../simulator.html" class="w-dropdown-link">latest</a>
+            
+
+            
+                
+                <div class="w-dropdown-link">v2.0.0</div>
+                
+            
+                
+                    <a href="../v1.2.1/simulator.html" class="w-dropdown-link">v1.2.1</a>
+                
+            
+                
+                    <a href="../v1.2.0/simulator.html" class="w-dropdown-link">v1.2.0</a>
+                
+            
+                
+                    <a href="../v1.1.0/simulator.html" class="w-dropdown-link">v1.1.0</a>
+                
+            
+                
+                    <a href="../v1.0.0/simulator.html" class="w-dropdown-link">v1.0.0</a>
+                
+            
+                
+                    <a href="../v0.6.2/simulator.html" class="w-dropdown-link">v0.6.2</a>
+                
+            
+                
+                    <a href="../v0.6.1/simulator.html" class="w-dropdown-link">v0.6.1</a>
+                
+            
+                
+                    <a href="../v0.6.0/simulator.html" class="w-dropdown-link">v0.6.0</a>
+                
+            
+                
+                    <a href="../v0.5.2/simulator.html" class="w-dropdown-link">v0.5.2</a>
+                
+            
+                
+                    <a href="../v0.5.1/simulator.html" class="w-dropdown-link">v0.5.1</a>
+                
+            
+                
+                    <a href="../v0.5.0/simulator.html" class="w-dropdown-link">v0.5.0</a>
+                
+            
+                
+                    <a href="../v0.4.0/simulator.html" class="w-dropdown-link">v0.4.0</a>
+                
+            
+                
+                    <a href="../v0.3.1/simulator.html" class="w-dropdown-link">v0.3.1</a>
+                
+            
+                
+                    <a href="../v0.3.0/simulator.html" class="w-dropdown-link">v0.3.0</a>
+                
+            
+                
+                    <a href="../v0.2.0/simulator.html" class="w-dropdown-link">v0.2.0</a>
+                
+            
+        </nav>
+    </div>
+</div>
+
+          
+  <div class="section" id="nengodl-simulator">
+<h1>NengoDL Simulator<a class="headerlink" href="#nengodl-simulator" title="Permalink to this headline">¶</a></h1>
+<p>This is the class that allows users to access the <code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code>
+backend.  This can be used as a drop-in replacement for <code class="docutils literal notranslate"><span class="pre">nengo.Simulator</span></code>
+(i.e., simply replace any instance of <code class="docutils literal notranslate"><span class="pre">nengo.Simulator</span></code> with
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.Simulator</span></code> and everything will continue to function as
+normal).</p>
+<p>In addition, the Simulator exposes features unique to the
+NengoDL backend, such as <a class="reference internal" href="reference.html#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.train</span></code></a>.</p>
+<p>The full class documentation can be viewed in the
+<a class="reference internal" href="reference.html#sim-api"><span class="std std-ref">API Reference</span></a>; here we will explain the practical usage of
+the Simulator in more depth.</p>
+<div class="section" id="simulator-arguments">
+<h2>Simulator arguments<a class="headerlink" href="#simulator-arguments" title="Permalink to this headline">¶</a></h2>
+<p>The NengoDL <a class="reference internal" href="reference.html#nengo_dl.simulator.Simulator" title="nengo_dl.simulator.Simulator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator</span></code></a> has a number of optional arguments, beyond
+those in <a class="reference external" href="https://www.nengo.ai/nengo/backend_api.html#nengo.Simulator" title="(in Nengo v2.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nengo.Simulator</span></code></a>, which control features specific to
+the <code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code> backend.</p>
+<div class="section" id="device">
+<h3>device<a class="headerlink" href="#device" title="Permalink to this headline">¶</a></h3>
+<p>This specifies the computational device on which the simulation will
+run.  The default is <code class="docutils literal notranslate"><span class="pre">None</span></code>, which means that operations will be assigned
+according to TensorFlow’s internal logic (generally speaking, this means that
+things will be assigned to the GPU if <code class="docutils literal notranslate"><span class="pre">tensorflow-gpu</span></code> is installed,
+otherwise everything will be assigned to the CPU).  The device can be set
+manually by passing the <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/Graph#device">TensorFlow device specification</a> to this
+parameter.  For example, setting <code class="docutils literal notranslate"><span class="pre">device=&quot;/cpu:0&quot;</span></code> will force everything
+to run on the CPU.  This may be worthwhile for small models, where the extra
+overhead of communicating with the GPU outweighs the actual computations.  On
+systems with multiple GPUs, <code class="docutils literal notranslate"><span class="pre">device=&quot;/gpu:0&quot;</span></code>/<code class="docutils literal notranslate"><span class="pre">&quot;/gpu:1&quot;</span></code>/etc. will select
+which one to use.</p>
+</div>
+<div class="section" id="unroll-simulation">
+<h3>unroll_simulation<a class="headerlink" href="#unroll-simulation" title="Permalink to this headline">¶</a></h3>
+<p>This controls how many simulation iterations are executed each time through
+the outer simulation loop.  That is, we could run 20 timesteps as</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">):</span>
+    <span class="o">&lt;</span><span class="n">run</span> <span class="mi">1</span> <span class="n">step</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+    <span class="o">&lt;</span><span class="n">run</span> <span class="mi">1</span> <span class="n">step</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="n">run</span> <span class="mi">1</span> <span class="n">step</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="n">run</span> <span class="mi">1</span> <span class="n">step</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="n">run</span> <span class="mi">1</span> <span class="n">step</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>This is an optimization process known as “loop unrolling”, and
+<code class="docutils literal notranslate"><span class="pre">unroll_simulation</span></code> controls how many simulation steps are unrolled.  The
+first example above would correspond to <code class="docutils literal notranslate"><span class="pre">unroll_simulation=1</span></code>, and the
+second would be <code class="docutils literal notranslate"><span class="pre">unroll_simulation=4</span></code>.</p>
+<p>Unrolling the simulation will result in faster simulation speed, but increased
+build time and memory usage.</p>
+<p>In general, unrolling the simulation will have no impact on the output of a
+simulation.  The only case in which unrolling may have an impact is if
+the number of simulation steps is not evenly divisible by
+<code class="docutils literal notranslate"><span class="pre">unroll_simulation</span></code>.  In that case extra simulation steps will be executed,
+and then data will be truncated to the correct number of steps.  However, those
+extra steps could still change the internal state of the simulation, which
+will affect any subsequent calls to <code class="docutils literal notranslate"><span class="pre">sim.run</span></code>.  So it is recommended that the
+number of steps always be evenly divisible by <code class="docutils literal notranslate"><span class="pre">unroll_simulation</span></code>.</p>
+</div>
+<div class="section" id="minibatch-size">
+<span id="id1"></span><h3>minibatch_size<a class="headerlink" href="#minibatch-size" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code> allows a model to be simulated with multiple simultaneous inputs,
+processing those values in parallel through the network.  For example, instead
+of executing a model three times with three different inputs, the model can
+be executed once with those three inputs in parallel.  <code class="docutils literal notranslate"><span class="pre">minibatch_size</span></code>
+specifies how many inputs will be processed at a time.  The default is
+<code class="docutils literal notranslate"><span class="pre">None</span></code>, meaning that this feature is not used and only one input will be
+processed at a time (as in standard Nengo simulators).</p>
+<p>In order to take advantage of the parallel inputs, multiple inputs need to
+be passed to <a class="reference internal" href="reference.html#nengo_dl.simulator.Simulator.run" title="nengo_dl.simulator.Simulator.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.run</span></code></a> via the <code class="docutils literal notranslate"><span class="pre">data</span></code> argument.  This
+is discussed in more detail <a class="reference internal" href="#sim-run"><span class="std std-ref">below</span></a>.</p>
+<p>When using <a class="reference internal" href="reference.html#nengo_dl.simulator.Simulator.train" title="nengo_dl.simulator.Simulator.train"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.train</span></code></a>, this parameter controls how many items
+from the training data will be used for each optimization iteration.</p>
+</div>
+<div class="section" id="tensorboard">
+<h3>tensorboard<a class="headerlink" href="#tensorboard" title="Permalink to this headline">¶</a></h3>
+<p>This can be used to specify an output directory if you would like to export
+data from the simulation in a format that can be visualized in
+<a class="reference external" href="https://www.tensorflow.org/guide/summaries_and_tensorboard">TensorBoard</a>.</p>
+<p>To view the collected data, run the command</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>tensorboard --logdir &lt;tensorboard_dir&gt;
+</pre></div>
+</div>
+<p>(where <code class="docutils literal notranslate"><span class="pre">tensorboard_dir</span></code> is the directory name passed to <code class="docutils literal notranslate"><span class="pre">tensorboard</span></code>),
+then open a web browser and navigate to <a class="reference external" href="http://localhost:6006">http://localhost:6006</a>.</p>
+<p>By default the TensorBoard output will only contain a <a class="reference external" href="https://www.tensorflow.org/guide/graph_viz">visualization of the
+TensorFlow graph</a>
+constructed for this Simulator.  However, TensorBoard can also be used to track
+various aspects of the simulation throughout the training process; see
+<a class="reference internal" href="training.html#summaries"><span class="std std-ref">the sim.train documentation</span></a> for details.</p>
+<p>Repeated Simulator calls with the same output directory will be organized into
+subfolders according to run number (e.g., <code class="docutils literal notranslate"><span class="pre">&lt;tensorboard_dir&gt;/run_0</span></code>).</p>
+</div>
+</div>
+<div class="section" id="simulator-run-arguments">
+<span id="sim-run"></span><h2>Simulator.run arguments<a class="headerlink" href="#simulator-run-arguments" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="reference.html#nengo_dl.simulator.Simulator.run" title="nengo_dl.simulator.Simulator.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.run</span></code></a> (and its variations <a class="reference internal" href="reference.html#nengo_dl.simulator.Simulator.step" title="nengo_dl.simulator.Simulator.step"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.step</span></code></a>/
+<a class="reference internal" href="reference.html#nengo_dl.simulator.Simulator.run_steps" title="nengo_dl.simulator.Simulator.run_steps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.run_steps</span></code></a>) also have some optional parameters beyond those
+in the standard Nengo simulator.</p>
+<div class="section" id="data">
+<h3>data<a class="headerlink" href="#data" title="Permalink to this headline">¶</a></h3>
+<p>This parameter can be used to override the value of any
+input <a class="reference external" href="https://www.nengo.ai/nengo/frontend_api.html#nengo.Node" title="(in Nengo v2.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Node</span></code></a> in a model (an input node is defined as
+a node with no incoming connections).  For example</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">n_steps</span> <span class="o">=</span> <span class="mi">5</span>
+
+<span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run_steps</span><span class="p">(</span><span class="n">n_steps</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>will execute the model in the standard way, and if we check the output of
+<code class="docutils literal notranslate"><span class="pre">node</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">print</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">p</span><span class="p">])</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>we see that it is all zero, as defined.</p>
+<p><code class="docutils literal notranslate"><span class="pre">data</span></code> is specified as a
+dictionary of <code class="docutils literal notranslate"><span class="pre">{my_node:</span> <span class="pre">override_value}</span></code> pairs, where <code class="docutils literal notranslate"><span class="pre">my_node</span></code> is the
+Node to be overridden and <code class="docutils literal notranslate"><span class="pre">override_value</span></code> is a numpy array with shape
+<code class="docutils literal notranslate"><span class="pre">(minibatch_size,</span> <span class="pre">n_steps,</span> <span class="pre">my_node.size_out)</span></code> that gives the Node output
+value on each simulation step. For example, if we instead run the model via</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span><span class="o">.</span><span class="n">run_steps</span><span class="p">(</span><span class="n">n_steps</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="n">node</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="mi">1</span><span class="p">))})</span>
+<span class="k">print</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">p</span><span class="p">])</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[[</span> <span class="mf">1.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">1.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">1.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">1.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">1.</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>we see that the output of <code class="docutils literal notranslate"><span class="pre">node</span></code> is all ones, which is the override
+value we specified.</p>
+<p><code class="docutils literal notranslate"><span class="pre">data</span></code> is usually used in concert with the minibatching feature of
+<code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code> (<a class="reference internal" href="#minibatch-size"><span class="std std-ref">see above</span></a>).  <code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code> allows multiple
+inputs to be processed simultaneously, but when we construct a
+<a class="reference external" href="https://www.nengo.ai/nengo/frontend_api.html#nengo.Node" title="(in Nengo v2.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Node</span></code></a> we can only specify one value.  For example, if we
+use minibatching on the above network</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mini</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">mini</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run_steps</span><span class="p">(</span><span class="n">n_steps</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">p</span><span class="p">])</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[[[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]]</span>
+     <span class="p">[[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]]</span>
+     <span class="p">[[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]]]</span>
+</pre></div>
+</div>
+<p>we see that the output is an array of zeros with size
+<code class="docutils literal notranslate"><span class="pre">(mini,</span> <span class="pre">n_steps,</span> <span class="pre">1)</span></code>.  That is, we simulated 3 inputs
+simultaneously, but those inputs all had the same value (the one we defined
+when the Node was constructed) so it wasn’t very
+useful.  To take full advantage of the minibatching we need to override the
+node values, so that we can specify a different value for each item in the
+minibatch:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">mini</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run_steps</span><span class="p">(</span><span class="n">n_steps</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">{</span>
+        <span class="n">node</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">mini</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">mini</span><span class="p">)[:,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]})</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">p</span><span class="p">])</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">[[[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">]]</span>
+     <span class="p">[[</span> <span class="mf">1.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">1.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">1.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">1.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">1.</span><span class="p">]]</span>
+     <span class="p">[[</span> <span class="mf">2.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">2.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">2.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">2.</span><span class="p">]</span> <span class="p">[</span> <span class="mf">2.</span><span class="p">]]]</span>
+</pre></div>
+</div>
+<p>Here we can see that 3 independent inputs have been processed during the
+simulation. In a simple network such as this, minibatching will not make much
+difference. But for larger models it will be much more efficient to process
+multiple inputs in parallel rather than one at a time.</p>
+</div>
+<div class="section" id="profile">
+<span id="sim-profile"></span><h3>profile<a class="headerlink" href="#profile" title="Permalink to this headline">¶</a></h3>
+<p>If set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, profiling data will be collected while the simulation
+runs.  This will significantly slow down the simulation, so it should be left
+on <code class="docutils literal notranslate"><span class="pre">False</span></code> (the default) in most cases.  It is mainly used by developers,
+in order to help identify performance bottlenecks.</p>
+<p>Profiling data will be saved to a file named <code class="docutils literal notranslate"><span class="pre">nengo_dl_profile.json</span></code>.  It
+can be viewed by opening a Chrome browser, navigating to
+<a class="reference external" href="chrome://tracing">chrome://tracing</a> and loading the <code class="docutils literal notranslate"><span class="pre">nengo_dl_profile.json</span></code> file.  A
+filename can be passed instead of <code class="docutils literal notranslate"><span class="pre">True</span></code>, to change the output filename.</p>
+<p>Note that in order for GPU profiling to work, you need to manually add
+<code class="docutils literal notranslate"><span class="pre">&lt;cuda&gt;/extras/CUPTI/libx64</span></code> to the <code class="docutils literal notranslate"><span class="pre">LD_LIBRARY_PATH</span></code> environment variable
+(where <code class="docutils literal notranslate"><span class="pre">&lt;cuda&gt;</span></code> is your CUDA installation directory).</p>
+</div>
+</div>
+</div>
+
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div><footer class="footer">
+  <div class="w-container">
+    <div class="w-clearfix">
+      <div class="w-row mobileAlign">
+        <div class="w-col w-col-2 footer-menu">
+          <p class="menu-Label">ABR, Inc.</p>
+          <ul class="vertical-menu">
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/products/">Products</a></li>
+            <li class="footer-listitem-new "><a href="https://appliedbrainresearch.com/services/">Services</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/research/">Research</a></li>
+          </ul>
+        </div>
+        <div class="w-col w-col-2 footer-menu">
+          <p class="menu-Label">About Us</p>
+          <ul class="vertical-menu">
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/">Contact</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/#team">Team</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/#culture">Culture</a></li>
+          </ul>
+        </div>
+        <a class="brand footer-brand" href="https://appliedbrainresearch.com">
+          <img src="https://appliedbrainresearch.com/img/logo-light-notext.svg" width="80">
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+  </body>
+</html>
