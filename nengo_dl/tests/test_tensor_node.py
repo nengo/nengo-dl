@@ -167,7 +167,7 @@ def test_post_build(Simulator):
         assert np.allclose(sim.data[p], [[2, 2, 2]])
 
 
-def test_reshaped():
+def test_reshaped(sess):
     x = tf.zeros((5, 12))
 
     @reshaped((4, 3))
@@ -178,8 +178,7 @@ def test_reshaped():
 
     y = my_func(None, x)
 
-    with tf.Session() as sess:
-        sess.run(y)
+    sess.run(y)
 
 
 def test_tensor_layer(Simulator):

@@ -233,76 +233,68 @@ def test_signal_dict_combine():
 
 
 @pytest.mark.parametrize("dtype", (None, tf.float32))
-def test_constant(dtype):
+def test_constant(dtype, sess):
     val = np.random.randn(10, 10).astype(np.float64)
 
-    graph = tf.Graph()
-    with graph.as_default():
-        signals = SignalDict(tf.float32, 1)
-        const0 = signals.constant(val, dtype=dtype)
-        const1 = signals.constant(val, dtype=dtype, cutoff=0)
+    signals = SignalDict(tf.float32, 1)
+    const0 = signals.constant(val, dtype=dtype)
+    const1 = signals.constant(val, dtype=dtype, cutoff=0)
 
-        assert const0.op.type == "Const"
-        assert const1.op.type == "Identity"
+    assert const0.op.type == "Const"
+    assert const1.op.type == "Identity"
 
-        assert const0.dtype == (dtype if dtype else tf.as_dtype(val.dtype))
-        assert const1.dtype == (dtype if dtype else tf.as_dtype(val.dtype))
+    assert const0.dtype == (dtype if dtype else tf.as_dtype(val.dtype))
+    assert const1.dtype == (dtype if dtype else tf.as_dtype(val.dtype))
 
-    with tf.Session(graph=graph) as sess:
-        sess.run(tf.variables_initializer(tf.get_collection("constants")),
-                 feed_dict=signals.constant_phs)
-        c0, c1 = sess.run([const0, const1])
+    sess.run(tf.variables_initializer(tf.get_collection("constants")),
+             feed_dict=signals.constant_phs)
+    c0, c1 = sess.run([const0, const1])
 
     assert np.allclose(c0, val)
     assert np.allclose(c1, val)
 
 
 @pytest.mark.gpu
-def test_constant_gpu():
+def test_constant_gpu(sess):
     val = np.random.randn(10, 10).astype(np.int32)
 
-    graph = tf.Graph()
-    with graph.as_default(), graph.device("/gpu:0"):
+    with tf.device("/gpu:0"):
         signals = SignalDict(tf.float32, 1)
         const = signals.constant(val, cutoff=0)
 
         assert const.dtype == tf.int32
         assert "GPU" in const.device.upper()
 
-    with tf.Session(graph=graph) as sess:
-        sess.run(tf.variables_initializer(tf.get_collection("constants")),
-                 feed_dict=signals.constant_phs)
-        c = sess.run(const)
+    sess.run(tf.variables_initializer(tf.get_collection("constants")),
+             feed_dict=signals.constant_phs)
+    c = sess.run(const)
 
     assert np.allclose(val, c)
 
 
 @pytest.mark.parametrize("dtype", (tf.float32, tf.float64))
 @pytest.mark.parametrize("diff", (True, False))
-def test_op_constant(dtype, diff):
+def test_op_constant(dtype, diff, sess):
     ops = (SimNeurons(LIF(tau_rc=1), Signal(np.zeros(10)), None),
            SimNeurons(LIF(tau_rc=2 if diff else 1), Signal(np.zeros(10)),
                       None))
 
-    graph = tf.Graph()
-    with graph.as_default():
-        signals = SignalDict(tf.float32, 1)
-        const = signals.op_constant(
-            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
-            "tau_rc", dtype)
-        const1 = signals.op_constant(
-            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
-            "tau_rc", dtype, ndims=1)
-        const3 = signals.op_constant(
-            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
-            "tau_rc", dtype, ndims=3)
+    signals = SignalDict(tf.float32, 1)
+    const = signals.op_constant(
+        [op.neurons for op in ops], [op.J.shape[0] for op in ops],
+        "tau_rc", dtype)
+    const1 = signals.op_constant(
+        [op.neurons for op in ops], [op.J.shape[0] for op in ops],
+        "tau_rc", dtype, ndims=1)
+    const3 = signals.op_constant(
+        [op.neurons for op in ops], [op.J.shape[0] for op in ops],
+        "tau_rc", dtype, ndims=3)
 
     assert const.dtype.base_dtype == dtype
 
-    with tf.Session(graph=graph) as sess:
-        sess.run(tf.variables_initializer(tf.get_collection("constants")),
-                 feed_dict=signals.constant_phs)
-        x, x1, x3 = sess.run([const, const1, const3])
+    sess.run(tf.variables_initializer(tf.get_collection("constants")),
+             feed_dict=signals.constant_phs)
+    x, x1, x3 = sess.run([const, const1, const3])
 
     if diff:
         assert np.array_equal(x, [[1]] * 10 + [[2]] * 10)

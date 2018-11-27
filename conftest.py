@@ -73,6 +73,14 @@ def Simulator(request):
     return TestSimulator
 
 
+@pytest.fixture(scope="function")
+def sess(request):
+    """Create a TensorFlow session with a unique scope per test."""
+    with tf.Graph().as_default() as graph:
+        with tf.Session(graph=graph) as sess:
+            yield sess
+
+
 def patch_nengo_tests():
     """Monkey-patch various aspects of the Nengo test suite, so that things
     work correctly when running those tests through NengoDL."""
