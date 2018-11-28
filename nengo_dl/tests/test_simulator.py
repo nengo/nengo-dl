@@ -1401,12 +1401,16 @@ def test_synapse_warning(Simulator):
         p = nengo.Probe(b)
         p2 = nengo.Probe(b)
 
-    def does_warn(n_steps=1):
+    def does_warn(n_steps=1, as_dict=True):
         with Simulator(net, unroll_simulation=1) as sim:
             with pytest.warns(UserWarning) as rec:
-                sim.train({a: np.zeros((1, n_steps, 1)),
-                           p: np.zeros((1, n_steps, 1))},
-                          tf.train.GradientDescentOptimizer(0))
+                if as_dict:
+                    sim.train({a: np.zeros((1, n_steps, 1)),
+                               p: np.zeros((1, n_steps, 1))},
+                              tf.train.GradientDescentOptimizer(0))
+                else:
+                    sim.train(n_steps, tf.train.GradientDescentOptimizer(0),
+                              objective={p: lambda x: x})
         return any(str(w.message).startswith("Training for one timestep")
                    for w in rec)
 
@@ -1425,6 +1429,10 @@ def test_synapse_warning(Simulator):
     p.synapse = None
     p2.synapse = 1
     assert not does_warn()
+
+    # warning when explicitly specifying n_steps
+    c.synapse = 1
+    assert does_warn(as_dict=True)
 
 
 @pytest.mark.training

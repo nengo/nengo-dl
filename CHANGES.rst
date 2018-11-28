@@ -24,6 +24,8 @@ Release History
 **Fixed**
 
 - Fixed objective argument parsing if objective is a callable class or method.
+- Fixed bug in ``sim.train`` 1-step synapse warning when explicitly specifying
+  ``n_steps`` (rather than passing in ``data``).
 
 2.0.0 (November 23, 2018)
 -------------------------

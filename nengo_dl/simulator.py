@@ -516,10 +516,12 @@ class Simulator:
             batch_size, n_steps = next(iter(data.values())).shape[:2]
 
         # error checking
-        if (n_steps == 1 and self.model.toplevel is not None and
-                any(x.synapse is not None for x in
+        synapses = [x.synapse is not None for x in
                     (self.model.toplevel.all_connections +
-                     list(p for p in data if isinstance(p, Probe))))):
+                     (list(p for p in data if isinstance(p, Probe))
+                      if isinstance(data, dict) else []))]
+        if (n_steps == 1 and self.model.toplevel is not None and
+                any(synapses)):
             warnings.warn(
                 "Training for one timestep, but the network contains "
                 "synaptic filters (which will introduce at least a "
