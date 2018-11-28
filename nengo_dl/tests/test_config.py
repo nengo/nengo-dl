@@ -1,8 +1,9 @@
 # pylint: disable=missing-docstring
 
-from nengo import ensemble, Network, Ensemble, Connection
+from nengo import ensemble, Network, Ensemble, Connection, Probe
 from nengo.builder import Model
 from nengo.exceptions import ValidationError, ConfigError, NetworkContextError
+import numpy as np
 import pytest
 
 from nengo_dl import config, builder
@@ -67,3 +68,23 @@ def test_session_config(Simulator, as_model):
     with Simulator(net, model=model) as sim:
         assert sim.sess._config.graph_options.optimizer_options.opt_level == 21
         assert sim.sess._config.gpu_options.allow_growth
+
+
+def test_keep_history(Simulator, seed):
+    with Network(seed=seed) as net:
+        config.configure_settings(keep_history=True)
+        a = Ensemble(30, 1)
+        p = Probe(a.neurons, synapse=0.1)
+
+    with Simulator(net) as sim:
+        sim.run_steps(10)
+
+    with net:
+        net.config[p].keep_history = False
+
+    with Simulator(net) as sim2:
+        sim2.run_steps(10)
+
+    assert sim.data[p].shape == (10, 30)
+    assert sim2.data[p].shape == (1, 30)
+    assert np.allclose(sim.data[p][[-1]], sim2.data[p])

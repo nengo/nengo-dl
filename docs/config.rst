@@ -205,3 +205,33 @@ for 32 or 64-bit precision, respectively.  32-bit precision is the default,
 as it is faster, will use less memory, and in most cases will not make a
 difference in the results of the simulation.  However, if very precise outputs
 are required then this can be changed to ``tf.float64``.
+
+keep_history
+------------
+
+By default, a `nengo.Probe` stores the probed output from every simulation
+timestep.  However, sometimes in NengoDL we want to add a probe to something
+for other reasons, and don't necessarily care about all of that data (which can
+consume a lot of memory).  For example, we might want to apply a probe to some
+connection weights so that we can apply a regularization penalty, but since
+the weights aren't changing during a simulation run we don't need to keep
+the value from every simulation step.
+
+The ``keep_history`` config option allows Probes to be configured so that they
+only store the output of the probed signal from the last simulation timestep.
+Calling
+
+.. code-block:: python
+
+   nengo_dl.configure_settings(keep_history=True/False)
+
+will set the default value for all probes in the simulation, which can then
+be further configured on a per-probe basis, e.g.
+
+.. code-block:: python
+
+   with nengo.Network() as net:
+      nengo_dl.configure_settings(keep_history=True)
+      ...
+      my_probe = nengo.Probe(...)
+      net.config[my_probe].keep_history = False

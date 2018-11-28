@@ -25,6 +25,11 @@ Release History
 
 - Added a built-in objective to assist in applying regularization during
   training.
+- Added `keep_history config option
+  <https://www.nengo.ai/nengo-dl/config.html#keep-history>`_, which can be set
+  to ``False`` on Probes if only the data from the most recent simulation step
+  is desired (as opposed to the default behaviour of keeping the data from
+  all steps).
 
 **Fixed**
 

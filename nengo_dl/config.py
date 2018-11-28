@@ -3,7 +3,7 @@ The configuration system is used to change NengoDL's default behaviour in
 various ways.
 """
 
-from nengo import Connection, Ensemble, Network, ensemble
+from nengo import Connection, Ensemble, Network, Probe, ensemble
 from nengo.builder import Model
 from nengo.exceptions import ConfigError, NetworkContextError
 from nengo.params import BoolParam, Parameter
@@ -56,6 +56,11 @@ def configure_settings(**kwargs):
         opposed to using `~nengo.LIFRate`).
     dtype : ``tf.DType``
         Set the floating point precision for simulation values.
+    keep_history : bool
+        Adds a parameter to Nengo Probes that controls whether or not they
+        will keep the history from all simulation timesteps or only the last
+        simulation step.  This can be further configured on a per-probe basis
+        (e.g., ``net.config[my_probe].keep_history = False``).
     """
 
     # get the toplevel network
@@ -83,6 +88,9 @@ def configure_settings(**kwargs):
 
                 obj_params.set_param("trainable", BoolParam("trainable", val,
                                                             optional=True))
+        elif attr == "keep_history":
+            config[Probe].set_param("keep_history",
+                                    BoolParam("keep_history", val))
         elif attr in ("planner", "sorter", "simplifications",
                       "session_config", "inference_only", "lif_smoothing",
                       "dtype"):
@@ -91,7 +99,7 @@ def configure_settings(**kwargs):
             raise ConfigError("%s is not a valid config parameter" % attr)
 
 
-def get_setting(model, setting, default=None):
+def get_setting(model, setting, default=None, obj=None):
     """
     Returns config settings (created by `.configure_settings`).
 
@@ -100,9 +108,12 @@ def get_setting(model, setting, default=None):
     model : `~nengo.builder.Model` or `~nengo.Network`
         Built model or Network containing all the config settings.
     setting : str
-        Name of the config option to return
+        Name of the config option to return.
     default
-        The default value to return if config option not set
+        The default value to return if config option not set.
+    obj : ``NengoObject``
+        The object on which config setting is stored (defaults to the top-level
+        network).
 
     Returns
     -------
@@ -115,7 +126,10 @@ def get_setting(model, setting, default=None):
             return default
         model = model.toplevel
 
+    if obj is None:
+        obj = model
+
     try:
-        return getattr(model.config[model], setting, default)
+        return getattr(model.config[obj], setting, default)
     except ConfigError:
         return default

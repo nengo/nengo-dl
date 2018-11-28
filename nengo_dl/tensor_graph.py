@@ -383,7 +383,15 @@ class TensorGraph:
 
                     # copy probe data to array
                     for i, p in enumerate(probe_tensors):
-                        probe_arrays[i] = probe_arrays[i].write(loop_i, p)
+                        if config.get_setting(
+                                self.model, "keep_history",
+                                default=True, obj=self.model.probes[i]):
+                            probe_arrays[i] = probe_arrays[i].write(loop_i, p)
+                        else:
+                            probe_arrays[i] = tf.cond(
+                                tf.equal(step, stop),
+                                lambda p=p: probe_arrays[i].write(0, p),
+                                lambda: probe_arrays[i])
 
                     # need to make sure that any operators that could have side
                     # effects run each timestep, so we tie them to the loop
