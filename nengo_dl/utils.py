@@ -515,3 +515,51 @@ def mse(outputs, targets):
 
     targets = tf.where(tf.is_nan(targets), outputs, targets)
     return tf.reduce_mean(tf.square(targets - outputs))
+
+
+class Regularize:
+    """
+    An objective function to apply regularization penalties.
+
+    Parameters
+    ----------
+    order : int or str
+        Order of the regularization norm (e.g. ``1`` for L1 norm, ``2`` for
+        L2 norm).  See https://www.tensorflow.org/api_docs/python/tf/norm for
+        a full description of the possible values for this parameter.
+    axis : int or None
+        The axis of probed signal along which to compute norm.  If None
+        (the default), the signal is flattened and the norm is computed across
+        the resulting vector.  Note that these are only the axes with respect
+        to the output on a single timestep (i.e. batch/time dimensions are not
+        included).
+    weight : float
+        Scaling weight to apply to regularization penalty.
+
+    Notes
+    -----
+    The mean will be computed across all the non-``axis`` dimensions after
+    computing the norm (including batch/time) in order to compute the overall
+    objective value.
+    """
+
+    def __init__(self, order=2, axis=None, weight=None):
+        self.order = order
+        self.axis = axis
+        self.weight = weight
+
+    def __call__(self, x):
+        if self.axis is None:
+            if x.get_shape().ndims > 3:
+                # flatten signal (keeping batch/time dimension)
+                x = tf.reshape(x, tf.concat([tf.shape(x)[:2], (-1,)], axis=0))
+            axis = 2
+        else:
+            axis = self.axis + 2
+
+        output = tf.reduce_mean(tf.norm(x, axis=axis, ord=self.order))
+
+        if self.weight is not None:
+            output *= self.weight
+
+        return output

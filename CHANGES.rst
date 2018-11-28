@@ -21,6 +21,11 @@ Release History
 2.0.1 (unreleased)
 ------------------
 
+**Added**
+
+- Added a built-in objective to assist in applying regularization during
+  training.
+
 **Fixed**
 
 - Fixed objective argument parsing if objective is a callable class or method.
