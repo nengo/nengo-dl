@@ -82,6 +82,18 @@ def test_build_outputs(Simulator):
         # no error for extra keyword arguments
         sim.tensor_graph.build_outputs({p: loss3b})
 
+        # arg parsing works with callable class
+        class CallableLoss:
+            def __call__(self, outputs, targets):
+                return outputs
+        sim.tensor_graph.build_outputs({p: CallableLoss()})
+
+        # arg parsing works with class methods
+        class MethodLoss:
+            def loss(self, outputs, targets):
+                return outputs
+        sim.tensor_graph.build_outputs({p: MethodLoss().loss})
+
 
 @pytest.mark.training
 def test_build_optimizer(Simulator):

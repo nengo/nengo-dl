@@ -21,6 +21,9 @@ Release History
 2.0.1 (unreleased)
 ------------------
 
+**Fixed**
+
+- Fixed objective argument parsing if objective is a callable class or method.
 
 2.0.0 (November 23, 2018)
 -------------------------

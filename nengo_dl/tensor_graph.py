@@ -8,7 +8,7 @@ network, which will be executed by the simulator.
 from __future__ import print_function
 
 from collections import OrderedDict, defaultdict
-from inspect import getfullargspec
+import inspect
 import itertools
 import logging
 import warnings
@@ -620,12 +620,20 @@ class TensorGraph:
                 output_vals[probes] = probe_arrays
             elif callable(out):
                 # look up number of positional arguments for function
-                spec = getfullargspec(out)
-                args = (spec.args if spec.defaults is None else
-                        spec.args[:-len(spec.defaults)])
-                if len(args) == 1:
+                spec = inspect.getfullargspec(out)
+
+                nargs = len(spec.args)
+                if spec.defaults is not None:
+                    # don't count keyword arguments
+                    nargs -= len(spec.defaults)
+                if inspect.ismethod(out) or not inspect.isroutine(out):
+                    # don't count self argument for methods or callable classes
+                    nargs -= 1
+
+                # build function arguments
+                if nargs == 1:
                     args = [probe_arrays]
-                elif len(args) == 2:
+                elif nargs == 2:
                     for p in probes if is_tuple else (probes,):
                         # create a placeholder for the target values if one
                         # hasn't been created yet
@@ -639,8 +647,10 @@ class TensorGraph:
                     args = [probe_arrays, target_phs]
                 else:
                     raise ValidationError(
-                        "Output functions must accept 1 or 2 arguments; found "
-                        "%s" % args, "outputs")
+                        "Output functions must accept 1 or 2 arguments; '%s' "
+                        "takes %s arguments" % (
+                            utils.function_name(out, sanitize=False), nargs),
+                        "outputs")
 
                 # apply output function
                 with tf.variable_scope(utils.function_name(out)) as scope:
