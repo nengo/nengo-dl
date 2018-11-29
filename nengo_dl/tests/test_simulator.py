@@ -13,8 +13,8 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import (
-    configure_settings, tensor_layer, dists, TensorNode, utils, objectives)
+from nengo_dl import configure_settings, tensor_layer, dists, TensorNode
+from nengo_dl.objectives import mse
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
 
@@ -301,44 +301,57 @@ def test_train_sparse(Simulator, seed):
 
 @pytest.mark.training
 def test_train_errors(Simulator):
-    with nengo.Network() as net:
-        a = nengo.Node([0])
-        p = nengo.Probe(a)
+    net, a, p = dummies.linear_net()
 
     n_steps = 20
     with Simulator(net) as sim:
+        # error for mismatched n_steps
         with pytest.raises(ValidationError):
             sim.train({a: np.ones((1, n_steps + 1, 1)),
                        p: np.ones((1, n_steps, 1))}, None)
 
+        # error for mismatched batch size
         with pytest.raises(ValidationError):
             sim.train({a: np.ones((2, n_steps, 1)),
                        p: np.ones((1, n_steps, 1))}, None)
 
+        # error for mismatched n_steps (in targets)
         with pytest.raises(ValidationError):
             sim.train({a: np.ones((1, n_steps, 1)),
                        p: np.ones((1, n_steps + 1, 1))}, None)
 
+        # error for mismatched batch size (in targets)
         with pytest.raises(ValidationError):
             sim.train({a: np.ones((1, n_steps, 1)),
                        p: np.ones((2, n_steps, 1))}, None)
 
+        # error when not specifying objective as a dict
         with pytest.raises(ValidationError):
             sim.train({a: np.ones((1, n_steps, 1)),
                        p: np.ones((1, n_steps, 1))}, None,
-                      objective="mse")
+                      objective=mse)
 
+        # error when using the old nengo-dl<2.0 inputs/targets style
         with pytest.raises(ValidationError):
             sim.train({a: np.ones((1, n_steps, 1))},
                       {p: np.ones((1, n_steps, 1))}, None)
 
+        # deprecation warning when using "mse" string
+        with pytest.warns(DeprecationWarning):
+            sim.train({p: np.ones((1, n_steps, 1))},
+                      tf.train.GradientDescentOptimizer(0),
+                      objective={p: "mse"})
+
+    # error when calling train after closing
     with pytest.raises(SimulatorClosed):
         sim.train({None: np.zeros((1, 1))}, None)
 
     with Simulator(net, unroll_simulation=2) as sim:
+        # error when data n_steps does not match unroll
         with pytest.raises(ValidationError):
             sim.train({a: np.ones((1, 1, 1)), p: np.ones((1, 1, 1))}, None)
 
+        # error when n_steps does not evenly divide by truncation
         with pytest.raises(ValidationError):
             sim.train({a: np.ones((1, 4, 1)), p: np.ones((1, 4, 1))}, None,
                       truncation=3)
@@ -371,43 +384,58 @@ def test_loss(Simulator):
         sim.run_steps(n_steps)
         data = sim.data[p]
 
+        # check mse
         assert np.allclose(sim.loss({inp: np.ones((4, n_steps, 1)),
                                      p: np.zeros((4, n_steps, 1))},
-                                    {p: "mse"}),
+                                    {p: mse}),
                            np.mean(data ** 2))
 
+
+
+        # check custom objective
         assert np.allclose(sim.loss({inp: np.ones((4, n_steps, 1)),
                                      p: np.zeros((4, n_steps, 1))},
                                     {p: lambda x, y: tf.constant(2.0)}),
                            2)
 
+        # error for mismatched n_steps
         with pytest.raises(ValidationError):
             sim.loss({inp: np.ones((1, n_steps + 1, 1)),
-                      p: np.ones((1, n_steps, 1))}, {p: "mse"})
+                      p: np.ones((1, n_steps, 1))}, {p: mse})
 
+        # error for mismatched batch size
         with pytest.raises(ValidationError):
             sim.loss({inp: np.ones((2, n_steps, 1)),
-                      p: np.ones((1, n_steps, 1))}, {p: "mse"})
+                      p: np.ones((1, n_steps, 1))}, {p: mse})
 
+        # error for mismatched n_steps (in targets)
         with pytest.raises(ValidationError):
             sim.loss({inp: np.ones((1, n_steps, 1)),
-                      p: np.ones((1, n_steps + 1, 1))}, {p: "mse"})
+                      p: np.ones((1, n_steps + 1, 1))}, {p: mse})
 
+        # error for mismatched batch size (in targets)
         with pytest.raises(ValidationError):
             sim.loss({inp: np.ones((1, n_steps, 1)),
-                      p: np.ones((2, n_steps, 1))}, {p: "mse"})
+                      p: np.ones((2, n_steps, 1))}, {p: mse})
 
+        # error when not specifying objective as a dict
         with pytest.raises(ValidationError):
             sim.loss({inp: np.ones((1, n_steps, 1)),
-                      p: np.ones((1, n_steps, 1))}, "mse")
+                      p: np.ones((1, n_steps, 1))}, mse)
 
+        # deprecation warning when using "mse" string
+        with pytest.warns(DeprecationWarning):
+            sim.loss({p: np.ones((1, n_steps, 1))}, {p: "mse"})
+
+    # error when calling loss after close
     with pytest.raises(SimulatorClosed):
-        sim.loss({None: np.zeros((1, 1))}, {p: "mse"})
+        sim.loss({None: np.zeros((1, 1))}, {p: mse})
 
     with Simulator(net, unroll_simulation=2) as sim:
+        # error when data n_steps does not match unroll
         with pytest.raises(ValidationError):
             sim.loss({inp: np.ones((1, 1, 1)),
-                      p: np.ones((1, 1, 1))}, {p: "mse"})
+                      p: np.ones((1, 1, 1))}, {p: mse})
 
 
 def test_generate_inputs(Simulator, seed):
@@ -623,7 +651,7 @@ def test_tensorboard(Simulator, tmpdir):
         sim.train({a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1)),
                    p2: np.zeros((1, 10, 1))},
                   tf.train.GradientDescentOptimizer(0.0),
-                  objective={p: loss, p2: "mse"},
+                  objective={p: loss, p2: mse},
                   summaries=["loss", b, b.neurons, c, summ],
                   n_epochs=3)
 
@@ -899,7 +927,7 @@ def test_train_state_save(Simulator):
                    optimizer=tf.train.GradientDescentOptimizer(0))
 
         sim2.loss({u: np.ones((4, 10, 1)), p: np.ones((4, 10, 1))},
-                  {p: "mse"})
+                  {p: mse})
 
         sim2.run_steps(10)
 
@@ -1193,8 +1221,8 @@ def test_extra_feeds(Simulator):
                   extra_feeds={b.tensor_func.ph: True})
 
         with pytest.raises(tf.errors.InvalidArgumentError):
-            sim.loss(data, {p: "mse"})
-        sim.loss(data, {p: "mse"}, extra_feeds={b.tensor_func.ph: True})
+            sim.loss(data, {p: mse})
+        sim.loss(data, {p: mse}, extra_feeds={b.tensor_func.ph: True})
 
 
 @pytest.mark.parametrize("mixed", (False, True))
@@ -1221,7 +1249,7 @@ def test_direct_grads(Simulator, mixed):
 
             if mixed:
                 data[p2] = np.ones((1, n_steps, 1)) * 2
-                obj[p2] = "mse"
+                obj[p2] = mse
                 assert np.allclose(sim.data[p], sim.data[p2])
 
             data[a] = np.ones((1, n_steps, 1))

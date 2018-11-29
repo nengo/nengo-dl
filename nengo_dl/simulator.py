@@ -453,22 +453,28 @@ class Simulator:
         n_epochs : int
             Run training for the given number of epochs (complete passes
             through ``data``)
-        objective : dict of {(tuple of) `~nengo.Probe`: \
-                             ``"mse"`` or callable or ``None``}
-            The objective to be minimized. Passing ``"mse"`` will train with
-            mean squared error. A custom function ``f(output, target) -> loss``
-            can be passed that consumes the actual output and target output for
-            the given probe(s) and returns a ``tf.Tensor`` representing a
-            scalar loss value.  The function may also accept a single argument
-            ``f(output) -> loss`` if targets are not required. Passing ``None``
+        objective : dict of {(tuple of) `~nengo.Probe`: callable or ``None``}
+            The objective to be minimized. The default applies
+            `.objectives.mse` to all probes in ``data``.  This can be
+            overridden by passing a dictionary mapping Probes to functions
+            ``f(output, target) -> loss`` that consume the actual output and
+            target output for the given probe(s) and return a ``tf.Tensor``
+            representing a scalar loss value.  The function may also accept a
+            single argument ``f(output) -> loss`` if targets are not required.
+            Some common objective functions can be found in
+            `nengo_dl.objectives`.
+
+            Passing ``None`` as the probe value (instead of a callable)
             indicates that the error is being computed outside the simulation,
-            and the value passed as probe target directly specifies the output
-            error gradient. If multiple probes are specified as the key then
-            the corresponding output/target values will be passed as a list to
-            the objective function.  The overall loss value being minimized
-            will be the sum across all the objectives specified.  The default
-            behaviour if no objective is provided is to use "mse" for each
-            probe in ``data``.
+            and the value passed for that probe in ``data`` directly specifies
+            the output error gradient.
+
+            If multiple probes are specified as the key, then the corresponding
+            output/target values will be passed as a list to the objective
+            function.
+
+            The overall loss value being minimized will be the sum across all
+            the objectives specified.
         shuffle : bool
             If True, randomize the data into different minibatches each epoch
         truncation: int
@@ -551,6 +557,13 @@ class Simulator:
         # fill in mse function
         for p, o in objective.items():
             if o == "mse":
+                # TODO: remove in 3.0.0
+                warnings.warn(
+                    "Using the string 'mse' for the objective is deprecated, "
+                    "and will no longer be supported in the future; please "
+                    "use the function `nengo_dl.objectives.mse` in the future",
+                    DeprecationWarning)
+
                 objective[p] = objectives.mse
 
         # build the output function
@@ -621,17 +634,22 @@ class Simulator:
             node.size_out/probe.size_in)``.  If no input data is required,
             an integer can be given specifying the number of timesteps to
             run the simulation.
-        objective : dict of {(tuple of) `~nengo.Probe`: \
-                             ``"mse"`` or callable}
-            The objective used to compute loss. Passing ``"mse"`` will use
-            mean squared error. A custom function ``f(output, target) -> loss``
-            can be passed that consumes the actual output and target output for
-            the given probe(s) and returns a ``tf.Tensor`` representing a
-            scalar loss value.  The function may also accept a single argument
-            ``f(output) -> loss`` if targets are not required.  If multiple
-            probes are specified as the key then the corresponding
+        objective : dict of {(tuple of) `~nengo.Probe`: callable}
+            The objective to compute the loss. This is a dictionary mapping
+            Probes to functions
+            ``f(output, target) -> loss`` that consume the actual output and
+            target output for the given probe(s) and return a ``tf.Tensor``
+            representing a scalar loss value.  The function may also accept a
+            single argument ``f(output) -> loss`` if targets are not required.
+            Some common objective functions can be found in
+            `nengo_dl.objectives`.
+
+            If multiple probes are specified as the key, then the corresponding
             output/target values will be passed as a list to the objective
             function.
+
+            The overall value returned will be the sum across all
+            the objectives specified.
         combine : callable
             Function used to combine objective values from each minibatch.
         extra_feeds : dict of {``tf.Tensor``: `~numpy.ndarray`}
@@ -661,6 +679,13 @@ class Simulator:
         # fill in mse function
         for p, o in objective.items():
             if o == "mse":
+                # TODO: remove in 3.0.0
+                warnings.warn(
+                    "Using the string 'mse' for the objective is deprecated, "
+                    "and will no longer be supported in the future; please "
+                    "use the function `nengo_dl.objectives.mse` in the future",
+                    DeprecationWarning)
+
                 objective[p] = objectives.mse
 
         progress = (

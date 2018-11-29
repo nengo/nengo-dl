@@ -94,6 +94,10 @@ def test_build_outputs(Simulator):
                 return outputs
         sim.tensor_graph.build_outputs({p: MethodLoss().loss})
 
+        # validation error for invalid output type
+        with pytest.raises(ValidationError):
+            sim.tensor_graph.build_outputs({p: 1})
+
 
 @pytest.mark.training
 def test_build_optimizer(Simulator):
@@ -106,8 +110,9 @@ def test_build_optimizer(Simulator):
     # check optimizer caching
     with Simulator(net) as sim:
         opt = tf.train.GradientDescentOptimizer(0)
-        assert (sim.tensor_graph.build_optimizer_func(opt, {p: "mse"}) is
-                sim.tensor_graph.build_optimizer_func(opt, {p: "mse"}))
+        assert (
+            sim.tensor_graph.build_optimizer_func(opt, {p: objectives.mse}) is
+            sim.tensor_graph.build_optimizer_func(opt, {p: objectives.mse}))
 
     # error when no trainable elements
     with nengo.Network() as net:
@@ -117,7 +122,8 @@ def test_build_optimizer(Simulator):
     with Simulator(net) as sim:
         with pytest.raises(ValueError):
             sim.tensor_graph.build_outputs(
-                {p: sim.tensor_graph.build_optimizer_func(opt, {p: "mse"})})
+                {p: sim.tensor_graph.build_optimizer_func(
+                    opt, {p: objectives.mse})})
 
     # capturing variables from nested loss function
     def loss(x):

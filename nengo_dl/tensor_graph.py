@@ -466,15 +466,27 @@ class TensorGraph:
         ----------
         optimizer : ``tf.train.Optimizer``
             Instance of a TensorFlow optimizer class
-        objective : dict of {`~nengo.Probe`: ``"mse"`` or callable or ``None``}
-            The objective to be minimized for each probe. Passing
-            ``"mse"`` will train with mean squared error. A custom function
-            ``f(output, target) -> loss`` can be passed that consumes the
-            actual output and target output for a probe in ``targets``
-            and returns a ``tf.Tensor`` representing the scalar loss value for
-            that Probe (loss will be summed across Probes).  ``None``
-            indicates that the error gradient is being directly specified
-            by the user.
+        objective : dict of {`~nengo.Probe`: callable or ``None``}
+            The objective to be minimized. This is a dictionary mapping Probes
+            to functions
+            ``f(output, target) -> loss`` that consume the actual output and
+            target output for the given probe(s) and return a ``tf.Tensor``
+            representing a scalar loss value.  The function may also accept a
+            single argument ``f(output) -> loss`` if targets are not required.
+            Some common objective functions can be found in
+            `nengo_dl.objectives`.
+
+            Passing ``None`` as the probe value (instead of a callable)
+            indicates that the error is being computed outside the simulation,
+            and the value passed for that probe in ``data`` directly specifies
+            the output error gradient.
+
+            If multiple probes are specified as the key, then the corresponding
+            output/target values will be passed as a list to the objective
+            function.
+
+            The overall loss value being minimized will be the sum across all
+            the objectives specified.
 
         Returns
         -------

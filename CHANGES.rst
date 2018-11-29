@@ -41,6 +41,11 @@ Release History
 - Fixed bug in ``sim.train`` 1-step synapse warning when explicitly specifying
   ``n_steps`` (rather than passing in ``data``).
 
+**Deprecated**
+
+- Passing ``"mse"`` as the objective in ``sim.train``/``sim.loss`` is no longer
+  supported.  Use the function ``nengo_dl.objectives.mse`` instead.
+
 2.0.0 (November 23, 2018)
 -------------------------
 

@@ -43,7 +43,7 @@ with nengo_dl.Simulator(net, minibatch_size=10) as sim:
               p: targets},
         optimizer=tf.train.AdamOptimizer(),
         n_epochs=2,
-        objective={p: "mse"})
+        objective={p: nengo_dl.objectives.mse})
 
 # snippet 6 (section 3.3)
 with net:
