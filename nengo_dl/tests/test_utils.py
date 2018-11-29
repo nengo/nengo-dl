@@ -1,6 +1,5 @@
 # pylint: disable=missing-docstring
 
-import nengo
 from nengo.exceptions import SimulationError
 import numpy as np
 import pytest
@@ -162,60 +161,3 @@ def test_progress_bar():
     # check that closing the parent process closes the sub
     assert sub2.finished
     assert progress.finished
-
-
-@pytest.mark.parametrize("axis, weight, order",
-                         [(None, 0.6, 1),
-                          (None, 0.7, "euclidean"),
-                          (1, None, 2)])
-def test_regularize(axis, weight, order, rng, sess):
-    x_init = rng.randn(2, 3, 4, 5)
-
-    x = tf.constant(x_init)
-
-    reg = utils.Regularize(weight=weight, order=order, axis=axis)(x)
-
-    sess.run(tf.global_variables_initializer())
-    reg_val = sess.run(reg)
-
-    if order == "euclidean":
-        order = 2
-
-    if weight is None:
-        weight = 1
-
-    if axis is None:
-        truth = np.reshape(x_init, x_init.shape[:2] + (-1,))
-        axis = 2
-    else:
-        truth = x_init
-        axis += 2
-    truth = np.mean(np.linalg.norm(truth, ord=order, axis=axis))
-    truth *= weight
-
-    assert np.allclose(reg_val, truth)
-
-
-@pytest.mark.training
-@pytest.mark.parametrize("mode", ("activity", "weights"))
-def test_regularize_train(Simulator, mode, seed):
-    with nengo.Network(seed=seed) as net:
-        a = nengo.Node([1])
-        b = nengo.Ensemble(30, 1, neuron_type=nengo.RectifiedLinear(),
-                           gain=nengo.dists.Choice([1]),
-                           bias=nengo.dists.Choice([0.1]))
-        c = nengo.Connection(a, b.neurons, synapse=None,
-                             transform=nengo.dists.Uniform(-0.1, 0.1))
-
-        if mode == "weights":
-            p = nengo.Probe(c, "weights")
-        else:
-            p = nengo.Probe(b.neurons)
-
-    with Simulator(net) as sim:
-        sim.train(
-            1, tf.train.RMSPropOptimizer(0.05),
-            objective={p: utils.Regularize()}, n_epochs=10)
-
-        sim.step()
-        assert np.allclose(sim.data[p], 0, atol=1e-2)

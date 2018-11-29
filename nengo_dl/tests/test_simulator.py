@@ -13,7 +13,8 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import configure_settings, tensor_layer, dists, TensorNode, utils
+from nengo_dl import (
+    configure_settings, tensor_layer, dists, TensorNode, utils, objectives)
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
 
@@ -217,7 +218,7 @@ def test_train_recurrent(Simulator, truncation, seed):
                   n_epochs=200, truncation=truncation)
 
         sim.check_gradients(
-            sim.tensor_graph.build_outputs({p: utils.mse})[0][p])
+            sim.tensor_graph.build_outputs({p: mse})[0][p])
 
         sim.run_steps(n_steps, data={inp: x[:minibatch_size]})
 
@@ -1339,7 +1340,7 @@ def test_fill_feed(Simulator):
     with Simulator(net) as sim:
         # build an objective with p0 in it, so that it will be added to the
         # graph
-        sim.tensor_graph.build_outputs({p0: utils.mse})
+        sim.tensor_graph.build_outputs({p0: mse})
 
         # filling p0 will work fine
         sim._fill_feed(1, data={p0: np.zeros((1, 1, 1))})

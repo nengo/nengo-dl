@@ -205,6 +205,9 @@ values for each of the specified probes.
 `.Simulator.loss` can be used to check the loss
 (error) value for a given objective.
 
+See :ref:`objective-api` for some common objective functions that are
+provided with NengoDL for convenience.
+
 .. _truncation:
 
 truncation

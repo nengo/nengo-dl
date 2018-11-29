@@ -31,6 +31,10 @@ Release History
   is desired (as opposed to the default behaviour of keeping the data from
   all steps).
 
+**Changed**
+
+- Moved ``utils.mse`` to ``objectives.mse``.
+
 **Fixed**
 
 - Fixed objective argument parsing if objective is a callable class or method.

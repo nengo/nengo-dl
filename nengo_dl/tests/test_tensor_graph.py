@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import tensor_graph, utils, graph_optimizer, config
+from nengo_dl import tensor_graph, utils, graph_optimizer, config, objectives
 from nengo_dl.tests import dummies
 
 
@@ -60,8 +60,8 @@ def test_build_outputs(Simulator):
 
     with Simulator(net) as sim:
         # check that the output caching works
-        assert (sim.tensor_graph.build_outputs({p: utils.mse})[0] is
-                sim.tensor_graph.build_outputs({p: utils.mse})[0])
+        assert (sim.tensor_graph.build_outputs({p: objectives.mse})[0] is
+                sim.tensor_graph.build_outputs({p: objectives.mse})[0])
 
         def loss(x):
             return x

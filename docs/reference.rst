@@ -61,6 +61,13 @@ Distributions
 
 .. automodule:: nengo_dl.dists
 
+.. _objective-api:
+
+Objectives
+^^^^^^^^^^
+
+.. automodule:: nengo_dl.objectives
+
 .. _developer-api:
 
 Developers

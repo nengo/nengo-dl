@@ -31,7 +31,7 @@ import tensorflow as tf
 from tensorflow.python.client.timeline import Timeline
 from tensorflow.python.ops import gradient_checker
 
-from nengo_dl import utils, config
+from nengo_dl import utils, config, objectives
 from nengo_dl.builder import NengoBuilder, NengoModel
 from nengo_dl.tensor_graph import TensorGraph
 
@@ -541,7 +541,8 @@ class Simulator:
                 raise ValidationError(
                     "Must specify an explicit objective if no input data "
                     "given", "objective")
-            objective = {p: utils.mse for p in data if isinstance(p, Probe)}
+            objective = {
+                p: objectives.mse for p in data if isinstance(p, Probe)}
 
         if not isinstance(objective, dict):
             raise ValidationError("Must be a dictionary mapping Probes to "
@@ -550,7 +551,7 @@ class Simulator:
         # fill in mse function
         for p, o in objective.items():
             if o == "mse":
-                objective[p] = utils.mse
+                objective[p] = objectives.mse
 
         # build the output function
         apply_optimizer = self.tensor_graph.build_optimizer_func(
@@ -660,7 +661,7 @@ class Simulator:
         # fill in mse function
         for p, o in objective.items():
             if o == "mse":
-                objective[p] = utils.mse
+                objective[p] = objectives.mse
 
         progress = (
             utils.ProgressBar("Calculating loss", "Calculation",
