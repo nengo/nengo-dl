@@ -342,6 +342,10 @@ def test_train_errors(Simulator):
                       tf.train.GradientDescentOptimizer(0),
                       objective={p: "mse"})
 
+        # must specify objective if no data
+        with pytest.raises(ValidationError):
+            sim.train(5, tf.train.GradientDescentOptimizer(0.1))
+
     # error when calling train after closing
     with pytest.raises(SimulatorClosed):
         sim.train({None: np.zeros((1, 1))}, None)
@@ -367,10 +371,6 @@ def test_train_no_data(Simulator):
         sim.step()
         assert np.allclose(sim.data[p], 2)
 
-        # must specify objective if no data
-        with pytest.raises(ValidationError):
-            sim.train(5, tf.train.GradientDescentOptimizer(0.1))
-
 
 def test_loss(Simulator):
     with nengo.Network() as net:
@@ -384,13 +384,10 @@ def test_loss(Simulator):
         sim.run_steps(n_steps)
         data = sim.data[p]
 
-        # check mse
+        # check default mse objective
         assert np.allclose(sim.loss({inp: np.ones((4, n_steps, 1)),
-                                     p: np.zeros((4, n_steps, 1))},
-                                    {p: mse}),
+                                     p: np.zeros((4, n_steps, 1))}),
                            np.mean(data ** 2))
-
-
 
         # check custom objective
         assert np.allclose(sim.loss({inp: np.ones((4, n_steps, 1)),
@@ -401,22 +398,22 @@ def test_loss(Simulator):
         # error for mismatched n_steps
         with pytest.raises(ValidationError):
             sim.loss({inp: np.ones((1, n_steps + 1, 1)),
-                      p: np.ones((1, n_steps, 1))}, {p: mse})
+                      p: np.ones((1, n_steps, 1))})
 
         # error for mismatched batch size
         with pytest.raises(ValidationError):
             sim.loss({inp: np.ones((2, n_steps, 1)),
-                      p: np.ones((1, n_steps, 1))}, {p: mse})
+                      p: np.ones((1, n_steps, 1))})
 
         # error for mismatched n_steps (in targets)
         with pytest.raises(ValidationError):
             sim.loss({inp: np.ones((1, n_steps, 1)),
-                      p: np.ones((1, n_steps + 1, 1))}, {p: mse})
+                      p: np.ones((1, n_steps + 1, 1))})
 
         # error for mismatched batch size (in targets)
         with pytest.raises(ValidationError):
             sim.loss({inp: np.ones((1, n_steps, 1)),
-                      p: np.ones((2, n_steps, 1))}, {p: mse})
+                      p: np.ones((2, n_steps, 1))})
 
         # error when not specifying objective as a dict
         with pytest.raises(ValidationError):
@@ -427,15 +424,19 @@ def test_loss(Simulator):
         with pytest.warns(DeprecationWarning):
             sim.loss({p: np.ones((1, n_steps, 1))}, {p: "mse"})
 
+        # must specify objective if no data
+        with pytest.raises(ValidationError):
+            sim.loss(5)
+
     # error when calling loss after close
     with pytest.raises(SimulatorClosed):
-        sim.loss({None: np.zeros((1, 1))}, {p: mse})
+        sim.loss({None: np.zeros((1, 1))})
 
     with Simulator(net, unroll_simulation=2) as sim:
         # error when data n_steps does not match unroll
         with pytest.raises(ValidationError):
             sim.loss({inp: np.ones((1, 1, 1)),
-                      p: np.ones((1, 1, 1))}, {p: mse})
+                      p: np.ones((1, 1, 1))})
 
 
 def test_generate_inputs(Simulator, seed):
@@ -926,8 +927,7 @@ def test_train_state_save(Simulator):
         sim2.train({u: np.ones((4, 10, 1)), p: np.ones((4, 10, 1))},
                    optimizer=tf.train.GradientDescentOptimizer(0))
 
-        sim2.loss({u: np.ones((4, 10, 1)), p: np.ones((4, 10, 1))},
-                  {p: mse})
+        sim2.loss({u: np.ones((4, 10, 1)), p: np.ones((4, 10, 1))})
 
         sim2.run_steps(10)
 
@@ -1221,8 +1221,8 @@ def test_extra_feeds(Simulator):
                   extra_feeds={b.tensor_func.ph: True})
 
         with pytest.raises(tf.errors.InvalidArgumentError):
-            sim.loss(data, {p: mse})
-        sim.loss(data, {p: mse}, extra_feeds={b.tensor_func.ph: True})
+            sim.loss(data)
+        sim.loss(data, extra_feeds={b.tensor_func.ph: True})
 
 
 @pytest.mark.parametrize("mixed", (False, True))

@@ -620,7 +620,7 @@ class Simulator:
                 truncation=truncation, profile=profile, shuffle=shuffle,
                 training=True, callback=callback)
 
-    def loss(self, data, objective, combine=np.mean, extra_feeds=None,
+    def loss(self, data, objective=None, combine=np.mean, extra_feeds=None,
              progress_bar=True, training=False):
         """
         Compute the loss value for the given objective and inputs/targets.
@@ -635,8 +635,9 @@ class Simulator:
             an integer can be given specifying the number of timesteps to
             run the simulation.
         objective : dict of {(tuple of) `~nengo.Probe`: callable}
-            The objective to compute the loss. This is a dictionary mapping
-            Probes to functions
+            The objective to compute the loss. The default applies
+            `.objectives.mse` to all probes in ``data``.  This can be
+            overridden by passing a dictionary mapping Probes to functions
             ``f(output, target) -> loss`` that consume the actual output and
             target output for the given probe(s) and return a ``tf.Tensor``
             representing a scalar loss value.  The function may also accept a
@@ -671,6 +672,15 @@ class Simulator:
 
         batch_size = (self.minibatch_size if isinstance(data, int) else
                       next(iter(data.values())).shape[0])
+
+        # fill in default objective
+        if objective is None:
+            if isinstance(data, int):
+                raise ValidationError(
+                    "Must specify an explicit objective if no input data "
+                    "given", "objective")
+            objective = {
+                p: objectives.mse for p in data if isinstance(p, Probe)}
 
         if not isinstance(objective, dict):
             raise ValidationError("Must be a dictionary mapping Probes to "

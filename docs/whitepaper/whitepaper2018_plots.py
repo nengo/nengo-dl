@@ -658,8 +658,7 @@ def spa_optimization(ctx, dimensions, n_epochs):
                     test_data, {net.output_probe: acc}))
                 print('pre retrieval:', results[i]["pre_retrieval"][-1])
 
-                results[i]["pre_mse"].append(sim.loss(
-                    test_data, {net.output_probe: nengo_dl.objectives.mse}))
+                results[i]["pre_mse"].append(sim.loss(test_data))
                 print('pre mse:', results[i]["pre_mse"][-1])
 
                 sim.train(train_data, optimizer, n_epochs=n_epochs,
@@ -669,8 +668,7 @@ def spa_optimization(ctx, dimensions, n_epochs):
                                      net.memory_probe: partial(weighted_mse,
                                                                weight=0.25)})
 
-                results[i]["post_mse"].append(sim.loss(
-                    test_data, {net.output_probe: nengo_dl.objectives.mse}))
+                results[i]["post_mse"].append(sim.loss(test_data))
                 print('post mse:', results[i]["post_mse"][-1])
 
                 results[i]["post_retrieval"].append(sim.loss(

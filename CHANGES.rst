@@ -34,6 +34,9 @@ Release History
 **Changed**
 
 - Moved ``utils.mse`` to ``objectives.mse``.
+- ``sim.loss`` will now apply ``nengo_dl.objectives.mse`` to all probes in
+  ``data`` if no explicit ``objective`` is given (mirroring the default
+  behaviour in ``sim.train``).
 
 **Fixed**
 
