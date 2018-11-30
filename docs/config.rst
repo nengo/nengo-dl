@@ -129,12 +129,13 @@ which differ from the standard config behaviour:
                # correct
                net.config[my_ens].trainable = False
 
-planner/sorter/simplifications
-------------------------------
+planner
+-------
 
-These options can be used to change the algorithm used for different aspects
-of the graph optimization stage.  For example, we could change the planning
-algorithm to the `.graph_optimizer.transitive_planner` via
+This option can be used to change the algorithm used for assigning an order
+to simulation operations during the graph optimization stage.  For example, we
+could change the planning algorithm to the
+`.graph_optimizer.transitive_planner` via
 
 .. code-block:: python
 
@@ -142,6 +143,36 @@ algorithm to the `.graph_optimizer.transitive_planner` via
 
     with nengo.Network() as net:
         nengo_dl.configure_settings(planner=transitive_planner)
+
+sorter
+------
+
+This option can be used to change the algorithm used for sorting
+signals/operators during the graph optimization stage.  For example, we could
+disable sorting via
+
+.. code-block:: python
+
+    from nengo_dl.graph_optimizer import noop_order_signals
+
+    with nengo.Network() as net:
+        nengo_dl.configure_settings(sorter=noop_order_signals)
+
+simplifications
+---------------
+
+This option can be used to change the simplification transformations applied
+during the graph optimization stage.  This takes a list of transformation
+functions, where each will be applied in sequence.  For example, we could apply
+only two of the default simplifications via
+
+.. code-block:: python
+
+    from nengo_dl.graph_optimizer import remove_identity_muls, remove_zero_incs
+
+    with nengo.Network() as net:
+        nengo_dl.configure_settings(simplifications=[remove_identity_muls,
+                                                     remove_zero_incs])
 
 session_config
 --------------
