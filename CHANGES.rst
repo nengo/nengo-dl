@@ -18,7 +18,7 @@ Release History
    - Deprecated
    - Removed
 
-2.0.1 (unreleased)
+2.1.0 (unreleased)
 ------------------
 
 **Added**
