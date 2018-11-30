@@ -37,6 +37,8 @@ Release History
 - ``sim.loss`` will now apply ``nengo_dl.objectives.mse`` to all probes in
   ``data`` if no explicit ``objective`` is given (mirroring the default
   behaviour in ``sim.train``).
+- The Spaun benchmark network will now be installed through pip rather than
+  manually cloning and importing the repo.
 
 **Fixed**
 

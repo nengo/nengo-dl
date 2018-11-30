@@ -6,9 +6,6 @@ import inspect
 import itertools
 import os
 import random
-import subprocess
-import sys
-import tempfile
 import time
 
 import click
@@ -273,31 +270,33 @@ def spaun(dimensions):
     .. [1] Chris Eliasmith, Terrence C. Stewart, Xuan Choo, Trevor Bekolay,
        Travis DeWolf, Yichuan Tang, and Daniel Rasmussen (2012). A large-scale
        model of the functioning brain. Science, 338:1202-1205.
+
+    Notes
+    -----
+    This network needs to be installed via
+
+    .. code-block:: bash
+
+        pip install git+https://github.com/drasmuss/spaun2.0.git
     """
 
-    # spaun needs to be downloaded from https://github.com/drasmuss/spaun2.0,
-    # and manually added to python path
-    spaun_dir = os.path.join(tempfile.gettempdir(), "spaun2.0")
-    if not os.path.exists(spaun_dir):
-        subprocess.call(
-            "git clone https://github.com/drasmuss/spaun2.0 %s" % spaun_dir,
-            shell=True)
-    sys.path.append(spaun_dir)
     from _spaun.configurator import cfg
     from _spaun.vocabulator import vocab
     from _spaun.experimenter import experiment
-    from _spaun.modules.vision.data import vis_data
-    from _spaun.modules.motor.data import mtr_data
+    from _spaun.modules.stim import stim_data
+    from _spaun.modules.vision import vis_data
+    from _spaun.modules.motor import mtr_data
     from _spaun.spaun_main import Spaun
 
     vocab.sp_dim = dimensions
     cfg.mtr_arm_type = None
 
     cfg.set_seed(1)
-    experiment.initialize('A', vis_data.get_image_ind,
-                          vis_data.get_image_label,
-                          cfg.mtr_est_digit_response_time, cfg.rng)
-    vocab.initialize(experiment.num_learn_actions, cfg.rng)
+    experiment.initialize(
+        "A", stim_data.get_image_ind, stim_data.get_image_label,
+        cfg.mtr_est_digit_response_time, "", cfg.rng)
+    vocab.initialize(
+        stim_data.stim_SP_labels, experiment.num_learn_actions, cfg.rng)
     vocab.initialize_mtr_vocab(mtr_data.dimensions, mtr_data.sps)
     vocab.initialize_vis_vocab(vis_data.dimensions, vis_data.sps)
 

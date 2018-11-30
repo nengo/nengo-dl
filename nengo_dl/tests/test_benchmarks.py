@@ -54,10 +54,12 @@ def test_mnist(tensor_layer):
 
 
 def test_spaun():
+    pytest.importorskip("_spaun")
+
     dimensions = 2
 
     net = benchmarks.spaun(dimensions=dimensions)
-    assert net.mem.mem_in.size_in == dimensions
+    assert net.mem.mb1_net.output.size_in == dimensions
 
 
 @pytest.mark.parametrize(
