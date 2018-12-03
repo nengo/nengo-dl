@@ -10,6 +10,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
+    "nengo_sphinx_theme",
     "nengo_sphinx_theme.ext.versions",
     "numpydoc",
     "nbsphinx",
@@ -58,9 +59,6 @@ pygments_style = "friendly"
 html_theme = "nengo_sphinx_theme"
 html_title = "NengoDL documentation"
 html_static_path = ["_static"]
-html_context = {
-    "css_files": [os.path.join("_static", "custom.css")],
-}
 htmlhelp_basename = "NengoDLdoc"
 html_last_updated_fmt = ""  # default output format
 html_show_sphinx = False
