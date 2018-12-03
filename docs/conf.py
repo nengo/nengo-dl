@@ -64,7 +64,10 @@ html_last_updated_fmt = ""  # default output format
 html_show_sphinx = False
 html_favicon = os.path.join("_static", "favicon.ico")
 html_logo = os.path.join("_static", "logo.png")
-html_sidebars = {"**": ["sidebar.html"]}
+html_theme_options = {
+    "sidebar_toc_depth": 4,
+    "sidebar_logo_width": 200,
+}
 
 # create redirect pages (from_page, to_page)
 # TODO: we can remove these redirects after a few releases
