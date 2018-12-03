@@ -7,7 +7,6 @@ cache:
   directories:
   - $HOME/miniconda
 
-sudo: required
 dist: trusty
 
 env:
