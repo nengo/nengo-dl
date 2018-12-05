@@ -1,0 +1,1656 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>nengo_dl.graph_optimizer &#8212; NengoDL documentation</title>
+    <link rel="stylesheet" href="../../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/normalize.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/bootstrap.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/mmenu.all.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/components.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/nengo.css" />
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<!--[if lte IE 9]><script src="https://cdnjs.cloudflare.com/ajax/libs/placeholders/3.0.2/placeholders.min.js"></script><![endif]-->
+<script type="text/javascript" src="https://cdn.crate.io/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/js/modernizr.js"></script>
+    <script type="text/javascript" src="../../_static/js/underscore.min.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/js/searchtools.js"></script>
+    <script type="text/javascript" src="../../_static/js/webflow.js"></script>
+    <script type="text/javascript" src="../../_static/js/bootstrap.js"></script>
+    <script type="text/javascript" src="../../_static/js/mmenu.all.min.js"></script>
+    <script type="text/javascript" src="../../_static/js/fontawesome.js"></script>
+    <script type="text/javascript" src="../../_static/js/custom.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+  </head><body>
+<header class="header-nav">
+  <div class="container">
+    <div class="navbar w-nav" data-animation="default" data-collapse="small" data-contain="1" data-duration="400">
+      <a class="brand w-nav-brand" href="https://www.nengo.ai/">
+        <img src="https://www.nengo.ai/design/_images/general-full-light.svg" width="120">
+      </a>
+      <nav class="w-nav-menu main-nav" role="navigation">
+        <div class="dropdownBackground">
+          <span class="arrow"></span>
+        </div>
+        <ul id="menu-top-navigation" class="menu">
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/overview.html">Overview</a>
+            <ul class="sub-menu">
+                <li class="menu-item"><a href="https://www.nengo.ai/quickstart.html">Quick Start</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/documentation.html">Documentation</a>
+            <table class="sub-menu">
+              <tr>
+                <td class="menu-heading">Core</td>
+                <td class="menu-heading">Backends</td>
+                <td class="menu-heading">Add-ons</td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo">Nengo</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-fpga">Nengo FPGA</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-examples">Nengo Examples</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-dl/">Nengo DL</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-loihi">Nengo Loihi</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-extras/">Nengo Extras</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-gui">Nengo GUI</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-mpi">Nengo MPI</a></td>
+                <td class="menu-item"><a href="https://arvoelke.github.io/nengolib-docs/">Nengo Lib</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-spa/">Nengo SPA</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-ocl">Nengo OpenCL</a></td>
+                <td class="menu-item"></td>
+              </tr>
+              <tr>
+                <td class="menu-item"></td>
+                <td class="menu-item"><a href="https://github.com/project-rig/nengo_spinnaker">Nengo SpiNNaker</a></td>
+                <td class="menu-item"></td>
+              </tr>
+            </table>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/community.html">Community</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://forum.nengo.ai/">Forum</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/publications.html">Publications</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/summerschool.html">Summer School</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/videos.html">Videos</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/people.html">People</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/projects.html">Development</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/contributing.html">Contributor Guide</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/projects.html">Ecosystem</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/README.html">About</a></li>
+          <li class="btn-link w-nav-link menu-item"><a href="https://www.nengo.ai/download.html">Download</a></li>
+        </ul>
+      </nav>
+
+      <div id="mobile-nav" class="mm-menu">
+        <ul class="offcanvas-menu">
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/overview.html">Overview</a></li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/documentation.html">Documentation</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/quickstart.html">Quick Start</a></li>
+              <li class="menu-item"><a href="http://www.nengo.ai/nengo">NengoCore</a></li>
+              <li class="menu-item"><a href="https://github.com/nengo/nengo-gui#nengo-gui">NengoGUI</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/community.html">Community</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://forum.nengo.ai/">Forum</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/summerschool.html">Summer School</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/people.html">People</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/projects.html">Development</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/contributing.html">Contributor Guide</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/projects.html">Ecosystem</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/README.html">About</a></li>
+          <li class="btn-link w-nav-link menu-item"><a href="https://www.nengo.ai/download.html">Download</a></li>
+        </ul>
+      </div>
+
+      <a href="#mobile-nav" class="fa fa-bars mobile-nav-button"></a>
+    </div>
+  </div>
+</header>
+
+<div class="w-section section border-top">
+  <div class="container">
+    <div class="row" id="_modules/nengo_dl/graph_optimizer">
+      <div class="col-md-4 col-lg-3">
+        <aside class="wrapper-navleft"><div role="complementary" class="bs-docs-sidebar hidden-print" id="nav-affix">
+  <ul class="bs-docs-sidenav bs-sidenav nav" role="complementary">
+    <a href="../../index.html">
+      <img class="logo" src="https://www.nengo.ai/design/_images/nengo-dl-full-light.svg" alt="NengoDL" width="200" />
+    </a>
+    <ul class="toctree nav nav-list">
+      <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user-guide.html">User guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../project.html">Project information</a></li>
+</ul>
+
+    </ul>
+  </ul>
+</div>
+          
+        </aside>
+      </div>
+      <div class="col-md-8 col-lg-9">
+        <div class="wrapper-content-right">
+          
+<div class="version-select-container">
+    <div data-delay="0" class="w-dropdown">
+        <div class="w-dropdown-toggle toggle">
+            <div class="toggle-text">v2.1.0</div>
+            <div class="w-icon-dropdown-toggle toggle-icon"></div>
+        </div>
+        <nav class="w-dropdown-list dropdown-list">
+            
+            
+                <a href="../../../_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">latest</a>
+            
+
+            
+                
+                <div class="w-dropdown-link">v2.1.0</div>
+                
+            
+                
+                    <a href="../../../v2.0.0/_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">v2.0.0</a>
+                
+            
+                
+                    <a href="../../../v1.2.1/_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">v1.2.1</a>
+                
+            
+                
+                    <a href="../../../v1.2.0/_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">v1.2.0</a>
+                
+            
+                
+                    <a href="../../../v1.1.0/_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">v1.1.0</a>
+                
+            
+                
+                    <a href="../../../v1.0.0/_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">v1.0.0</a>
+                
+            
+                
+                    <a href="../../../v0.6.2/_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">v0.6.2</a>
+                
+            
+                
+                    <a href="../../../v0.6.1/_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">v0.6.1</a>
+                
+            
+                
+                    <a href="../../../v0.6.0/_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">v0.6.0</a>
+                
+            
+                
+                    <a href="../../../v0.5.2/_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">v0.5.2</a>
+                
+            
+                
+                    <a href="../../../v0.5.1/_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">v0.5.1</a>
+                
+            
+                
+                    <a href="../../../v0.5.0/_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">v0.5.0</a>
+                
+            
+                
+                    <a href="../../../v0.4.0/_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">v0.4.0</a>
+                
+            
+                
+                    <a href="../../../v0.3.1/_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">v0.3.1</a>
+                
+            
+                
+                    <a href="../../../v0.3.0/_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">v0.3.0</a>
+                
+            
+                
+                    <a href="../../../v0.2.0/_modules/nengo_dl/graph_optimizer.html" class="w-dropdown-link">v0.2.0</a>
+                
+            
+        </nav>
+    </div>
+</div>
+
+          
+  <h1>Source code for nengo_dl.graph_optimizer</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">These functions are used to restructure the Nengo operator graph so that it</span>
+<span class="sd">can be simulated more efficiently when converted into a TensorFlow graph.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span><span class="p">,</span> <span class="n">defaultdict</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">from</span> <span class="nn">nengo.builder.operator</span> <span class="k">import</span> <span class="n">ElementwiseInc</span><span class="p">,</span> <span class="n">DotInc</span><span class="p">,</span> <span class="n">Reset</span><span class="p">,</span> <span class="n">Copy</span>
+<span class="kn">from</span> <span class="nn">nengo.exceptions</span> <span class="k">import</span> <span class="n">BuildError</span>
+<span class="kn">from</span> <span class="nn">nengo.utils.compat</span> <span class="k">import</span> <span class="n">iteritems</span>
+<span class="kn">from</span> <span class="nn">nengo.utils.graphs</span> <span class="k">import</span> <span class="n">toposort</span><span class="p">,</span> <span class="n">BidirectionalDAG</span>
+<span class="kn">from</span> <span class="nn">nengo.utils.simulator</span> <span class="k">import</span> <span class="n">operator_dependency_graph</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">nengo_dl</span> <span class="k">import</span> <span class="p">(</span><span class="n">process_builders</span><span class="p">,</span> <span class="n">builder</span><span class="p">,</span> <span class="n">tensor_node</span><span class="p">,</span>
+                      <span class="n">op_builders</span><span class="p">,</span> <span class="n">learning_rule_builders</span><span class="p">,</span> <span class="n">neuron_builders</span><span class="p">)</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="mergeable"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.mergeable">[docs]</a><span class="k">def</span> <span class="nf">mergeable</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">chosen_ops</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check if the given op can be merged with the candidate group</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    op : `~nengo.builder.Operator`</span>
+<span class="sd">        The operator to be merged</span>
+<span class="sd">    chosen_ops : list of `~nengo.builder.Operator`</span>
+<span class="sd">        The operator group to be merged in to</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    mergeable : bool</span>
+<span class="sd">        True if ``op`` can be merged into ``chosen_ops``, else False</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">chosen_ops</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="c1"># note: we only need to check against the first item in the list,</span>
+    <span class="c1"># since we know the rest all match</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">chosen_ops</span><span class="p">))</span>
+
+    <span class="c1"># must share the same builder</span>
+    <span class="k">if</span> <span class="n">builder</span><span class="o">.</span><span class="n">Builder</span><span class="o">.</span><span class="n">builders</span><span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">op</span><span class="p">)]</span> <span class="o">!=</span> <span class="n">builder</span><span class="o">.</span><span class="n">Builder</span><span class="o">.</span><span class="n">builders</span><span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">c</span><span class="p">)]:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="c1"># sets/incs/reads/updates must all match</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">sets</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">sets</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">incs</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">incs</span><span class="p">)</span> <span class="ow">or</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">reads</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">reads</span><span class="p">)</span> <span class="ow">or</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">updates</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">updates</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="c1"># signals must be mergeable into the same base array</span>
+    <span class="k">for</span> <span class="n">s0</span><span class="p">,</span> <span class="n">s1</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">all_signals</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">all_signals</span><span class="p">):</span>
+        <span class="c1"># dtype of signals must match</span>
+        <span class="k">if</span> <span class="n">s0</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">s1</span><span class="o">.</span><span class="n">dtype</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="c1"># shape of signal base must match on all axes &gt; 0</span>
+        <span class="k">if</span> <span class="n">s0</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">!=</span> <span class="n">s1</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="c1"># display shape must also match (since we need the shape to be well</span>
+        <span class="c1"># defined when we combine the signals)</span>
+        <span class="k">if</span> <span class="n">s0</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">!=</span> <span class="n">s1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="c1"># trainable/minibatched must match</span>
+        <span class="k">if</span> <span class="n">s0</span><span class="o">.</span><span class="n">trainable</span> <span class="o">!=</span> <span class="n">s1</span><span class="o">.</span><span class="n">trainable</span> <span class="ow">or</span> <span class="n">s0</span><span class="o">.</span><span class="n">minibatched</span> <span class="o">!=</span> <span class="n">s1</span><span class="o">.</span><span class="n">minibatched</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="c1"># operator-specific checks</span>
+    <span class="k">return</span> <span class="n">builder</span><span class="o">.</span><span class="n">Builder</span><span class="o">.</span><span class="n">builders</span><span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">op</span><span class="p">)]</span><span class="o">.</span><span class="n">mergeable</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="greedy_planner"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.greedy_planner">[docs]</a><span class="k">def</span> <span class="nf">greedy_planner</span><span class="p">(</span><span class="n">operators</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Combine mergeable operators into groups that will be executed as a</span>
+<span class="sd">    single computation.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    operators : list of `~nengo.builder.Operator`</span>
+<span class="sd">        All the ``nengo`` operators in a model (unordered)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    plan : list of tuple of `~nengo.builder.Operator`</span>
+<span class="sd">        Operators combined into mergeable groups and in execution order</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Originally based on ``nengo_ocl`` greedy planner</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">dependency_graph</span> <span class="o">=</span> <span class="n">operator_dependency_graph</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span>
+
+    <span class="c1"># map unscheduled ops to their direct predecessors and successors</span>
+    <span class="n">predecessors_of</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">successors_of</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">operators</span><span class="p">:</span>
+        <span class="n">predecessors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">successors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">op</span><span class="p">,</span> <span class="n">dests</span> <span class="ow">in</span> <span class="n">iteritems</span><span class="p">(</span><span class="n">dependency_graph</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">op2</span> <span class="ow">in</span> <span class="n">dests</span><span class="p">:</span>
+            <span class="n">predecessors_of</span><span class="p">[</span><span class="n">op2</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+        <span class="n">successors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">dests</span><span class="p">)</span>
+
+    <span class="c1"># the ops in `available` are ready to be scheduled (all predecessors</span>
+    <span class="c1"># have been scheduled).</span>
+    <span class="c1"># initialize it with the ops that have no predecessors</span>
+    <span class="n">available</span> <span class="o">=</span> <span class="p">[</span><span class="n">op</span> <span class="k">for</span> <span class="n">op</span><span class="p">,</span> <span class="n">dep</span> <span class="ow">in</span> <span class="n">iteritems</span><span class="p">(</span><span class="n">predecessors_of</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dep</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">plan</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">groups</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">predecessors_of</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># sort the available ops into mergeable groups</span>
+        <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">available</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">mergeable</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">g</span><span class="p">):</span>
+                    <span class="n">g</span> <span class="o">+=</span> <span class="p">[</span><span class="n">op</span><span class="p">]</span>
+                    <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">groups</span> <span class="o">+=</span> <span class="p">[[</span><span class="n">op</span><span class="p">]]</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">groups</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BuildError</span><span class="p">(</span><span class="s2">&quot;Cycle detected during graph optimization&quot;</span><span class="p">)</span>
+
+        <span class="c1"># pick the group that has the largest number of available ops</span>
+        <span class="n">groups</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">groups</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="nb">len</span><span class="p">)</span>
+        <span class="n">chosen</span> <span class="o">=</span> <span class="n">groups</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">groups</span> <span class="o">=</span> <span class="n">groups</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">plan</span> <span class="o">+=</span> <span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">chosen</span><span class="p">)]</span>
+
+        <span class="c1"># update predecessors and successors of remaining ops, and check for</span>
+        <span class="c1"># any newly available ops</span>
+        <span class="n">available</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">chosen</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">op2</span> <span class="ow">in</span> <span class="n">successors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]:</span>
+                <span class="n">preds</span> <span class="o">=</span> <span class="n">predecessors_of</span><span class="p">[</span><span class="n">op2</span><span class="p">]</span>
+                <span class="n">preds</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">preds</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">available</span> <span class="o">+=</span> <span class="p">[</span><span class="n">op2</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">predecessors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">successors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;GREEDY PLAN&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">plan</span><span class="p">),</span> <span class="o">*</span><span class="n">plan</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span> <span class="o">==</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ops</span><span class="p">)</span> <span class="k">for</span> <span class="n">ops</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">plan</span></div>
+
+
+<div class="viewcode-block" id="tree_planner"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.tree_planner">[docs]</a><span class="k">def</span> <span class="nf">tree_planner</span><span class="p">(</span><span class="n">op_list</span><span class="p">,</span> <span class="n">max_depth</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create merged execution plan through exhaustive tree search.</span>
+
+<span class="sd">    The ``max_depth`` parameter scales the planner between full tree search</span>
+<span class="sd">    and greedy search.  ``max_depth==1`` is equivalent to</span>
+<span class="sd">    `.greedy_planner`, and ``max_depth==len(op_list)`` is full tree</span>
+<span class="sd">    search (guaranteed to find the optimal plan, but likely very slow).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    op_list : list of `~nengo.builder.Operator`</span>
+<span class="sd">        All the ``nengo`` operators in a model (unordered)</span>
+<span class="sd">    max_depth : int</span>
+<span class="sd">        The planner will search this many steps ahead before selecting which</span>
+<span class="sd">        group to schedule next</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    plan : list of tuple of `~nengo.builder.Operator`</span>
+<span class="sd">        Operators combined into mergeable groups and in execution order</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">shortest_plan</span><span class="p">(</span><span class="n">selected</span><span class="p">,</span> <span class="n">successors_of</span><span class="p">,</span> <span class="n">predecessors_of</span><span class="p">,</span> <span class="n">cache</span><span class="p">,</span>
+                      <span class="n">max_depth</span><span class="p">,</span> <span class="n">available</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Recursively check what the shortest plan is after selecting each</span>
+<span class="sd">        available group.&quot;&quot;&quot;</span>
+
+        <span class="n">shortest</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">successors_of</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">nonempty_available</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">available</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">n_remaining</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">successors_of</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">selected</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">nonempty_available</span><span class="p">:</span>
+            <span class="n">new_len</span> <span class="o">=</span> <span class="n">n_remaining</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">max_depth</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">new_len</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># we&#39;ve reached the end, so just return the number</span>
+                <span class="c1"># of remaining operators after selecting this group</span>
+                <span class="n">remaining_length</span> <span class="o">=</span> <span class="n">new_len</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># update the selected ops after adding group</span>
+                <span class="n">new_selected</span> <span class="o">=</span> <span class="n">selected</span> <span class="o">|</span> <span class="n">group</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c1"># check if we&#39;ve already computed the shortest path</span>
+                    <span class="c1"># for the selected ops and depth</span>
+                    <span class="n">remaining_length</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[</span><span class="n">max_depth</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="n">new_selected</span><span class="p">]</span>
+
+                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                    <span class="c1"># update the list of available items after selecting</span>
+                    <span class="c1"># this group</span>
+                    <span class="n">available</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+                    <span class="n">successors</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">group</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">successors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]]</span>
+                    <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">successors</span><span class="p">:</span>
+                        <span class="n">predecessors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
+
+                        <span class="k">if</span> <span class="n">predecessors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="n">available</span><span class="p">[</span><span class="n">mergeable_cache</span><span class="p">[</span><span class="n">op</span><span class="p">]]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+
+                    <span class="c1"># recursively find the best plan on the remaining</span>
+                    <span class="c1"># operators</span>
+                    <span class="n">_</span><span class="p">,</span> <span class="n">remaining_length</span> <span class="o">=</span> <span class="n">shortest_plan</span><span class="p">(</span>
+                        <span class="n">new_selected</span><span class="p">,</span> <span class="n">successors_of</span><span class="p">,</span> <span class="n">predecessors_of</span><span class="p">,</span> <span class="n">cache</span><span class="p">,</span>
+                        <span class="n">max_depth</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">available</span><span class="p">)</span>
+
+                    <span class="c1"># return the available list to its original state for</span>
+                    <span class="c1"># the next group (note: this is faster than copying</span>
+                    <span class="c1"># the list)</span>
+                    <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">successors</span><span class="p">:</span>
+                        <span class="n">predecessors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                        <span class="k">if</span> <span class="n">predecessors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                            <span class="n">available</span><span class="p">[</span><span class="n">mergeable_cache</span><span class="p">[</span><span class="n">op</span><span class="p">]]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+                    <span class="n">available</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">group</span>
+
+            <span class="k">if</span> <span class="n">remaining_length</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="n">shortest</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="c1"># new shortest path found</span>
+                <span class="n">shortest</span> <span class="o">=</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">group</span><span class="p">),</span> <span class="n">remaining_length</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">shortest</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BuildError</span><span class="p">(</span><span class="s2">&quot;Cycle detected during graph optimization&quot;</span><span class="p">)</span>
+
+        <span class="n">cache</span><span class="p">[</span><span class="n">max_depth</span><span class="p">][</span><span class="n">selected</span><span class="p">]</span> <span class="o">=</span> <span class="n">shortest</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">shortest</span>
+
+    <span class="c1"># compute operator dependency graph</span>
+    <span class="n">successors_of</span> <span class="o">=</span> <span class="n">operator_dependency_graph</span><span class="p">(</span><span class="n">op_list</span><span class="p">)</span>
+
+    <span class="c1"># convert operators to integer indices (to save memory and make</span>
+    <span class="c1"># lookup faster)</span>
+    <span class="n">op_codes</span> <span class="o">=</span> <span class="p">{</span><span class="n">op</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">op</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">op_list</span><span class="p">)}</span>
+    <span class="n">successors_of</span> <span class="o">=</span> <span class="p">{</span><span class="n">op_codes</span><span class="p">[</span><span class="n">k</span><span class="p">]:</span> <span class="nb">set</span><span class="p">(</span><span class="n">op_codes</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">v</span><span class="p">)</span>
+                     <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">successors_of</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+    <span class="c1"># track the number of incoming edges to each operator</span>
+    <span class="n">predecessors_of</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">successors_of</span><span class="p">:</span>
+        <span class="n">predecessors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">op</span><span class="p">,</span> <span class="n">dests</span> <span class="ow">in</span> <span class="n">successors_of</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">op2</span> <span class="ow">in</span> <span class="n">dests</span><span class="p">:</span>
+            <span class="n">predecessors_of</span><span class="p">[</span><span class="n">op2</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="c1"># precompute which operators are theoretically mergeable (this doesn&#39;t mean</span>
+    <span class="c1"># we can actually merge these ops, since they may be dependent on one</span>
+    <span class="c1"># another)</span>
+    <span class="n">mergeable_cache</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">op_list</span><span class="p">]</span>
+    <span class="n">groups</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">op</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">op_list</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">g</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">groups</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">mergeable</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">g</span><span class="p">):</span>
+                <span class="n">mergeable_cache</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+                <span class="n">g</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+                <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mergeable_cache</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">groups</span><span class="p">)</span>
+            <span class="n">groups</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">op</span><span class="p">])</span>
+    <span class="n">groups</span> <span class="o">=</span> <span class="p">[[</span><span class="n">op_codes</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">g</span><span class="p">]</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">]</span>
+
+    <span class="c1"># find the ops that could be scheduled next in each merge group</span>
+    <span class="n">available</span> <span class="o">=</span> <span class="p">[</span><span class="nb">set</span><span class="p">(</span><span class="n">op</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">g</span> <span class="k">if</span> <span class="n">predecessors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">]</span>
+
+    <span class="n">plan</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">successors_of</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># find the best plan of the given depth</span>
+        <span class="n">selected</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">shortest_plan</span><span class="p">(</span>
+            <span class="nb">frozenset</span><span class="p">(),</span> <span class="n">successors_of</span><span class="p">,</span> <span class="n">predecessors_of</span><span class="p">,</span>
+            <span class="p">[{}</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_depth</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)],</span> <span class="n">max_depth</span><span class="p">,</span> <span class="n">available</span><span class="p">)</span>
+
+        <span class="c1"># select the first item in that plan (i.e., the best group to select</span>
+        <span class="c1"># after looking ahead for max_depth steps)</span>
+        <span class="n">plan</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">selected</span><span class="p">)</span>
+
+        <span class="c1"># update the operator availability</span>
+        <span class="n">available</span><span class="p">[</span><span class="n">mergeable_cache</span><span class="p">[</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">selected</span><span class="p">))]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">selected</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">op2</span> <span class="ow">in</span> <span class="n">successors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]:</span>
+                <span class="n">predecessors_of</span><span class="p">[</span><span class="n">op2</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
+
+                <span class="k">if</span> <span class="n">predecessors_of</span><span class="p">[</span><span class="n">op2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">available</span><span class="p">[</span><span class="n">mergeable_cache</span><span class="p">[</span><span class="n">op2</span><span class="p">]]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">op2</span><span class="p">)</span>
+
+            <span class="k">del</span> <span class="n">predecessors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">successors_of</span><span class="p">[</span><span class="n">op</span><span class="p">]</span>
+
+    <span class="c1"># convert indices back to operators</span>
+    <span class="n">plan</span> <span class="o">=</span> <span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">op_list</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">g</span><span class="p">)</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">]</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;TREE PLAN&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">plan</span><span class="p">),</span> <span class="o">*</span><span class="n">plan</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">plan</span></div>
+
+
+<div class="viewcode-block" id="transitive_planner"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.transitive_planner">[docs]</a><span class="k">def</span> <span class="nf">transitive_planner</span><span class="p">(</span><span class="n">op_list</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create merged execution plan through transitive closure construction.</span>
+
+<span class="sd">    This is something like a middle ground between `.greedy_planner` and</span>
+<span class="sd">    `.tree_planner`; it can improve simulation time over the greedy</span>
+<span class="sd">    planner, but comes with potentially significant build time increases.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    op_list : list of `~nengo.builder.Operator`</span>
+<span class="sd">        All the ``nengo`` operators in a model (unordered)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    plan : list of tuple of `~nengo.builder.Operator`</span>
+<span class="sd">        Operators combined into mergeable groups and in execution order</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">n_ele</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">op_list</span><span class="p">)</span>
+    <span class="n">merge_groups</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">dg</span> <span class="o">=</span> <span class="n">operator_dependency_graph</span><span class="p">(</span><span class="n">op_list</span><span class="p">)</span>
+    <span class="n">op_codes</span> <span class="o">=</span> <span class="p">{</span><span class="n">op</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">op</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">op_list</span><span class="p">)}</span>
+    <span class="n">dg</span> <span class="o">=</span> <span class="p">{</span><span class="n">op_codes</span><span class="p">[</span><span class="n">k</span><span class="p">]:</span> <span class="nb">set</span><span class="p">(</span><span class="n">op_codes</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">dg</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="n">op_codes</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># so it will get garbage collected</span>
+    <span class="n">dg</span> <span class="o">=</span> <span class="n">BidirectionalDAG</span><span class="p">(</span><span class="n">dg</span><span class="p">)</span>
+
+    <span class="c1"># fail fast here if the op graph has cycles</span>
+    <span class="n">toposort</span><span class="p">(</span><span class="n">dg</span><span class="o">.</span><span class="n">forward</span><span class="p">)</span>
+
+    <span class="n">builder_types</span> <span class="o">=</span> <span class="p">[</span><span class="n">builder</span><span class="o">.</span><span class="n">Builder</span><span class="o">.</span><span class="n">builders</span><span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">op</span><span class="p">)]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">op_list</span><span class="p">]</span>
+
+    <span class="c1"># sort operators by builder (we&#39;ll only be interested in one builder type</span>
+    <span class="c1"># at a time, because we can&#39;t merge operators between builder types anyway)</span>
+    <span class="n">ops_by_type</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">set</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">op</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">op_list</span><span class="p">):</span>
+        <span class="n">ops_by_type</span><span class="p">[</span><span class="n">builder_types</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+
+    <span class="c1"># heuristic ordering for builder types (earlier items in the list will</span>
+    <span class="c1"># have higher priority, meaning that we will choose to merge those ops</span>
+    <span class="c1"># and potentially break lower-priority groups)</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">op_builders</span><span class="o">.</span><span class="n">SparseDotIncBuilder</span><span class="p">,</span> <span class="n">op_builders</span><span class="o">.</span><span class="n">ElementwiseIncBuilder</span><span class="p">,</span>
+        <span class="n">neuron_builders</span><span class="o">.</span><span class="n">SimNeuronsBuilder</span><span class="p">,</span> <span class="n">process_builders</span><span class="o">.</span><span class="n">SimProcessBuilder</span><span class="p">,</span>
+        <span class="n">op_builders</span><span class="o">.</span><span class="n">SimPyFuncBuilder</span><span class="p">,</span> <span class="n">learning_rule_builders</span><span class="o">.</span><span class="n">SimOjaBuilder</span><span class="p">,</span>
+        <span class="n">learning_rule_builders</span><span class="o">.</span><span class="n">SimVojaBuilder</span><span class="p">,</span>
+        <span class="n">learning_rule_builders</span><span class="o">.</span><span class="n">SimBCMBuilder</span><span class="p">,</span> <span class="n">op_builders</span><span class="o">.</span><span class="n">CopyBuilder</span><span class="p">,</span>
+        <span class="n">op_builders</span><span class="o">.</span><span class="n">ResetBuilder</span><span class="p">,</span> <span class="n">tensor_node</span><span class="o">.</span><span class="n">SimTensorNodeBuilder</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">builder_type</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">builder_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ops_by_type</span><span class="p">:</span>
+            <span class="c1"># no ops of this type in the model</span>
+            <span class="k">continue</span>
+
+        <span class="n">ops</span> <span class="o">=</span> <span class="n">ops_by_type</span><span class="p">[</span><span class="n">builder_type</span><span class="p">]</span>
+
+        <span class="c1"># compute transitive closure</span>
+        <span class="n">trans</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_ele</span><span class="p">)]</span>
+        <span class="n">transitive_closure_recurse</span><span class="p">(</span><span class="n">dg</span><span class="o">.</span><span class="n">forward</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">trans</span><span class="p">,</span> <span class="n">builder_type</span><span class="p">,</span>
+                                   <span class="n">builder_types</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="c1"># reduce it to the elements we care about (ops of the current</span>
+        <span class="c1"># builder type)</span>
+        <span class="n">trans</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">trans</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">op_list</span><span class="p">)])</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">}</span>
+
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">trans</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># find all the ops that have no downstream dependents</span>
+            <span class="n">available</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">trans</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+
+            <span class="c1"># sort those ops into mergeable groups</span>
+            <span class="n">groups</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">available</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">mergeable</span><span class="p">(</span><span class="n">op_list</span><span class="p">[</span><span class="n">op</span><span class="p">],</span> <span class="p">(</span><span class="n">op_list</span><span class="p">[</span><span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">]],)):</span>
+                        <span class="n">g</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+                        <span class="k">break</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">groups</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">op</span><span class="p">])</span>
+
+            <span class="c1"># merge the groups</span>
+            <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
+                <span class="n">dg</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">n_ele</span><span class="p">)</span>
+                <span class="n">merge_groups</span><span class="p">[</span><span class="n">n_ele</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span>
+                <span class="n">n_ele</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="c1"># remove those ops from the transitive closure</span>
+            <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">available</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">trans</span><span class="p">[</span><span class="n">op</span><span class="p">]</span>
+
+            <span class="c1"># remove those ops from the transitive closure of upstream ops</span>
+            <span class="c1"># note: we first remove all the duplicate aliased transitive sets,</span>
+            <span class="c1"># to reduce the number of set operations we need to do</span>
+            <span class="n">unique_trans</span> <span class="o">=</span> <span class="p">{</span><span class="nb">id</span><span class="p">(</span><span class="n">v</span><span class="p">):</span> <span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">trans</span><span class="o">.</span><span class="n">values</span><span class="p">()}</span>
+            <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">unique_trans</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="n">t</span> <span class="o">-=</span> <span class="n">available</span>
+
+        <span class="c1"># trans_reverse = [None for _ in range(n_ele)]</span>
+        <span class="c1"># transitive_closure_recurse(dg.backward, ops, trans_reverse,</span>
+        <span class="c1">#                            builder_type, builder_types, cache)</span>
+        <span class="c1"># trans_reverse = {i: v for i, v in</span>
+        <span class="c1">#                  enumerate(trans_reverse[:len(op_list)]) if i in ops}</span>
+        <span class="c1"># group = None</span>
+        <span class="c1"># for op in toposort(trans, trans_reverse):</span>
+        <span class="c1">#     if group is None:</span>
+        <span class="c1">#         group = [op]</span>
+        <span class="c1">#         continue</span>
+        <span class="c1">#</span>
+        <span class="c1">#     if mergeable(op_list[op], (op_list[group[0]],)) and all(</span>
+        <span class="c1">#             x not in trans[op] for x in group):</span>
+        <span class="c1">#         group.append(op)</span>
+        <span class="c1">#     else:</span>
+        <span class="c1">#         dg.merge(group, n_ele)</span>
+        <span class="c1">#         merge_groups[n_ele] = group</span>
+        <span class="c1">#         n_ele += 1</span>
+        <span class="c1">#         group = [op]</span>
+        <span class="c1">#</span>
+        <span class="c1"># dg.merge(group, n_ele)</span>
+        <span class="c1"># merge_groups[n_ele] = group</span>
+        <span class="c1"># n_ele += 1</span>
+
+        <span class="k">del</span> <span class="n">ops_by_type</span><span class="p">[</span><span class="n">builder_type</span><span class="p">]</span>
+
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">ops_by_type</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+
+    <span class="c1"># toposort the merged graph to come up with execution plan</span>
+    <span class="n">plan</span> <span class="o">=</span> <span class="n">toposort</span><span class="p">(</span><span class="n">dg</span><span class="o">.</span><span class="n">forward</span><span class="p">)</span>
+    <span class="n">plan</span> <span class="o">=</span> <span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">op_list</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">merge_groups</span><span class="p">[</span><span class="n">group</span><span class="p">])</span> <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">]</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;TRANSITIVE PLAN&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">plan</span><span class="p">),</span> <span class="o">*</span><span class="n">plan</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">plan</span></div>
+
+
+<div class="viewcode-block" id="transitive_closure_recurse"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.transitive_closure_recurse">[docs]</a><span class="k">def</span> <span class="nf">transitive_closure_recurse</span><span class="p">(</span><span class="n">dg</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">trans</span><span class="p">,</span> <span class="n">builder_type</span><span class="p">,</span> <span class="n">builder_types</span><span class="p">,</span>
+                               <span class="n">cache</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Computes the transitive closure for the given graph, restricted to the</span>
+<span class="sd">    operators with the given builder type.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dg : dict of {int: set of int}</span>
+<span class="sd">        Dependency graph where ``dg[a] = {b, c}`` indicates that operators</span>
+<span class="sd">        ``b`` and ``c`` are dependent on ``a``</span>
+<span class="sd">    ops : list of int</span>
+<span class="sd">        The operators for which we want to compute the transitive closure</span>
+<span class="sd">    trans : dict of {int: set of int}</span>
+<span class="sd">        The transitive closure for the graph (will be filled in-place)</span>
+<span class="sd">    builder_type : type</span>
+<span class="sd">        One of the ``nengo_dl`` build classes (e.g.,</span>
+<span class="sd">        `~.op_builders.CopyBuilder`), specifying the type of operators</span>
+<span class="sd">        to include in the transitive closure</span>
+<span class="sd">    builder_types : list of type</span>
+<span class="sd">        The build class for each operator</span>
+<span class="sd">    cache : dict of {frozenset of int: set of int}</span>
+<span class="sd">        Stores base sets which ``trans`` will reference (to reduce memory</span>
+<span class="sd">        usage, since many elements in ``trans`` will have the same value)</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This function uses ints to refer to operators, where the int indicates</span>
+<span class="sd">    the index of the operator in the overall op list (this is done to save</span>
+<span class="sd">    memory).  See `.transitive_planner`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">trans</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># this can occur if the downstream calculations of an earlier</span>
+            <span class="c1"># op filled in the value for this op</span>
+            <span class="k">continue</span>
+
+        <span class="n">todo</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">dg</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="k">if</span> <span class="n">trans</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="n">transitive_closure_recurse</span><span class="p">(</span><span class="n">dg</span><span class="p">,</span> <span class="n">todo</span><span class="p">,</span> <span class="n">trans</span><span class="p">,</span> <span class="n">builder_type</span><span class="p">,</span>
+                                   <span class="n">builder_types</span><span class="p">,</span> <span class="n">cache</span><span class="p">)</span>
+
+        <span class="n">merged</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
+            <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">dg</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="k">if</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">builder_types</span><span class="p">)</span> <span class="ow">and</span>
+            <span class="n">builder_types</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">==</span> <span class="n">builder_type</span><span class="p">)</span>
+
+        <span class="n">unique_posts</span> <span class="o">=</span> <span class="p">{</span><span class="nb">id</span><span class="p">(</span><span class="n">trans</span><span class="p">[</span><span class="n">x</span><span class="p">]):</span> <span class="n">trans</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">dg</span><span class="p">[</span><span class="n">op</span><span class="p">]}</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">merged</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_posts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">trans</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">unique_posts</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">unique_posts</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="n">merged</span> <span class="o">|=</span> <span class="n">x</span>
+
+            <span class="n">key</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">merged</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">trans</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="n">trans</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">=</span> <span class="n">merged</span>
+                <span class="n">cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">merged</span></div>
+
+
+<div class="viewcode-block" id="noop_planner"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.noop_planner">[docs]</a><span class="k">def</span> <span class="nf">noop_planner</span><span class="p">(</span><span class="n">operators</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Orders operators into a valid execution order, but does not perform</span>
+<span class="sd">    any merging.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    operators : list of `~nengo.builder.Operator`</span>
+<span class="sd">        All the ``nengo`` operators in a model (unordered)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    plan : list of tuple of `~nengo.builder.Operator`</span>
+<span class="sd">        Operators in execution order</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">dependency_graph</span> <span class="o">=</span> <span class="n">operator_dependency_graph</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span>
+    <span class="n">plan</span> <span class="o">=</span> <span class="p">[(</span><span class="n">op</span><span class="p">,)</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">toposort</span><span class="p">(</span><span class="n">dependency_graph</span><span class="p">)]</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;NOOP PLAN&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">plan</span><span class="p">),</span> <span class="o">*</span><span class="n">plan</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">plan</span></div>
+
+
+<div class="viewcode-block" id="order_signals"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.order_signals">[docs]</a><span class="k">def</span> <span class="nf">order_signals</span><span class="p">(</span><span class="n">plan</span><span class="p">,</span> <span class="n">n_passes</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Orders signals and operators to try to structure reads/writes in contiguous</span>
+<span class="sd">    blocks.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    plan : list of tuple of `~nengo.builder.Operator`</span>
+<span class="sd">        Operator execution plan (e.g., output from ``greedy_planner``)</span>
+<span class="sd">    n_passes : int</span>
+<span class="sd">        Number of repeated passes through the operator reordering stage</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    signals : list of `~nengo.builder.Signal`</span>
+<span class="sd">        Signals organized into the order in which we want them arranged in</span>
+<span class="sd">        memory</span>
+<span class="sd">    plan : list of tuple of `~nengo.builder.Operator`</span>
+<span class="sd">        Input plan with operators reordered within groups to align with order</span>
+<span class="sd">        of signals</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># get all the unique base signals (we use OrderedDict to drop the duplicate</span>
+    <span class="c1"># bases without changing their order, so that signal order will be</span>
+    <span class="c1"># deterministic for a given model)</span>
+    <span class="n">all_signals</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">OrderedDict</span><span class="p">(</span>
+        <span class="p">[(</span><span class="n">s</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">for</span> <span class="n">ops</span> <span class="ow">in</span> <span class="n">plan</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span>
+         <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">op</span><span class="o">.</span><span class="n">all_signals</span><span class="p">])</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="c1"># figure out all the read/write blocks in the plan (in theory we would like</span>
+    <span class="c1"># each block to become a contiguous chunk in the base array)</span>
+    <span class="n">io_blocks</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+
+    <span class="n">op_sigs</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">ops</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">:</span>
+        <span class="c1"># op_sigs stores the signals we care about during the sort process for</span>
+        <span class="c1"># each op. at the moment this is equivalent to op.all_signals, but</span>
+        <span class="c1"># keeping it as it provides a layer of indirection that has proven</span>
+        <span class="c1"># useful in the past and may be in the future.</span>
+        <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">:</span>
+            <span class="n">op_sigs</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">op</span><span class="o">.</span><span class="n">all_signals</span><span class="p">]</span>
+
+        <span class="c1"># the i&#39;th signal for each op in the op group is one io group</span>
+        <span class="c1"># (note that we only care about bases, since those are the things we</span>
+        <span class="c1"># are trying to order)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">op_sigs</span><span class="p">[</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">]])):</span>
+            <span class="n">io_blocks</span><span class="p">[(</span><span class="n">ops</span><span class="p">,</span> <span class="n">i</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">op_sigs</span><span class="p">[</span><span class="n">op</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">base</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">io_blocks</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># no io blocks, so nothing to reorder</span>
+        <span class="k">return</span> <span class="n">all_signals</span><span class="p">,</span> <span class="n">plan</span>
+
+    <span class="c1"># get rid of duplicate io blocks</span>
+    <span class="n">duplicates</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="n">y</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">io_blocks</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="n">y</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">io_blocks</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+    <span class="n">sorted_blocks</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">duplicates</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">io_blocks</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">duplicates</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="n">x</span><span class="p">]</span>
+
+    <span class="c1"># sort by the size of the block (descending order)</span>
+    <span class="c1"># note: we multiply by the number of duplicates, since blocks that</span>
+    <span class="c1"># are accessed by multiple op groups will have a proportionally larger</span>
+    <span class="c1"># impact on performance</span>
+    <span class="n">sorted_blocks</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+        <span class="n">sorted_blocks</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">b</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="n">s</span><span class="o">.</span><span class="n">size</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span> <span class="o">*</span> <span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">sorted_blocks</span> <span class="o">=</span> <span class="p">[</span><span class="n">sorted_blocks</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span>
+                     <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sorted_blocks</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)]</span>
+
+    <span class="c1"># figure out which io blocks each signal participates in</span>
+    <span class="n">signal_blocks</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sorted_blocks</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">b</span><span class="p">:</span>
+            <span class="n">signal_blocks</span><span class="p">[</span><span class="n">s</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+    <span class="n">signal_blocks</span> <span class="o">=</span> <span class="p">{</span><span class="n">s</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">signal_blocks</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;all signals&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">all_signals</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;sorted blocks&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">sorted_blocks</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;signal blocks&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">signal_blocks</span><span class="p">)</span>
+
+    <span class="c1"># list of the ops in each io block, sorted by the size of that io block</span>
+    <span class="n">sorted_io</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+        <span class="n">io_blocks</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
+        <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="o">-</span><span class="n">sorted_blocks</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">io_blocks</span><span class="p">[</span><span class="n">p</span><span class="p">]))</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;sorted io&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">sorted_io</span><span class="p">))</span>
+
+    <span class="c1"># reorder the signals into contiguous blocks (giving higher priority</span>
+    <span class="c1"># to larger groups)</span>
+    <span class="n">sort_idxs</span> <span class="o">=</span> <span class="n">hamming_sort</span><span class="p">(</span><span class="n">signal_blocks</span><span class="p">)</span>
+    <span class="n">all_signals</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">all_signals</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">sort_idxs</span><span class="p">[</span><span class="n">s</span><span class="p">])</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;hamming sorted signals&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">all_signals</span><span class="p">)</span>
+
+    <span class="c1"># now we want to order the ops and signals within the blocks established</span>
+    <span class="c1"># by the hamming sort</span>
+
+    <span class="c1"># basically we&#39;re going to repeatedly iterate over two steps</span>
+    <span class="c1"># 1) order the ops within a group according to the order of their</span>
+    <span class="c1">#    io signals</span>
+    <span class="c1"># 2) order/group the signals according to operator groups</span>
+
+    <span class="c1"># we iterate through the groups in order of increasing size, so that</span>
+    <span class="c1"># if later reorderings (in 2) break a previous order, we tend to leave the</span>
+    <span class="c1"># largest blocks in order.</span>
+    <span class="c1"># similarly, we do multiple passes through this sorting because if a</span>
+    <span class="c1"># later group breaks the ordering of an earlier one, it is possible that</span>
+    <span class="c1"># on the next pass we can put the first group back into a valid ordering</span>
+    <span class="c1"># based on the order established by the later group.</span>
+
+    <span class="n">new_plan</span> <span class="o">=</span> <span class="p">{</span><span class="n">ops</span><span class="p">:</span> <span class="n">ops</span> <span class="k">for</span> <span class="n">ops</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">}</span>
+    <span class="n">sig_idxs</span> <span class="o">=</span> <span class="p">{</span><span class="n">s</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">all_signals</span><span class="p">)}</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;plan&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_plan</span><span class="p">),</span> <span class="o">*</span><span class="n">new_plan</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;signal indices&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">sig_idxs</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_passes</span><span class="p">):</span>
+        <span class="c1"># TODO: every few iterations, eliminate the smallest unsatisfied block?</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;======== pass </span><span class="si">%d</span><span class="s2"> ========&quot;</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+
+        <span class="c1"># save previous plan/idxs, so we can check if they change for</span>
+        <span class="c1"># early termination</span>
+        <span class="n">prev_plan</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">new_plan</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">prev_sig_idxs</span> <span class="o">=</span> <span class="n">sig_idxs</span>  <span class="c1"># note: no copy necessary</span>
+
+        <span class="c1"># reorder ops by signal order. this leaves the overall</span>
+        <span class="c1"># hamming sort block order unchanged.</span>
+        <span class="n">new_plan</span><span class="p">,</span> <span class="n">sig_idxs</span> <span class="o">=</span> <span class="n">sort_ops_by_signals</span><span class="p">(</span>
+            <span class="n">sorted_io</span><span class="p">,</span> <span class="n">all_signals</span><span class="p">,</span> <span class="n">sig_idxs</span><span class="p">,</span> <span class="n">new_plan</span><span class="p">,</span> <span class="n">signal_blocks</span><span class="p">,</span> <span class="n">op_sigs</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;resorted ops&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_plan</span><span class="p">),</span> <span class="o">*</span><span class="n">new_plan</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;reordered signal indices&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">sig_idxs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nb">all</span><span class="p">([</span><span class="n">x</span> <span class="o">==</span> <span class="n">y</span> <span class="k">for</span> <span class="n">ops</span> <span class="ow">in</span> <span class="n">plan</span>
+                 <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">new_plan</span><span class="p">[</span><span class="n">ops</span><span class="p">],</span> <span class="n">prev_plan</span><span class="p">[</span><span class="n">ops</span><span class="p">])])</span> <span class="ow">and</span>
+                <span class="nb">all</span><span class="p">([</span><span class="n">sig_idxs</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="n">prev_sig_idxs</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">all_signals</span><span class="p">])):</span>
+            <span class="c1"># if the plan didn&#39;t change and the signals didn&#39;t change, then</span>
+            <span class="c1"># there is no point in continuing (they&#39;re not going to change</span>
+            <span class="c1"># in the future)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;early termination&quot;</span><span class="p">)</span>
+            <span class="k">break</span>
+
+    <span class="n">sorted_signals</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">all_signals</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">sig_idxs</span><span class="p">[</span><span class="n">s</span><span class="p">])</span>
+
+    <span class="c1"># error checking</span>
+    <span class="c1"># make sure that overall signal block order didn&#39;t change</span>
+    <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">s2</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">all_signals</span><span class="p">,</span> <span class="n">sorted_signals</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">signal_blocks</span> <span class="ow">or</span> <span class="n">s2</span> <span class="ow">in</span> <span class="n">signal_blocks</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">signal_blocks</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="n">signal_blocks</span><span class="p">[</span><span class="n">s2</span><span class="p">]</span>
+
+    <span class="c1"># make sure that all ops are present</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_plan</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">plan</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">ops</span><span class="p">,</span> <span class="n">new_ops</span> <span class="ow">in</span> <span class="n">new_plan</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">ops</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_ops</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">ops</span><span class="p">)</span> <span class="o">==</span> <span class="nb">set</span><span class="p">(</span><span class="n">new_ops</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;final sorted signals&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">sorted_signals</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;new plan&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_plan</span><span class="p">),</span> <span class="o">*</span><span class="n">new_plan</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;blocks&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">display_signal_blocks</span><span class="p">(</span><span class="n">new_plan</span><span class="p">,</span> <span class="n">sorted_signals</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">sorted_signals</span><span class="p">,</span> <span class="p">[</span><span class="n">new_plan</span><span class="p">[</span><span class="n">ops</span><span class="p">]</span> <span class="k">for</span> <span class="n">ops</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="hamming_sort"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.hamming_sort">[docs]</a><span class="k">def</span> <span class="nf">hamming_sort</span><span class="p">(</span><span class="n">blocks</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Reorder signals using heuristics to try to place signals that are accessed</span>
+<span class="sd">    by the same operators into adjacent positions (giving priority to larger</span>
+<span class="sd">    blocks).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    blocks : dict of {`~nengo.builder.Signal`: frozenset of int}</span>
+<span class="sd">        Dictionary indicating which io blocks each signal is a part of</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    sort_idxs : dict of {`~nengo.builder.Signal`: int}</span>
+<span class="sd">        Indices indicating where each signal should be in the sorted list</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">sorted_blocks</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">curr_blocks</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">active_block</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">unique_blocks</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">blocks</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+
+    <span class="n">n_unique</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_blocks</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;hamming sort:&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;unique blocks&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">unique_blocks</span><span class="p">)</span>
+
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;curr_blocks </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">curr_blocks</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">curr_blocks</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># first pass through loop, initialize with default first block</span>
+            <span class="c1"># (the rest of the loop will figure out what the actual first</span>
+            <span class="c1"># block will be)</span>
+            <span class="n">curr_blocks</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># add the selected block to the sorted list</span>
+            <span class="n">sorted_blocks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">curr_blocks</span><span class="p">)</span>
+            <span class="n">unique_blocks</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">curr_blocks</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sorted_blocks</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_unique</span><span class="p">:</span>
+            <span class="k">break</span>
+
+        <span class="c1"># pick which block to go to next</span>
+
+        <span class="c1"># start by picking all the blocks that are a continuation of the</span>
+        <span class="c1"># active block (this is to give us some persistence, so it doesn&#39;t</span>
+        <span class="c1"># jump around too much)</span>
+        <span class="k">if</span> <span class="n">active_block</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># pick the largest block in the current block to become the new</span>
+            <span class="c1"># active block (note: the blocks are sorted from largest to</span>
+            <span class="c1"># smallest, so the smallest value in curr_blocks is the largest</span>
+            <span class="c1"># block. this ordering is used in several places)</span>
+            <span class="n">active_block</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">curr_blocks</span><span class="p">)</span>
+
+        <span class="n">next_blocks</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">unique_blocks</span> <span class="k">if</span> <span class="n">active_block</span> <span class="ow">in</span> <span class="n">b</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">next_blocks</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># there are no remaining blocks that are a continuation of the</span>
+            <span class="c1"># current block, so they&#39;re all up for grabs</span>
+            <span class="n">next_blocks</span> <span class="o">=</span> <span class="n">unique_blocks</span>
+            <span class="n">active_block</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># find all the matching blocks (blocks which contain all the same</span>
+        <span class="c1"># elements as curr_blocks, plus something extra)</span>
+        <span class="n">matching</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">next_blocks</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span> <span class="o">|</span> <span class="n">curr_blocks</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">matching</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">next_blocks</span> <span class="o">=</span> <span class="n">matching</span>
+
+        <span class="c1"># then within all the matching blocks, pick the ones with the smallest</span>
+        <span class="c1"># hamming distance</span>
+        <span class="n">next_dists</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">curr_blocks</span> <span class="o">^</span> <span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">next_blocks</span><span class="p">]</span>
+        <span class="n">min_dist</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">next_dists</span><span class="p">)</span>
+        <span class="n">next_blocks</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">next_blocks</span><span class="p">)</span>
+                       <span class="k">if</span> <span class="n">next_dists</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="n">min_dist</span><span class="p">]</span>
+
+        <span class="c1"># within all the blocks that have the same hamming distance, pick the</span>
+        <span class="c1"># next block that matches along the largest blocks</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">curr_blocks</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">next_blocks</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">break</span>
+
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">i</span> <span class="ow">in</span> <span class="n">b</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">next_blocks</span><span class="p">):</span>
+                <span class="n">next_blocks</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">next_blocks</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">b</span><span class="p">]</span>
+
+        <span class="c1"># within the blocks that match curr_block equally, pick the next block</span>
+        <span class="c1"># containing the largest io blocks</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">next_blocks</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">next_blocks</span> <span class="o">=</span> <span class="p">[</span><span class="nb">frozenset</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">next_blocks</span><span class="p">))]</span>
+
+        <span class="n">curr_blocks</span> <span class="o">=</span> <span class="n">next_blocks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># the sort index for each signal is just the position of its block in</span>
+    <span class="c1"># the sorted block list (since we don&#39;t care about the order of</span>
+    <span class="c1"># signals within each block). signals that aren&#39;t part of any io block</span>
+    <span class="c1"># get a default value of -1.</span>
+    <span class="n">block_idxs</span> <span class="o">=</span> <span class="p">{</span><span class="n">b</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sorted_blocks</span><span class="p">)}</span>
+    <span class="n">sort_idxs</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span>
+        <span class="k">lambda</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">[(</span><span class="n">s</span><span class="p">,</span> <span class="n">block_idxs</span><span class="p">[</span><span class="n">b</span><span class="p">])</span> <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">blocks</span><span class="o">.</span><span class="n">items</span><span class="p">()])</span>
+
+    <span class="k">return</span> <span class="n">sort_idxs</span></div>
+
+
+<div class="viewcode-block" id="sort_ops_by_signals"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.sort_ops_by_signals">[docs]</a><span class="k">def</span> <span class="nf">sort_ops_by_signals</span><span class="p">(</span><span class="n">sorted_io</span><span class="p">,</span> <span class="n">sigs</span><span class="p">,</span> <span class="n">sig_idxs</span><span class="p">,</span> <span class="n">new_plan</span><span class="p">,</span> <span class="n">blocks</span><span class="p">,</span> <span class="n">op_sigs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Rearrange operators to match the order of signals.</span>
+
+<span class="sd">    Note: the same operators can be associated with multiple read blocks if</span>
+<span class="sd">    they have multiple inputs, so rearranging the operators according to one</span>
+<span class="sd">    of those blocks could mess up the order with respect to the other read</span>
+<span class="sd">    block.  We iterate through the read blocks in increasing size so</span>
+<span class="sd">    that the largest blocks win out.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sorted_io : list of tuple of (`~nengo.builder.Operator`, int)</span>
+<span class="sd">        The operators that form each io block, sorted by increasing size of</span>
+<span class="sd">        the block. In the case that a group of operators participate in</span>
+<span class="sd">        multiple io blocks, the integer distinguishes which one of those</span>
+<span class="sd">        blocks this block is associated with.</span>
+<span class="sd">    sigs : list of `~nengo.builder.Signal`</span>
+<span class="sd">        Signals that have been arranged into a given order by other parts</span>
+<span class="sd">        of the algorithm</span>
+<span class="sd">    sig_idxs : dict of {`~nengo.builder.Signal`: int}</span>
+<span class="sd">        Sorted indices of signals</span>
+<span class="sd">    new_plan : dict of {tuple of `~nengo.builder.Operator`: \</span>
+<span class="sd">                        tuple of `~nengo.builder.Operator`}</span>
+<span class="sd">        Mapping from original operator group to the sorted operators</span>
+<span class="sd">    blocks : dict of {`~nengo.builder.Signal`: frozenset of int}</span>
+<span class="sd">        Indicates which io blocks each signal participates in</span>
+<span class="sd">    op_sigs : dict of {`~nengo.builder.Operator`: \</span>
+<span class="sd">                       list of `~nengo.builder.Signal`}</span>
+<span class="sd">        The signals accessed by each operator</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    new_plan : dict of {tuple of `~nengo.builder.Operator`: \</span>
+<span class="sd">                        tuple of `~nengo.builder.Operator`}</span>
+<span class="sd">        Mapping from original operator group to the sorted operators</span>
+<span class="sd">    sig_idxs : dict of {`~nengo.builder.Signal`: int}</span>
+<span class="sd">        Signal indices, possibly updated to match new op order</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;sort ops by signals&quot;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">old_ops</span><span class="p">,</span> <span class="n">io_block</span> <span class="ow">in</span> <span class="n">sorted_io</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">30</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;sorting ops </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">new_plan</span><span class="p">[</span><span class="n">old_ops</span><span class="p">])</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;by </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                   <span class="p">[</span><span class="n">op_sigs</span><span class="p">[</span><span class="n">op</span><span class="p">][</span><span class="n">io_block</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">new_plan</span><span class="p">[</span><span class="n">old_ops</span><span class="p">]])</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">old_ops</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># then we have nothing to sort</span>
+            <span class="k">continue</span>
+
+        <span class="n">ops</span> <span class="o">=</span> <span class="n">new_plan</span><span class="p">[</span><span class="n">old_ops</span><span class="p">]</span>
+
+        <span class="c1"># note: the key is (signal index, view offset), so ops will be</span>
+        <span class="c1"># sorted first by the order of the signals in the list, then by</span>
+        <span class="c1"># the order of the views within each signal</span>
+        <span class="n">sorted_ops</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+            <span class="n">ops</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">op</span><span class="p">,</span> <span class="n">io_block</span><span class="o">=</span><span class="n">io_block</span><span class="p">:</span> <span class="p">(</span>
+                <span class="n">sig_idxs</span><span class="p">[</span><span class="n">op_sigs</span><span class="p">[</span><span class="n">op</span><span class="p">][</span><span class="n">io_block</span><span class="p">]</span><span class="o">.</span><span class="n">base</span><span class="p">],</span>
+                <span class="n">op_sigs</span><span class="p">[</span><span class="n">op</span><span class="p">][</span><span class="n">io_block</span><span class="p">]</span><span class="o">.</span><span class="n">elemoffset</span><span class="p">))</span>
+
+        <span class="n">new_plan</span><span class="p">[</span><span class="n">old_ops</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">sorted_ops</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;sorted ops&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">new_plan</span><span class="p">[</span><span class="n">old_ops</span><span class="p">])</span>
+
+        <span class="c1"># after sorting the operators, we then rearrange all the io</span>
+        <span class="c1"># blocks associated with this group of operators to match the new</span>
+        <span class="c1"># order. note that this could make smaller (earlier) blocks out</span>
+        <span class="c1"># of order, which will hopefully be fixed on future passes. however,</span>
+        <span class="c1"># it means that larger (later) blocks will align themselves to this</span>
+        <span class="c1"># order if possible</span>
+        <span class="c1"># note2: we include the current io block in the groups to be sorted,</span>
+        <span class="c1"># because while we know that these ops are in the same relative order</span>
+        <span class="c1"># as the signals, the signals may not be adjacent (sorting will try</span>
+        <span class="c1"># to make them adjacent)</span>
+        <span class="n">sig_idxs</span> <span class="o">=</span> <span class="n">sort_signals_by_ops</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">sorted_io</span> <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">old_ops</span><span class="p">],</span>
+            <span class="n">sigs</span><span class="p">,</span> <span class="n">sig_idxs</span><span class="p">,</span> <span class="n">new_plan</span><span class="p">,</span> <span class="n">blocks</span><span class="p">,</span> <span class="n">op_sigs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">new_plan</span><span class="p">,</span> <span class="n">sig_idxs</span></div>
+
+
+<div class="viewcode-block" id="sort_signals_by_ops"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.sort_signals_by_ops">[docs]</a><span class="k">def</span> <span class="nf">sort_signals_by_ops</span><span class="p">(</span><span class="n">sorted_io</span><span class="p">,</span> <span class="n">sigs</span><span class="p">,</span> <span class="n">sig_idxs</span><span class="p">,</span> <span class="n">new_plan</span><span class="p">,</span> <span class="n">blocks</span><span class="p">,</span> <span class="n">op_sigs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Attempts to rearrange ``sigs`` so that it is in the same order as</span>
+<span class="sd">    operator signals, without changing the overall block order.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sorted_io : list of tuple of (`~nengo.builder.Operator`, \</span>
+<span class="sd">                                     int)</span>
+<span class="sd">        The operators that form each io block, sorted by increasing size of</span>
+<span class="sd">        the io block. In the case that a group of operators participate in</span>
+<span class="sd">        multiple io blocks, the integer distinguishes which one of those</span>
+<span class="sd">        blocks this block is associated with.</span>
+<span class="sd">    sigs : list of `~nengo.builder.Signal`</span>
+<span class="sd">        Signals to be sorted</span>
+<span class="sd">    sig_idxs : dict of {`~nengo.builder.Signal`: int}</span>
+<span class="sd">        Sorted indices of signals</span>
+<span class="sd">    new_plan : dict of {tuple of `~nengo.builder.Operator`: \</span>
+<span class="sd">                        tuple of `~nengo.builder.Operator`}</span>
+<span class="sd">        Mapping from original operator group to the sorted operators</span>
+<span class="sd">    blocks : dict of {`~nengo.builder.Signal`: frozenset of int}</span>
+<span class="sd">        Indicates which io blocks each signal participates in</span>
+<span class="sd">    op_sigs : dict of {`~nengo.builder.Operator`: \</span>
+<span class="sd">                       list of `~nengo.builder.Signal`}</span>
+<span class="sd">        The signals accessed by each operator</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    sig_idxs : dict of {`~nengo.builder.Signal`: int}</span>
+<span class="sd">        Sorted indices of signals</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;sort signals by ops&quot;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">old_ops</span><span class="p">,</span> <span class="n">io_block</span> <span class="ow">in</span> <span class="n">sorted_io</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;sorting signals </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                   <span class="p">[</span><span class="n">op_sigs</span><span class="p">[</span><span class="n">op</span><span class="p">][</span><span class="n">io_block</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">new_plan</span><span class="p">[</span><span class="n">old_ops</span><span class="p">]])</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%d</span><span class="s2"> </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">io_block</span><span class="p">,</span> <span class="n">new_plan</span><span class="p">[</span><span class="n">old_ops</span><span class="p">])</span>
+
+        <span class="n">ops</span> <span class="o">=</span> <span class="n">new_plan</span><span class="p">[</span><span class="n">old_ops</span><span class="p">]</span>
+
+        <span class="n">sort_vals</span> <span class="o">=</span> <span class="p">{</span><span class="n">s</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span>
+                     <span class="nb">enumerate</span><span class="p">(</span><span class="n">op_sigs</span><span class="p">[</span><span class="n">op</span><span class="p">][</span><span class="n">io_block</span><span class="p">]</span><span class="o">.</span><span class="n">base</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">)}</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sort_vals</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># only one accessed signal, so nothing to sort</span>
+            <span class="k">continue</span>
+
+        <span class="n">sort_idxs</span> <span class="o">=</span> <span class="p">[</span><span class="n">sig_idxs</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sort_vals</span><span class="p">]</span>
+        <span class="n">min_index</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">sort_idxs</span><span class="p">)</span>
+        <span class="n">max_index</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">sort_idxs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">max_index</span> <span class="o">-</span> <span class="n">min_index</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sort_idxs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># this block isn&#39;t contiguous, so it isn&#39;t sortable</span>
+            <span class="k">continue</span>
+
+        <span class="c1"># we try to sort things into everything &lt;= the first io block</span>
+        <span class="c1"># in op_sigs and everything after, with the op_sigs signals in</span>
+        <span class="c1"># the middle (ordered to match op_sigs)</span>
+        <span class="n">curr_block</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">curr_max</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sigs</span><span class="p">[</span><span class="n">min_index</span><span class="p">:</span><span class="n">max_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]):</span>
+            <span class="k">if</span> <span class="n">blocks</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">!=</span> <span class="n">curr_block</span><span class="p">:</span>
+                <span class="n">prev_max</span> <span class="o">=</span> <span class="n">curr_max</span>
+                <span class="n">curr_max</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="n">curr_block</span> <span class="o">=</span> <span class="n">blocks</span><span class="p">[</span><span class="n">s</span><span class="p">]</span>
+
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">sort_vals</span><span class="p">[</span><span class="n">s</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="n">prev_max</span><span class="p">:</span>
+                <span class="c1"># if the sort position for this signal is less than the</span>
+                <span class="c1"># end of the previous sorted block, then the list is not</span>
+                <span class="c1"># sortable</span>
+                <span class="k">break</span>
+
+            <span class="c1"># update the max sort index in this block</span>
+            <span class="n">curr_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">curr_max</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
+                    <span class="nb">sorted</span><span class="p">(</span><span class="n">sort_vals</span><span class="p">,</span>
+                           <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">sort_vals</span><span class="o">=</span><span class="n">sort_vals</span><span class="p">:</span> <span class="n">sort_vals</span><span class="p">[</span><span class="n">x</span><span class="p">])):</span>
+                <span class="n">sig_idxs</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="n">min_index</span> <span class="o">+</span> <span class="n">i</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;sorted indices </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">sig_idxs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">sig_idxs</span></div>
+
+
+<div class="viewcode-block" id="noop_order_signals"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.noop_order_signals">[docs]</a><span class="k">def</span> <span class="nf">noop_order_signals</span><span class="p">(</span><span class="n">plan</span><span class="p">,</span> <span class="o">**</span><span class="n">_</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A version of `.graph_optimizer.order_signals` that doesn&#39;t do any</span>
+<span class="sd">    reordering, for debugging.&quot;&quot;&quot;</span>
+
+    <span class="n">all_signals</span> <span class="o">=</span> <span class="nb">list</span><span class="p">({</span><span class="n">s</span><span class="o">.</span><span class="n">base</span> <span class="k">for</span> <span class="n">ops</span> <span class="ow">in</span> <span class="n">plan</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span>
+                        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">op</span><span class="o">.</span><span class="n">all_signals</span><span class="p">})</span>
+    <span class="k">return</span> <span class="n">all_signals</span><span class="p">,</span> <span class="n">plan</span></div>
+
+
+<div class="viewcode-block" id="remove_unmodified_resets"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.remove_unmodified_resets">[docs]</a><span class="k">def</span> <span class="nf">remove_unmodified_resets</span><span class="p">(</span><span class="n">operators</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Remove any Reset operators that are targeting a signal that is</span>
+<span class="sd">    never modified.</span>
+
+<span class="sd">    If a signal is reset, but never inced/updated after that, we can just set</span>
+<span class="sd">    the default signal value to the reset value and remove the reset. Note:</span>
+<span class="sd">    this wouldn&#39;t normally happen, but it can happen if we removed</span>
+<span class="sd">    some of the incs (e.g. in remove_zero_incs).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    operators : list of `~nengo.builder.Operator`</span>
+<span class="sd">        Operators in the model</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    new_operators : list of `~nengo.builder.Operator`</span>
+<span class="sd">        Modified list of operators</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_</span><span class="p">,</span> <span class="n">incs</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">updates</span> <span class="o">=</span> <span class="n">signal_io_dicts</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span>
+
+    <span class="n">new_operators</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">operators</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">op</span><span class="p">)</span> <span class="o">==</span> <span class="n">Reset</span><span class="p">:</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">dst</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">incs</span><span class="p">[</span><span class="n">target</span><span class="o">.</span><span class="n">base</span><span class="p">])</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">updates</span><span class="p">[</span><span class="n">target</span><span class="o">.</span><span class="n">base</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">target</span><span class="o">.</span><span class="n">initial_value</span><span class="o">.</span><span class="n">setflags</span><span class="p">(</span><span class="n">write</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">target</span><span class="o">.</span><span class="n">initial_value</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">value</span>
+                <span class="n">target</span><span class="o">.</span><span class="n">initial_value</span><span class="o">.</span><span class="n">setflags</span><span class="p">(</span><span class="n">write</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">new_operators</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">new_operators</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">new_operators</span></div>
+
+
+<div class="viewcode-block" id="remove_zero_incs"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.remove_zero_incs">[docs]</a><span class="k">def</span> <span class="nf">remove_zero_incs</span><span class="p">(</span><span class="n">operators</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Remove any operators where we know the input (and therefore output) is</span>
+<span class="sd">    zero.</span>
+
+<span class="sd">    If the input to a DotInc/ElementwiseInc/Copy is zero then we know</span>
+<span class="sd">    that the output of the op will be zero, so we can just get rid of it.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    operators : list of `~nengo.builder.Operator`</span>
+<span class="sd">        Operators in the model</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    new_operators : list of `~nengo.builder.Operator`</span>
+<span class="sd">        Modified list of operators</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;REMOVE_ZERO_INCS&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;input ops&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span>
+
+    <span class="n">sets</span><span class="p">,</span> <span class="n">incs</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">updates</span> <span class="o">=</span> <span class="n">signal_io_dicts</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span>
+
+    <span class="n">new_operators</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">operators</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="p">(</span><span class="n">DotInc</span><span class="p">,</span> <span class="n">ElementwiseInc</span><span class="p">,</span> <span class="n">Copy</span><span class="p">)):</span>
+            <span class="k">for</span> <span class="n">src</span> <span class="ow">in</span> <span class="n">op</span><span class="o">.</span><span class="n">reads</span><span class="p">:</span>
+                <span class="c1"># check if the input is the output of a Node (in which case the</span>
+                <span class="c1"># value might change, so we should never get rid of this op).</span>
+                <span class="c1"># checking the name of the signal seems a bit fragile, but I</span>
+                <span class="c1"># can&#39;t think of a better solution</span>
+                <span class="k">if</span> <span class="n">src</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;&lt;Node&quot;</span><span class="p">):</span>
+                    <span class="k">continue</span>
+
+                <span class="c1"># find any ops that modify src</span>
+                <span class="n">pred</span> <span class="o">=</span> <span class="n">sets</span><span class="p">[</span><span class="n">src</span><span class="o">.</span><span class="n">base</span><span class="p">]</span> <span class="o">+</span> <span class="n">incs</span><span class="p">[</span><span class="n">src</span><span class="o">.</span><span class="n">base</span><span class="p">]</span>
+
+                <span class="c1"># the input (and therefore output) will be zero if the only</span>
+                <span class="c1"># input is a Reset(0) op, or the only input is a constant</span>
+                <span class="c1"># signal (not set/inc/updated) that is all zero</span>
+                <span class="n">zero_input</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pred</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="n">Reset</span> <span class="ow">and</span>
+                     <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="mi">0</span><span class="p">))</span> <span class="ow">or</span>
+                    <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pred</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">initial_value</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span>
+                     <span class="nb">len</span><span class="p">(</span><span class="n">updates</span><span class="p">[</span><span class="n">src</span><span class="o">.</span><span class="n">base</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">src</span><span class="o">.</span><span class="n">trainable</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">zero_input</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">sets</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">new_operators</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Reset</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+                    <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">new_operators</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">new_operators</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;new ops&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">new_operators</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">new_operators</span></div>
+
+
+<span class="c1"># def remove_reset_incs(operators):</span>
+<span class="c1">#     &quot;&quot;&quot;Replace ``y=Reset(0) + x`` with ``y=x``.</span>
+<span class="c1">#</span>
+<span class="c1">#     If a signal is Reset and Inc&#39;d, we can change that to a Set that combines</span>
+<span class="c1">#     the two ops (note: any other incs of that signal can proceed as normal)</span>
+<span class="c1">#</span>
+<span class="c1">#     Parameters</span>
+<span class="c1">#     ----------</span>
+<span class="c1">#     operators : list of `~nengo.builder.Operator`</span>
+<span class="c1">#         operators in the model</span>
+<span class="c1">#</span>
+<span class="c1">#     Returns</span>
+<span class="c1">#     -------</span>
+<span class="c1">#     new_operators : list of `~nengo.builder.Operator`</span>
+<span class="c1">#         modified list of operators</span>
+<span class="c1">#</span>
+<span class="c1">#     Notes</span>
+<span class="c1">#     -----</span>
+<span class="c1">#     In practice, this modification seems to hurt more than it helps.  Inc</span>
+<span class="c1">#     operators are cheaper to compute the gradient for, and changing Incs to</span>
+<span class="c1">#     Incs and Sets splits up the Inc merge groups.</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#</span>
+<span class="c1">#     dg = operator_dependency_graph(operators)</span>
+<span class="c1">#</span>
+<span class="c1">#     for op in operators:</span>
+<span class="c1">#         if type(op) == Reset and np.all(op.value == 0):</span>
+<span class="c1">#             incers = [succ for succ in dg[op] if op.dst in succ.incs]</span>
+<span class="c1">#             if len(incers) &gt; 0:</span>
+<span class="c1">#                 del dg[op]</span>
+<span class="c1">#                 incer = incers[0]</span>
+<span class="c1">#                 incer.sets.extend(incer.incs)</span>
+<span class="c1">#                 incer.incs = []</span>
+<span class="c1">#                 if isinstance(incer, ElementwiseInc):</span>
+<span class="c1">#                     incer.__class__ = op_builders.ElementwiseSet</span>
+<span class="c1">#                 elif isinstance(incer, DotInc):</span>
+<span class="c1">#                     incer.__class__ = op_builders.DotSet</span>
+<span class="c1">#                 else:</span>
+<span class="c1">#                     incer.inc = False</span>
+<span class="c1">#</span>
+<span class="c1">#     return list(dg.keys())</span>
+
+
+<div class="viewcode-block" id="remove_constant_copies"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.remove_constant_copies">[docs]</a><span class="k">def</span> <span class="nf">remove_constant_copies</span><span class="p">(</span><span class="n">operators</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Change Copies with constant input to Resets.</span>
+
+<span class="sd">    If a Copy has no dependencies, or just one Reset() dependency, then</span>
+<span class="sd">    we can change it to an op that just directly sets the output signal to</span>
+<span class="sd">    the Copy input value.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    operators : list of `~nengo.builder.Operator`</span>
+<span class="sd">        Operators in the model</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    new_operators : list of `~nengo.builder.Operator`</span>
+<span class="sd">        Modified list of operators</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">sets</span><span class="p">,</span> <span class="n">incs</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">updates</span> <span class="o">=</span> <span class="n">signal_io_dicts</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span>
+
+    <span class="n">new_operators</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">operators</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">Copy</span><span class="p">):</span>
+            <span class="n">src</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">src</span>
+
+            <span class="c1"># check if the input is the output of a Node (in which case the</span>
+            <span class="c1"># value might change, so we should never get rid of this op).</span>
+            <span class="c1"># checking the name of the signal seems a bit fragile, but I can&#39;t</span>
+            <span class="c1"># think of a better solution</span>
+            <span class="k">if</span> <span class="n">src</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;&lt;Node&quot;</span><span class="p">):</span>
+                <span class="n">new_operators</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="n">pred</span> <span class="o">=</span> <span class="n">sets</span><span class="p">[</span><span class="n">src</span><span class="o">.</span><span class="n">base</span><span class="p">]</span> <span class="o">+</span> <span class="n">incs</span><span class="p">[</span><span class="n">src</span><span class="o">.</span><span class="n">base</span><span class="p">]</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pred</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">op</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">trainable</span> <span class="ow">and</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">updates</span><span class="p">[</span><span class="n">src</span><span class="o">.</span><span class="n">base</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="c1"># no predecessors means that the src is constant. but we also</span>
+                <span class="c1"># need to keep the bias signal if it is trainable (since</span>
+                <span class="c1"># changing it to a reset op would make it not trainable).</span>
+                <span class="c1"># we also need to check if anything is updating src (which</span>
+                <span class="c1"># wouldn&#39;t be in the predecessors).</span>
+                <span class="n">val</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">initial_value</span><span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">src_slice</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">pred</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="n">Reset</span><span class="p">:</span>
+                <span class="c1"># if the only predecessor is a Reset, we can just use that</span>
+                <span class="c1"># set value</span>
+                <span class="n">val</span> <span class="o">=</span> <span class="n">pred</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">value</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">new_operators</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="n">operators</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">new_operators</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="n">new_op</span> <span class="o">=</span> <span class="n">Reset</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">dst</span> <span class="k">if</span> <span class="n">op</span><span class="o">.</span><span class="n">dst_slice</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span>
+                           <span class="n">op</span><span class="o">.</span><span class="n">dst</span><span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">dst_slice</span><span class="p">])</span>
+            <span class="c1"># note: we need to set the value separately to bypass the float()</span>
+            <span class="c1"># casting in Reset</span>
+            <span class="n">new_op</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">val</span>
+
+            <span class="k">if</span> <span class="n">op</span><span class="o">.</span><span class="n">inc</span><span class="p">:</span>
+                <span class="n">new_op</span><span class="o">.</span><span class="n">incs</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">new_op</span><span class="o">.</span><span class="n">sets</span><span class="p">)</span>
+                <span class="n">new_op</span><span class="o">.</span><span class="n">sets</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">new_op</span><span class="o">.</span><span class="vm">__class__</span> <span class="o">=</span> <span class="n">op_builders</span><span class="o">.</span><span class="n">ResetInc</span>
+
+            <span class="n">new_operators</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_op</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">new_operators</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">new_operators</span></div>
+
+
+<div class="viewcode-block" id="remove_identity_muls"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.remove_identity_muls">[docs]</a><span class="k">def</span> <span class="nf">remove_identity_muls</span><span class="p">(</span><span class="n">operators</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Change y=x*1 ops to y=x Copy ops.</span>
+
+<span class="sd">    If one of the inputs to a DotInc/ElementwiseInc is 1 then we can skip</span>
+<span class="sd">    the multiplication and change it to a Copy op.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    operators : list of `~nengo.builder.Operator`</span>
+<span class="sd">        Operators in the model</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    new_operators : list of `~nengo.builder.Operator`</span>
+<span class="sd">        Modified list of operators</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">sets</span><span class="p">,</span> <span class="n">incs</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">updates</span> <span class="o">=</span> <span class="n">signal_io_dicts</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">is_identity</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">sig</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">or</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">():</span>
+            <span class="k">return</span> <span class="n">x</span> <span class="o">==</span> <span class="mi">1</span>
+
+        <span class="n">d</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">sig</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">d</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">d</span><span class="p">)))</span>
+
+    <span class="n">new_operators</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">operators</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="p">(</span><span class="n">DotInc</span><span class="p">,</span> <span class="n">ElementwiseInc</span><span class="p">)):</span>
+            <span class="c1"># we can check A or X for elementwise inc, since either being 1</span>
+            <span class="c1"># means that this is a noop. but if X is 1 on a dotinc this is</span>
+            <span class="c1"># still a useful op, and we shouldn&#39;t remove it</span>
+            <span class="n">srcs</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">reads</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">ElementwiseInc</span><span class="p">)</span> <span class="k">else</span> <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">A</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">src</span> <span class="ow">in</span> <span class="n">srcs</span><span class="p">:</span>
+                <span class="c1"># check if the input is the output of a Node (in which case the</span>
+                <span class="c1"># value might change, so we should never get rid of this op).</span>
+                <span class="c1"># checking the name of the signal seems a bit fragile, but I</span>
+                <span class="c1"># can&#39;t think of a better solution</span>
+                <span class="k">if</span> <span class="n">src</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;&lt;Node&quot;</span><span class="p">):</span>
+                    <span class="k">continue</span>
+
+                <span class="c1"># find any ops that modify src</span>
+                <span class="n">pred</span> <span class="o">=</span> <span class="n">sets</span><span class="p">[</span><span class="n">src</span><span class="o">.</span><span class="n">base</span><span class="p">]</span> <span class="o">+</span> <span class="n">incs</span><span class="p">[</span><span class="n">src</span><span class="o">.</span><span class="n">base</span><span class="p">]</span>
+
+                <span class="c1"># the input will be one if the only input is a Reset(1) op, or</span>
+                <span class="c1"># the only input is a constant signal (not set/inc/updated)</span>
+                <span class="c1"># that is an identity value</span>
+                <span class="n">identity_input</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pred</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="n">Reset</span> <span class="ow">and</span>
+                     <span class="n">is_identity</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">src</span><span class="p">))</span> <span class="ow">or</span>
+                    <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pred</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">is_identity</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">initial_value</span><span class="p">,</span> <span class="n">src</span><span class="p">)</span> <span class="ow">and</span>
+                     <span class="nb">len</span><span class="p">(</span><span class="n">updates</span><span class="p">[</span><span class="n">src</span><span class="o">.</span><span class="n">base</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">src</span><span class="o">.</span><span class="n">trainable</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">identity_input</span><span class="p">:</span>
+                    <span class="n">other_src</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">op</span><span class="o">.</span><span class="n">reads</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">src</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">new_operators</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Copy</span><span class="p">(</span><span class="n">other_src</span><span class="p">,</span> <span class="n">op</span><span class="o">.</span><span class="n">Y</span><span class="p">,</span>
+                                              <span class="n">inc</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">incs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">))</span>
+                    <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">new_operators</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">new_operators</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">new_operators</span></div>
+
+
+<div class="viewcode-block" id="signal_io_dicts"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.signal_io_dicts">[docs]</a><span class="k">def</span> <span class="nf">signal_io_dicts</span><span class="p">(</span><span class="n">operators</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Organizes operators into dictionaries according to the signals they</span>
+<span class="sd">    set/inc/read/update.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    operators : list of `~nengo.builder.Operator`</span>
+<span class="sd">        Operators in the model</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    sets : dict of {`~nengo.builder.Signal`: \</span>
+<span class="sd">                    list of `~nengo.builder.Operator`}</span>
+<span class="sd">        A dictionary indicating all the Operators that set each signal.</span>
+<span class="sd">    incs : dict of {`~nengo.builder.Signal`: \</span>
+<span class="sd">                    list of `~nengo.builder.Operator`}</span>
+<span class="sd">        A dictionary indicating all the Operators that inc each signal.</span>
+<span class="sd">    reads : dict of {`~nengo.builder.Signal`: \</span>
+<span class="sd">                     list of `~nengo.builder.Operator`}</span>
+<span class="sd">        A dictionary indicating all the Operators that read each signal.</span>
+<span class="sd">    updates : dict of {`~nengo.builder.Signal`: \</span>
+<span class="sd">                       list of `~nengo.builder.Operator`}</span>
+<span class="sd">        A dictionary indicating all the Operators that update each signal.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># note: we manually initialize the arrays because we want there to be</span>
+    <span class="c1"># an entry for all the signal bases, but get an error if we try to</span>
+    <span class="c1"># access any non-base signals</span>
+    <span class="n">sets</span> <span class="o">=</span> <span class="p">{</span><span class="n">s</span><span class="o">.</span><span class="n">base</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">operators</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">op</span><span class="o">.</span><span class="n">all_signals</span><span class="p">}</span>
+    <span class="n">incs</span> <span class="o">=</span> <span class="p">{</span><span class="n">s</span><span class="o">.</span><span class="n">base</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">operators</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">op</span><span class="o">.</span><span class="n">all_signals</span><span class="p">}</span>
+    <span class="n">reads</span> <span class="o">=</span> <span class="p">{</span><span class="n">s</span><span class="o">.</span><span class="n">base</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">operators</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">op</span><span class="o">.</span><span class="n">all_signals</span><span class="p">}</span>
+    <span class="n">updates</span> <span class="o">=</span> <span class="p">{</span><span class="n">s</span><span class="o">.</span><span class="n">base</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">operators</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">op</span><span class="o">.</span><span class="n">all_signals</span><span class="p">}</span>
+
+    <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">operators</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">op</span><span class="o">.</span><span class="n">sets</span><span class="p">:</span>
+            <span class="n">sets</span><span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">base</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">op</span><span class="o">.</span><span class="n">incs</span><span class="p">:</span>
+            <span class="n">incs</span><span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">base</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">op</span><span class="o">.</span><span class="n">reads</span><span class="p">:</span>
+            <span class="n">reads</span><span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">base</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">op</span><span class="o">.</span><span class="n">updates</span><span class="p">:</span>
+            <span class="n">updates</span><span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">base</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">sets</span><span class="p">,</span> <span class="n">incs</span><span class="p">,</span> <span class="n">reads</span><span class="p">,</span> <span class="n">updates</span></div>
+
+
+<div class="viewcode-block" id="display_signal_blocks"><a class="viewcode-back" href="../../reference.html#nengo_dl.graph_optimizer.display_signal_blocks">[docs]</a><span class="k">def</span> <span class="nf">display_signal_blocks</span><span class="p">(</span><span class="n">operators</span><span class="p">,</span> <span class="n">all_signals</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates a visual depiction of the signals blocks read by each operator</span>
+<span class="sd">    group.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    operators : list of tuple of `~nengo.builder.Operator`</span>
+<span class="sd">        Operator execution plan</span>
+<span class="sd">    all_signals : list of `~nengo.builder.Signal`</span>
+<span class="sd">        Base signals arranged into some order</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    signal_blocks : str</span>
+<span class="sd">        A string where each row corresponds to one operator group, and the</span>
+<span class="sd">        non-blank characters in the line indicate that the operator group</span>
+<span class="sd">        reads/writes that signal (with a number used to distinguish the</span>
+<span class="sd">        different signal blocks within the operator group).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">sig_idxs</span> <span class="o">=</span> <span class="p">{</span><span class="n">s</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">all_signals</span><span class="p">)}</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([[</span><span class="s2">&quot; &quot;</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">all_signals</span><span class="p">]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">operators</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">operators</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">group</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">all_signals</span><span class="p">)):</span>
+            <span class="n">sig_group</span> <span class="o">=</span> <span class="p">[</span><span class="n">sig_idxs</span><span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">all_signals</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">base</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">group</span><span class="p">]</span>
+            <span class="n">output</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="n">sig_group</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">output</span><span class="p">)</span></div>
+</pre></div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div><footer class="footer">
+  <div class="w-container">
+    <div class="w-clearfix">
+      <div class="w-row mobileAlign">
+        <div class="w-col w-col-2 footer-menu">
+          <p class="menu-Label">ABR, Inc.</p>
+          <ul class="vertical-menu">
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/products/">Products</a></li>
+            <li class="footer-listitem-new "><a href="https://appliedbrainresearch.com/services/">Services</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/research/">Research</a></li>
+          </ul>
+        </div>
+        <div class="w-col w-col-2 footer-menu">
+          <p class="menu-Label">About Us</p>
+          <ul class="vertical-menu">
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/">Contact</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/#team">Team</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/#culture">Culture</a></li>
+          </ul>
+        </div>
+        <a class="brand footer-brand" href="https://appliedbrainresearch.com">
+          <img src="https://appliedbrainresearch.com/img/logo-light-notext.svg" width="80">
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+  </body>
+</html>
