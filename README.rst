@@ -16,7 +16,7 @@
 
 |
 
-.. image:: https://www.nengo.ai/design/_images/full-light1.svg
+.. image:: https://www.nengo.ai/design/_images/nengo-dl-full-light.svg
   :target: https://www.nengo.ai/nengo-dl
   :alt: NengoDL
   :width: 400px

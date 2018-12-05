@@ -11,7 +11,6 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "nengo_sphinx_theme",
-    "nengo_sphinx_theme.ext.versions",
     "numpydoc",
     "nbsphinx",
     "sphinx_click.ext",
@@ -63,10 +62,10 @@ htmlhelp_basename = "NengoDLdoc"
 html_last_updated_fmt = ""  # default output format
 html_show_sphinx = False
 html_favicon = os.path.join("_static", "favicon.ico")
-html_logo = os.path.join("_static", "logo.png")
 html_theme_options = {
     "sidebar_toc_depth": 4,
     "sidebar_logo_width": 200,
+    "nengo_logo": "nengo-dl-full-light.svg",
 }
 
 # create redirect pages (from_page, to_page)
