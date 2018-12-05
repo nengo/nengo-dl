@@ -18,6 +18,10 @@ Release History
    - Deprecated
    - Removed
 
+2.1.1 (unreleased)
+------------------
+
+
 2.1.0 (December 5, 2018)
 ------------------------
 
