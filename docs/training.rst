@@ -424,5 +424,5 @@ on custom neuromorphic hardware).
 Examples
 --------
 
-* :doc:`examples/nef-init`
+* :doc:`examples/from-nengo`
 * :doc:`examples/spiking-mnist`

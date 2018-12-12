@@ -10,7 +10,7 @@ the
 .. toctree::
     :maxdepth: 1
 
-    examples/nef-init
+    examples/from-nengo
     examples/pretrained-model
     examples/spiking-mnist
     examples/spa-retrieval

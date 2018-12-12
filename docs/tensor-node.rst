@@ -57,5 +57,6 @@ examples below for demonstrations of using TensorNodes in practice.
 Examples
 --------
 
+* :doc:`examples/from-nengo`
 * :doc:`examples/pretrained-model`
 * :doc:`examples/spiking-mnist`

@@ -24,10 +24,17 @@ Release History
 **Added**
 
 - Added ``nengo_dl.obj`` as a shortcut alias for ``nengo_dl.objectives``.
+- Added tutorial for `Nengo users coming to NengoDL
+  <https://www.nengo.ai/nengo-dl/examples/from-nengo.html>`_
 
 **Changed**
 
 - Increased minimum ``progressbar2`` version to 3.39.0.
+
+**Removed**
+
+- Removed the ``nef-init`` tutorial (replaced by the new ``from-nengo``
+  tutorial).
 
 2.1.0 (December 5, 2018)
 ------------------------
