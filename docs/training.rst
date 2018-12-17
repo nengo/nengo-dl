@@ -425,4 +425,5 @@ Examples
 --------
 
 * :doc:`examples/from-nengo`
+* :doc:`examples/from-tensorflow`
 * :doc:`examples/spiking-mnist`

@@ -11,6 +11,7 @@ the
     :maxdepth: 1
 
     examples/from-nengo
+    examples/from-tensorflow
     examples/pretrained-model
     examples/spiking-mnist
     examples/spa-retrieval

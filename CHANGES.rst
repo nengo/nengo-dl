@@ -26,6 +26,8 @@ Release History
 - Added ``nengo_dl.obj`` as a shortcut alias for ``nengo_dl.objectives``.
 - Added tutorial for `Nengo users coming to NengoDL
   <https://www.nengo.ai/nengo-dl/examples/from-nengo.html>`_
+- Added tutorial for `TensorFlow users coming to NengoDL
+  <https://www.nengo.ai/nengo-dl/examples/from-tensorflow.html>`_
 
 **Changed**
 

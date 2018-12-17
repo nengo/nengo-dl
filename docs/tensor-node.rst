@@ -58,5 +58,6 @@ Examples
 --------
 
 * :doc:`examples/from-nengo`
+* :doc:`examples/from-tensorflow`
 * :doc:`examples/pretrained-model`
 * :doc:`examples/spiking-mnist`
