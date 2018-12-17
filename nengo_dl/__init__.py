@@ -38,6 +38,9 @@ from nengo_dl.tensor_node import TensorNode, tensor_layer, reshaped
 from nengo_dl.config import configure_settings
 from nengo_dl.neurons import SoftLIFRate
 
+# shortcut for objective namespace
+obj = objectives
+
 # apply tensorflow monkey patches
 from nengo_dl import tensorflow_patch
 
