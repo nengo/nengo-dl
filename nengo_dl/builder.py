@@ -14,80 +14,134 @@ from nengo.exceptions import BuildError
 import numpy as np
 import tensorflow as tf
 
+from nengo_dl import utils
+
 logger = logging.getLogger(__name__)
 
 
 class Builder:
-    """Manages the operator build classes known to the ``nengo_dl``
-    build process."""
+    """
+    Manages the operator build classes known to the ``nengo_dl`` build process.
+
+    Parameters
+    ----------
+    plan : list of tuple of `~nengo.builder.Operator`
+        The groups of operators that will be built
+    graph : ``tf.Graph``
+        The simulation build graph
+    signals : `.signals.SignalDict`
+        Mapping from `~nengo.builder.Signal` to
+        ``tf.Tensor`` (updated by operations)
+    config : `.BuildConfig`
+        Configuration parameters for the build process
+    """
 
     builders = {}
 
-    @classmethod
-    def pre_build(cls, ops, signals, op_builds, config):
+    def __init__(self, plan, graph, signals, config):
+        self.plan = plan
+        self.graph = graph
+        self.signals = signals
+        self.config = config
+        self.op_builds = {}
+
+    def pre_build(self, progress=None):
         """
         Setup step for build classes, in which they compute any of the
         values that are constant across simulation timesteps.
 
         Parameters
         ----------
-        ops : tuple of `~nengo.builder.Operator`
-            The operator group to build into the model
-        signals : `.signals.SignalDict`
-            Mapping from `~nengo.builder.Signal` to
-            ``tf.Tensor`` (updated by operations)
-        op_builds : dict of {tuple of `~nengo.builder.Operator`, `.OpBuilder`}
-            ``pre_build`` will populate this dictionary with the OpBuilder
-            objects (which execute the pre-build step in their ``__init__``)
+        progress : `.utils.ProgressBar`
+            Progress bar for ops in plan
         """
 
-        logger.debug("===================")
-        logger.debug("PRE BUILD %s", ops)
-        logger.debug("sets %s", [op.sets for op in ops])
-        logger.debug("incs %s", [op.incs for op in ops])
-        logger.debug("reads %s", [op.reads for op in ops])
-        logger.debug("updates %s", [op.updates for op in ops])
+        for ops in self.plan:
+            logger.debug("===================")
+            logger.debug("PRE BUILD %s", ops)
+            logger.debug("sets %s", [op.sets for op in ops])
+            logger.debug("incs %s", [op.incs for op in ops])
+            logger.debug("reads %s", [op.reads for op in ops])
+            logger.debug("updates %s", [op.updates for op in ops])
 
-        if type(ops[0]) not in cls.builders:
-            raise BuildError("No registered builder for operators of type %r" %
-                             type(ops[0]))
+            if type(ops[0]) not in Builder.builders:
+                raise BuildError(
+                    "No registered builder for operators of type %r" %
+                    type(ops[0]))
 
-        BuildClass = cls.builders[type(ops[0])]
+            BuildClass = Builder.builders[type(ops[0])]
 
-        op_builds[ops] = BuildClass(ops, signals, config)
+            with self.name_scope(ops):
+                self.op_builds[ops] = BuildClass(ops, self.signals,
+                                                 self.config)
 
-    @classmethod
-    def build(cls, ops, signals, op_builds):
+            if progress is not None:
+                progress.step()
+
+    def build(self, progress=None):
         """
         Build the computations implementing a single simulator timestep.
 
         Parameters
         ----------
-        ops : tuple of `~nengo.builder.Operator`
-            The operator group to build into the model
-        signals : `.signals.SignalDict`
-            Mapping from `~nengo.builder.Signal` to
-            ``tf.Tensor`` (updated by operations)
-        op_builds : dict of {tuple of `~nengo.builder.Operator`, \
-                             ~`.op_builders.OpBuilder`}
-            Mapping from operator groups to the pre-built builder objects
+        progress : `.utils.ProgressBar`
+            Progress bar for ops in plan
+
+        Returns
+        -------
+        side_effects : list of ``tf.Tensor``
+            Outputs with possible side-effects, i.e. computations that need to
+            be executed in the TensorFlow graph even if their output doesn't
+            appear to be used.
         """
 
-        logger.debug("===================")
-        logger.debug("BUILD %s", ops)
+        side_effects = []
+        for ops in self.plan:
+            logger.debug("===================")
+            logger.debug("BUILD %s", ops)
 
-        if ops not in op_builds:
-            raise BuildError("Operators build has not been initialized "
-                             "(missed pre-build step)")
+            with self.name_scope(ops):
+                output = self.op_builds[ops].build_step(self.signals)
 
-        output = op_builds[ops].build_step(signals)
+            if isinstance(output, (tf.Tensor, tf.Variable)):
+                side_effects.append(output)
+            elif isinstance(output, (list, tuple)):
+                side_effects.extend(list(output))
 
-        if isinstance(output, (tf.Tensor, tf.Variable)):
-            output = [output]
-        elif isinstance(output, tuple):
-            output = list(output)
+            if progress is not None:
+                progress.step()
 
-        return output
+        return side_effects
+
+    def post_build(self, sess, rng, progress=None):
+        """
+        Calls post build functions for all ops in plan.
+
+        Parameters
+        ----------
+        sess : ``tf.Session``
+            The initialized simulation session
+        rng : `~numpy.random.RandomState`
+            Seeded random number generator
+        progress : `.utils.ProgressBar`
+            Progress bar for ops in plan
+        """
+
+        for ops in self.plan:
+            logger.debug("===================")
+            logger.debug("POST BUILD %s", ops)
+
+            with self.name_scope(ops):
+                self.op_builds[ops].build_post(ops, self.signals, sess, rng)
+
+            if progress is not None:
+                progress.step()
+
+    def name_scope(self, ops):
+        """Returns a new TensorFlow name scope for the given ops."""
+
+        return self.graph.name_scope(
+            utils.sanitize_name(Builder.builders[type(ops[0])].__name__))
 
     @classmethod
     def register(cls, nengo_op):

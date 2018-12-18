@@ -2,9 +2,11 @@
 
 from nengo.exceptions import BuildError
 import pytest
+import tensorflow as tf
 
 from nengo_dl.builder import Builder, OpBuilder, NengoModel
 from nengo_dl.tests import dummies
+from nengo_dl.utils import NullProgressBar
 
 
 def test_custom_builder():
@@ -15,14 +17,12 @@ def test_custom_builder():
         updates = None
 
     ops = (TestOp(),)
+    builder = Builder([ops], tf.Graph(), None, None)
+    progress = NullProgressBar()
 
     # error if no builder registered
     with pytest.raises(BuildError):
-        Builder.pre_build(ops, None, None, None)
-
-    # error if no pre-built object
-    with pytest.raises(BuildError):
-        Builder.build(ops, None, {})
+        builder.pre_build()
 
     # warning if builder doesn't subclass OpBuilder
     with pytest.warns(UserWarning):
@@ -50,17 +50,16 @@ def test_custom_builder():
             def build_post(self, ops, signals, sess, rng):
                 self.post_built = True
 
-    op_builds = {}
-    Builder.pre_build(ops, None, op_builds, None)
+    builder.pre_build(progress)
 
-    result = Builder.build(ops, None, op_builds)
+    result = builder.build(progress)
 
     assert len(result) == 2
     assert result[0] == 0
     assert result[1] == 1
 
-    op_builds[ops].build_post(None, None, None, None)
-    assert op_builds[ops].post_built
+    builder.post_build(None, None, progress)
+    assert builder.op_builds[ops].post_built
 
 
 @pytest.mark.parametrize("fail_fast", (True, False))

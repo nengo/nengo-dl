@@ -148,6 +148,15 @@ class TensorGraph:
         logger.info("Optimized plan length: %d", len(self.plan))
         logger.info("Number of base arrays: %d", len(self.base_arrays_init))
 
+        # initialize op builder
+        build_config = builder.BuildConfig(
+            inference_only=self.inference_only,
+            lif_smoothing=config.get_setting(self.model, "lif_smoothing"),
+            cpu_only=self.device == "/cpu:0" or not utils.tf_gpu_installed,
+        )
+        self.op_builder = builder.Builder(self.plan, self.graph, self.signals,
+                                          build_config)
+
     @with_self
     def build(self, progress):
         """
@@ -212,23 +221,13 @@ class TensorGraph:
         self.build_inputs(sub)
 
         # pre-build stage
-        sub = progress.sub("pre-build stage")
-        self.op_builds = {}
-        build_config = builder.BuildConfig(
-            inference_only=self.inference_only,
-            lif_smoothing=config.get_setting(self.model, "lif_smoothing"),
-            cpu_only=(
-                self.device == "/cpu:0" or not utils.tf_gpu_installed),
-        )
-        for ops in sub(self.plan):
-            with self.graph.name_scope(utils.sanitize_name(
-                    builder.Builder.builders[type(ops[0])].__name__)):
-                builder.Builder.pre_build(ops, self.signals, self.op_builds,
-                                          build_config)
+        with progress.sub("pre-build stage", max_value=len(self.plan)) as sub:
+            self.op_builder.pre_build(sub)
 
         # build stage
-        sub = progress.sub("unrolled step ops")
-        self.build_loop(sub)
+        with progress.sub(
+                "build stage", max_value=len(self.plan) * self.unroll) as sub:
+            self.build_loop(sub)
 
         # ops for initializing variables (will be called by simulator)
         trainable_vars = tf.trainable_variables()
@@ -251,10 +250,15 @@ class TensorGraph:
         for x in self.signals.write_types.items():
             logger.info("    %s: %d", *x)
 
-    def build_step(self):
+    def build_step(self, progress):
         """
         Build the operators that execute a single simulation timestep
         into the graph.
+
+        Parameters
+        ----------
+        progress : `.utils.ProgressBar`
+            Progress bar for loop construction
 
         Returns
         -------
@@ -268,9 +272,6 @@ class TensorGraph:
             to be used in the simulation
         """
 
-        # build operators
-        side_effects = []
-
         # manually build TimeUpdate. we don't include this in the plan,
         # because loop variables (`step`) are (semi?) pinned to the CPU, which
         # causes the whole variable to get pinned to the CPU if we include
@@ -279,14 +280,7 @@ class TensorGraph:
                                     self.dtype) * self.signals.dt
 
         # build operators
-        for ops in self.plan:
-            with self.graph.name_scope(utils.sanitize_name(
-                    builder.Builder.builders[type(ops[0])].__name__)):
-                outputs = builder.Builder.build(ops, self.signals,
-                                                self.op_builds)
-
-            if outputs is not None:
-                side_effects += outputs
+        side_effects = self.op_builder.build(progress)
 
         logger.debug("collecting probe tensors")
         probe_tensors = []
@@ -349,7 +343,7 @@ class TensorGraph:
                     self.base_vars.keys(), self.signals.internal_vars.keys())):
                 self.signals.bases[key] = base_vars[i]
 
-            for iter in progress(range(self.unroll)):
+            for iter in range(self.unroll):
                 logger.debug("BUILDING ITERATION %d", iter)
                 with self.graph.name_scope("iteration_%d" % iter):
                     # note: nengo step counter is incremented at the beginning
@@ -369,14 +363,14 @@ class TensorGraph:
                     # simulation step (side effects and probes) from the
                     # previous timestep are executed before the next step
                     # starts
-                    with self.graph.control_dependencies([loop_i]):
-                        # note: we use the variable scope to make sure that we
-                        # aren't accidentally creating new variables for
-                        # unrolled iterations (this is really only a concern
-                        # with TensorNodes)
-                        with tf.variable_scope(tf.get_variable_scope(),
-                                               reuse=iter > 0):
-                            probe_tensors, side_effects = self.build_step()
+                    # note2: we use the variable scope to make sure that we
+                    # aren't accidentally creating new variables for
+                    # unrolled iterations (this is really only a concern
+                    # with TensorNodes)
+                    with self.graph.control_dependencies([loop_i]), \
+                            tf.variable_scope(tf.get_variable_scope(),
+                                              reuse=iter > 0):
+                        probe_tensors, side_effects = self.build_step(progress)
 
                     # copy probe data to array
                     for i, p in enumerate(probe_tensors):
@@ -727,9 +721,8 @@ class TensorGraph:
                 # have side effects
                 self.input_funcs[n] = [output]
 
-        # call build_post on all the op builders
-        for ops, built_ops in self.op_builds.items():
-            built_ops.build_post(ops, self.signals, sess, rng)
+        # execute post_build on all the op builders
+        self.op_builder.post_build(sess, rng)
 
     @with_self
     def build_summaries(self, summaries):
