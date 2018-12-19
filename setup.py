@@ -53,6 +53,7 @@ install_requires = [
     "progressbar2>=3.39.0",
 ]
 docs_require = [
+    "click>=6.7",  # needed for sphinx-click
     "jupyter>=1.0.0",
     "matplotlib>=2.0.0",
     "nbconvert!=5.4",  # doesn't work with nbsphinx TODO: remove this once there's an upstream fix; https://github.com/jupyter/nbconvert/issues/878
