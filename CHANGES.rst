@@ -21,6 +21,9 @@ Release History
 2.1.1 (unreleased)
 ------------------
 
+**Changed**
+
+- Increased minimum ``progressbar2`` version to 3.39.0.
 
 2.1.0 (December 5, 2018)
 ------------------------

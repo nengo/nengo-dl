@@ -153,10 +153,13 @@ def test_progress_bar():
     assert sub.finished
 
     # check that iterable wrapping works properly
-    for _ in progress(range(11)):
-        pass
+    counter = 0
+    for _ in progress(range(15)):
+        counter += 1
 
-    assert progress.value == 11
+    # note: progress value cut-off at 10 (the max value we specified)
+    assert counter == 15
+    assert progress.value == 10
 
     # check that closing the parent process closes the sub
     assert sub2.finished

@@ -50,7 +50,7 @@ install_requires = [
     "nengo>=2.7.0",
     "numpy>=1.12.1",
     "%s>=1.4.0" % tf_req,
-    "progressbar2>=3.37.1",
+    "progressbar2>=3.39.0",
 ]
 docs_require = [
     "jupyter>=1.0.0",
