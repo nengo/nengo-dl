@@ -69,7 +69,6 @@ Check out the `documentation <https://www.nengo.ai/nengo-dl/>`_ for
 
 - `Installation instructions <https://www.nengo.ai/nengo-dl/installation.html>`_
 - `Details on the unique features of NengoDL
-  <https://www.nengo.ai/nengo-dl/frontend.html>`_
-- `Examples <https://www.nengo.ai/nengo-dl/examples.html>`_
-- `More information on how NengoDL works under the hood
-  <https://www.nengo.ai/nengo-dl/backend.html>`_
+  <https://www.nengo.ai/nengo-dl/user-guide.html>`_
+- `Tutorials and examples <https://www.nengo.ai/nengo-dl/examples.html>`_
+- `API reference <https://www.nengo.ai/nengo-dl/reference.html>`_
