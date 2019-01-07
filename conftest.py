@@ -7,11 +7,11 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import config, simulator
+from nengo_dl import config, simulator, utils
 
 
 def pytest_runtest_setup(item):
-    if getattr(item.obj, "gpu", False) and not pytest.gpu_installed:
+    if getattr(item.obj, "gpu", False) and not utils.tf_gpu_installed:
         pytest.skip("This test requires tensorflow-gpu")
     elif (hasattr(item, "fixturenames") and
           "Simulator" not in item.fixturenames and
@@ -34,12 +34,6 @@ def pytest_addoption(parser):
                      help="unroll_simulation value for Simulator")
     parser.addoption("--device", default=None,
                      help="device parameter for Simulator")
-
-
-def pytest_namespace():
-    gpu_dists = [d for d in pkg_resources.working_set
-                 if d.project_name in ("tensorflow-gpu", "tf-nightly-gpu")]
-    return {"gpu_installed": len(gpu_dists) > 0}
 
 
 @pytest.fixture(scope="session")

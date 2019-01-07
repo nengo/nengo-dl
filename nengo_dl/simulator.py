@@ -26,7 +26,6 @@ from nengo.exceptions import (
     ValidationError)
 from nengo.solvers import NoSolver
 import numpy as np
-import pkg_resources
 import tensorflow as tf
 from tensorflow.python.client.timeline import Timeline
 from tensorflow.python.ops import gradient_checker
@@ -127,9 +126,7 @@ class Simulator:
 
         # TODO: multi-GPU support
 
-        gpu_dists = [d for d in pkg_resources.working_set
-                     if d.project_name in ("tensorflow-gpu", "tf-nightly-gpu")]
-        if device is None and len(gpu_dists) == 0:
+        if device is None and not utils.tf_gpu_installed:
             warnings.warn(
                 "No GPU support detected. It is recommended that you "
                 "install tensorflow-gpu (`pip install tensorflow-gpu`).")

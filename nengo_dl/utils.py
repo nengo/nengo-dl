@@ -13,11 +13,17 @@ import warnings
 
 from nengo.exceptions import SimulationError
 import numpy as np
+import pkg_resources
 import progressbar
 import tensorflow as tf
 from tensorflow.python.framework.ops import get_gradient_function
 
 logger = logging.getLogger(__name__)
+
+# check if tensorflow-gpu is installed
+tf_gpu_installed = len(
+    [d for d in pkg_resources.working_set
+     if d.project_name in ("tensorflow-gpu", "tf-nightly-gpu")]) > 0
 
 
 def sanitize_name(name):

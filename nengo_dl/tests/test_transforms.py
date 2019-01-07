@@ -6,6 +6,8 @@ import nengo
 import numpy as np
 import pytest
 
+from nengo_dl.utils import tf_gpu_installed
+
 
 @pytest.mark.skipif(LooseVersion(nengo.__version__) <= "2.8.0",
                     reason="Nengo Convolutions not implemented")
@@ -37,7 +39,7 @@ def test_merge_conv(Simulator, channels_last, seed, pytestconfig):
     # note: this also assures us that we are testing on the GPU in native
     # channels_first when possible
     recwarns = [w for w in recwarns if "channels_last=False" in str(w.message)]
-    if channels_last or (pytest.gpu_installed
+    if channels_last or (tf_gpu_installed
                          and pytestconfig.getoption("--device") != "/cpu:0"):
         assert len(recwarns) == 0
     else:
