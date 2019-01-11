@@ -35,7 +35,7 @@ NengoDL imports several open source libraries:
 
 To build the documentation, NengoDL uses:
 
-* `Jupyter <http://jupyter.org>`_ - Used under
+* `Jupyter <https://jupyter.org/>`_ - Used under
   `BSD license <https://github.com/jupyter/jupyter/blob/master/LICENSE>`__
 * `matplotlib <https://matplotlib.org/>`_ - Used under
   `modified PSF license <https://matplotlib.org/users/license.html>`__
