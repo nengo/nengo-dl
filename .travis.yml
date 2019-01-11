@@ -49,7 +49,7 @@ jobs:
         server: https://test.pypi.org/legacy/
         user: drasmuss
         password: $PYPI_TOKEN
-        distributions: "sdist bdist_wheel"
+        distributions: "sdist"
         on:
           all_branches: true
           condition: $TRAVIS_BRANCH =~ ^release-candidate-*
@@ -57,7 +57,7 @@ jobs:
       - provider: pypi
         user: drasmuss
         password: $PYPI_TOKEN
-        distributions: "sdist bdist_wheel"
+        distributions: "sdist"
         on:
           all_branches: true
           condition: $TRAVIS_TAG =~ ^v[0-9]*

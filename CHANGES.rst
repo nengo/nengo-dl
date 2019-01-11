@@ -32,6 +32,10 @@ Release History
 **Changed**
 
 - Increased minimum ``progressbar2`` version to 3.39.0.
+- We now only provide ``sdist`` releases, not ``bdist_wheel``. Due to the way
+  the TensorFlow packages are organized, ``bdist_wheel``  forces any existing
+  TensorFlow installations (e.g. ``tensorflow-gpu`` or ``tf-nightly``)
+  to be overwritten by ``tensorflow``, which we don't want to do.
 
 **Removed**
 
