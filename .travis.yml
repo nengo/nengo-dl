@@ -44,6 +44,7 @@ jobs:
   - stage: deploy
     if: branch =~ ^release-candidate-* OR tag =~ ^v[0-9]*
     env: MODE="deploy"
+    cache: false
     deploy:
       - provider: pypi
         server: https://test.pypi.org/legacy/
