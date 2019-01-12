@@ -8,8 +8,8 @@ represents a release version. Commits for which the version doesn't have
 import warnings
 
 name = "nengo-dl"
-version_info = (2, 1, 1)  # (major, minor, patch)
-dev = False
+version_info = (2, 1, 2)  # (major, minor, patch)
+dev = True
 
 version = "{v}{dev}".format(v='.'.join(str(v) for v in version_info),
                             dev='.dev0' if dev else '')
@@ -19,7 +19,7 @@ try:
     import nengo.version
 
     minimum_nengo_version = (2, 7, 0)
-    latest_nengo_version = (2, 8, 0)
+    latest_nengo_version = (2, 8, 1)
     if nengo.version.version_info < minimum_nengo_version:  # pragma: no cover
         raise ValueError(
             "`nengo_dl` does not support `nengo` version %s. Upgrade "
