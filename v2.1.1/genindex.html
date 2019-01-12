@@ -1,0 +1,1052 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Index &#8212; NengoDL documentation</title>
+    <link rel="stylesheet" href="_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/normalize.css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/bootstrap.css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/mmenu.all.css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/components.css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/nengo.css" />
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<!--[if lte IE 9]><script src="https://cdnjs.cloudflare.com/ajax/libs/placeholders/3.0.2/placeholders.min.js"></script><![endif]-->
+<script type="text/javascript" src="https://cdn.crate.io/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="_static/js/modernizr.js"></script>
+    <script type="text/javascript" src="_static/js/underscore.min.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/js/searchtools.js"></script>
+    <script type="text/javascript" src="_static/js/webflow.js"></script>
+    <script type="text/javascript" src="_static/js/bootstrap.js"></script>
+    <script type="text/javascript" src="_static/js/mmenu.all.min.js"></script>
+    <script type="text/javascript" src="_static/js/fontawesome.js"></script>
+    <script type="text/javascript" src="_static/js/custom.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+  </head><body>
+<header class="header-nav">
+  <div class="container">
+    <div class="navbar w-nav" data-animation="default" data-collapse="small" data-contain="1" data-duration="400">
+      <a class="brand w-nav-brand" href="https://www.nengo.ai/">
+        <img src="https://www.nengo.ai/design/_images/general-full-light.svg" width="120">
+      </a>
+      <nav class="w-nav-menu main-nav" role="navigation">
+        <div class="dropdownBackground">
+          <span class="arrow"></span>
+        </div>
+        <ul id="menu-top-navigation" class="menu">
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/overview.html">Overview</a>
+            <ul class="sub-menu">
+                <li class="menu-item"><a href="https://www.nengo.ai/quickstart.html">Quick Start</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/documentation.html">Documentation</a>
+            <table class="sub-menu">
+              <tr>
+                <td class="menu-heading">Core</td>
+                <td class="menu-heading">Backends</td>
+                <td class="menu-heading">Add-ons</td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo">Nengo</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-fpga">Nengo FPGA</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-examples">Nengo Examples</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-dl/">Nengo DL</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-loihi">Nengo Loihi</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-extras/">Nengo Extras</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-gui">Nengo GUI</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-mpi">Nengo MPI</a></td>
+                <td class="menu-item"><a href="https://arvoelke.github.io/nengolib-docs/">Nengo Lib</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-spa/">Nengo SPA</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-ocl">Nengo OpenCL</a></td>
+                <td class="menu-item"></td>
+              </tr>
+              <tr>
+                <td class="menu-item"></td>
+                <td class="menu-item"><a href="https://github.com/project-rig/nengo_spinnaker">Nengo SpiNNaker</a></td>
+                <td class="menu-item"></td>
+              </tr>
+            </table>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/community.html">Community</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://forum.nengo.ai/">Forum</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/publications.html">Publications</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/summerschool.html">Summer School</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/videos.html">Videos</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/people.html">People</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/projects.html">Development</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/contributing.html">Contributor Guide</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/projects.html">Ecosystem</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/README.html">About</a></li>
+          <li class="btn-link w-nav-link menu-item"><a href="https://www.nengo.ai/download.html">Download</a></li>
+        </ul>
+      </nav>
+
+      <div id="mobile-nav" class="mm-menu">
+        <ul class="offcanvas-menu">
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/overview.html">Overview</a></li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/documentation.html">Documentation</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/quickstart.html">Quick Start</a></li>
+              <li class="menu-item"><a href="http://www.nengo.ai/nengo">NengoCore</a></li>
+              <li class="menu-item"><a href="https://github.com/nengo/nengo-gui#nengo-gui">NengoGUI</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/community.html">Community</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://forum.nengo.ai/">Forum</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/summerschool.html">Summer School</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/people.html">People</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/projects.html">Development</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/contributing.html">Contributor Guide</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/projects.html">Ecosystem</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/README.html">About</a></li>
+          <li class="btn-link w-nav-link menu-item"><a href="https://www.nengo.ai/download.html">Download</a></li>
+        </ul>
+      </div>
+
+      <a href="#mobile-nav" class="fa fa-bars mobile-nav-button"></a>
+    </div>
+  </div>
+</header>
+
+<div class="w-section section border-top">
+  <div class="container">
+    <div class="row" id="genindex">
+      <div class="col-md-4 col-lg-3">
+        <aside class="wrapper-navleft"><div role="complementary" class="bs-docs-sidebar hidden-print" id="nav-affix">
+  <ul class="bs-docs-sidenav bs-sidenav nav" role="complementary">
+    <a href="index.html">
+      <img class="logo" src="https://www.nengo.ai/design/_images/nengo-dl-full-light.svg" alt="NengoDL" width="200" />
+    </a>
+    <ul class="toctree nav nav-list">
+      <ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user-guide.html">User guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a></li>
+</ul>
+
+    </ul>
+  </ul>
+</div>
+          
+        </aside>
+      </div>
+      <div class="col-md-8 col-lg-9">
+        <div class="wrapper-content-right">
+          
+<div class="version-select-container">
+    <div data-delay="0" class="w-dropdown">
+        <div class="w-dropdown-toggle toggle">
+            <div class="toggle-text">v2.1.1</div>
+            <div class="w-icon-dropdown-toggle toggle-icon"></div>
+        </div>
+        <nav class="w-dropdown-list dropdown-list">
+            
+            
+                <a href="../genindex.html" class="w-dropdown-link">latest</a>
+            
+
+            
+                
+                <div class="w-dropdown-link">v2.1.1</div>
+                
+            
+                
+                    <a href="../v2.1.0/genindex.html" class="w-dropdown-link">v2.1.0</a>
+                
+            
+                
+                    <a href="../v2.0.0/genindex.html" class="w-dropdown-link">v2.0.0</a>
+                
+            
+                
+                    <a href="../v1.2.1/genindex.html" class="w-dropdown-link">v1.2.1</a>
+                
+            
+                
+                    <a href="../v1.2.0/genindex.html" class="w-dropdown-link">v1.2.0</a>
+                
+            
+                
+                    <a href="../v1.1.0/genindex.html" class="w-dropdown-link">v1.1.0</a>
+                
+            
+                
+                    <a href="../v1.0.0/genindex.html" class="w-dropdown-link">v1.0.0</a>
+                
+            
+                
+                    <a href="../v0.6.2/genindex.html" class="w-dropdown-link">v0.6.2</a>
+                
+            
+                
+                    <a href="../v0.6.1/genindex.html" class="w-dropdown-link">v0.6.1</a>
+                
+            
+                
+                    <a href="../v0.6.0/genindex.html" class="w-dropdown-link">v0.6.0</a>
+                
+            
+                
+                    <a href="../v0.5.2/genindex.html" class="w-dropdown-link">v0.5.2</a>
+                
+            
+                
+                    <a href="../v0.5.1/genindex.html" class="w-dropdown-link">v0.5.1</a>
+                
+            
+                
+                    <a href="../v0.5.0/genindex.html" class="w-dropdown-link">v0.5.0</a>
+                
+            
+                
+                    <a href="../v0.4.0/genindex.html" class="w-dropdown-link">v0.4.0</a>
+                
+            
+                
+                    <a href="../v0.3.1/genindex.html" class="w-dropdown-link">v0.3.1</a>
+                
+            
+                
+                    <a href="../v0.3.0/genindex.html" class="w-dropdown-link">v0.3.0</a>
+                
+            
+                
+                    <a href="../v0.2.0/genindex.html" class="w-dropdown-link">v0.2.0</a>
+                
+            
+        </nav>
+    </div>
+</div>
+
+          
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ <a href="#Symbols"><strong>Symbols</strong></a>
+ | <a href="#_"><strong>_</strong></a>
+ | <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
+ | <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
+ | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
+ | <a href="#H"><strong>H</strong></a>
+ | <a href="#I"><strong>I</strong></a>
+ | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
+ | <a href="#N"><strong>N</strong></a>
+ | <a href="#O"><strong>O</strong></a>
+ | <a href="#P"><strong>P</strong></a>
+ | <a href="#R"><strong>R</strong></a>
+ | <a href="#S"><strong>S</strong></a>
+ | <a href="#T"><strong>T</strong></a>
+ | <a href="#V"><strong>V</strong></a>
+ | <a href="#W"><strong>W</strong></a>
+ 
+</div>
+<h2 id="Symbols">Symbols</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    --batch_size &lt;batch_size&gt;
+
+      <ul>
+        <li><a href="reference.html#cmdoption-benchmarks-profile-batch-size">benchmarks-profile command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --benchmark &lt;benchmark&gt;
+
+      <ul>
+        <li><a href="reference.html#cmdoption-benchmarks-build-benchmark">benchmarks-build command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --device &lt;device&gt;
+
+      <ul>
+        <li><a href="reference.html#cmdoption-benchmarks-performance-samples-device">benchmarks-performance-samples command line option</a>
+</li>
+        <li><a href="reference.html#cmdoption-benchmarks-profile-device">benchmarks-profile command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --dimensions &lt;dimensions&gt;
+
+      <ul>
+        <li><a href="reference.html#cmdoption-benchmarks-build-dimensions">benchmarks-build command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --kwarg &lt;kwarg&gt;
+
+      <ul>
+        <li><a href="reference.html#cmdoption-benchmarks-build-kwarg">benchmarks-build command line option</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    --n_steps &lt;n_steps&gt;
+
+      <ul>
+        <li><a href="reference.html#cmdoption-benchmarks-profile-n-steps">benchmarks-profile command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --neuron_type &lt;neuron_type&gt;
+
+      <ul>
+        <li><a href="reference.html#cmdoption-benchmarks-build-neuron-type">benchmarks-build command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --neurons_per_d &lt;neurons_per_d&gt;
+
+      <ul>
+        <li><a href="reference.html#cmdoption-benchmarks-build-neurons-per-d">benchmarks-build command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --time-only
+
+      <ul>
+        <li><a href="reference.html#cmdoption-benchmarks-profile-time-only">benchmarks-profile command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --train, --no-train
+
+      <ul>
+        <li><a href="reference.html#cmdoption-benchmarks-profile-train">benchmarks-profile command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --unroll &lt;unroll&gt;
+
+      <ul>
+        <li><a href="reference.html#cmdoption-benchmarks-profile-unroll">benchmarks-profile command line option</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="_">_</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.signals.TensorSignal.__getitem__">__getitem__() (nengo_dl.signals.TensorSignal method)</a>
+
+      <ul>
+        <li><a href="reference.html#nengo_dl.simulator.SimulationData.__getitem__">(nengo_dl.simulator.SimulationData method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.builder.NengoModel.add_op">add_op() (nengo_dl.builder.NengoModel method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.utils.align_func">align_func() (in module nengo_dl.utils)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.benchmarks.basal_ganglia">basal_ganglia() (in module nengo_dl.benchmarks)</a>
+</li>
+      <li>
+    benchmarks-build command line option
+
+      <ul>
+        <li><a href="reference.html#cmdoption-benchmarks-build-benchmark">--benchmark &lt;benchmark&gt;</a>
+</li>
+        <li><a href="reference.html#cmdoption-benchmarks-build-dimensions">--dimensions &lt;dimensions&gt;</a>
+</li>
+        <li><a href="reference.html#cmdoption-benchmarks-build-kwarg">--kwarg &lt;kwarg&gt;</a>
+</li>
+        <li><a href="reference.html#cmdoption-benchmarks-build-neuron-type">--neuron_type &lt;neuron_type&gt;</a>
+</li>
+        <li><a href="reference.html#cmdoption-benchmarks-build-neurons-per-d">--neurons_per_d &lt;neurons_per_d&gt;</a>
+</li>
+      </ul></li>
+      <li>
+    benchmarks-performance-samples command line option
+
+      <ul>
+        <li><a href="reference.html#cmdoption-benchmarks-performance-samples-device">--device &lt;device&gt;</a>
+</li>
+      </ul></li>
+      <li>
+    benchmarks-profile command line option
+
+      <ul>
+        <li><a href="reference.html#cmdoption-benchmarks-profile-batch-size">--batch_size &lt;batch_size&gt;</a>
+</li>
+        <li><a href="reference.html#cmdoption-benchmarks-profile-device">--device &lt;device&gt;</a>
+</li>
+        <li><a href="reference.html#cmdoption-benchmarks-profile-n-steps">--n_steps &lt;n_steps&gt;</a>
+</li>
+        <li><a href="reference.html#cmdoption-benchmarks-profile-time-only">--time-only</a>
+</li>
+        <li><a href="reference.html#cmdoption-benchmarks-profile-train">--train, --no-train</a>
+</li>
+        <li><a href="reference.html#cmdoption-benchmarks-profile-unroll">--unroll &lt;unroll&gt;</a>
+</li>
+      </ul></li>
+      <li><a href="reference.html#nengo_dl.signals.TensorSignal.broadcast">broadcast() (nengo_dl.signals.TensorSignal method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.builder.Builder.build">build() (nengo_dl.builder.Builder method)</a>
+
+      <ul>
+        <li><a href="reference.html#nengo_dl.builder.NengoBuilder.build">(nengo_dl.builder.NengoBuilder class method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.tensor_graph.TensorGraph.build">(nengo_dl.tensor_graph.TensorGraph method)</a>
+</li>
+      </ul></li>
+      <li><a href="reference.html#nengo_dl.tensor_graph.TensorGraph.build_inputs">build_inputs() (nengo_dl.tensor_graph.TensorGraph method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.tensor_graph.TensorGraph.build_loop">build_loop() (nengo_dl.tensor_graph.TensorGraph method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.tensor_graph.TensorGraph.build_optimizer_func">build_optimizer_func() (nengo_dl.tensor_graph.TensorGraph method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.tensor_graph.TensorGraph.build_outputs">build_outputs() (nengo_dl.tensor_graph.TensorGraph method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.learning_rule_builders.build_pes">build_pes() (in module nengo_dl.learning_rule_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.builder.OpBuilder.build_post">build_post() (nengo_dl.builder.OpBuilder method)</a>
+
+      <ul>
+        <li><a href="reference.html#nengo_dl.process_builders.GenericProcessBuilder.build_post">(nengo_dl.process_builders.GenericProcessBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.process_builders.SimProcessBuilder.build_post">(nengo_dl.process_builders.SimProcessBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.tensor_graph.TensorGraph.build_post">(nengo_dl.tensor_graph.TensorGraph method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.tensor_node.SimTensorNodeBuilder.build_post">(nengo_dl.tensor_node.SimTensorNodeBuilder method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.builder.OpBuilder.build_step">build_step() (nengo_dl.builder.OpBuilder method)</a>
+
+      <ul>
+        <li><a href="reference.html#nengo_dl.learning_rule_builders.SimBCMBuilder.build_step">(nengo_dl.learning_rule_builders.SimBCMBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.learning_rule_builders.SimOjaBuilder.build_step">(nengo_dl.learning_rule_builders.SimOjaBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.learning_rule_builders.SimPESBuilder.build_step">(nengo_dl.learning_rule_builders.SimPESBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.learning_rule_builders.SimVojaBuilder.build_step">(nengo_dl.learning_rule_builders.SimVojaBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.neuron_builders.GenericNeuronBuilder.build_step">(nengo_dl.neuron_builders.GenericNeuronBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.neuron_builders.LIFBuilder.build_step">(nengo_dl.neuron_builders.LIFBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.neuron_builders.LIFRateBuilder.build_step">(nengo_dl.neuron_builders.LIFRateBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.neuron_builders.RectifiedLinearBuilder.build_step">(nengo_dl.neuron_builders.RectifiedLinearBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.neuron_builders.SigmoidBuilder.build_step">(nengo_dl.neuron_builders.SigmoidBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.neuron_builders.SimNeuronsBuilder.build_step">(nengo_dl.neuron_builders.SimNeuronsBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.neuron_builders.SoftLIFRateBuilder.build_step">(nengo_dl.neuron_builders.SoftLIFRateBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.neuron_builders.SpikingRectifiedLinearBuilder.build_step">(nengo_dl.neuron_builders.SpikingRectifiedLinearBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.op_builders.CopyBuilder.build_step">(nengo_dl.op_builders.CopyBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.op_builders.DotIncBuilder.build_step">(nengo_dl.op_builders.DotIncBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.op_builders.ElementwiseIncBuilder.build_step">(nengo_dl.op_builders.ElementwiseIncBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.op_builders.ResetBuilder.build_step">(nengo_dl.op_builders.ResetBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.op_builders.SimPyFuncBuilder.build_step">(nengo_dl.op_builders.SimPyFuncBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.op_builders.SparseDotIncBuilder.build_step">(nengo_dl.op_builders.SparseDotIncBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.process_builders.GenericProcessBuilder.build_step">(nengo_dl.process_builders.GenericProcessBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.process_builders.LinearFilterBuilder.build_step">(nengo_dl.process_builders.LinearFilterBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.process_builders.LowpassBuilder.build_step">(nengo_dl.process_builders.LowpassBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.process_builders.SimProcessBuilder.build_step">(nengo_dl.process_builders.SimProcessBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.tensor_graph.TensorGraph.build_step">(nengo_dl.tensor_graph.TensorGraph method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.tensor_node.SimTensorNodeBuilder.build_step">(nengo_dl.tensor_node.SimTensorNodeBuilder method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.transform_builders.ConvIncBuilder.build_step">(nengo_dl.transform_builders.ConvIncBuilder method)</a>
+</li>
+      </ul></li>
+      <li><a href="reference.html#nengo_dl.tensor_graph.TensorGraph.build_summaries">build_summaries() (nengo_dl.tensor_graph.TensorGraph method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.tensor_node.build_tensor_node">build_tensor_node() (in module nengo_dl.tensor_node)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.builder.BuildConfig">BuildConfig (class in nengo_dl.builder)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.builder.Builder">Builder (class in nengo_dl.builder)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="C">C</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.benchmarks.cconv">cconv() (in module nengo_dl.benchmarks)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.check_gradients">check_gradients() (nengo_dl.simulator.Simulator method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.close">close() (nengo_dl.simulator.Simulator method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.signals.SignalDict.combine">combine() (nengo_dl.signals.SignalDict method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.config.configure_settings">configure_settings() (in module nengo_dl.config)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.signals.SignalDict.constant">constant() (nengo_dl.signals.SignalDict method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.transform_builders.ConvIncBuilder">ConvIncBuilder (class in nengo_dl.transform_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.op_builders.CopyBuilder">CopyBuilder (class in nengo_dl.op_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.tensor_graph.TensorGraph.create_signals">create_signals() (nengo_dl.tensor_graph.TensorGraph method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.display_signal_blocks">display_signal_blocks() (in module nengo_dl.graph_optimizer)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.op_builders.DotIncBuilder">DotIncBuilder (class in nengo_dl.op_builders)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.op_builders.ElementwiseIncBuilder">ElementwiseIncBuilder (class in nengo_dl.op_builders)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.utils.find_non_differentiable">find_non_differentiable() (in module nengo_dl.utils)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.utils.ProgressBar.finish">finish() (nengo_dl.utils.ProgressBar method)</a>
+
+      <ul>
+        <li><a href="reference.html#nengo_dl.utils.SubProgressBar.finish">(nengo_dl.utils.SubProgressBar method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.freeze_params">freeze_params() (nengo_dl.simulator.Simulator method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.signals.TensorSignal.full_shape">full_shape (nengo_dl.signals.TensorSignal attribute)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.utils.function_name">function_name() (in module nengo_dl.utils)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.signals.SignalDict.gather">gather() (nengo_dl.signals.SignalDict method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.neuron_builders.GenericNeuronBuilder">GenericNeuronBuilder (class in nengo_dl.neuron_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.process_builders.GenericProcessBuilder">GenericProcessBuilder (class in nengo_dl.process_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.get_nengo_params">get_nengo_params() (nengo_dl.simulator.Simulator method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.simulator.SimulationData.get_params">get_params() (nengo_dl.simulator.SimulationData method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.config.get_setting">get_setting() (in module nengo_dl.config)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.tensor_graph.TensorGraph.get_tensor">get_tensor() (nengo_dl.tensor_graph.TensorGraph method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.signals.SignalDict.get_tensor_signal">get_tensor_signal() (nengo_dl.signals.SignalDict method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.dists.Glorot">Glorot (class in nengo_dl.dists)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.greedy_planner">greedy_planner() (in module nengo_dl.graph_optimizer)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="H">H</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.hamming_sort">hamming_sort() (in module nengo_dl.graph_optimizer)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.dists.He">He (class in nengo_dl.dists)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.signals.TensorSignal.indices">indices (nengo_dl.signals.TensorSignal attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.benchmarks.integrator">integrator() (in module nengo_dl.benchmarks)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.neuron_builders.LIFBuilder">LIFBuilder (class in nengo_dl.neuron_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.neuron_builders.LIFRateBuilder">LIFRateBuilder (class in nengo_dl.neuron_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.process_builders.LinearFilterBuilder">LinearFilterBuilder (class in nengo_dl.process_builders)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.load_params">load_params() (nengo_dl.simulator.Simulator method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.loss">loss() (nengo_dl.simulator.Simulator method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.process_builders.LowpassBuilder">LowpassBuilder (class in nengo_dl.process_builders)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.signals.SignalDict.make_internal">make_internal() (nengo_dl.signals.SignalDict method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.signals.SignalDict.mark_gather">mark_gather() (nengo_dl.signals.SignalDict method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.tensor_graph.TensorGraph.mark_signals">mark_signals() (nengo_dl.tensor_graph.TensorGraph method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.utils.ProgressBar.max_steps">max_steps (nengo_dl.utils.ProgressBar attribute)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.mergeable">mergeable() (in module nengo_dl.graph_optimizer)</a>
+
+      <ul>
+        <li><a href="reference.html#nengo_dl.builder.OpBuilder.mergeable">(nengo_dl.builder.OpBuilder static method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.learning_rule_builders.SimBCMBuilder.mergeable">(nengo_dl.learning_rule_builders.SimBCMBuilder static method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.learning_rule_builders.SimOjaBuilder.mergeable">(nengo_dl.learning_rule_builders.SimOjaBuilder static method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.learning_rule_builders.SimPESBuilder.mergeable">(nengo_dl.learning_rule_builders.SimPESBuilder static method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.learning_rule_builders.SimVojaBuilder.mergeable">(nengo_dl.learning_rule_builders.SimVojaBuilder static method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.neuron_builders.SimNeuronsBuilder.mergeable">(nengo_dl.neuron_builders.SimNeuronsBuilder static method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.op_builders.CopyBuilder.mergeable">(nengo_dl.op_builders.CopyBuilder static method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.op_builders.DotIncBuilder.mergeable">(nengo_dl.op_builders.DotIncBuilder static method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.op_builders.ElementwiseIncBuilder.mergeable">(nengo_dl.op_builders.ElementwiseIncBuilder static method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.op_builders.ResetBuilder.mergeable">(nengo_dl.op_builders.ResetBuilder static method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.op_builders.SimPyFuncBuilder.mergeable">(nengo_dl.op_builders.SimPyFuncBuilder static method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.process_builders.SimProcessBuilder.mergeable">(nengo_dl.process_builders.SimProcessBuilder static method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.transform_builders.ConvIncBuilder.mergeable">(nengo_dl.transform_builders.ConvIncBuilder static method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.utils.MessageBar">MessageBar (class in nengo_dl.utils)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.utils.minibatch_generator">minibatch_generator() (in module nengo_dl.utils)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.signals.TensorSignal.minibatched">minibatched (nengo_dl.signals.TensorSignal attribute)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.benchmarks.mnist">mnist() (in module nengo_dl.benchmarks)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.objectives.mse">mse() (in module nengo_dl.objectives)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="N">N</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.builder.Builder.name_scope">name_scope() (nengo_dl.builder.Builder method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.signals.TensorSignal.ndim">ndim (nengo_dl.signals.TensorSignal attribute)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.benchmarks">nengo_dl.benchmarks (module)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.builder">nengo_dl.builder (module)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.config">nengo_dl.config (module)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.dists">nengo_dl.dists (module)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.graph_optimizer">nengo_dl.graph_optimizer (module)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.learning_rule_builders">nengo_dl.learning_rule_builders (module)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.neuron_builders">nengo_dl.neuron_builders (module)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.neurons">nengo_dl.neurons (module)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.objectives">nengo_dl.objectives (module)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.op_builders">nengo_dl.op_builders (module)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#module-nengo_dl.process_builders">nengo_dl.process_builders (module)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.signals">nengo_dl.signals (module)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.simulator">nengo_dl.simulator (module)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.tensor_graph">nengo_dl.tensor_graph (module)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.tensor_node">nengo_dl.tensor_node (module)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.transform_builders">nengo_dl.transform_builders (module)</a>
+</li>
+      <li><a href="reference.html#module-nengo_dl.utils">nengo_dl.utils (module)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.builder.NengoBuilder">NengoBuilder (class in nengo_dl.builder)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.builder.NengoModel">NengoModel (class in nengo_dl.builder)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.noop_order_signals">noop_order_signals() (in module nengo_dl.graph_optimizer)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.noop_planner">noop_planner() (in module nengo_dl.graph_optimizer)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.utils.NullProgressBar">NullProgressBar (class in nengo_dl.utils)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.signals.SignalDict.op_constant">op_constant() (nengo_dl.signals.SignalDict method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.builder.OpBuilder">OpBuilder (class in nengo_dl.builder)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.order_signals">order_signals() (in module nengo_dl.graph_optimizer)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.tensor_node.TensorNode.output">output (nengo_dl.tensor_node.TensorNode attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="P">P</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.benchmarks.pes">pes() (in module nengo_dl.benchmarks)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.builder.Builder.post_build">post_build() (nengo_dl.builder.Builder method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.builder.Builder.pre_build">pre_build() (nengo_dl.builder.Builder method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.utils.print_op">print_op() (in module nengo_dl.utils)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.utils.ProgressBar">ProgressBar (class in nengo_dl.utils)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.benchmarks.random_network">random_network() (in module nengo_dl.benchmarks)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.neurons.SoftLIFRate.rates">rates() (nengo_dl.neurons.SoftLIFRate method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.neuron_builders.RectifiedLinearBuilder">RectifiedLinearBuilder (class in nengo_dl.neuron_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.builder.Builder.register">register() (nengo_dl.builder.Builder class method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.objectives.Regularize">Regularize (class in nengo_dl.objectives)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.remove_constant_copies">remove_constant_copies() (in module nengo_dl.graph_optimizer)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.remove_identity_muls">remove_identity_muls() (in module nengo_dl.graph_optimizer)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.remove_unmodified_resets">remove_unmodified_resets() (in module nengo_dl.graph_optimizer)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.remove_zero_incs">remove_zero_incs() (in module nengo_dl.graph_optimizer)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.reset">reset() (nengo_dl.simulator.Simulator method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.op_builders.ResetBuilder">ResetBuilder (class in nengo_dl.op_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.op_builders.ResetInc">ResetInc (class in nengo_dl.op_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.signals.TensorSignal.reshape">reshape() (nengo_dl.signals.TensorSignal method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.run">run() (nengo_dl.simulator.Simulator method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.run_batch">run_batch() (nengo_dl.simulator.Simulator method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.benchmarks.run_profile">run_profile() (in module nengo_dl.benchmarks)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.run_steps">run_steps() (nengo_dl.simulator.Simulator method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.dists.TruncatedNormal.sample">sample() (nengo_dl.dists.TruncatedNormal method)</a>
+
+      <ul>
+        <li><a href="reference.html#nengo_dl.dists.VarianceScaling.sample">(nengo_dl.dists.VarianceScaling method)</a>
+</li>
+      </ul></li>
+      <li><a href="reference.html#nengo_dl.utils.sanitize_name">sanitize_name() (in module nengo_dl.utils)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.save_params">save_params() (nengo_dl.simulator.Simulator method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.signals.SignalDict.scatter">scatter() (nengo_dl.signals.SignalDict method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.neuron_builders.SigmoidBuilder">SigmoidBuilder (class in nengo_dl.neuron_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.signal_io_dicts">signal_io_dicts() (in module nengo_dl.graph_optimizer)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.signals.SignalDict">SignalDict (class in nengo_dl.signals)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.learning_rule_builders.SimBCMBuilder">SimBCMBuilder (class in nengo_dl.learning_rule_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.neuron_builders.SimNeuronsBuilder">SimNeuronsBuilder (class in nengo_dl.neuron_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.learning_rule_builders.SimOjaBuilder">SimOjaBuilder (class in nengo_dl.learning_rule_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.learning_rule_builders.SimPES">SimPES (class in nengo_dl.learning_rule_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.learning_rule_builders.SimPESBuilder">SimPESBuilder (class in nengo_dl.learning_rule_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.process_builders.SimProcessBuilder">SimProcessBuilder (class in nengo_dl.process_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.op_builders.SimPyFuncBuilder">SimPyFuncBuilder (class in nengo_dl.op_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.tensor_node.SimTensorNode">SimTensorNode (class in nengo_dl.tensor_node)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.tensor_node.SimTensorNodeBuilder">SimTensorNodeBuilder (class in nengo_dl.tensor_node)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.simulator.SimulationData">SimulationData (class in nengo_dl.simulator)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator">Simulator (class in nengo_dl.simulator)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.learning_rule_builders.SimVojaBuilder">SimVojaBuilder (class in nengo_dl.learning_rule_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.soft_reset">soft_reset() (nengo_dl.simulator.Simulator method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.neurons.SoftLIFRate">SoftLIFRate (class in nengo_dl.neurons)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.neuron_builders.SoftLIFRateBuilder">SoftLIFRateBuilder (class in nengo_dl.neuron_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.sort_ops_by_signals">sort_ops_by_signals() (in module nengo_dl.graph_optimizer)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.sort_signals_by_ops">sort_signals_by_ops() (in module nengo_dl.graph_optimizer)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.op_builders.SparseDotIncBuilder">SparseDotIncBuilder (class in nengo_dl.op_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.benchmarks.spaun">spaun() (in module nengo_dl.benchmarks)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.neuron_builders.SpikingRectifiedLinearBuilder">SpikingRectifiedLinearBuilder (class in nengo_dl.neuron_builders)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.utils.ProgressBar.start">start() (nengo_dl.utils.ProgressBar method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.step">step() (nengo_dl.simulator.Simulator method)</a>
+
+      <ul>
+        <li><a href="reference.html#nengo_dl.utils.NullProgressBar.step">(nengo_dl.utils.NullProgressBar method)</a>
+</li>
+        <li><a href="reference.html#nengo_dl.utils.ProgressBar.step">(nengo_dl.utils.ProgressBar method)</a>
+</li>
+      </ul></li>
+      <li><a href="reference.html#nengo_dl.neurons.SoftLIFRate.step_math">step_math() (nengo_dl.neurons.SoftLIFRate method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.utils.NullProgressBar.sub">sub() (nengo_dl.utils.NullProgressBar method)</a>
+
+      <ul>
+        <li><a href="reference.html#nengo_dl.utils.ProgressBar.sub">(nengo_dl.utils.ProgressBar method)</a>
+</li>
+      </ul></li>
+      <li><a href="reference.html#nengo_dl.utils.SubProgressBar">SubProgressBar (class in nengo_dl.utils)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="T">T</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.tensor_node.tensor_layer">tensor_layer() (in module nengo_dl.tensor_node)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.tensor_graph.TensorGraph">TensorGraph (class in nengo_dl.tensor_graph)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.tensor_node.TensorNode">TensorNode (class in nengo_dl.tensor_node)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.signals.TensorSignal">TensorSignal (class in nengo_dl.signals)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.signals.TensorSignal.tf_indices">tf_indices (nengo_dl.signals.TensorSignal attribute)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.signals.TensorSignal.tf_shape">tf_shape (nengo_dl.signals.TensorSignal attribute)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.signals.TensorSignal.tf_slice">tf_slice (nengo_dl.signals.TensorSignal attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.train">train() (nengo_dl.simulator.Simulator method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.training_step">training_step (nengo_dl.simulator.Simulator attribute)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.simulator.Simulator.trange">trange() (nengo_dl.simulator.Simulator method)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.transitive_closure_recurse">transitive_closure_recurse() (in module nengo_dl.graph_optimizer)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.transitive_planner">transitive_planner() (in module nengo_dl.graph_optimizer)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.graph_optimizer.tree_planner">tree_planner() (in module nengo_dl.graph_optimizer)</a>
+</li>
+      <li><a href="reference.html#nengo_dl.dists.TruncatedNormal">TruncatedNormal (class in nengo_dl.dists)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.dists.VarianceScaling">VarianceScaling (class in nengo_dl.dists)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="W">W</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#nengo_dl.tensor_graph.with_self">with_self() (in module nengo_dl.tensor_graph)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div><footer class="footer">
+  <div class="w-container">
+    <div class="w-clearfix">
+      <div class="w-row mobileAlign">
+        <div class="w-col w-col-2 footer-menu">
+          <p class="menu-Label">ABR, Inc.</p>
+          <ul class="vertical-menu">
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/products/">Products</a></li>
+            <li class="footer-listitem-new "><a href="https://appliedbrainresearch.com/services/">Services</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/research/">Research</a></li>
+          </ul>
+        </div>
+        <div class="w-col w-col-2 footer-menu">
+          <p class="menu-Label">About Us</p>
+          <ul class="vertical-menu">
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/">Contact</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/#team">Team</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/#culture">Culture</a></li>
+          </ul>
+        </div>
+        <a class="brand footer-brand" href="https://appliedbrainresearch.com">
+          <img src="https://appliedbrainresearch.com/img/logo-light-notext.svg" width="80">
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+  </body>
+</html>

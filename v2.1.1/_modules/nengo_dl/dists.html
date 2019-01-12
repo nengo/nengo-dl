@@ -1,0 +1,501 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>nengo_dl.dists &#8212; NengoDL documentation</title>
+    <link rel="stylesheet" href="../../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/normalize.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/bootstrap.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/mmenu.all.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/components.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/nengo.css" />
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<!--[if lte IE 9]><script src="https://cdnjs.cloudflare.com/ajax/libs/placeholders/3.0.2/placeholders.min.js"></script><![endif]-->
+<script type="text/javascript" src="https://cdn.crate.io/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <script type="text/javascript" src="../../_static/js/modernizr.js"></script>
+    <script type="text/javascript" src="../../_static/js/underscore.min.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/js/searchtools.js"></script>
+    <script type="text/javascript" src="../../_static/js/webflow.js"></script>
+    <script type="text/javascript" src="../../_static/js/bootstrap.js"></script>
+    <script type="text/javascript" src="../../_static/js/mmenu.all.min.js"></script>
+    <script type="text/javascript" src="../../_static/js/fontawesome.js"></script>
+    <script type="text/javascript" src="../../_static/js/custom.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+  </head><body>
+<header class="header-nav">
+  <div class="container">
+    <div class="navbar w-nav" data-animation="default" data-collapse="small" data-contain="1" data-duration="400">
+      <a class="brand w-nav-brand" href="https://www.nengo.ai/">
+        <img src="https://www.nengo.ai/design/_images/general-full-light.svg" width="120">
+      </a>
+      <nav class="w-nav-menu main-nav" role="navigation">
+        <div class="dropdownBackground">
+          <span class="arrow"></span>
+        </div>
+        <ul id="menu-top-navigation" class="menu">
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/overview.html">Overview</a>
+            <ul class="sub-menu">
+                <li class="menu-item"><a href="https://www.nengo.ai/quickstart.html">Quick Start</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/documentation.html">Documentation</a>
+            <table class="sub-menu">
+              <tr>
+                <td class="menu-heading">Core</td>
+                <td class="menu-heading">Backends</td>
+                <td class="menu-heading">Add-ons</td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo">Nengo</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-fpga">Nengo FPGA</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-examples">Nengo Examples</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-dl/">Nengo DL</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-loihi">Nengo Loihi</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-extras/">Nengo Extras</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-gui">Nengo GUI</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-mpi">Nengo MPI</a></td>
+                <td class="menu-item"><a href="https://arvoelke.github.io/nengolib-docs/">Nengo Lib</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-spa/">Nengo SPA</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-ocl">Nengo OpenCL</a></td>
+                <td class="menu-item"></td>
+              </tr>
+              <tr>
+                <td class="menu-item"></td>
+                <td class="menu-item"><a href="https://github.com/project-rig/nengo_spinnaker">Nengo SpiNNaker</a></td>
+                <td class="menu-item"></td>
+              </tr>
+            </table>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/community.html">Community</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://forum.nengo.ai/">Forum</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/publications.html">Publications</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/summerschool.html">Summer School</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/videos.html">Videos</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/people.html">People</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/projects.html">Development</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/contributing.html">Contributor Guide</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/projects.html">Ecosystem</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/README.html">About</a></li>
+          <li class="btn-link w-nav-link menu-item"><a href="https://www.nengo.ai/download.html">Download</a></li>
+        </ul>
+      </nav>
+
+      <div id="mobile-nav" class="mm-menu">
+        <ul class="offcanvas-menu">
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/overview.html">Overview</a></li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/documentation.html">Documentation</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/quickstart.html">Quick Start</a></li>
+              <li class="menu-item"><a href="http://www.nengo.ai/nengo">NengoCore</a></li>
+              <li class="menu-item"><a href="https://github.com/nengo/nengo-gui#nengo-gui">NengoGUI</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/community.html">Community</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://forum.nengo.ai/">Forum</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/summerschool.html">Summer School</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/people.html">People</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/projects.html">Development</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/contributing.html">Contributor Guide</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/projects.html">Ecosystem</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/README.html">About</a></li>
+          <li class="btn-link w-nav-link menu-item"><a href="https://www.nengo.ai/download.html">Download</a></li>
+        </ul>
+      </div>
+
+      <a href="#mobile-nav" class="fa fa-bars mobile-nav-button"></a>
+    </div>
+  </div>
+</header>
+
+<div class="w-section section border-top">
+  <div class="container">
+    <div class="row" id="_modules/nengo_dl/dists">
+      <div class="col-md-4 col-lg-3">
+        <aside class="wrapper-navleft"><div role="complementary" class="bs-docs-sidebar hidden-print" id="nav-affix">
+  <ul class="bs-docs-sidenav bs-sidenav nav" role="complementary">
+    <a href="../../index.html">
+      <img class="logo" src="https://www.nengo.ai/design/_images/nengo-dl-full-light.svg" alt="NengoDL" width="200" />
+    </a>
+    <ul class="toctree nav nav-list">
+      <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user-guide.html">User guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../project.html">Project information</a></li>
+</ul>
+
+    </ul>
+  </ul>
+</div>
+          
+        </aside>
+      </div>
+      <div class="col-md-8 col-lg-9">
+        <div class="wrapper-content-right">
+          
+<div class="version-select-container">
+    <div data-delay="0" class="w-dropdown">
+        <div class="w-dropdown-toggle toggle">
+            <div class="toggle-text">v2.1.1</div>
+            <div class="w-icon-dropdown-toggle toggle-icon"></div>
+        </div>
+        <nav class="w-dropdown-list dropdown-list">
+            
+            
+                <a href="../../../_modules/nengo_dl/dists.html" class="w-dropdown-link">latest</a>
+            
+
+            
+                
+                <div class="w-dropdown-link">v2.1.1</div>
+                
+            
+                
+                    <a href="../../../v2.1.0/_modules/nengo_dl/dists.html" class="w-dropdown-link">v2.1.0</a>
+                
+            
+                
+                    <a href="../../../v2.0.0/_modules/nengo_dl/dists.html" class="w-dropdown-link">v2.0.0</a>
+                
+            
+                
+                    <a href="../../../v1.2.1/_modules/nengo_dl/dists.html" class="w-dropdown-link">v1.2.1</a>
+                
+            
+                
+                    <a href="../../../v1.2.0/_modules/nengo_dl/dists.html" class="w-dropdown-link">v1.2.0</a>
+                
+            
+                
+                    <a href="../../../v1.1.0/_modules/nengo_dl/dists.html" class="w-dropdown-link">v1.1.0</a>
+                
+            
+                
+                    <a href="../../../v1.0.0/_modules/nengo_dl/dists.html" class="w-dropdown-link">v1.0.0</a>
+                
+            
+                
+                    <a href="../../../v0.6.2/_modules/nengo_dl/dists.html" class="w-dropdown-link">v0.6.2</a>
+                
+            
+                
+                    <a href="../../../v0.6.1/_modules/nengo_dl/dists.html" class="w-dropdown-link">v0.6.1</a>
+                
+            
+                
+                    <a href="../../../v0.6.0/_modules/nengo_dl/dists.html" class="w-dropdown-link">v0.6.0</a>
+                
+            
+                
+                    <a href="../../../v0.5.2/_modules/nengo_dl/dists.html" class="w-dropdown-link">v0.5.2</a>
+                
+            
+                
+                    <a href="../../../v0.5.1/_modules/nengo_dl/dists.html" class="w-dropdown-link">v0.5.1</a>
+                
+            
+                
+                    <a href="../../../v0.5.0/_modules/nengo_dl/dists.html" class="w-dropdown-link">v0.5.0</a>
+                
+            
+                
+                    <a href="../../../v0.4.0/_modules/nengo_dl/dists.html" class="w-dropdown-link">v0.4.0</a>
+                
+            
+                
+                    <a href="../../../v0.3.1/_modules/nengo_dl/dists.html" class="w-dropdown-link">v0.3.1</a>
+                
+            
+                
+                    <a href="../../../v0.3.0/_modules/nengo_dl/dists.html" class="w-dropdown-link">v0.3.0</a>
+                
+            
+                
+                    <a href="../../../v0.2.0/_modules/nengo_dl/dists.html" class="w-dropdown-link">v0.2.0</a>
+                
+            
+        </nav>
+    </div>
+</div>
+
+          
+  <h1>Source code for nengo_dl.dists</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Additions to the `distributions included with Nengo</span>
+<span class="sd">&lt;nengo.dists.Distribution&gt;`.</span>
+<span class="sd">These distributions are usually used to initialize weight matrices, e.g.</span>
+<span class="sd">``nengo.Connection(a.neurons, b.neurons, transform=nengo_dl.dists.Glorot())``.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
+
+<span class="kn">from</span> <span class="nn">nengo.dists</span> <span class="k">import</span> <span class="n">Distribution</span>
+<span class="kn">from</span> <span class="nn">nengo.params</span> <span class="k">import</span> <span class="n">NumberParam</span><span class="p">,</span> <span class="n">EnumParam</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+
+<div class="viewcode-block" id="TruncatedNormal"><a class="viewcode-back" href="../../reference.html#nengo_dl.dists.TruncatedNormal">[docs]</a><span class="k">class</span> <span class="nc">TruncatedNormal</span><span class="p">(</span><span class="n">Distribution</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Normal distribution where any values more than some distance from the</span>
+<span class="sd">    mean are resampled.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mean : float</span>
+<span class="sd">        Mean of the normal distribution</span>
+<span class="sd">    stddev : float</span>
+<span class="sd">        Standard deviation of the normal distribution</span>
+<span class="sd">    limit : float</span>
+<span class="sd">        Resample any values more than this distance from the mean. If None,</span>
+<span class="sd">        then limit will be set to 2 standard deviations.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">mean</span> <span class="o">=</span> <span class="n">NumberParam</span><span class="p">(</span><span class="s2">&quot;mean&quot;</span><span class="p">)</span>
+    <span class="n">stddev</span> <span class="o">=</span> <span class="n">NumberParam</span><span class="p">(</span><span class="s2">&quot;stddev&quot;</span><span class="p">,</span> <span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">limit</span> <span class="o">=</span> <span class="n">NumberParam</span><span class="p">(</span><span class="s2">&quot;limit&quot;</span><span class="p">,</span> <span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">low_open</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">stddev</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">TruncatedNormal</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">=</span> <span class="n">mean</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stddev</span> <span class="o">=</span> <span class="n">stddev</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">limit</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">stddev</span> <span class="k">if</span> <span class="n">limit</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">limit</span>
+
+<div class="viewcode-block" id="TruncatedNormal.sample"><a class="viewcode-back" href="../../reference.html#nengo_dl.dists.TruncatedNormal.sample">[docs]</a>    <span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Samples the distribution.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n : int</span>
+<span class="sd">            Number samples to take.</span>
+<span class="sd">        d : int or None</span>
+<span class="sd">            The number of dimensions to return. If this is an int, the return</span>
+<span class="sd">            value will be of shape ``(n, d)``. If None, the return</span>
+<span class="sd">            value will be of shape ``(n,)``.</span>
+<span class="sd">        rng : `numpy.random.RandomState`</span>
+<span class="sd">            Random number generator state (if None, will use the default</span>
+<span class="sd">            numpy random number generator).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        samples : (n,) or (n, d) array_like</span>
+<span class="sd">            Samples as a 1d or 2d array depending on ``d``. The second</span>
+<span class="sd">            dimension enumerates the dimensions of the process.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">rng</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span>
+        <span class="n">sample_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">n</span><span class="p">,)</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stddev</span><span class="p">,</span>
+                             <span class="n">size</span><span class="o">=</span><span class="n">sample_shape</span><span class="p">)</span>
+        <span class="n">outliers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">samples</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">limit</span>
+        <span class="n">n_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">outliers</span><span class="p">)</span>
+        <span class="k">while</span> <span class="n">n_out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">samples</span><span class="p">[</span><span class="n">outliers</span><span class="p">]</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stddev</span><span class="p">,</span>
+                                           <span class="n">size</span><span class="o">=</span><span class="n">n_out</span><span class="p">)</span>
+            <span class="n">outliers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">samples</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">limit</span>
+            <span class="n">n_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">outliers</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">samples</span></div></div>
+
+
+<div class="viewcode-block" id="VarianceScaling"><a class="viewcode-back" href="../../reference.html#nengo_dl.dists.VarianceScaling">[docs]</a><span class="k">class</span> <span class="nc">VarianceScaling</span><span class="p">(</span><span class="n">Distribution</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Variance scaling distribution for weight initialization (analogous to</span>
+<span class="sd">    TensorFlow ``init_ops.VarianceScaling``).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    scale : float</span>
+<span class="sd">        Overall scale on values</span>
+<span class="sd">    mode : &quot;fan_in&quot; or &quot;fan_out&quot; or &quot;fan_avg&quot;</span>
+<span class="sd">        Whether to scale based on input or output dimensionality, or average of</span>
+<span class="sd">        the two</span>
+<span class="sd">    distribution: &quot;uniform&quot; or &quot;normal&quot;</span>
+<span class="sd">        Whether to use a uniform or normal distribution for weights</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">scale</span> <span class="o">=</span> <span class="n">NumberParam</span><span class="p">(</span><span class="s2">&quot;scale&quot;</span><span class="p">,</span> <span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">EnumParam</span><span class="p">(</span><span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fan_in&quot;</span><span class="p">,</span> <span class="s2">&quot;fan_out&quot;</span><span class="p">,</span> <span class="s2">&quot;fan_avg&quot;</span><span class="p">])</span>
+    <span class="n">distribution</span> <span class="o">=</span> <span class="n">EnumParam</span><span class="p">(</span><span class="s2">&quot;distribution&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;uniform&quot;</span><span class="p">,</span> <span class="s2">&quot;normal&quot;</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;fan_avg&quot;</span><span class="p">,</span> <span class="n">distribution</span><span class="o">=</span><span class="s2">&quot;uniform&quot;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">VarianceScaling</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">scale</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">distribution</span> <span class="o">=</span> <span class="n">distribution</span>
+
+<div class="viewcode-block" id="VarianceScaling.sample"><a class="viewcode-back" href="../../reference.html#nengo_dl.dists.VarianceScaling.sample">[docs]</a>    <span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Samples the distribution.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n : int</span>
+<span class="sd">            Number samples to take.</span>
+<span class="sd">        d : int or None</span>
+<span class="sd">            The number of dimensions to return. If this is an int, the return</span>
+<span class="sd">            value will be of shape ``(n, d)``. If None, the return</span>
+<span class="sd">            value will be of shape ``(n,)``.</span>
+<span class="sd">        rng : `numpy.random.RandomState`</span>
+<span class="sd">            Random number generator state (if None, will use the default</span>
+<span class="sd">            numpy random number generator).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        samples : (n,) or (n, d) array_like</span>
+<span class="sd">            Samples as a 1d or 2d array depending on ``d``. The second</span>
+<span class="sd">            dimension enumerates the dimensions of the process.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">rng</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span>
+        <span class="n">fan_out</span> <span class="o">=</span> <span class="n">n</span>
+        <span class="n">fan_in</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">d</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;fan_in&quot;</span><span class="p">:</span>
+            <span class="n">scale</span> <span class="o">/=</span> <span class="n">fan_in</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;fan_out&quot;</span><span class="p">:</span>
+            <span class="n">scale</span> <span class="o">/=</span> <span class="n">fan_out</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;fan_avg&quot;</span><span class="p">:</span>
+            <span class="n">scale</span> <span class="o">/=</span> <span class="p">(</span><span class="n">fan_in</span> <span class="o">+</span> <span class="n">fan_out</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+
+        <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">n</span><span class="p">,)</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">distribution</span> <span class="o">==</span> <span class="s2">&quot;uniform&quot;</span><span class="p">:</span>
+            <span class="n">limit</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">3.0</span> <span class="o">*</span> <span class="n">scale</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">limit</span><span class="p">,</span> <span class="n">limit</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">distribution</span> <span class="o">==</span> <span class="s2">&quot;normal&quot;</span><span class="p">:</span>
+            <span class="n">stddev</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">TruncatedNormal</span><span class="p">(</span><span class="n">stddev</span><span class="o">=</span><span class="n">stddev</span><span class="p">)</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="n">rng</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># note: this should be caught by the enumparam check</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span></div></div>
+
+
+<div class="viewcode-block" id="Glorot"><a class="viewcode-back" href="../../reference.html#nengo_dl.dists.Glorot">[docs]</a><span class="k">class</span> <span class="nc">Glorot</span><span class="p">(</span><span class="n">VarianceScaling</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Weight initialization method from [1]_ (also known as Xavier</span>
+<span class="sd">    initialization).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    scale : float</span>
+<span class="sd">        Scale on weight distribution. For rectified linear units this should</span>
+<span class="sd">        be sqrt(2), otherwise usually 1.</span>
+<span class="sd">    distribution: &quot;uniform&quot; or &quot;normal&quot;</span>
+<span class="sd">        Whether to use a uniform or normal distribution for weights</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Xavier Glorot and Yoshua Bengio (2010): Understanding the difficulty</span>
+<span class="sd">       of training deep feedforward neural networks. International conference</span>
+<span class="sd">       on artificial intelligence and statistics.</span>
+<span class="sd">       http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">distribution</span><span class="o">=</span><span class="s2">&quot;uniform&quot;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Glorot</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;fan_avg&quot;</span><span class="p">,</span>
+                                     <span class="n">distribution</span><span class="o">=</span><span class="n">distribution</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="He"><a class="viewcode-back" href="../../reference.html#nengo_dl.dists.He">[docs]</a><span class="k">class</span> <span class="nc">He</span><span class="p">(</span><span class="n">VarianceScaling</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Weight initialization method from [1]_.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    scale : float</span>
+<span class="sd">        Scale on weight distribution. For rectified linear units this should</span>
+<span class="sd">        be sqrt(2), otherwise usually 1.</span>
+<span class="sd">    distribution: &quot;uniform&quot; or &quot;normal&quot;</span>
+<span class="sd">        Whether to use a uniform or normal distribution for weights</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. (2015):</span>
+<span class="sd">       Delving deep into rectifiers: Surpassing human-level performance on</span>
+<span class="sd">       ImageNet classification. https://arxiv.org/abs/1502.01852.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">distribution</span><span class="o">=</span><span class="s2">&quot;normal&quot;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">He</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">scale</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;fan_in&quot;</span><span class="p">,</span>
+                                 <span class="n">distribution</span><span class="o">=</span><span class="n">distribution</span><span class="p">)</span></div>
+</pre></div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div><footer class="footer">
+  <div class="w-container">
+    <div class="w-clearfix">
+      <div class="w-row mobileAlign">
+        <div class="w-col w-col-2 footer-menu">
+          <p class="menu-Label">ABR, Inc.</p>
+          <ul class="vertical-menu">
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/products/">Products</a></li>
+            <li class="footer-listitem-new "><a href="https://appliedbrainresearch.com/services/">Services</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/research/">Research</a></li>
+          </ul>
+        </div>
+        <div class="w-col w-col-2 footer-menu">
+          <p class="menu-Label">About Us</p>
+          <ul class="vertical-menu">
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/">Contact</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/#team">Team</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/#culture">Culture</a></li>
+          </ul>
+        </div>
+        <a class="brand footer-brand" href="https://appliedbrainresearch.com">
+          <img src="https://appliedbrainresearch.com/img/logo-light-notext.svg" width="80">
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+  </body>
+</html>

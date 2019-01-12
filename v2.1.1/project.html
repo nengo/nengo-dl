@@ -1,0 +1,1103 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Project information &#8212; NengoDL documentation</title>
+    <link rel="stylesheet" href="_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/normalize.css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/bootstrap.css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/mmenu.all.css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/components.css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/nengo.css" />
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<!--[if lte IE 9]><script src="https://cdnjs.cloudflare.com/ajax/libs/placeholders/3.0.2/placeholders.min.js"></script><![endif]-->
+<script type="text/javascript" src="https://cdn.crate.io/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="_static/js/modernizr.js"></script>
+    <script type="text/javascript" src="_static/js/underscore.min.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/js/searchtools.js"></script>
+    <script type="text/javascript" src="_static/js/webflow.js"></script>
+    <script type="text/javascript" src="_static/js/bootstrap.js"></script>
+    <script type="text/javascript" src="_static/js/mmenu.all.min.js"></script>
+    <script type="text/javascript" src="_static/js/fontawesome.js"></script>
+    <script type="text/javascript" src="_static/js/custom.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Additional resources" href="resources.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+  </head><body>
+<header class="header-nav">
+  <div class="container">
+    <div class="navbar w-nav" data-animation="default" data-collapse="small" data-contain="1" data-duration="400">
+      <a class="brand w-nav-brand" href="https://www.nengo.ai/">
+        <img src="https://www.nengo.ai/design/_images/general-full-light.svg" width="120">
+      </a>
+      <nav class="w-nav-menu main-nav" role="navigation">
+        <div class="dropdownBackground">
+          <span class="arrow"></span>
+        </div>
+        <ul id="menu-top-navigation" class="menu">
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/overview.html">Overview</a>
+            <ul class="sub-menu">
+                <li class="menu-item"><a href="https://www.nengo.ai/quickstart.html">Quick Start</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/documentation.html">Documentation</a>
+            <table class="sub-menu">
+              <tr>
+                <td class="menu-heading">Core</td>
+                <td class="menu-heading">Backends</td>
+                <td class="menu-heading">Add-ons</td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo">Nengo</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-fpga">Nengo FPGA</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-examples">Nengo Examples</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-dl/">Nengo DL</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-loihi">Nengo Loihi</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-extras/">Nengo Extras</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-gui">Nengo GUI</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-mpi">Nengo MPI</a></td>
+                <td class="menu-item"><a href="https://arvoelke.github.io/nengolib-docs/">Nengo Lib</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-spa/">Nengo SPA</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-ocl">Nengo OpenCL</a></td>
+                <td class="menu-item"></td>
+              </tr>
+              <tr>
+                <td class="menu-item"></td>
+                <td class="menu-item"><a href="https://github.com/project-rig/nengo_spinnaker">Nengo SpiNNaker</a></td>
+                <td class="menu-item"></td>
+              </tr>
+            </table>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/community.html">Community</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://forum.nengo.ai/">Forum</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/publications.html">Publications</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/summerschool.html">Summer School</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/videos.html">Videos</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/people.html">People</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/projects.html">Development</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/contributing.html">Contributor Guide</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/projects.html">Ecosystem</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/README.html">About</a></li>
+          <li class="btn-link w-nav-link menu-item"><a href="https://www.nengo.ai/download.html">Download</a></li>
+        </ul>
+      </nav>
+
+      <div id="mobile-nav" class="mm-menu">
+        <ul class="offcanvas-menu">
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/overview.html">Overview</a></li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/documentation.html">Documentation</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/quickstart.html">Quick Start</a></li>
+              <li class="menu-item"><a href="http://www.nengo.ai/nengo">NengoCore</a></li>
+              <li class="menu-item"><a href="https://github.com/nengo/nengo-gui#nengo-gui">NengoGUI</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/community.html">Community</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://forum.nengo.ai/">Forum</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/summerschool.html">Summer School</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/people.html">People</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/projects.html">Development</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/contributing.html">Contributor Guide</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/projects.html">Ecosystem</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/README.html">About</a></li>
+          <li class="btn-link w-nav-link menu-item"><a href="https://www.nengo.ai/download.html">Download</a></li>
+        </ul>
+      </div>
+
+      <a href="#mobile-nav" class="fa fa-bars mobile-nav-button"></a>
+    </div>
+  </div>
+</header>
+
+<div class="w-section section border-top">
+  <div class="container">
+    <div class="row" id="project">
+      <div class="col-md-4 col-lg-3">
+        <aside class="wrapper-navleft"><div role="complementary" class="bs-docs-sidebar hidden-print" id="nav-affix">
+  <ul class="bs-docs-sidenav bs-sidenav nav" role="complementary">
+    <a href="index.html">
+      <img class="logo" src="https://www.nengo.ai/design/_images/nengo-dl-full-light.svg" alt="NengoDL" width="200" />
+    </a>
+    <ul class="toctree nav nav-list">
+      <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user-guide.html">User guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Project information</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#release-history">Release History</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#january-11-2019">2.1.1 (January 11, 2019)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#december-5-2018">2.1.0 (December 5, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#november-23-2018">2.0.0 (November 23, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#november-2-2018">1.2.1 (November 2, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#september-5-2018">1.2.0 (September 5, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#july-24-2018">1.1.0 (July 24, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#may-30-2018">1.0.0 (May 30, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#may-4-2018">0.6.2 (May 4, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#march-7-2018">0.6.1 (March 7, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#december-13-2017">0.6.0 (December 13, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#october-11-2017">0.5.2 (October 11, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#august-28-2017">0.5.1 (August 28, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#july-11-2017">0.5.0 (July 11, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#june-8-2017">0.4.0 (June 8, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#may-12-2017">0.3.1 (May 12, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#april-25-2017">0.3.0 (April 25, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#march-13-2017">0.2.0 (March 13, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#june-12-2016">0.1.0 (June 12, 2016)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#contributing-to-nengodl">Contributing to NengoDL</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#filing-issues">Filing issues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#making-pull-requests">Making pull requests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#contributor-agreement">Contributor agreement</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#nengodl-license">NengoDL license</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#licensed-code">Licensed code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citation">Citation</a></li>
+</ul>
+</li>
+</ul>
+
+    </ul>
+  </ul>
+</div>
+          
+        </aside>
+      </div>
+      <div class="col-md-8 col-lg-9">
+        <div class="wrapper-content-right">
+          
+<div class="version-select-container">
+    <div data-delay="0" class="w-dropdown">
+        <div class="w-dropdown-toggle toggle">
+            <div class="toggle-text">v2.1.1</div>
+            <div class="w-icon-dropdown-toggle toggle-icon"></div>
+        </div>
+        <nav class="w-dropdown-list dropdown-list">
+            
+            
+                <a href="../project.html" class="w-dropdown-link">latest</a>
+            
+
+            
+                
+                <div class="w-dropdown-link">v2.1.1</div>
+                
+            
+                
+                    <a href="../v2.1.0/project.html" class="w-dropdown-link">v2.1.0</a>
+                
+            
+                
+                    <a href="../v2.0.0/project.html" class="w-dropdown-link">v2.0.0</a>
+                
+            
+                
+                    <a href="../v1.2.1/project.html" class="w-dropdown-link">v1.2.1</a>
+                
+            
+                
+                    <a href="../v1.2.0/project.html" class="w-dropdown-link">v1.2.0</a>
+                
+            
+                
+                    <a href="../v1.1.0/project.html" class="w-dropdown-link">v1.1.0</a>
+                
+            
+                
+                    <a href="../v1.0.0/project.html" class="w-dropdown-link">v1.0.0</a>
+                
+            
+                
+                    <a href="../v0.6.2/project.html" class="w-dropdown-link">v0.6.2</a>
+                
+            
+                
+                    <a href="../v0.6.1/project.html" class="w-dropdown-link">v0.6.1</a>
+                
+            
+                
+                    <a href="../v0.6.0/project.html" class="w-dropdown-link">v0.6.0</a>
+                
+            
+                
+                    <a href="../v0.5.2/project.html" class="w-dropdown-link">v0.5.2</a>
+                
+            
+                
+                    <a href="../v0.5.1/project.html" class="w-dropdown-link">v0.5.1</a>
+                
+            
+                
+                    <a href="../v0.5.0/project.html" class="w-dropdown-link">v0.5.0</a>
+                
+            
+                
+                    <a href="../v0.4.0/project.html" class="w-dropdown-link">v0.4.0</a>
+                
+            
+                
+                    <a href="../v0.3.1/project.html" class="w-dropdown-link">v0.3.1</a>
+                
+            
+                
+                    <a href="../v0.3.0/project.html" class="w-dropdown-link">v0.3.0</a>
+                
+            
+                
+                    <a href="../v0.2.0/project.html" class="w-dropdown-link">v0.2.0</a>
+                
+            
+        </nav>
+    </div>
+</div>
+
+          
+  <div class="section" id="project-information">
+<h1>Project information<a class="headerlink" href="#project-information" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="release-history">
+<h2>Release History<a class="headerlink" href="#release-history" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="january-11-2019">
+<h3>2.1.1 (January 11, 2019)<a class="headerlink" href="#january-11-2019" title="Permalink to this headline">¶</a></h3>
+<p><strong>Added</strong></p>
+<ul class="simple">
+<li>Added <code class="docutils literal notranslate"><span class="pre">nengo_dl.obj</span></code> as a shortcut alias for <code class="docutils literal notranslate"><span class="pre">nengo_dl.objectives</span></code>.</li>
+<li>Added tutorial for <a class="reference external" href="https://www.nengo.ai/nengo-dl/examples/from-nengo.html">Nengo users coming to NengoDL</a></li>
+<li>Added tutorial for <a class="reference external" href="https://www.nengo.ai/nengo-dl/examples/from-tensorflow.html">TensorFlow users coming to NengoDL</a></li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li>Increased minimum <code class="docutils literal notranslate"><span class="pre">progressbar2</span></code> version to 3.39.0.</li>
+<li>We now only provide <code class="docutils literal notranslate"><span class="pre">sdist</span></code> releases, not <code class="docutils literal notranslate"><span class="pre">bdist_wheel</span></code>. Due to the way
+the TensorFlow packages are organized, <code class="docutils literal notranslate"><span class="pre">bdist_wheel</span></code>  forces any existing
+TensorFlow installations (e.g. <code class="docutils literal notranslate"><span class="pre">tensorflow-gpu</span></code> or <code class="docutils literal notranslate"><span class="pre">tf-nightly</span></code>)
+to be overwritten by <code class="docutils literal notranslate"><span class="pre">tensorflow</span></code>, which we don’t want to do.</li>
+</ul>
+<p><strong>Removed</strong></p>
+<ul class="simple">
+<li>Removed the <code class="docutils literal notranslate"><span class="pre">nef-init</span></code> tutorial (replaced by the new <code class="docutils literal notranslate"><span class="pre">from-nengo</span></code>
+tutorial).</li>
+</ul>
+</div>
+<div class="section" id="december-5-2018">
+<h3>2.1.0 (December 5, 2018)<a class="headerlink" href="#december-5-2018" title="Permalink to this headline">¶</a></h3>
+<p><strong>Added</strong></p>
+<ul class="simple">
+<li>Added a built-in objective to assist in applying regularization during
+training.</li>
+<li>Added <a class="reference external" href="https://www.nengo.ai/nengo-dl/config.html#keep-history">keep_history config option</a>, which can be set
+to <code class="docutils literal notranslate"><span class="pre">False</span></code> on Probes if only the data from the most recent simulation step
+is desired (as opposed to the default behaviour of keeping the data from
+all steps).</li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li>Moved <code class="docutils literal notranslate"><span class="pre">utils.mse</span></code> to <code class="docutils literal notranslate"><span class="pre">objectives.mse</span></code>.</li>
+<li><code class="docutils literal notranslate"><span class="pre">sim.loss</span></code> will now apply <code class="docutils literal notranslate"><span class="pre">nengo_dl.objectives.mse</span></code> to all probes in
+<code class="docutils literal notranslate"><span class="pre">data</span></code> if no explicit <code class="docutils literal notranslate"><span class="pre">objective</span></code> is given (mirroring the default
+behaviour in <code class="docutils literal notranslate"><span class="pre">sim.train</span></code>).</li>
+<li>The Spaun benchmark network will now be installed through pip rather than
+manually cloning and importing the repo.</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul class="simple">
+<li>Fixed objective argument parsing if objective is a callable class or method.</li>
+<li>Fixed bug in <code class="docutils literal notranslate"><span class="pre">sim.train</span></code> 1-step synapse warning when explicitly specifying
+<code class="docutils literal notranslate"><span class="pre">n_steps</span></code> (rather than passing in <code class="docutils literal notranslate"><span class="pre">data</span></code>).</li>
+</ul>
+<p><strong>Deprecated</strong></p>
+<ul class="simple">
+<li>Passing <code class="docutils literal notranslate"><span class="pre">&quot;mse&quot;</span></code> as the objective in <code class="docutils literal notranslate"><span class="pre">sim.train</span></code>/<code class="docutils literal notranslate"><span class="pre">sim.loss</span></code> is no longer
+supported.  Use the function <code class="docutils literal notranslate"><span class="pre">nengo_dl.objectives.mse</span></code> instead.</li>
+</ul>
+</div>
+<div class="section" id="november-23-2018">
+<h3>2.0.0 (November 23, 2018)<a class="headerlink" href="#november-23-2018" title="Permalink to this headline">¶</a></h3>
+<p><strong>Breaking API changes</strong></p>
+<ul>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">sim.train</span></code> and <code class="docutils literal notranslate"><span class="pre">sim.loss</span></code> now accept a single <code class="docutils literal notranslate"><span class="pre">data</span></code> argument, which
+combines the previous <code class="docutils literal notranslate"><span class="pre">inputs</span></code> and <code class="docutils literal notranslate"><span class="pre">targets</span></code> arguments. For example,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">({</span><span class="n">my_node</span><span class="p">:</span> <span class="n">x</span><span class="p">},</span> <span class="p">{</span><span class="n">my_probe</span><span class="p">:</span> <span class="n">y</span><span class="p">},</span> <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>is now equivalent to</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">({</span><span class="n">my_node</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span> <span class="n">my_probe</span><span class="p">:</span> <span class="n">y</span><span class="p">},</span> <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The motivation for this change is that not all objective functions require
+target values. Switching to the more generic <code class="docutils literal notranslate"><span class="pre">data</span></code> argument simplifies
+the API and makes it more flexible, allowing users to specify whatever
+training/loss data is actually required.</p>
+</li>
+<li><p class="first">The <code class="docutils literal notranslate"><span class="pre">objective</span></code> argument in <code class="docutils literal notranslate"><span class="pre">sim.train</span></code>/<code class="docutils literal notranslate"><span class="pre">sim.loss</span></code> is now always
+specified as a dictionary mapping probes to objective functions.  Note that
+this was available but optional previously; it was also possible to pass
+a single value for the objective function, which would be applied to all
+probes in <code class="docutils literal notranslate"><span class="pre">targets</span></code>.  The latter is no longer supported.  For example,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">objective</span><span class="o">=</span><span class="s2">&quot;mse&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>must now be explicitly specified as</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">objective</span><span class="o">=</span><span class="p">{</span><span class="n">my_probe</span><span class="p">:</span> <span class="s2">&quot;mse&quot;</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>The motivation for this change is that, especially with the other new
+features introduced in the 2.0 update, there were a lot of different ways to
+specify the <code class="docutils literal notranslate"><span class="pre">objective</span></code> argument.  This made it somewhat unclear how
+exactly this argument worked, and the automatic “broadcasting” was also
+ambiguous (e.g., should the single objective be applied to each probe
+individually, or to all of them together?).  Making the argument explicit
+helps clarify the mental model.</p>
+</li>
+</ul>
+<p><strong>Added</strong></p>
+<ul class="simple">
+<li>An integer number of steps can now be passed for the
+<code class="docutils literal notranslate"><span class="pre">sim.loss</span></code>/<code class="docutils literal notranslate"><span class="pre">sim.train</span></code> data argument, if no input/target data is
+required.</li>
+<li>The <code class="docutils literal notranslate"><span class="pre">objective</span></code> dict in <code class="docutils literal notranslate"><span class="pre">sim.train</span></code>/<code class="docutils literal notranslate"><span class="pre">sim.loss</span></code> can now contain
+tuples of probes as the keys, in which case the objective function will be
+called with a corresponding tuple of probe/target values as each argument.</li>
+<li>Added the <code class="docutils literal notranslate"><span class="pre">sim.run_batch</span></code> function.  This exposes all the functionality
+that the <code class="docutils literal notranslate"><span class="pre">sim.run</span></code>/<code class="docutils literal notranslate"><span class="pre">sim.train</span></code>/<code class="docutils literal notranslate"><span class="pre">sim.loss</span></code> functions are based on,
+allowing advanced users full control over how to run a NengoDL simulation.</li>
+<li>Added option to disable progress bar in <code class="docutils literal notranslate"><span class="pre">sim.train</span></code> and <code class="docutils literal notranslate"><span class="pre">sim.loss</span></code>.</li>
+<li>Added <code class="docutils literal notranslate"><span class="pre">training</span></code> argument to <code class="docutils literal notranslate"><span class="pre">sim.loss</span></code> to control whether the loss
+is evaluated in training or inference mode.</li>
+<li>Added support for the new Nengo <code class="docutils literal notranslate"><span class="pre">Transform</span></code> API (see
+<a class="reference external" href="https://github.com/nengo/nengo/pull/1481">https://github.com/nengo/nengo/pull/1481</a>).</li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li>Custom objective functions passed to <code class="docutils literal notranslate"><span class="pre">sim.train</span></code>/<code class="docutils literal notranslate"><span class="pre">sim.loss</span></code> can now
+accept a single argument (<code class="docutils literal notranslate"><span class="pre">my_objective(outputs):</span> <span class="pre">...</span></code> instead of
+<code class="docutils literal notranslate"><span class="pre">my_objective(outputs,</span> <span class="pre">targets):</span> <span class="pre">...</span></code>) if no target values are required.</li>
+<li><code class="docutils literal notranslate"><span class="pre">utils.minibatch_generator</span></code> now accepts a single <code class="docutils literal notranslate"><span class="pre">data</span></code> argument rather
+than <code class="docutils literal notranslate"><span class="pre">inputs</span></code> and <code class="docutils literal notranslate"><span class="pre">targets</span></code> (see discussion in “Breaking API changes”).</li>
+<li><code class="docutils literal notranslate"><span class="pre">sim.training_step</span></code> is now the same as
+<code class="docutils literal notranslate"><span class="pre">tf.train.get_or_create_global_step()</span></code>.</li>
+<li>Switched documentation to new
+<a class="reference external" href="https://github.com/nengo/nengo-sphinx-theme">nengo-sphinx-theme</a>.</li>
+<li>Reorganized documentation into “User guide” and “API reference” sections.</li>
+<li>Improve build speed of models with large constants
+(<a class="reference external" href="https://github.com/nengo/nengo-dl/pull/69">#69</a>)</li>
+<li>Moved op-specific merge logic into the <code class="docutils literal notranslate"><span class="pre">OpBuilder</span></code> classes.</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul class="simple">
+<li>Ensure that training step is always updated before TensorBoard events are
+added (previously it could update before or after depending on the platform).</li>
+</ul>
+<p><strong>Deprecated</strong></p>
+<ul class="simple">
+<li>The <code class="docutils literal notranslate"><span class="pre">sim.run</span></code> <code class="docutils literal notranslate"><span class="pre">input_feeds</span></code> argument has been renamed to <code class="docutils literal notranslate"><span class="pre">data</span></code> (for
+consistency with other simulator functions).</li>
+</ul>
+<p><strong>Removed</strong></p>
+<ul class="simple">
+<li>NengoDL no longer supports Python 2 (see <a class="reference external" href="https://python3statement.org/">https://python3statement.org/</a> for
+more information)</li>
+</ul>
+</div>
+<div class="section" id="november-2-2018">
+<h3>1.2.1 (November 2, 2018)<a class="headerlink" href="#november-2-2018" title="Permalink to this headline">¶</a></h3>
+<p><strong>Added</strong></p>
+<ul class="simple">
+<li>Added a warning if users run one-timestep training with a network containing
+synaptic filters.</li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li>Test Simulator parameters are now controlled through pytest arguments,
+rather than environment variables.</li>
+<li>Disable INFO-level TensorFlow logging (from C side) on import.  Added a
+NengoDL log message indicating the device the simulation will run on, as
+a more concise replacement.</li>
+<li>Boolean signals are now supported
+(<a class="reference external" href="https://github.com/nengo/nengo-dl/issues/61">#61</a>)</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul class="simple">
+<li>Avoid backpropagating NaN gradients from spiking neurons.</li>
+<li>Fixed an error that was thrown when calling <code class="docutils literal notranslate"><span class="pre">get_tensor</span></code> on a <code class="docutils literal notranslate"><span class="pre">Signal</span></code>
+that was first initialized inside the Simulation while loop
+(<a class="reference external" href="https://github.com/nengo/nengo-dl/issues/56">#56</a>)</li>
+<li>Allow TensorNodes to run in Nengo GUI.</li>
+<li>Avoid bug in TensorFlow 1.11.0 that prevents certain models from
+running (see <a class="reference external" href="https://github.com/tensorflow/tensorflow/issues/23383">https://github.com/tensorflow/tensorflow/issues/23383</a>). Note
+that this doesn’t prevent this from occurring in user models, as we cannot
+control the model structure there. If your model hangs indefinitely when
+you call <code class="docutils literal notranslate"><span class="pre">sim.train</span></code>, try downgrading to TensorFlow 1.10.0.</li>
+<li>Ensure that <code class="docutils literal notranslate"><span class="pre">sim.training_step</span></code> is always updated after the optimization
+step (in certain race conditions it would sometimes update part-way through
+the optimization step).</li>
+</ul>
+</div>
+<div class="section" id="september-5-2018">
+<h3>1.2.0 (September 5, 2018)<a class="headerlink" href="#september-5-2018" title="Permalink to this headline">¶</a></h3>
+<p><strong>Added</strong></p>
+<ul class="simple">
+<li>NengoDL will now automatically use a rate-based approximation to compute the
+gradient for spiking neuron types, if one is known (no more need to manually
+swap neuron types for training and inference).</li>
+<li>Added <code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings(inference_only=True)</span></code> option, which will
+build the network in inference-only mode.  This will slightly improve the
+inference speed of the simulation, but the network will not be trainable.</li>
+<li>Added <code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings(lif_smoothing=x)</span></code> option, which will
+control how much smoothing is applied to the LIF function during gradient
+calculations (if any).</li>
+<li>Added <a class="reference external" href="https://www.nengo.ai/nengo-dl/config.html">documentation</a> on the
+various NengoDL config options.</li>
+<li>Added better validation for TensorNode output when <code class="docutils literal notranslate"><span class="pre">size_out</span> <span class="pre">!=</span> <span class="pre">None</span></code>
+(<a class="reference external" href="https://github.com/nengo/nengo-dl/issues/51">#51</a>)</li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li>More informative error message if the user tries to pass target values for
+a probe that isn’t used in the objective function.</li>
+<li>Switched to ADD_N gradient accumulation (from TREE); this will increase
+the memory usage during training, but improve performance.</li>
+<li>Revert to <code class="docutils literal notranslate"><span class="pre">Timeline</span></code> profiling method. <code class="docutils literal notranslate"><span class="pre">tf.profiler</span></code> can produce
+incorrect output, and isn’t maintained any more
+(<a class="reference external" href="https://github.com/tensorflow/tensorflow/issues/15214#issuecomment-382442357">https://github.com/tensorflow/tensorflow/issues/15214#issuecomment-382442357</a>)</li>
+<li>Reduce memory usage during training by caching temporary variables used
+when computing <code class="docutils literal notranslate"><span class="pre">ScatterUpdate</span></code> gradient.</li>
+<li>Increase minimum TensorFlow version to 1.4.0.</li>
+<li>Increased minimum NumPy version to 1.12.1 (required by TensorFlow)</li>
+<li>Sort write signals as well as reads during graph optimization (encourages
+tighter partitioning, which can improve training/inference speed).</li>
+<li>Moved <code class="docutils literal notranslate"><span class="pre">configure_settings</span></code> from <code class="docutils literal notranslate"><span class="pre">utils.py</span></code> to <code class="docutils literal notranslate"><span class="pre">config.py</span></code>.</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul class="simple">
+<li>Fixed a bug where
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.dists.VarianceScaling(...,</span> <span class="pre">distribution=&quot;normal&quot;)</span></code> did not
+respect the seed if one was given.</li>
+</ul>
+<p><strong>Deprecated</strong></p>
+<ul class="simple">
+<li>The <code class="docutils literal notranslate"><span class="pre">Simulator(dtype=...)</span></code> argument has been deprecated; use
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings(dtype=...)</span></code> instead.  Will be removed in
+1.3.0.</li>
+</ul>
+</div>
+<div class="section" id="july-24-2018">
+<h3>1.1.0 (July 24, 2018)<a class="headerlink" href="#july-24-2018" title="Permalink to this headline">¶</a></h3>
+<p><strong>Added</strong></p>
+<ul class="simple">
+<li>The default TensorFlow Session is now set to the underlying Simulator session
+within the Simulator context.</li>
+<li>Added CLI for benchmarks.py</li>
+<li>Added <code class="docutils literal notranslate"><span class="pre">sim.freeze_params</span></code> tool, to more easily extract model parameters for
+reuse in different Simulators.</li>
+<li>Added <a class="reference external" href="https://www.nengo.ai/nengo-dl/training.html#saving-and-loading-parameters">documentation on saving and loading model parameters</a>.</li>
+<li>Added <a class="reference external" href="http://science.sciencemag.org/content/338/6111/1202.full">Spaun</a>
+example in <code class="docutils literal notranslate"><span class="pre">benchmarks.py</span></code></li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li>Move <code class="docutils literal notranslate"><span class="pre">tensorflow-gpu</span></code> installation check to Simulator init, and only apply
+if <code class="docutils literal notranslate"><span class="pre">device=None</span></code>.</li>
+<li>Switched to <code class="docutils literal notranslate"><span class="pre">pylint</span></code> for style checks.</li>
+<li>TensorFlow INFO-level log messages are now disabled by default on import</li>
+<li>All previous releases now tracked in documentation</li>
+<li>Updated spiking MNIST example to simplify and improve performance.</li>
+<li>Passing unknown configuration options to <code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings</span></code>
+will now give a more explicit error message.</li>
+<li>Improved speed of parameter fetching though <code class="docutils literal notranslate"><span class="pre">get_nengo_params</span></code></li>
+<li>Raise a warning if user tries to train a network with non-differentiable
+elements (requires <code class="docutils literal notranslate"><span class="pre">tensorflow&gt;=1.9.0</span></code>)</li>
+<li>Improved accuracy of <code class="docutils literal notranslate"><span class="pre">SoftLIFRate</span></code> implementation for small values (<a class="reference external" href="https://github.com/nengo/nengo-dl/pull/45">#45</a>)</li>
+<li>Simplified how <code class="docutils literal notranslate"><span class="pre">TensorSignals</span></code> are loaded into the TensorFlow graph</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul class="simple">
+<li>Better handling of Simulator errors not associated with a specific op (fixes
+<a class="reference external" href="https://github.com/nengo/nengo-dl/issues/41">#41</a>)</li>
+<li>Fixed node outputs changing after simulator is built (fixes <a class="reference external" href="https://github.com/nengo/nengo-dl/issues/4">#4</a>)</li>
+<li>Fixed some broken cross references in the documentation</li>
+<li>Fixed several edge cases for <code class="docutils literal notranslate"><span class="pre">get_nengo_params</span></code>; don’t use trained gains
+for direct neuron connections, error raised if <code class="docutils literal notranslate"><span class="pre">get_nengo_params</span></code> applied
+to an Ensemble with Direct neurons</li>
+<li>Compatible with <code class="docutils literal notranslate"><span class="pre">tensorflow==1.9.0</span></code> release</li>
+<li>Fixed bug in <code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings(session_config=...)</span></code> when passing
+a pre-build model to the Simulator instead of a Network</li>
+<li>Fixed TensorFlow version comparisons for 1.10.0</li>
+</ul>
+<p><strong>Deprecated</strong></p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">Simulator.trange</span></code> argument <code class="docutils literal notranslate"><span class="pre">dt</span></code> has been deprecated (replaced with
+<code class="docutils literal notranslate"><span class="pre">sample_every</span></code>, see <a class="reference external" href="https://github.com/nengo/nengo/pull/1384">https://github.com/nengo/nengo/pull/1384</a>)</li>
+</ul>
+<p><strong>Removed</strong></p>
+<ul class="simple">
+<li>Removed <code class="docutils literal notranslate"><span class="pre">nengo_dl.DATA_DIR</span></code> constant</li>
+<li>Removed <code class="docutils literal notranslate"><span class="pre">benchmarks.compare_backends</span></code> (use
+<code class="docutils literal notranslate"><span class="pre">whitepaper2018_plots.py:compare_backends</span></code> instead)</li>
+<li>Removed <code class="docutils literal notranslate"><span class="pre">ghp-import</span></code> dependency</li>
+</ul>
+</div>
+<div class="section" id="may-30-2018">
+<h3>1.0.0 (May 30, 2018)<a class="headerlink" href="#may-30-2018" title="Permalink to this headline">¶</a></h3>
+<p><strong>Added</strong></p>
+<ul class="simple">
+<li>User can now directly specify the output error gradient, rather than using
+targets/objective (useful for when you have some external process for
+computing error that is not easy to implement as an objective function).
+See <a class="reference external" href="https://www.nengo.ai/nengo-dl/training.html#objective">the documentation</a> for details.</li>
+<li>Added <a class="reference external" href="https://arxiv.org/abs/1805.11144">NengoDL white paper</a></li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li>Extra requirements for documentation/testing are now stored in <code class="docutils literal notranslate"><span class="pre">setup.py</span></code>’s
+<code class="docutils literal notranslate"><span class="pre">extra_requires</span></code> instead of <code class="docutils literal notranslate"><span class="pre">requirements-*.txt</span></code>.  For example, instead
+of doing <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-r</span> <span class="pre">requirements-test.txt</span></code>, instead use
+<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">nengo-dl[tests]</span></code> (or <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-e</span> <span class="pre">.[tests]</span></code> for a
+developer installation).</li>
+<li>Improved efficiency of PES implementation</li>
+</ul>
+<p><strong>Removed</strong></p>
+<ul class="simple">
+<li>Removed <code class="docutils literal notranslate"><span class="pre">sphinxcontrib-versioning</span></code> dependency for building documentation</li>
+</ul>
+</div>
+<div class="section" id="may-4-2018">
+<h3>0.6.2 (May 4, 2018)<a class="headerlink" href="#may-4-2018" title="Permalink to this headline">¶</a></h3>
+<p><strong>Added</strong></p>
+<ul class="simple">
+<li>Added <code class="docutils literal notranslate"><span class="pre">sim.get_nengo_params</span></code> function to more easily extract
+model parameters for reuse when building different models.</li>
+<li>Added <code class="docutils literal notranslate"><span class="pre">Simulator(...,</span> <span class="pre">progress_bar=False)</span></code> option to disable the progress
+information printed to console when the network is building.</li>
+<li>TensorFlow session config options can now be set using
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings</span></code> (e.g.,
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings(session_config={&quot;gpu_options.allow_growth&quot;:</span> <span class="pre">True})</span></code>)</li>
+<li>The signal sorting/graph simplificaton functions can now be configured
+through <code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings</span></code></li>
+<li>Added <code class="docutils literal notranslate"><span class="pre">extra_feeds</span></code> parameter to <code class="docutils literal notranslate"><span class="pre">sim.run/train/loss</span></code>, which can be
+used to feed Tensor values directly into the TensorFlow session</li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li>Improved speed of PES implementation by adding a custom operator.</li>
+<li>Renamed project from <code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code> to <code class="docutils literal notranslate"><span class="pre">nengo-dl</span></code> (to be more consistent with
+standard conventions).  This only affects the display name of the project
+on PyPI/GitHub, and the documentation now resides at
+<a class="reference external" href="https://www.nengo.ai/nengo-dl/">https://www.nengo.ai/nengo-dl/</a>; there are no functional changes to user code.</li>
+<li>Minor efficiency improvements to graph planner</li>
+<li>Avoid using <code class="docutils literal notranslate"><span class="pre">tf.constant</span></code>, to get around TensorFlow’s 2GB limit on graph
+size when building large models</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul class="simple">
+<li>Checking <code class="docutils literal notranslate"><span class="pre">nengo_dl</span></code> version without <code class="docutils literal notranslate"><span class="pre">nengo</span></code> installed will no longer
+result in an error.</li>
+<li>Updated progress bar to work with <code class="docutils literal notranslate"><span class="pre">progressbar2&gt;=3.37.0</span></code></li>
+<li>Updated PES implementation to work with generic synapse types
+(see <a class="reference external" href="https://github.com/nengo/nengo/pull/1095">https://github.com/nengo/nengo/pull/1095</a>)</li>
+<li>Fixed installation to work with <code class="docutils literal notranslate"><span class="pre">pip&gt;=10.0</span></code></li>
+<li>Fixed bug when using a TensorNode with a <code class="docutils literal notranslate"><span class="pre">pre_build</span></code> function and
+<code class="docutils literal notranslate"><span class="pre">size_in==0</span></code></li>
+</ul>
+</div>
+<div class="section" id="march-7-2018">
+<h3>0.6.1 (March 7, 2018)<a class="headerlink" href="#march-7-2018" title="Permalink to this headline">¶</a></h3>
+<p><strong>Added</strong></p>
+<ul class="simple">
+<li>Added TensorFlow implementation for <code class="docutils literal notranslate"><span class="pre">nengo.SpikingRectifiedLinear</span></code> neuron
+type.</li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li>Optimizer variables (e.g., momentum values) will only be initialized the
+first time that optimizer is passed to <code class="docutils literal notranslate"><span class="pre">sim.train</span></code>.  Subsequent calls to
+<code class="docutils literal notranslate"><span class="pre">sim.train</span></code> will resume with the values from the previous call.</li>
+<li>Low-level simulation input/output formats have been reworked to make them
+slightly easier to use (for users who want to bypass <code class="docutils literal notranslate"><span class="pre">sim.run</span></code> or
+<code class="docutils literal notranslate"><span class="pre">sim.train</span></code> and access the TensorFlow session directly).</li>
+<li>Batch dimension will always be first (if present) when checking model
+parameters via <code class="docutils literal notranslate"><span class="pre">sim.data</span></code>.</li>
+<li>TensorFlow ops created within the Simulator context will now default to
+the same device as the Simulator.</li>
+<li>Update minimum Nengo version to 2.7.0</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul class="simple">
+<li>Better error message if training data has incorrect rank</li>
+<li>Avoid reinstalling TensorFlow if one of the nightly build packages is already
+installed</li>
+<li>Lowpass synapse can now be applied to multidimensional inputs</li>
+<li>TensorNodes will no longer be built into the default graph when checking
+their output dimensionality.</li>
+</ul>
+<p><strong>Removed</strong></p>
+<ul class="simple">
+<li>Removed <code class="docutils literal notranslate"><span class="pre">utils.cast_dtype</span></code> function</li>
+</ul>
+</div>
+<div class="section" id="december-13-2017">
+<h3>0.6.0 (December 13, 2017)<a class="headerlink" href="#december-13-2017" title="Permalink to this headline">¶</a></h3>
+<p><strong>Added</strong></p>
+<ul class="simple">
+<li>The <code class="docutils literal notranslate"><span class="pre">SoftLIFRate</span></code> neuron type now has an <code class="docutils literal notranslate"><span class="pre">amplitude</span></code> parameter, which
+scales the output in the same way as the new <code class="docutils literal notranslate"><span class="pre">amplitude</span></code> parameter in
+<code class="docutils literal notranslate"><span class="pre">LIF</span></code>/<code class="docutils literal notranslate"><span class="pre">LIFRate</span></code> (see <a class="reference external" href="https://github.com/nengo/nengo/pull/1325">Nengo PR #1325</a>).</li>
+<li>Added <code class="docutils literal notranslate"><span class="pre">progress_bar=False</span></code> option to <code class="docutils literal notranslate"><span class="pre">sim.run</span></code>, which will disable the
+information about the simulation status printed to standard output (<a class="reference external" href="https://github.com/nengo/nengo-dl/issues/17">#17</a>).</li>
+<li>Added progress bars for the build/simulation process.</li>
+<li>Added truncated backpropagation option to <code class="docutils literal notranslate"><span class="pre">sim.train</span></code> (useful for reducing
+memory usage during training).  See <a class="reference external" href="https://www.nengo.ai/nengo-dl/training.html#truncation">the documentation for details</a>.</li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li>Changed the default <code class="docutils literal notranslate"><span class="pre">tensorboard</span></code> argument in <code class="docutils literal notranslate"><span class="pre">Simulator</span></code> from <code class="docutils literal notranslate"><span class="pre">False</span></code>
+to <code class="docutils literal notranslate"><span class="pre">None</span></code></li>
+<li>Use the new <a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/profiler/README.md">tf.profiler</a>
+tool to collect profiling data in <code class="docutils literal notranslate"><span class="pre">sim.run_steps</span></code> and <code class="docutils literal notranslate"><span class="pre">sim.train</span></code> when
+<code class="docutils literal notranslate"><span class="pre">profile=True</span></code>.</li>
+<li>Minor improvements to efficiency of build process.</li>
+<li>Minor improvements to simulation efficiency targeting small ops
+(<code class="docutils literal notranslate"><span class="pre">tf.reshape/identity/constant</span></code>).</li>
+<li>Process inputs are now reseeded for each input when batch processing (if seed
+is not manually set).</li>
+<li>Users can pass a dict of config options for the <code class="docutils literal notranslate"><span class="pre">profile</span></code> argument in
+<code class="docutils literal notranslate"><span class="pre">run_steps</span></code>/<code class="docutils literal notranslate"><span class="pre">train</span></code>, which will be passed on to the TensorFlow
+profiler; see the <code class="docutils literal notranslate"><span class="pre">tf.profiler</span></code> documentation for the <a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/profiler/g3doc/options.md">available options</a>.</li>
+</ul>
+<p><strong>Removed</strong></p>
+<ul class="simple">
+<li>Removed <code class="docutils literal notranslate"><span class="pre">backports.print_function</span></code> dependency</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul class="simple">
+<li>Fixed a bug where input nodes that were only read as a view were not
+feedable</li>
+<li>Updated <code class="docutils literal notranslate"><span class="pre">tensorflow-gpu</span></code> installation check</li>
+<li>Improved numerical stability of <code class="docutils literal notranslate"><span class="pre">LIFRate</span></code> gradients  (<a class="reference external" href="https://github.com/nengo/nengo-dl/issues/26">#26</a>)</li>
+<li>Added more informative error message when data is provided with fewer items
+than <code class="docutils literal notranslate"><span class="pre">sim.minibatch_size</span></code> (<a class="reference external" href="https://github.com/nengo/nengo-dl/issues/30">#30</a>)</li>
+</ul>
+</div>
+<div class="section" id="october-11-2017">
+<h3>0.5.2 (October 11, 2017)<a class="headerlink" href="#october-11-2017" title="Permalink to this headline">¶</a></h3>
+<p><strong>Added</strong></p>
+<ul class="simple">
+<li>TensorNode outputs can now define a <code class="docutils literal notranslate"><span class="pre">post_build</span></code> function that will be
+executed after the simulation is initialized (see the <a class="reference external" href="https://www.nengo.ai/nengo-dl/tensor_node.html">TensorNode
+documentation for details</a>).</li>
+<li>Added functionality for outputting summary data during the training process
+that can be viewed in TensorBoard (see the <a class="reference external" href="https://www.nengo.ai/nengo-dl/training.html#summaries">sim.train documentation</a>).</li>
+<li>Added some examples demonstrating how to use Nengo DL in a more complicated
+task using semantic pointers to encode/retrieve information</li>
+<li>Added <code class="docutils literal notranslate"><span class="pre">sim.training_step</span></code> variable which will track the current training
+iteration (can be used, e.g., for TensorFlow’s variable learning rate
+operations).</li>
+<li>Users can manually create <code class="docutils literal notranslate"><span class="pre">tf.summary</span></code> ops and pass them to <code class="docutils literal notranslate"><span class="pre">sim.train</span></code>
+summaries</li>
+<li>The Simulator context will now also set the default TensorFlow graph to the
+one associated with the Simulator (so any TensorFlow ops created within the
+Simulator context will automatically be added to the correct graph)</li>
+<li>Users can now specify a different objective for each output probe during
+training/loss calculation (see the <a class="reference external" href="https://www.nengo.ai/nengo-dl/training.html#objective">sim.train documentation</a>).</li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li>Resetting the simulator now only rebuilds the necessary components in the
+graph (as opposed to rebuilding the whole graph)</li>
+<li>The default <code class="docutils literal notranslate"><span class="pre">&quot;mse&quot;</span></code> loss implementation will now automatically convert
+<code class="docutils literal notranslate"><span class="pre">np.nan</span></code> values in the target to zero error</li>
+<li>If there are multiple target probes given to <code class="docutils literal notranslate"><span class="pre">sim.train</span></code>/<code class="docutils literal notranslate"><span class="pre">sim.loss</span></code> the
+total error will now be summed across probes (instead of averaged)</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">sim.data</span></code> now implements the full <code class="docutils literal notranslate"><span class="pre">collections.Mapping</span></code> interface</li>
+<li>Fixed bug where signal order was non-deterministic for Networks containing
+objects with duplicate names
+(<a class="reference external" href="https://github.com/nengo/nengo-dl/issues/9">#9</a>)</li>
+<li>Fixed bug where non-slot optimizer variables were not initialized
+(<a class="reference external" href="https://github.com/nengo/nengo-dl/issues/11">#11</a>)</li>
+<li>Implemented a modified PES builder in order to avoid slicing encoders on
+non-decoded PES connections</li>
+<li>TensorBoard output directory will be automatically created if it doesn’t
+exist</li>
+</ul>
+</div>
+<div class="section" id="august-28-2017">
+<h3>0.5.1 (August 28, 2017)<a class="headerlink" href="#august-28-2017" title="Permalink to this headline">¶</a></h3>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">sim.data[obj]</span></code> will now return live parameter values from the simulation,
+rather than initial values from the build process.  That means that it can
+be used to get the values of object parameters after training, e.g.
+<code class="docutils literal notranslate"><span class="pre">sim.data[my_conn].weights</span></code>.</li>
+<li>Increased minimum Nengo version to 2.5.0.</li>
+<li>Increased minimum TensorFlow version to 1.3.0.</li>
+</ul>
+</div>
+<div class="section" id="july-11-2017">
+<h3>0.5.0 (July 11, 2017)<a class="headerlink" href="#july-11-2017" title="Permalink to this headline">¶</a></h3>
+<p><strong>Added</strong></p>
+<ul class="simple">
+<li>Added <code class="docutils literal notranslate"><span class="pre">nengo_dl.tensor_layer</span></code> to help with the construction of
+layer-style TensorNodes (see the <a class="reference external" href="https://www.nengo.ai/nengo-dl/tensor_node.html">TensorNode documentation</a>)</li>
+<li>Added an example demonstrating <a class="reference external" href="https://www.nengo.ai/nengo-dl/examples/spiking_mnist.html">how to train a neural network
+that can run in spiking neurons</a></li>
+<li>Added some distributions for weight initialization to <code class="docutils literal notranslate"><span class="pre">nengo_dl.dists</span></code></li>
+<li>Added <code class="docutils literal notranslate"><span class="pre">sim.train(...,</span> <span class="pre">profile=True)</span></code> option to collect profiling
+information during training</li>
+<li>Added new methods to simplify the Nengo operation graph, resulting in faster
+simulation/training speed</li>
+<li>The default graph planner can now be modified by setting the <code class="docutils literal notranslate"><span class="pre">planner</span></code>
+attribute on the top-level Network config</li>
+<li>Added TensorFlow implementation for general linear synapses</li>
+<li>Added <code class="docutils literal notranslate"><span class="pre">backports.tempfile</span></code> and <code class="docutils literal notranslate"><span class="pre">backports.print_function</span></code> requirement for
+Python 2.7 systems</li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li>Increased minimum TensorFlow version to 1.2.0</li>
+<li>Improved error checking for input/target data</li>
+<li>Improved efficiency of stateful gradient operations, resulting in faster
+training speed</li>
+<li>The functionality for <code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_trainable</span></code> has been subsumed into
+the more general <code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings(trainable=x)</span></code>.  This has
+resulted in some small changes to how trainability is controlled within
+subnetworks; see the <a class="reference external" href="https://www.nengo.ai/nengo-dl/training.html#choosing-which-elements-to-optimize">updated documentation</a>
+for details.</li>
+<li>Calling <code class="docutils literal notranslate"><span class="pre">Simulator.train</span></code>/<code class="docutils literal notranslate"><span class="pre">Simulator.loss</span></code> no longer resets the internal
+state of the simulation (so they can be safely intermixed with calls to
+<code class="docutils literal notranslate"><span class="pre">Simulator.run</span></code>)</li>
+</ul>
+<p><strong>Deprecated</strong></p>
+<ul class="simple">
+<li>The old <code class="docutils literal notranslate"><span class="pre">step_blocks</span></code>/<code class="docutils literal notranslate"><span class="pre">unroll_simulation</span></code> syntax has been fully
+deprecated, and will result in errors if used</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul class="simple">
+<li>Fixed bug related to changing the output of a Node after the model is
+constructed (<a class="reference external" href="https://github.com/nengo/nengo-dl/issues/4">#4</a>)</li>
+<li>Order of variable creation is now deterministic (helps make saving/loading
+parameters more reliable)</li>
+<li>Configuring whether or not a model element is trainable does not affect
+whether or not that element is minibatched</li>
+<li>Correctly reuse variables created inside a TensorNode when
+<code class="docutils literal notranslate"><span class="pre">unroll_simulation</span></code> &gt; 1</li>
+<li>Correctly handle probes that aren’t connected to any ops</li>
+<li>Swapped <code class="docutils literal notranslate"><span class="pre">fan_in</span></code>/<code class="docutils literal notranslate"><span class="pre">fan_out</span></code> in <code class="docutils literal notranslate"><span class="pre">dists.VarianceScaling</span></code> to align with
+the standard definitions</li>
+<li>Temporary patch to fix memory leak in TensorFlow (see
+<a class="reference external" href="https://github.com/tensorflow/tensorflow/issues/11273">#11273</a>)</li>
+<li>Fixed bug related to nodes that had matching output functions but different
+size_out</li>
+<li>Fixed bug related to probes that do not contain any data yet</li>
+</ul>
+</div>
+<div class="section" id="june-8-2017">
+<h3>0.4.0 (June 8, 2017)<a class="headerlink" href="#june-8-2017" title="Permalink to this headline">¶</a></h3>
+<p><strong>Added</strong></p>
+<ul class="simple">
+<li>Added ability to manually specify which parts of a model are trainable
+(see the <a class="reference external" href="https://www.nengo.ai/nengo-dl/training.html">sim.train documentation</a>)</li>
+<li>Added some code examples (see the <code class="docutils literal notranslate"><span class="pre">docs/examples</span></code> directory, or the
+<a class="reference external" href="https://www.nengo.ai/nengo-dl/examples.html">pre-built examples in the documentation</a>)</li>
+<li>Added the SoftLIFRate neuron type for training LIF networks (based on
+<a class="reference external" href="https://arxiv.org/abs/1510.08829">this paper</a>)</li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li>Updated TensorFuncParam to new Nengo Param syntax</li>
+<li>The interface for Simulator <code class="docutils literal notranslate"><span class="pre">step_blocks</span></code>/<code class="docutils literal notranslate"><span class="pre">unroll_simulation</span></code> has been
+changed.  Now <code class="docutils literal notranslate"><span class="pre">unroll_simulation</span></code> takes an integer as argument which is
+equivalent to the old <code class="docutils literal notranslate"><span class="pre">step_blocks</span></code> value, and <code class="docutils literal notranslate"><span class="pre">unroll_simulation=1</span></code> is
+equivalent to the old <code class="docutils literal notranslate"><span class="pre">unroll_simulation=False</span></code>.  For example,
+<code class="docutils literal notranslate"><span class="pre">Simulator(...,</span> <span class="pre">unroll_simulation=True,</span> <span class="pre">step_blocks=10)</span></code> is now equivalent
+to <code class="docutils literal notranslate"><span class="pre">Simulator(...,</span> <span class="pre">unroll_simulation=10)</span></code>.</li>
+<li>Simulator.train/Simulator.loss no longer require <code class="docutils literal notranslate"><span class="pre">step_blocks</span></code> (or the new
+<code class="docutils literal notranslate"><span class="pre">unroll_simulation</span></code>) to be specified; the number of steps to train across
+will now be inferred from the input data.</li>
+</ul>
+</div>
+<div class="section" id="may-12-2017">
+<h3>0.3.1 (May 12, 2017)<a class="headerlink" href="#may-12-2017" title="Permalink to this headline">¶</a></h3>
+<p><strong>Added</strong></p>
+<ul class="simple">
+<li>Added more documentation on Simulator arguments</li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li>Improved efficiency of tree_planner, made it the new default planner</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul class="simple">
+<li>Correctly handle input feeds when n_steps &gt; step_blocks</li>
+<li>Detect cycles in transitive planner</li>
+<li>Fix bug in uneven step_blocks rounding</li>
+<li>Fix bug in Simulator.print_params</li>
+<li>Fix bug related to merging of learning rule with different dimensionality</li>
+<li>Use tf.Session instead of tf.InteractiveSession, to avoid strange side
+effects if the simulator isn’t closed properly</li>
+</ul>
+</div>
+<div class="section" id="april-25-2017">
+<h3>0.3.0 (April 25, 2017)<a class="headerlink" href="#april-25-2017" title="Permalink to this headline">¶</a></h3>
+<p><strong>Added</strong></p>
+<ul class="simple">
+<li>Use logger for debug/builder output</li>
+<li>Implemented TensorFlow gradients for sparse Variable update Ops, to allow
+models with those elements to be trained</li>
+<li>Added tutorial/examples on using <code class="docutils literal notranslate"><span class="pre">Simulator.train</span></code></li>
+<li>Added support for training models when <code class="docutils literal notranslate"><span class="pre">unroll_simulation=False</span></code></li>
+<li>Compatibility changes for Nengo 2.4.0</li>
+<li>Added a new graph planner algorithm, which can improve simulation speed at
+the cost of build time</li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul class="simple">
+<li>Significant improvements to simulation speed<ul>
+<li>Use sparse Variable updates for signals.scatter/gather</li>
+<li>Improved graph optimizer memory organization</li>
+<li>Implemented sparse matrix multiplication op, to allow more aggressive
+merging of DotInc operators</li>
+</ul>
+</li>
+<li>Significant improvements to build speed<ul>
+<li>Added early termination to graph optimization</li>
+<li>Algorithmic improvements to graph optimization functions</li>
+</ul>
+</li>
+<li>Reorganized documentation to more clearly direct new users to relevant
+material</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul class="simple">
+<li>Fix bug where passing a built model to the Simulator more than once would
+result in an error</li>
+<li>Cache result of calls to <code class="docutils literal notranslate"><span class="pre">tensor_graph.build_loss/build_optimizer</span></code>, so that
+we don’t unnecessarily create duplicate elements in the graph on repeated
+calls</li>
+<li>Fix support for Variables on GPU when <code class="docutils literal notranslate"><span class="pre">unroll_simulation=False</span></code></li>
+<li>SimPyFunc operators will always be assigned to CPU, even when
+<code class="docutils literal notranslate"><span class="pre">device=&quot;/gpu:0&quot;</span></code>, since there is no GPU kernel</li>
+<li>Fix bug where <code class="docutils literal notranslate"><span class="pre">Simulator.loss</span></code> was not being computed correctly for
+models with internal state</li>
+<li>Data/targets passed to <code class="docutils literal notranslate"><span class="pre">Simulator.train</span></code> will be truncated if not evenly
+divisible by the specified minibatch size</li>
+<li>Fixed bug where in some cases Nodes with side effects would not be run if
+their output was not used in the simulation</li>
+<li>Fixed bug where strided reads that cover a full array would be interpreted as
+non-strided reads of the full array</li>
+</ul>
+</div>
+<div class="section" id="march-13-2017">
+<h3>0.2.0 (March 13, 2017)<a class="headerlink" href="#march-13-2017" title="Permalink to this headline">¶</a></h3>
+<p>Initial release of TensorFlow-based NengoDL</p>
+</div>
+<div class="section" id="june-12-2016">
+<h3>0.1.0 (June 12, 2016)<a class="headerlink" href="#june-12-2016" title="Permalink to this headline">¶</a></h3>
+<p>Initial release of Lasagne-based NengoDL</p>
+</div>
+</div>
+<div class="section" id="contributing-to-nengodl">
+<h2>Contributing to NengoDL<a class="headerlink" href="#contributing-to-nengodl" title="Permalink to this headline">¶</a></h2>
+<p>Issues and pull requests are always welcome! We appreciate help from the
+community to make NengoDL better.</p>
+<div class="section" id="filing-issues">
+<h3>Filing issues<a class="headerlink" href="#filing-issues" title="Permalink to this headline">¶</a></h3>
+<p>If you find a bug in NengoDL, or think that a certain feature is missing,
+please consider <a class="reference external" href="https://github.com/nengo/nengo-dl/issues">filing an issue</a>.
+Please search the currently open issues first to see if your bug or feature
+request already exists. If so, feel free to add a comment to the issue
+so that we know that multiple people are affected.</p>
+</div>
+<div class="section" id="making-pull-requests">
+<h3>Making pull requests<a class="headerlink" href="#making-pull-requests" title="Permalink to this headline">¶</a></h3>
+<p>If you want to fix a bug or add a feature to NengoDL, we welcome pull requests.
+We try to maintain 100% test coverage, so any new features should also include
+unit tests to cover that change.  If you fix a bug it’s also a good idea to
+add a unit test, so that the bug doesn’t get un-fixed in the future!</p>
+</div>
+<div class="section" id="contributor-agreement">
+<h3>Contributor agreement<a class="headerlink" href="#contributor-agreement" title="Permalink to this headline">¶</a></h3>
+<p>We require that all contributions be covered under our contributor assignment
+agreement. Please see <a class="reference external" href="https://www.nengo.ai/caa.html">the agreement</a>
+for instructions on how to sign.</p>
+</div>
+</div>
+<div class="section" id="nengodl-license">
+<h2>NengoDL license<a class="headerlink" href="#nengodl-license" title="Permalink to this headline">¶</a></h2>
+<p>Copyright (c) 2015-2018 Applied Brain Research Inc.</p>
+<p>NengoDL is made available under a proprietary license that permits
+using, copying, sharing, and making derivative works from NengoDL and its
+source code for any non-commercial purpose, as long as the above copyright
+notice and this permission notice are included in all copies or substantial
+portions of the software.</p>
+<p>If you would like to use NengoDL commercially, licenses can be
+purchased from Applied Brain Research, Inc. Please contact
+<a class="reference external" href="mailto:info&#37;&#52;&#48;appliedbrainresearch&#46;com">info<span>&#64;</span>appliedbrainresearch<span>&#46;</span>com</a> for more information.</p>
+<p>THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</p>
+<div class="section" id="licensed-code">
+<h3>Licensed code<a class="headerlink" href="#licensed-code" title="Permalink to this headline">¶</a></h3>
+<p>NengoDL imports several open source libraries:</p>
+<ul class="simple">
+<li><a class="reference external" href="http://www.numpy.org/">NumPy</a> - Used under
+<a class="reference external" href="http://www.numpy.org/license.html">BSD license</a></li>
+<li><a class="reference external" href="https://www.tensorflow.org/">TensorFlow</a> - Used under
+<a class="reference external" href="https://github.com/tensorflow/tensorflow/blob/master/LICENSE">Apache license</a></li>
+<li><a class="reference external" href="https://progressbar-2.readthedocs.io/en/latest/">Progressbar 2</a> - Used under
+<a class="reference external" href="https://github.com/WoLpH/python-progressbar/blob/develop/LICENSE">BSD license</a></li>
+</ul>
+<p>To build the documentation, NengoDL uses:</p>
+<ul class="simple">
+<li><a class="reference external" href="https://jupyter.org/">Jupyter</a> - Used under
+<a class="reference external" href="https://github.com/jupyter/jupyter/blob/master/LICENSE">BSD license</a></li>
+<li><a class="reference external" href="https://matplotlib.org/">matplotlib</a> - Used under
+<a class="reference external" href="https://matplotlib.org/users/license.html">modified PSF license</a></li>
+<li><a class="reference external" href="https://github.com/spatialaudio/nbsphinx">nbsphinx</a> - Used under
+<a class="reference external" href="https://github.com/spatialaudio/nbsphinx/blob/master/LICENSE">MIT license</a></li>
+<li><a class="reference external" href="https://github.com/numpy/numpydoc">numpydoc</a> - Used under
+<a class="reference external" href="https://github.com/numpy/numpydoc/blob/master/LICENSE.txt">BSD license</a></li>
+<li><a class="reference external" href="https://pillow.readthedocs.io/en/latest/">Pillow</a> - Used under
+<a class="reference external" href="https://github.com/python-pillow/Pillow/blob/master/LICENSE">PIL license</a></li>
+<li><a class="reference external" href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> - Used under
+<a class="reference external" href="https://github.com/sphinx-doc/sphinx/blob/master/LICENSE">BSD license</a></li>
+<li><a class="reference external" href="https://sphinx-click.readthedocs.io/en/latest/">sphinx-click</a> - Used under
+<a class="reference external" href="https://github.com/click-contrib/sphinx-click/blob/master/LICENSE">MIT license</a></li>
+</ul>
+<p>To run the unit tests, NengoDL uses:</p>
+<ul class="simple">
+<li><a class="reference external" href="https://click.palletsprojects.com/en/6.x/">Click</a> - Used under
+<a class="reference external" href="https://click.palletsprojects.com/en/6.x/license/">BSD license</a></li>
+<li><a class="reference external" href="https://github.com/codespell-project/codespell">codespell</a> - Used under
+<a class="reference external" href="https://github.com/codespell-project/codespell/blob/master/COPYING">GPL license</a></li>
+<li><a class="reference external" href="https://coverage.readthedocs.io/en/latest/">Coverage.py</a> - Used under
+<a class="reference external" href="https://github.com/nedbat/coveragepy/blob/master/LICENSE.txt">Apache license</a></li>
+<li><a class="reference external" href="https://matplotlib.org/">matplotlib</a> - Used under
+<a class="reference external" href="https://matplotlib.org/users/license.html">modified PSF license</a></li>
+<li><a class="reference external" href="https://github.com/computationalmodelling/nbval">nbval</a> - Used under
+<a class="reference external" href="https://github.com/computationalmodelling/nbval/blob/master/LICENSE">BSD license</a></li>
+<li><a class="reference external" href="https://www.pylint.org/">pylint</a> - Used under
+<a class="reference external" href="https://github.com/PyCQA/pylint/blob/master/COPYING">GPL license</a></li>
+<li><a class="reference external" href="https://docs.pytest.org/en/latest/">pytest</a> - Used under
+<a class="reference external" href="https://docs.pytest.org/en/latest/license.html">MIT license</a></li>
+<li><a class="reference external" href="https://github.com/pytest-dev/pytest-xdist">pytest-xdist</a> - Used under
+<a class="reference external" href="https://github.com/pytest-dev/pytest-xdist/blob/master/LICENSE">MIT license</a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="citation">
+<h2>Citation<a class="headerlink" href="#citation" title="Permalink to this headline">¶</a></h2>
+<p>If you would like to cite NengoDL in your research, please cite the <a class="reference external" href="https://arxiv.org/abs/1805.11144">white
+paper</a>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Rasmussen, D. (2018). NengoDL: Combining deep learning and neuromorphic
+modelling methods. arXiv:1805.11144, 1–22.
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>@article{
+  Rasmussen2018,
+  archivePrefix = {arXiv},
+  arxivId = {1805.11144},
+  author = {Rasmussen, Daniel},
+  journal = {arXiv},
+  pages = {1--22},
+  title = {{NengoDL}: Combining deep learning and neuromorphic modelling
+           methods},
+  url = {http://arxiv.org/abs/1805.11144},
+  volume = {1805.11144},
+  year = {2018}
+}
+</pre></div>
+</div>
+</div>
+</div>
+
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div><footer class="footer">
+  <div class="w-container">
+    <div class="w-clearfix">
+      <div class="w-row mobileAlign">
+        <div class="w-col w-col-2 footer-menu">
+          <p class="menu-Label">ABR, Inc.</p>
+          <ul class="vertical-menu">
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/products/">Products</a></li>
+            <li class="footer-listitem-new "><a href="https://appliedbrainresearch.com/services/">Services</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/research/">Research</a></li>
+          </ul>
+        </div>
+        <div class="w-col w-col-2 footer-menu">
+          <p class="menu-Label">About Us</p>
+          <ul class="vertical-menu">
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/">Contact</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/#team">Team</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/#culture">Culture</a></li>
+          </ul>
+        </div>
+        <a class="brand footer-brand" href="https://appliedbrainresearch.com">
+          <img src="https://appliedbrainresearch.com/img/logo-light-notext.svg" width="80">
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+  </body>
+</html>

@@ -1,0 +1,443 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>NengoDL &#8212; NengoDL documentation</title>
+    <link rel="stylesheet" href="_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/normalize.css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/bootstrap.css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/mmenu.all.css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/components.css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/nengo.css" />
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<!--[if lte IE 9]><script src="https://cdnjs.cloudflare.com/ajax/libs/placeholders/3.0.2/placeholders.min.js"></script><![endif]-->
+<script type="text/javascript" src="https://cdn.crate.io/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="_static/js/modernizr.js"></script>
+    <script type="text/javascript" src="_static/js/underscore.min.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/js/searchtools.js"></script>
+    <script type="text/javascript" src="_static/js/webflow.js"></script>
+    <script type="text/javascript" src="_static/js/bootstrap.js"></script>
+    <script type="text/javascript" src="_static/js/mmenu.all.min.js"></script>
+    <script type="text/javascript" src="_static/js/fontawesome.js"></script>
+    <script type="text/javascript" src="_static/js/custom.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Deep learning integration for Nengo" href="introduction.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+  </head><body>
+<header class="header-nav">
+  <div class="container">
+    <div class="navbar w-nav" data-animation="default" data-collapse="small" data-contain="1" data-duration="400">
+      <a class="brand w-nav-brand" href="https://www.nengo.ai/">
+        <img src="https://www.nengo.ai/design/_images/general-full-light.svg" width="120">
+      </a>
+      <nav class="w-nav-menu main-nav" role="navigation">
+        <div class="dropdownBackground">
+          <span class="arrow"></span>
+        </div>
+        <ul id="menu-top-navigation" class="menu">
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/overview.html">Overview</a>
+            <ul class="sub-menu">
+                <li class="menu-item"><a href="https://www.nengo.ai/quickstart.html">Quick Start</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/documentation.html">Documentation</a>
+            <table class="sub-menu">
+              <tr>
+                <td class="menu-heading">Core</td>
+                <td class="menu-heading">Backends</td>
+                <td class="menu-heading">Add-ons</td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo">Nengo</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-fpga">Nengo FPGA</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-examples">Nengo Examples</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-dl/">Nengo DL</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-loihi">Nengo Loihi</a></td>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-extras/">Nengo Extras</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-gui">Nengo GUI</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-mpi">Nengo MPI</a></td>
+                <td class="menu-item"><a href="https://arvoelke.github.io/nengolib-docs/">Nengo Lib</a></td>
+              </tr>
+              <tr>
+                <td class="menu-item"><a href="https://www.nengo.ai/nengo-spa/">Nengo SPA</a></td>
+                <td class="menu-item"><a href="https://github.com/nengo/nengo-ocl">Nengo OpenCL</a></td>
+                <td class="menu-item"></td>
+              </tr>
+              <tr>
+                <td class="menu-item"></td>
+                <td class="menu-item"><a href="https://github.com/project-rig/nengo_spinnaker">Nengo SpiNNaker</a></td>
+                <td class="menu-item"></td>
+              </tr>
+            </table>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/community.html">Community</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://forum.nengo.ai/">Forum</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/publications.html">Publications</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/summerschool.html">Summer School</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/videos.html">Videos</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/people.html">People</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/projects.html">Development</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/contributing.html">Contributor Guide</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/projects.html">Ecosystem</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/README.html">About</a></li>
+          <li class="btn-link w-nav-link menu-item"><a href="https://www.nengo.ai/download.html">Download</a></li>
+        </ul>
+      </nav>
+
+      <div id="mobile-nav" class="mm-menu">
+        <ul class="offcanvas-menu">
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/overview.html">Overview</a></li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/documentation.html">Documentation</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/quickstart.html">Quick Start</a></li>
+              <li class="menu-item"><a href="http://www.nengo.ai/nengo">NengoCore</a></li>
+              <li class="menu-item"><a href="https://github.com/nengo/nengo-gui#nengo-gui">NengoGUI</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/community.html">Community</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://forum.nengo.ai/">Forum</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/summerschool.html">Summer School</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/people.html">People</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item menu-item-has-children">
+            <a href="https://www.nengo.ai/projects.html">Development</a>
+            <ul class="sub-menu">
+              <li class="menu-item"><a href="https://www.nengo.ai/contributing.html">Contributor Guide</a></li>
+              <li class="menu-item"><a href="https://www.nengo.ai/projects.html">Ecosystem</a></li>
+            </ul>
+          </li>
+          <li class="navlink w-nav-link menu-item"><a href="https://www.nengo.ai/README.html">About</a></li>
+          <li class="btn-link w-nav-link menu-item"><a href="https://www.nengo.ai/download.html">Download</a></li>
+        </ul>
+      </div>
+
+      <a href="#mobile-nav" class="fa fa-bars mobile-nav-button"></a>
+    </div>
+  </div>
+</header>
+
+<div class="w-section section border-top">
+  <div class="container">
+    <div class="row" id="index">
+      <div class="col-md-4 col-lg-3">
+        <aside class="wrapper-navleft"><div role="complementary" class="bs-docs-sidebar hidden-print" id="nav-affix">
+  <ul class="bs-docs-sidenav bs-sidenav nav" role="complementary">
+    <a href="#">
+      <img class="logo" src="https://www.nengo.ai/design/_images/nengo-dl-full-light.svg" alt="NengoDL" width="200" />
+    </a>
+    <ul class="toctree nav nav-list">
+      <ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user-guide.html">User guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a></li>
+</ul>
+
+    </ul>
+  </ul>
+</div>
+          
+        </aside>
+      </div>
+      <div class="col-md-8 col-lg-9">
+        <div class="wrapper-content-right">
+          
+<div class="version-select-container">
+    <div data-delay="0" class="w-dropdown">
+        <div class="w-dropdown-toggle toggle">
+            <div class="toggle-text">v2.1.1</div>
+            <div class="w-icon-dropdown-toggle toggle-icon"></div>
+        </div>
+        <nav class="w-dropdown-list dropdown-list">
+            
+            
+                <a href="../index.html" class="w-dropdown-link">latest</a>
+            
+
+            
+                
+                <div class="w-dropdown-link">v2.1.1</div>
+                
+            
+                
+                    <a href="../v2.1.0/index.html" class="w-dropdown-link">v2.1.0</a>
+                
+            
+                
+                    <a href="../v2.0.0/index.html" class="w-dropdown-link">v2.0.0</a>
+                
+            
+                
+                    <a href="../v1.2.1/index.html" class="w-dropdown-link">v1.2.1</a>
+                
+            
+                
+                    <a href="../v1.2.0/index.html" class="w-dropdown-link">v1.2.0</a>
+                
+            
+                
+                    <a href="../v1.1.0/index.html" class="w-dropdown-link">v1.1.0</a>
+                
+            
+                
+                    <a href="../v1.0.0/index.html" class="w-dropdown-link">v1.0.0</a>
+                
+            
+                
+                    <a href="../v0.6.2/index.html" class="w-dropdown-link">v0.6.2</a>
+                
+            
+                
+                    <a href="../v0.6.1/index.html" class="w-dropdown-link">v0.6.1</a>
+                
+            
+                
+                    <a href="../v0.6.0/index.html" class="w-dropdown-link">v0.6.0</a>
+                
+            
+                
+                    <a href="../v0.5.2/index.html" class="w-dropdown-link">v0.5.2</a>
+                
+            
+                
+                    <a href="../v0.5.1/index.html" class="w-dropdown-link">v0.5.1</a>
+                
+            
+                
+                    <a href="../v0.5.0/index.html" class="w-dropdown-link">v0.5.0</a>
+                
+            
+                
+                    <a href="../v0.4.0/index.html" class="w-dropdown-link">v0.4.0</a>
+                
+            
+                
+                    <a href="../v0.3.1/index.html" class="w-dropdown-link">v0.3.1</a>
+                
+            
+                
+                    <a href="../v0.3.0/index.html" class="w-dropdown-link">v0.3.0</a>
+                
+            
+                
+                    <a href="../v0.2.0/index.html" class="w-dropdown-link">v0.2.0</a>
+                
+            
+        </nav>
+    </div>
+</div>
+
+          
+  <div class="section" id="nengodl">
+<h1>NengoDL<a class="headerlink" href="#nengodl" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installing-nengodl">Installing NengoDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#developer-installation">Developer installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installing-tensorflow">Installing TensorFlow</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user-guide.html">User guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="simulator.html">NengoDL Simulator</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="simulator.html#simulator-arguments">Simulator arguments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="simulator.html#simulator-run-arguments">Simulator.run arguments</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="training.html">Optimizing a NengoDL model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="training.html#simulator-train-arguments">Simulator.train arguments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="training.html#choosing-which-elements-to-optimize">Choosing which elements to optimize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="training.html#saving-and-loading-parameters">Saving and loading parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="training.html#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tensor-node.html">TensorNodes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tensor-node.html#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="config.html">Configuration options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="config.html#trainable">trainable</a></li>
+<li class="toctree-l3"><a class="reference internal" href="config.html#planner">planner</a></li>
+<li class="toctree-l3"><a class="reference internal" href="config.html#sorter">sorter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="config.html#simplifications">simplifications</a></li>
+<li class="toctree-l3"><a class="reference internal" href="config.html#session-config">session_config</a></li>
+<li class="toctree-l3"><a class="reference internal" href="config.html#inference-only">inference_only</a></li>
+<li class="toctree-l3"><a class="reference internal" href="config.html#lif-smoothing">lif_smoothing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="config.html#dtype">dtype</a></li>
+<li class="toctree-l3"><a class="reference internal" href="config.html#keep-history">keep_history</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="reference.html#users">Users</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference.html#module-nengo_dl.simulator">Simulator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference.html#module-nengo_dl.tensor_node">TensorNodes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference.html#module-nengo_dl.config">Configuration system</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference.html#module-nengo_dl.neurons">Neuron types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference.html#module-nengo_dl.dists">Distributions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference.html#module-nengo_dl.objectives">Objectives</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference.html#developers">Developers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference.html#module-nengo_dl.builder">Builder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference.html#operator-builders">Operator builders</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference.html#module-nengo_dl.tensor_graph">Graph construction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference.html#module-nengo_dl.signals">Signals</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference.html#module-nengo_dl.graph_optimizer">Graph optimization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference.html#module-nengo_dl.utils">Utilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference.html#module-nengo_dl.benchmarks">Benchmarks</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples/from-nengo.html">Coming from Nengo to NengoDL</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples/from-nengo.html#Simulating-a-network-with-NengoDL">Simulating a network with NengoDL</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/from-nengo.html#Batch-processing">Batch processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/from-nengo.html#Specifying-model-inputs-at-run-time">Specifying model inputs at run time</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/from-nengo.html#Optimizing-model-parameters">Optimizing model parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/from-nengo.html#Evaluating-model-performance">Evaluating model performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/from-nengo.html#Integrating-TensorFlow-code">Integrating TensorFlow code</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/from-nengo.html#Conclusion">Conclusion</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="examples/from-tensorflow.html">Coming from TensorFlow to NengoDL</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples/from-tensorflow.html#What-is-Nengo">What is Nengo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/from-tensorflow.html#Simulating-a-network">Simulating a network</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/from-tensorflow.html#Spiking-networks">Spiking networks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/from-tensorflow.html#Inserting-TensorFlow-code">Inserting TensorFlow code</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/from-tensorflow.html#Deep-learning-parameter-optimization">Deep learning parameter optimization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/from-tensorflow.html#NEF-parameter-optimization">NEF parameter optimization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/from-tensorflow.html#Running-on-neuromorphic-hardware">Running on neuromorphic hardware</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/from-tensorflow.html#Conclusion">Conclusion</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="examples/pretrained-model.html">Inserting a TensorFlow network into a Nengo model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/spiking-mnist.html">Optimizing spiking neural networks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/spa-retrieval.html">Optimizing a cognitive model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/spa-memory.html">Optimizing a cognitive model with temporal dynamics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples/spa-memory.html#Optimizing-a-memory-network">Optimizing a memory network</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/spa-memory.html#Adding-memory-to-the-cognitive-model">Adding memory to the cognitive model</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="project.html#release-history">Release History</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="project.html#january-11-2019">2.1.1 (January 11, 2019)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#december-5-2018">2.1.0 (December 5, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#november-23-2018">2.0.0 (November 23, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#november-2-2018">1.2.1 (November 2, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#september-5-2018">1.2.0 (September 5, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#july-24-2018">1.1.0 (July 24, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#may-30-2018">1.0.0 (May 30, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#may-4-2018">0.6.2 (May 4, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#march-7-2018">0.6.1 (March 7, 2018)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#december-13-2017">0.6.0 (December 13, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#october-11-2017">0.5.2 (October 11, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#august-28-2017">0.5.1 (August 28, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#july-11-2017">0.5.0 (July 11, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#june-8-2017">0.4.0 (June 8, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#may-12-2017">0.3.1 (May 12, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#april-25-2017">0.3.0 (April 25, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#march-13-2017">0.2.0 (March 13, 2017)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#june-12-2016">0.1.0 (June 12, 2016)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="project.html#contributing-to-nengodl">Contributing to NengoDL</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="project.html#filing-issues">Filing issues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#making-pull-requests">Making pull requests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="project.html#contributor-agreement">Contributor agreement</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="project.html#nengodl-license">NengoDL license</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="project.html#licensed-code">Licensed code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="project.html#citation">Citation</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p><a class="reference external" href="https://github.com/nengo/nengo-dl">Github</a> |
+<a class="reference external" href="https://pypi.org/project/nengo-dl">PyPI</a></p>
+</div>
+
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div><footer class="footer">
+  <div class="w-container">
+    <div class="w-clearfix">
+      <div class="w-row mobileAlign">
+        <div class="w-col w-col-2 footer-menu">
+          <p class="menu-Label">ABR, Inc.</p>
+          <ul class="vertical-menu">
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/products/">Products</a></li>
+            <li class="footer-listitem-new "><a href="https://appliedbrainresearch.com/services/">Services</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/research/">Research</a></li>
+          </ul>
+        </div>
+        <div class="w-col w-col-2 footer-menu">
+          <p class="menu-Label">About Us</p>
+          <ul class="vertical-menu">
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/">Contact</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/#team">Team</a></li>
+            <li class="footer-listitem-new"><a href="https://appliedbrainresearch.com/about-us/#culture">Culture</a></li>
+          </ul>
+        </div>
+        <a class="brand footer-brand" href="https://appliedbrainresearch.com">
+          <img src="https://appliedbrainresearch.com/img/logo-light-notext.svg" width="80">
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+  </body>
+</html>
