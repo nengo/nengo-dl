@@ -67,8 +67,13 @@ adds a number of unique features, such as:
 
 Check out the `documentation <https://www.nengo.ai/nengo-dl/>`_ for
 
-- `Installation instructions <https://www.nengo.ai/nengo-dl/installation.html>`_
+- `Installation instructions
+  <https://www.nengo.ai/nengo-dl/installation.html>`_
 - `Details on the unique features of NengoDL
   <https://www.nengo.ai/nengo-dl/user-guide.html>`_
-- `Tutorials and examples <https://www.nengo.ai/nengo-dl/examples.html>`_
+- `Tutorial for new users with a TensorFlow background
+  <https://www.nengo.ai/nengo-dl/examples/from-tensorflow.html>`_
+- `Tutorial for new users with a Nengo background
+  <https://www.nengo.ai/nengo-dl/examples/from-nengo.html>`_
+- `More in-depth examples <https://www.nengo.ai/nengo-dl/examples.html>`_
 - `API reference <https://www.nengo.ai/nengo-dl/reference.html>`_
