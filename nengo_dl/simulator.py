@@ -175,6 +175,10 @@ class Simulator:
                 self.model, self.dt, unroll_simulation, dtype,
                 self.minibatch_size, device, progress)
 
+        # set TensorFlow graph seed
+        with self.tensor_graph.graph.as_default():
+            tf.set_random_seed(self.seed)
+
         # construct graph
         with ProgressBar("Constructing graph", "Construction",
                          max_value=None) as progress:
@@ -247,7 +251,8 @@ class Simulator:
         if seed is not None:
             self.seed = seed
         self.rng = np.random.RandomState(self.seed)
-        tf.set_random_seed(self.seed)
+        with self.tensor_graph.graph.as_default():
+            tf.set_random_seed(self.seed)
 
         with self.sess.as_default():
             self.tensor_graph.build_post(self.sess, self.rng)

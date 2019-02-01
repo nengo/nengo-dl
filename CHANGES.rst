@@ -26,6 +26,11 @@ Release History
 - The default session will now be set to the NengoDL session before calling
   TensorNodes' ``post_build`` function.
 
+**Fixed**
+
+- Fixed TensorFlow seeding so that randomness can be reliably controlled by
+  setting the Simulator seed.
+
 2.1.1 (January 11, 2019)
 ------------------------
 

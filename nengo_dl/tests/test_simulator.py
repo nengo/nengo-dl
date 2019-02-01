@@ -1511,3 +1511,26 @@ def test_run_batch(Simulator, rng):
         inp = np.reshape(inp, (5, 2, 10, 1))
         assert np.allclose(out[0], inp)
         assert np.allclose(out[1], inp + 1)
+
+
+def test_tf_seed(Simulator, seed):
+    with nengo.Network() as net:
+        a = TensorNode(lambda t: tf.random_uniform((1, 1), dtype=t.dtype))
+        p = nengo.Probe(a)
+
+    with Simulator(net, seed=seed) as sim:
+        sim.step()
+
+    with Simulator(net, seed=seed) as sim_seed:
+        sim_seed.step()
+
+    assert np.allclose(sim.data[p], sim_seed.data[p])
+
+    with Simulator(net, seed=seed + 1) as sim_reset:
+        sim_reset.step()
+
+        assert not np.allclose(sim.data[p], sim_reset.data[p])
+
+        sim_reset.reset(seed=seed)
+
+        assert np.allclose(sim.data[p], sim_reset.data[p])
