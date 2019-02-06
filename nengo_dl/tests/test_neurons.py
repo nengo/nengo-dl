@@ -62,6 +62,9 @@ def test_soft_lif(Simulator, sigma, seed):
 @pytest.mark.training
 def test_neuron_gradients(Simulator, neuron_type, seed):
     with nengo.Network(seed=seed) as net:
+        config.configure_settings(dtype=tf.float64)
+        net.config[nengo.Ensemble].intercepts = nengo.dists.Choice([-0.5])
+
         a = nengo.Node(output=[0])
         b = nengo.Ensemble(50, 1, neuron_type=neuron_type())
         c = nengo.Ensemble(50, 1, neuron_type=neuron_type(amplitude=0.1))
