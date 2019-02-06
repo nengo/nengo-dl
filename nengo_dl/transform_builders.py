@@ -92,7 +92,7 @@ class ConvIncBuilder(OpBuilder):
                     # move channel dimension back to the front
                     perm_y[1:-1] = perm_y[:-2]
                     perm_y[1] = len(perm_y) - 2
-            else:  # pragma: no cover (this can only be tested with a GPU)
+            else:
                 reshape_y = (
                     (signals.minibatch_size, -1, len(ops))
                     + self.conv.output_shape.spatial_shape)

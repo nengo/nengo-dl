@@ -25,9 +25,9 @@ env:
     - COV_CORE_CONFIG=.coveragerc
     - COV_CORE_DATAFILE=.coverage.eager
     - BRANCH_NAME="${TRAVIS_PULL_REQUEST_BRANCH:-$TRAVIS_BRANCH}"
-    - NUMPY_VERSION="numpy"
-    - TF_VERSION="tensorflow"
     - NENGO_VERSION="nengo"
+    - TF_VERSION="tensorflow"
+    - NUMPY_VERSION="numpy"
 
 jobs:
   include:
@@ -41,15 +41,21 @@ jobs:
     cache: False
   -
     env:
+      NENGO_VERSION="git+https://github.com/nengo/nengo.git"
+      SCRIPT="gpu"
+      TF_VERSION="tensorflow-gpu"
+      TEST_ARGS="--device /gpu:3 --performance"
+  -
+    env:
       NENGO_VERSION="git+https://github.com/nengo/nengo.git#egg=nengo"
-      TF_VERSION="tensorflow<2.0"
       SCRIPT="test-coverage"
+      TF_VERSION="tensorflow<2.0"
   -
     env:
       NENGO_VERSION="nengo==2.7.0"
-      TF_VERSION="tensorflow==1.4.0"
       PIP_UPGRADE_STRATEGY="only-if-needed"
       SCRIPT="test-coverage"
+      TF_VERSION="tensorflow==1.4.0"
       PYTHON_VERSION="3.4"
   -
     env:

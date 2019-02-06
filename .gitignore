@@ -11,8 +11,10 @@ dist
 .cache
 .ci/*.sh
 .coverage
+.env
 .idea
 .pytest_cache
+.vscode
 data
 docs/.doctrees
 docs/mnist.pkl

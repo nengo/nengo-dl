@@ -25,6 +25,7 @@ ci_scripts:
       - python docs/whitepaper/whitepaper2018_code.py > /dev/null
   - template: docs
   - template: deploy
+  - template: gpu
 
 travis_yml:
   python_version: 3.6
@@ -36,6 +37,11 @@ travis_yml:
     - script: static
     - script: docs
     - cache: false
+    - script: gpu
+      test_args: --device /gpu:3 --performance
+      env:
+        NENGO_VERSION: git+https://github.com/nengo/nengo.git
+        TF_VERSION: tensorflow-gpu
     - script: test-coverage
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo
