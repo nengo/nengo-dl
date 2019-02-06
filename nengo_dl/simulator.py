@@ -866,7 +866,7 @@ class Simulator:
                             "Function '%s' caused an error (see error log "
                             "above)" % e.op.name)
                     else:
-                        raise e  # pragma: no cover
+                        raise e  # pragma: no cover (unknown errors)
 
                 if callback is not None:
                     callback(out_vals, extra_vals)

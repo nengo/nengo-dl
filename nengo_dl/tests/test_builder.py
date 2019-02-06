@@ -61,6 +61,16 @@ def test_custom_builder():
     builder.post_build(None, None, progress)
     assert builder.op_builds[ops].post_built
 
+    # error if builder doesn't define build_step
+    @Builder.register(TestOp)
+    class TestOpBuilder2(OpBuilder):
+        def __init__(self, *_):
+            super(TestOpBuilder2, self).__init__([], None, None)
+
+    builder.pre_build(progress)
+    with pytest.raises(BuildError):
+        builder.build(progress)
+
 
 @pytest.mark.parametrize("fail_fast", (True, False))
 def test_custom_model(fail_fast):

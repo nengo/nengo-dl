@@ -52,7 +52,7 @@ class GenericProcessBuilder(OpBuilder):
         # `merged_func` calls the step function for each process and
         # combines the result
         @utils.align_func(self.output_shape, self.output_data.dtype)
-        def merged_func(time, input):  # pragma: no cover
+        def merged_func(time, input):  # pragma: no cover (runs in TF)
             if any(x is None for a in self.step_fs for x in a):
                 raise SimulationError(
                     "build_post has not been called for %s" % self)

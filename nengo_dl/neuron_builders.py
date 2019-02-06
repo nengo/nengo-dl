@@ -40,7 +40,7 @@ class GenericNeuronBuilder(OpBuilder):
 
         self.prev_result = []
 
-        def neuron_step_math(dt, J, *states):  # pragma: no cover
+        def neuron_step_math(dt, J, *states):  # pragma: no cover (runs in TF)
             output = None
             J_offset = 0
             state_offset = [0 for _ in states]

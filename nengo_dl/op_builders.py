@@ -403,7 +403,7 @@ class SimPyFuncBuilder(OpBuilder):
             self.output_data = None
             self.output_dtype = signals.dtype
 
-        def merged_func(time, inputs):  # pragma: no cover
+        def merged_func(time, inputs):  # pragma: no cover (runs in TF)
             outputs = []
             offset = 0
             for op in ops:

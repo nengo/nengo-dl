@@ -189,7 +189,7 @@ class BuildConfig(namedtuple("BuildConfig", (
     __slots__ = ()
 
 
-class OpBuilder:  # pragma: no cover
+class OpBuilder:
     """
     The constructor should set up any computations that are fixed for
     this op (i.e., things that do not need to be recomputed each timestep).

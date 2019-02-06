@@ -150,7 +150,7 @@ def print_op(input, message):
     consistently.
     """
 
-    def print_func(x):  # pragma: no cover
+    def print_func(x):  # pragma: no cover (runs in TF)
         print(message, str(x))
         return x
 
