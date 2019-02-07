@@ -350,7 +350,8 @@ def random_network(dimensions, neurons_per_d, neuron_type, n_ensembles,
     return net
 
 
-def run_profile(net, train=False, n_steps=150, do_profile=True, **kwargs):
+def run_profile(net, train=False, n_steps=150, do_profile=True,
+                reps=1, **kwargs):
     """
     Run profiler on a benchmark network.
 
@@ -365,40 +366,51 @@ def run_profile(net, train=False, n_steps=150, do_profile=True, **kwargs):
         The number of timesteps to run the simulation.
     do_profile : bool
         Whether or not to run profiling
+    reps : int
+        Repeat the run this many times (only profile data from the last
+        run will be kept).
+
+    Returns
+    -------
+    exec_time : float
+        Time (in seconds) taken to run the benchmark, taking the minimum over
+        ``reps``.
 
     Notes
     -----
     kwargs will be passed on to `.Simulator`
     """
 
+    exec_time = 1e10
+
     with net:
         nengo_dl.configure_settings(inference_only=not train)
 
     with nengo_dl.Simulator(net, **kwargs) as sim:
-        # note: we run a few times to try to eliminate startup overhead (only
-        # the data from the last run will be kept)
         if train:
             opt = tf.train.GradientDescentOptimizer(0.001)
             x = np.random.randn(sim.minibatch_size, n_steps, net.inp.size_out)
             y = np.random.randn(sim.minibatch_size, n_steps, net.p.size_in)
 
-            for _ in range(2):
-                sim.train({net.inp: x, net.p: y}, optimizer=opt, n_epochs=1,
-                          profile=do_profile)
-
-            start = time.time()
+            # run once to eliminate startup overhead
             sim.train({net.inp: x, net.p: y}, optimizer=opt, n_epochs=1,
                       profile=do_profile)
-            exec_time = time.time() - start
+
+            for _ in range(reps):
+                start = time.time()
+                sim.train({net.inp: x, net.p: y}, optimizer=opt, n_epochs=1,
+                          profile=do_profile)
+                exec_time = min(time.time() - start, exec_time)
             print("Execution time:", exec_time)
 
         else:
-            for _ in range(2):
-                sim.run_steps(n_steps, profile=do_profile)
-
-            start = time.time()
+            # run once to eliminate startup overhead
             sim.run_steps(n_steps, profile=do_profile)
-            exec_time = time.time() - start
+
+            for _ in range(reps):
+                start = time.time()
+                sim.run_steps(n_steps, profile=do_profile)
+                exec_time = min(time.time() - start, exec_time)
             print("Execution time:", exec_time)
 
     return exec_time
@@ -555,74 +567,6 @@ def matmul_vs_reduce():  # pragma: no cover
     fig.colorbar(cs, cax=cbar_ax)
 
     plt.show()
-
-
-@main.command()
-@click.option("--device", default="/gpu:0",
-              help="TensorFlow device on which to run benchmarks")
-def performance_samples(device):  # pragma: no cover
-    """
-    Run a brief sample of the benchmarks to check overall performance.
-
-    This is mainly used to quickly check that there haven't been any unexpected
-    performance regressions.
-    """
-
-    # TODO: automatically run some basic performance tests during CI
-
-    default_kwargs = {"n_steps": 1000, "device": device,
-                      "unroll_simulation": 25,
-                      "progress_bar": False, "do_profile": False}
-
-    print("cconv + relu")
-    net = cconv(128, 64, nengo.RectifiedLinear())
-    run_profile(net, minibatch_size=64, **default_kwargs)
-
-    print("cconv + lif")
-    net = cconv(128, 64, nengo.LIF())
-    run_profile(net, minibatch_size=64, **default_kwargs)
-
-    print("integrator training + relu")
-    net = integrator(128, 32, nengo.RectifiedLinear())
-    run_profile(net, minibatch_size=64, train=True, **default_kwargs)
-
-    print("integrator training + lif")
-    net = integrator(128, 32, nengo.LIF())
-    run_profile(net, minibatch_size=64, train=True, **default_kwargs)
-
-    print("random")
-    net = random_network(128, 64, nengo.RectifiedLinear(), n_ensembles=50,
-                         connections_per_ensemble=5, seed=0)
-    run_profile(net, **default_kwargs)
-
-    print("spaun")
-    net = spaun(1)
-    run_profile(net, **default_kwargs)
-
-    # example benchmark data
-    # CPU: 4.00GHz Intel Core i7-6700K
-    # GPU: NVIDIA GeForce GTX 980 Ti
-    # TensorFlow version: 1.10.0
-    # Nengo version: 2.8.0
-    # NengoDL version: 1.2.0
-
-    # cconv + relu
-    # Execution time: 1.0098507404327393
-
-    # cconv + lif
-    # Execution time: 2.074916362762451
-
-    # integrator training + relu
-    # Execution time: 1.8205187320709229
-
-    # integrator training + lif
-    # Execution time: 2.669060707092285
-
-    # random
-    # Execution time: 21.686023235321045
-
-    # spaun
-    # Execution time: 9.540623426437378
 
 
 if __name__ == "__main__":

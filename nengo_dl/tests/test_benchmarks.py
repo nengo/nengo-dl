@@ -139,3 +139,36 @@ def test_cli():
         benchmarks.main(obj={})
 
     sys.argv = old_argv
+
+
+@pytest.mark.performance
+@pytest.mark.parametrize(
+    "net, train, minibatch_size, min, max",
+    [(benchmarks.cconv(128, 64, nengo.RectifiedLinear()),
+      False, 64, 0.7, 0.85),
+     (benchmarks.cconv(128, 64, nengo.LIF()),
+      False, 64, 1.6, 1.8),
+     (benchmarks.integrator(128, 32, nengo.RectifiedLinear()),
+      True, 64, 1.7, 2.1),
+     (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 2.5, 3.0),
+     (benchmarks.random_network(
+         64, 32, nengo.RectifiedLinear(), n_ensembles=20,
+         connections_per_ensemble=5, seed=0),
+      False, None, 0.4, 0.6),
+     # (benchmarks.spaun(1), False, None, 8.02, 9.52),
+     ]
+)
+def test_performance(net, train, minibatch_size, min, max):
+    # performance is based on ABR GPU server
+    # CPU: Intel Xeon E5-1650 v3 @ 3.50GHz
+    # GPU: GeForce GTX Titan X
+    # Python version: 3.6.8
+    # TensorFlow GPU version: 1.13.1
+    # Nengo version: 2.8.0
+    # NengoDL version: 2.1.2
+
+    time = benchmarks.run_profile(
+        net, minibatch_size=minibatch_size, train=train,
+        n_steps=1000, unroll_simulation=25, progress_bar=False,
+        do_profile=False, reps=5)
+    assert min < time < max
