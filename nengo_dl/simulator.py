@@ -249,7 +249,8 @@ class Simulator:
         self.rng = np.random.RandomState(self.seed)
         tf.set_random_seed(self.seed)
 
-        self.tensor_graph.build_post(self.sess, self.rng)
+        with self.sess.as_default():
+            self.tensor_graph.build_post(self.sess, self.rng)
 
     def soft_reset(self, include_trainable=False, include_probes=False):
         """

@@ -145,6 +145,7 @@ def test_post_build(Simulator):
             self.weights = tf.Variable(tf.zeros((size_in[1], size_out[1])))
 
         def post_build(self, sess, rng):
+            assert sess is tf.get_default_session()
             assert isinstance(rng, np.random.RandomState)
             init_op = tf.assign(self.weights, tf.ones((2, 3)))
             sess.run(init_op)

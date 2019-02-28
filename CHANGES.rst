@@ -21,6 +21,10 @@ Release History
 2.1.2 (unreleased)
 ------------------
 
+**Changed**
+
+- The default session will now be set to the NengoDL session before calling
+  TensorNodes' ``post_build`` function.
 
 2.1.1 (January 11, 2019)
 ------------------------
