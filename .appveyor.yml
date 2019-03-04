@@ -2,14 +2,13 @@ skip_branch_with_pr: true
 
 environment:
   MODE: test
-  PYTHON_VERSION: C:\Miniconda35-x64  # TODO: switch back to 3.6 if it becomes available (Miniconda36 installs 3.7 for some reason)
+  PYTHON_VERSION: C:\Miniconda36-x64
   NUMPY_VERSION: numpy
   TF_VERSION: tensorflow
   NENGO_VERSION: nengo
 
   matrix:
     - MODE: test # default build
-    # - MODE: examples  # TODO: some problem with nbval on windows (timeout)
     - NENGO_VERSION: git+https://github.com/nengo/nengo.git
       TF_VERSION: tensorflow --pre
     - NENGO_VERSION: nengo==2.7.0
@@ -24,12 +23,8 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - if %MODE% == examples (
-      conda install pandoc jupyter &
-      pip install -e .[tests,docs]
-    ) else (
-      pip install -e .[tests]
-    )
+  - conda install "six>=1.11.0"
+  - pip install -e .[tests]
   - pip install %TF_VERSION%
   - pip install %NENGO_VERSION%
   - pip uninstall -y numpy
@@ -40,8 +35,4 @@ install:
 build: false  # Not a C# project
 
 test_script:
-  - if %MODE% == examples (
-      py.test -v --durations 20 --nbval-lax docs/examples
-    ) else (
-      py.test -n 2 --pyargs nengo && py.test -n 2 --durations 20 nengo_dl
-    )
+  - py.test -n 2 --pyargs nengo && py.test -n 2 --durations 20 nengo_dl
