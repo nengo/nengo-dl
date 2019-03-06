@@ -29,7 +29,7 @@ jobs:
     cache: false  # disable the cache for one build to make sure that works
   - env: MODE="coverage"
          NENGO_VERSION="git+https://github.com/nengo/nengo.git"
-         TF_VERSION="tensorflow --pre"
+         TF_VERSION="tensorflow<2.0 --pre"
   - env: MODE="coverage"
          NENGO_VERSION="nengo==2.7.0"
          TF_VERSION="tensorflow==1.4.0"
