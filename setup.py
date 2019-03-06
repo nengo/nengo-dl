@@ -68,6 +68,7 @@ tests_require = [
     "click>=6.7",
     "codespell>=1.12.0",
     "coverage>=4.3.4",
+    "isort!=4.3.11",  # has a bug with third party modules TODO: remove once there's an upstream fix; https://github.com/timothycrosley/isort/issues/882
     "matplotlib>=2.0.0",
     "nbval>=0.6.0",
     "pylint>=1.9.2",
