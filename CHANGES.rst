@@ -21,6 +21,13 @@ Release History
 2.1.2 (unreleased)
 ------------------
 
+**Added**
+
+- Added a
+  `new example <https://www.nengo.ai/nengo-dl/examples/tensorflow-models>`_
+  demonstrating how to integrate a Keras model with NengoDL (thanks to new
+  contributor `@NickleDave <https://github.com/NickleDave>`_).
+
 **Changed**
 
 - The default session will now be set to the NengoDL session before calling

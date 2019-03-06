@@ -91,6 +91,7 @@ redirects = [
     ("examples/spa_memory.html", "examples/spa-memory.html"),
     ("examples/spa_retrieval.html", "examples/spa-retrieval.html"),
     ("examples/spiking_mnist.html", "examples/spiking-mnist.html"),
+    ("examples/pretrained-model.html", "examples/tensorflow-models.html"),
 ]
 
 

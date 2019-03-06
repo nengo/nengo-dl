@@ -25,7 +25,7 @@ These examples illustrate some different possible use cases for NengoDL:
 .. toctree::
     :maxdepth: 1
 
-    examples/pretrained-model
+    examples/tensorflow-models
     examples/spiking-mnist
     examples/spa-retrieval
     examples/spa-memory
