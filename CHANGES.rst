@@ -33,6 +33,7 @@ Release History
 - The default session will now be set to the NengoDL session before calling
   TensorNodes' ``post_build`` function.
 - Renamed the pytest ``unroll_simulation`` argument to ``unroll-simulation``.
+- Switched to nengo-bones templating system for TravisCI config/scripts.
 
 **Fixed**
 

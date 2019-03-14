@@ -9,6 +9,7 @@ dist
 *.swp
 .ipynb_checkpoints/
 .cache
+.ci/*.sh
 .coverage
 .idea
 .pytest_cache

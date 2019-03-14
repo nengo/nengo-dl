@@ -49,7 +49,7 @@ version = runpy.run_path(os.path.join(
 install_requires = [
     "nengo>=2.7.0",
     "numpy>=1.12.1",
-    "%s>=1.4.0" % tf_req,
+    "%s>=1.4.0,<2.0.0" % tf_req,
     "progressbar2>=3.39.0",
 ]
 docs_require = [
@@ -67,12 +67,12 @@ docs_require = [
 tests_require = [
     "click>=6.7",
     "codespell>=1.12.0",
-    "coverage>=4.3.4",
     "isort!=4.3.11",  # has a bug with third party modules TODO: remove once there's an upstream fix; https://github.com/timothycrosley/isort/issues/882
     "matplotlib>=2.0.0",
     "nbval>=0.6.0",
     "pylint>=1.9.2",
     "pytest>=3.6.0,<4.1.0",  # >=4.1.0 doesn't work with nengo tests TODO: remove this once https://github.com/nengo/nengo/pull/1497 is merged
+    "pytest-cov>=2.6.0",
     "pytest-xdist>=1.16.0",
 ]
 

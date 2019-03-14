@@ -56,8 +56,6 @@ To run the unit tests, NengoDL uses:
   `BSD license <https://click.palletsprojects.com/en/6.x/license/>`__
 * `codespell <https://github.com/codespell-project/codespell>`_ - Used under
   `GPL license <https://github.com/codespell-project/codespell/blob/master/COPYING>`__
-* `Coverage.py <https://coverage.readthedocs.io/en/latest/>`_ - Used under
-  `Apache license <https://github.com/nedbat/coveragepy/blob/master/LICENSE.txt>`__
 * `matplotlib <https://matplotlib.org/>`_ - Used under
   `modified PSF license <https://matplotlib.org/users/license.html>`__
 * `nbval <https://github.com/computationalmodelling/nbval>`_ - Used under
@@ -66,5 +64,7 @@ To run the unit tests, NengoDL uses:
   `GPL license <https://github.com/PyCQA/pylint/blob/master/COPYING>`__
 * `pytest <https://docs.pytest.org/en/latest/>`_ - Used under
   `MIT license <https://docs.pytest.org/en/latest/license.html>`__
+* `pytest-cov <https://github.com/pytest-dev/pytest-cov>`_ - Used under
+  `MIT license <https://github.com/pytest-dev/pytest-cov/blob/master/LICENSE>`__
 * `pytest-xdist <https://github.com/pytest-dev/pytest-xdist>`_ - Used under
   `MIT license <https://github.com/pytest-dev/pytest-xdist/blob/master/LICENSE>`__

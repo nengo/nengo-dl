@@ -1,0 +1,57 @@
+pkg_name: nengo_dl
+repo_name: nengo/nengo-dl
+
+ci_scripts:
+  - template: static
+  - template: test
+    pip_install:
+      - $NUMPY_VERSION
+      - $TF_VERSION
+      - $NENGO_VERSION
+      - git+https://github.com/drasmuss/spaun2.0.git
+    nengo_tests: true
+  - template: test
+    output_name: test-coverage
+    coverage: true
+    pip_install:
+      - --pre
+      - $NUMPY_VERSION
+      - $TF_VERSION
+      - $NENGO_VERSION
+      - git+https://github.com/drasmuss/spaun2.0.git
+    nengo_tests: true
+  - template: examples
+    post_commands:
+      - python docs/whitepaper/whitepaper2018_code.py > /dev/null
+  - template: docs
+  - template: deploy
+
+travis_yml:
+  python_version: 3.6
+  global_vars:
+    NUMPY_VERSION: numpy
+    TF_VERSION: tensorflow
+    NENGO_VERSION: nengo
+  jobs:
+    - script: static
+    - script: docs
+    - cache: false
+    - script: test-coverage
+      env:
+        NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo
+        TF_VERSION: tensorflow<2.0
+    - script: test-coverage
+      env:
+        NENGO_VERSION: nengo==2.7.0
+        TF_VERSION: tensorflow==1.4.0
+        PIP_UPGRADE_STRATEGY: only-if-needed
+      python_version: 3.4
+    - test_args: --dtype float64 --simulator-only
+    - test_args: --unroll-simulation 5 --simulator-only
+    - test_args: --inference-only --simulator-only
+    - script: examples
+  pypi_user: drasmuss
+  deploy_dists:
+    - sdist
+
+codecov_yml: {}
