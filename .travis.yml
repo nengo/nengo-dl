@@ -37,7 +37,7 @@ jobs:
          PYTHON_VERSION="3.4"
          PIP_UPGRADE_STRATEGY="only-if-needed"
   - env: TEST_ARGS="--dtype float64 --simulator-only"
-  - env: TEST_ARGS="--unroll_simulation 5 --simulator-only"
+  - env: TEST_ARGS="--unroll-simulation 5 --simulator-only"
   - env: TEST_ARGS="--inference-only --simulator-only"
   - env: MODE="examples"
     language: generic  # needed for xvfb

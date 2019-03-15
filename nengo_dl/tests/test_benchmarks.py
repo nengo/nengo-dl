@@ -104,7 +104,7 @@ def test_run_profile(train, pytestconfig):
     benchmarks.run_profile(
         net, train=train, n_steps=10, do_profile=False,
         device=pytestconfig.getvalue("--device"),
-        unroll_simulation=pytest.config.getvalue("--unroll_simulation"),
+        unroll_simulation=pytest.config.getvalue("--unroll-simulation"),
         dtype=(tf.float32 if pytest.config.getvalue("dtype") == "float32" else
                tf.float64))
 

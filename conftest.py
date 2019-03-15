@@ -30,7 +30,7 @@ def pytest_addoption(parser):
     parser.addoption("--dtype", default="float32",
                      choices=("float32", "float64"),
                      help="Simulator float precision")
-    parser.addoption("--unroll_simulation", default=1, type=int,
+    parser.addoption("--unroll-simulation", default=1, type=int,
                      help="unroll_simulation value for Simulator")
     parser.addoption("--device", default=None,
                      help="device parameter for Simulator")
@@ -43,7 +43,7 @@ def Simulator(request):
     """
 
     dtype = getattr(tf, request.config.getoption("--dtype"))
-    unroll = request.config.getoption("--unroll_simulation")
+    unroll = request.config.getoption("--unroll-simulation")
     device = request.config.getoption("--device")
     inference_only = request.config.getoption("--inference-only")
 

@@ -11,7 +11,7 @@ def test_simulator_fixture(Simulator, pytestconfig):
         assert sim.tensor_graph.dtype == (
             tf.float32 if pytestconfig.getoption("--dtype") == "float32" else
             tf.float64)
-        assert sim.unroll == pytestconfig.getoption("--unroll_simulation")
+        assert sim.unroll == pytestconfig.getoption("--unroll-simulation")
         assert sim.tensor_graph.device == pytestconfig.getoption("--device")
         assert (config.get_setting(sim.model, "inference_only") ==
                 pytestconfig.getoption("--inference-only"))
