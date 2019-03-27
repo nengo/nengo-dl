@@ -12,10 +12,11 @@ import click
 import matplotlib.pyplot as plt
 import nengo
 from nengo import spa
-import nengo_dl
-from nengo_dl import graph_optimizer, benchmarks
 import numpy as np
 import tensorflow as tf
+
+import nengo_dl
+from nengo_dl import graph_optimizer, benchmarks
 
 
 def filter_results(results, **kwargs):
@@ -86,14 +87,15 @@ def compare_backends(ctx, batch, n_neurons):
                    in params]
 
     if reps > 0:
-        for i, (bench, n_neurons, dimensions, neuron_type,
+        for i, (bench, neurons_per_ens, dimensions, neuron_type,
                 backend) in enumerate(params):
             print("%d/%d: %s %s %s %s %s" % (
-                i + 1, len(params), bench, n_neurons, dimensions, neuron_type,
-                backend))
+                i + 1, len(params), bench, neurons_per_ens, dimensions,
+                neuron_type, backend))
 
             net = getattr(benchmarks, bench)(
-                dimensions=dimensions, neurons_per_d=n_neurons // dimensions,
+                dimensions=dimensions,
+                neurons_per_d=neurons_per_ens // dimensions,
                 neuron_type=neuron_type)
 
             with net:
@@ -387,7 +389,7 @@ def spiking_mnist(ctx, n_epochs):
 
     neuron_type = nengo.LIF(amplitude=0.01)
     ens_params = dict(max_rates=nengo.dists.Choice([100]),
-             intercepts=nengo.dists.Choice([0]))
+                      intercepts=nengo.dists.Choice([0]))
     minibatch_size = 200
     n_steps = 50
 
@@ -554,8 +556,8 @@ def spa_optimization(ctx, dimensions, n_epochs):
         output = outputs[:, -1, :]
         sims = tf.matmul(vocab_vectors, tf.transpose(output))
         idxs = tf.argmax(sims, axis=0)
-        match = tf.reduce_all(tf.equal(
-            tf.gather(vocab_vectors, idxs), targets[:, -1]),
+        match = tf.reduce_all(
+            tf.equal(tf.gather(vocab_vectors, idxs), targets[:, -1]),
             axis=1)
 
         return tf.reduce_mean(tf.cast(match, tf.float32))
@@ -736,4 +738,4 @@ if __name__ == "__main__":
     # to generate an individual figure
     # python whitepaper2018_plots.py <figure_name>
 
-    main(obj={})
+    main(obj={})  # pylint: disable=no-value-for-parameter

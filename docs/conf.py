@@ -106,9 +106,8 @@ def setup(app):
                 raise
 
     def redirect_pages(app, docname):
-        redirects = app.config.redirects
         if app.builder.name == "html":
-            for src, dst in redirects:
+            for src, dst in app.config.redirects:
                 srcfile = os.path.join(app.outdir, src)
                 dsturl = "/".join(
                     [".." for _ in range(src.count("/"))] + [dst])

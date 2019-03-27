@@ -1,4 +1,4 @@
-# snippet 1 (section 3.1)
+# snippet 1 (section 3.1)  pylint: disable=wrong-import-order
 import nengo
 import nengo_dl
 
@@ -47,7 +47,7 @@ with nengo_dl.Simulator(net, minibatch_size=10) as sim:
 
 # snippet 6 (section 3.3)
 with net:
-    def tensor_func(t, x):
+    def tensor_func(time, x):
         return tf.layers.dense(x, 100, activation=tf.nn.relu)
     t = nengo_dl.TensorNode(tensor_func, size_in=1)
     nengo.Connection(a, t)
