@@ -24,6 +24,7 @@ class ResetInc(Reset):
     """
     @property
     def dst(self):
+        """Overridden to return from incs rather than sets."""
         return self.incs[0]
 
 

@@ -51,14 +51,30 @@ def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
 
 
 class TensorFuncParam(Parameter):
-    """Performs validation on the function passed to TensorNode, and sets
-    ``size_out`` if necessary."""
+    """Parameter for the ``tensor_func`` parameter of a `.TensorNode`."""
 
     def __init__(self, name, readonly=False):
         super(TensorFuncParam, self).__init__(
             name, optional=False, readonly=readonly)
 
     def coerce(self, node, func):
+        """
+        Performs validation on the function passed to TensorNode, and sets
+        ``size_out`` if necessary.
+
+        Parameters
+        ----------
+        node : `.TensorNode`
+            The node whose ``tensor_func`` parameter is being set.
+        func : callable
+            The function being assigned to the TensorNode.
+
+        Returns
+        -------
+        output : callable
+            The function after validation is applied.
+        """
+
         output = super(TensorFuncParam, self).coerce(node, func)
 
         if node.size_out is None:

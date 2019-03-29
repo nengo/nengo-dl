@@ -57,6 +57,8 @@ class SoftLIFRate(LIFRate):
         return args
 
     def rates(self, x, gain, bias):
+        """Estimates steady-state firing rate given gain and bias."""
+
         J = gain * x
         J += bias
         out = np.zeros_like(J)
