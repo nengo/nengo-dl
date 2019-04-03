@@ -44,7 +44,6 @@ def test_validation(Simulator):
         with pytest.raises(SimulationError):
             sim.step()
 
-
     # these tensornodes won't be validated at creation, because size_out
     # is specified. instead the validation occurs when the network is built
 

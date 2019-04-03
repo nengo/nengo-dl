@@ -117,7 +117,7 @@ class Simulator:
     def __init__(self, network, dt=0.001, seed=None, model=None,
                  dtype=None, device=None, unroll_simulation=1,
                  minibatch_size=None, tensorboard=None, progress_bar=True):
-        self.closed = False
+        self.closed = None
         self.unroll = unroll_simulation
         self.minibatch_size = 1 if minibatch_size is None else minibatch_size
         self.data = SimulationData(self, minibatch_size is not None)
@@ -224,6 +224,8 @@ class Simulator:
 
         self.reset(seed=seed)
 
+        self.closed = False
+
     def reset(self, seed=None):
         """
         Resets the simulator to initial conditions.
@@ -235,7 +237,7 @@ class Simulator:
             (note: this becomes the new default simulator seed)
         """
 
-        if self.closed:
+        if self.closed is not None and self.closed:
             raise SimulatorClosed("Cannot reset closed Simulator.")
 
         self.n_steps = 0
