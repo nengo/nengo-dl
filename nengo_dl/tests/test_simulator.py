@@ -185,7 +185,7 @@ def test_train_ff(Simulator, neurons, seed):
 
         sim.step(data={inp_a: x[..., [0]], inp_b: x[..., [1]]})
 
-        assert np.allclose(sim.data[p], y, atol=1e-3)
+        assert np.allclose(sim.data[p], y, atol=2e-3)
 
 
 @pytest.mark.parametrize("truncation", (None, 5))
