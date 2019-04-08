@@ -78,42 +78,6 @@ class Simulator:
         If True (default), display progress information when building a model
     """
 
-    # unsupported unit tests
-    unsupported = [
-        ("nengo/tests/test_simulator.py:test_warn_on_opensim_del",
-         "nengo_dl raises a different (more visible) warning (see "
-         "tests/test_nengo_tests.py:test_warn_on_opensim_del"),
-
-        ("nengo/tests/test_simulator.py:test_signal_init_values",
-         "different method required to manually step simulator (see "
-         "tests/test_nengo_tests.py:test_signal_init_values"),
-
-        ("nengo/tests/test_simulator.py:test_entry_point",
-         "overridden so we can pass custom test simulators (see "
-         "tests/test_nengo_tests.py:test_entry_point"),
-
-        ("nengo/tests/test_simulator.py:test_simulator_progress_bars",
-         "nengo_dl uses a different progress bar system (see "
-         "tests/test_utils.py:test_progress_bar"),
-
-        ("nengo/tests/test_node.py:test_args",
-         "time is passed as np.float32, not a float (see "
-         "tests/test_nengo_tests.py:test_args"),
-
-        ("nengo/tests/test_node.py:test_unconnected_node",
-         "need to set `unroll_simulation` to ensure node runs the correct "
-         "number of times (see "
-         "tests/test_nengo_tests.py:test_unconnected_node"),
-
-        ("nengo/tests/test_synapses.py:test_alpha",
-         "need to set looser tolerances due to float32 implementation (see "
-         "tests/test_processes.py:test_alpha"),
-
-        ("nengo/tests/test_ensemble.py:test_gain_bias",
-         "use allclose instead of array_equal (see "
-         "tests/test_simulator.py:test_gain_bias")
-    ]
-
     def __init__(self, network, dt=0.001, seed=None, model=None,
                  dtype=None, device=None, unroll_simulation=1,
                  minibatch_size=None, tensorboard=None, progress_bar=True):

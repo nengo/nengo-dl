@@ -1,3 +1,5 @@
+import shlex
+
 import nengo.conftest
 from nengo.conftest import seed, rng  # pylint: disable=unused-import
 from nengo.tests import test_synapses, test_learning_rules
@@ -6,6 +8,23 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import config, simulator, utils
+
+
+def pytest_configure(config):
+    # add unsupported attribute to Simulator (for compatibility with nengo<3.0)
+    # join all the lines and then split (preserving quoted strings)
+    unsupported = shlex.split(
+        " ".join(config.getini("nengo_test_unsupported")))
+    # group pairs (representing testname + reason)
+    unsupported = [
+        unsupported[i:i + 2] for i in range(0, len(unsupported), 2)]
+    # wrap square brackets to interpret them literally
+    # (see https://docs.python.org/3/library/fnmatch.html)
+    for i, (testname, _) in enumerate(unsupported):
+        unsupported[i][0] = "".join("[%s]" % c if c in ('[', ']') else c
+                                    for c in testname)
+
+    simulator.Simulator.unsupported = unsupported
 
 
 def pytest_runtest_setup(item):
@@ -29,9 +48,15 @@ def pytest_addoption(parser):
                      choices=("float32", "float64"),
                      help="Simulator float precision")
     parser.addoption("--unroll-simulation", default=1, type=int,
-                     help="unroll_simulation value for Simulator")
+                     help="`unroll_simulation` parameter for Simulator")
     parser.addoption("--device", default=None,
-                     help="device parameter for Simulator")
+                     help="`device` parameter for Simulator")
+
+    if nengo.version.version_info <= (2, 8, 0):
+        # add the pytest option from future nengo versions
+        parser.addini("nengo_test_unsupported", type="linelist",
+                      help="List of unsupported unit tests with reason for "
+                           "exclusion")
 
 
 @pytest.fixture(scope="session")
@@ -46,8 +71,6 @@ def Simulator(request):
     inference_only = request.config.getoption("--inference-only")
 
     def TestSimulator(net, *args, **kwargs):
-        # raise Exception
-
         kwargs.setdefault("unroll_simulation", unroll)
         kwargs.setdefault("device", device)
 
