@@ -58,7 +58,7 @@ def main_callback(_, show, **kwargs):
 @main.command()
 @click.pass_context
 @click.option("--batch", default=1, help="Number of batch elements")
-@click.option("--n_neurons", default=9984,
+@click.option("--n-neurons", default=9984,
               help="Number of neurons per ensemble")
 def compare_backends(ctx, batch, n_neurons):
     load = ctx.obj["load"]
@@ -382,7 +382,7 @@ def compare_simplifications(ctx, dimensions):
 
 @main.command()
 @click.pass_context
-@click.option("--n_epochs", default=10, help="Number of training epochs")
+@click.option("--n-epochs", default=10, help="Number of training epochs")
 def spiking_mnist(ctx, n_epochs):
     load = ctx.obj["load"]
     reps = ctx.obj["reps"]
@@ -497,7 +497,7 @@ def spiking_mnist(ctx, n_epochs):
 @main.command()
 @click.pass_context
 @click.option("--dimensions", default=64, help="Dimensionality of vocabulary")
-@click.option("--n_epochs", default=10, help="Number of training epochs")
+@click.option("--n-epochs", default=10, help="Number of training epochs")
 def spa_optimization(ctx, dimensions, n_epochs):
     load = ctx.obj["load"]
     reps = ctx.obj["reps"]
