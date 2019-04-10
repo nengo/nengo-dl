@@ -45,6 +45,8 @@ Release History
   setting the Simulator seed.
 - Improved robustness of ``tensorflow-gpu`` installation check (in particular,
   it will now correctly detect GPU dists installed through ``conda``).
+- Fixed inspection of ``TensorNode.tensor_func`` arguments for partial
+  functions.
 
 **Removed**
 

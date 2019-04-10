@@ -6,6 +6,7 @@ network, which will be executed by the simulator.
 """
 
 from collections import OrderedDict, defaultdict
+import functools
 import inspect
 import itertools
 import logging
@@ -640,15 +641,19 @@ class TensorGraph:
                 # return probe output value
                 output_vals[probes] = probe_arrays
             elif callable(out):
-                # look up number of positional arguments for function
+                # look up number of arguments for function
                 spec = inspect.getfullargspec(out)
-
                 nargs = len(spec.args)
+
+                # don't count keyword arguments
                 if spec.defaults is not None:
-                    # don't count keyword arguments
                     nargs -= len(spec.defaults)
-                if inspect.ismethod(out) or not inspect.isroutine(out):
-                    # don't count self argument for methods or callable classes
+
+                # don't count self argument for methods or callable classes
+                out_func = (out.func if isinstance(out, functools.partial)
+                            else out)
+                if inspect.ismethod(out_func) or not inspect.isroutine(
+                        out_func):
                     nargs -= 1
 
                 # build function arguments

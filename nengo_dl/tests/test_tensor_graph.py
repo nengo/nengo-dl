@@ -1,5 +1,7 @@
 # pylint: disable=missing-docstring
 
+from functools import partial
+
 import nengo
 from nengo.builder.operator import Reset
 from nengo.exceptions import ValidationError
@@ -96,6 +98,9 @@ def test_build_outputs(Simulator):
                 return outputs
 
         sim.tensor_graph.build_outputs({p: MethodLoss().loss})
+
+        # arg parsing works with partial functions
+        sim.tensor_graph.build_outputs({p: partial(loss3b, z=5)})
 
         # validation error for invalid output type
         with pytest.raises(ValidationError):
