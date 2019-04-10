@@ -5,8 +5,6 @@ These distributions are usually used to initialize weight matrices, e.g.
 ``nengo.Connection(a.neurons, b.neurons, transform=nengo_dl.dists.Glorot())``.
 """
 
-from __future__ import division
-
 from nengo.dists import Distribution
 from nengo.params import NumberParam, EnumParam
 import numpy as np

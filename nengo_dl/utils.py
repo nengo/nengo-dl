@@ -2,8 +2,6 @@
 Utility objects used throughout the code base.
 """
 
-from __future__ import print_function
-
 import logging
 import re
 import subprocess

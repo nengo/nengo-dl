@@ -4,8 +4,6 @@ including `running <.Simulator.run_steps>` and `training <.Simulator.train>`
 a model.
 """
 
-from __future__ import print_function, division
-
 import collections
 import copy
 import datetime
