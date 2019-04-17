@@ -67,12 +67,14 @@ class Regularize:
         if self.axis is None:
             if x.get_shape().ndims > 3:
                 # flatten signal (keeping batch/time dimension)
-                x = tf.reshape(x, tf.concat([tf.shape(input=x)[:2], (-1,)], axis=0))
+                x = tf.reshape(x, tf.concat([tf.shape(input=x)[:2], (-1,)],
+                                            axis=0))
             axis = 2
         else:
             axis = self.axis + 2
 
-        output = tf.reduce_mean(input_tensor=tf.norm(tensor=x, axis=axis, ord=self.order))
+        output = tf.reduce_mean(
+            input_tensor=tf.norm(tensor=x, axis=axis, ord=self.order))
 
         if self.weight is not None:
             output *= self.weight

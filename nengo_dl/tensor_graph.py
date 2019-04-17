@@ -373,10 +373,10 @@ class TensorGraph:
                     # aren't accidentally creating new variables for
                     # unrolled iterations (this is really only a concern
                     # with TensorNodes)
-                    with self.graph.control_dependencies([loop_i]), \
-                            tf_compat.variable_scope(
-                                    tf_compat.get_variable_scope(),
-                                    reuse=iter > 0):
+                    scope = tf_compat.variable_scope(
+                        tf_compat.get_variable_scope(),
+                        reuse=iter > 0)
+                    with self.graph.control_dependencies([loop_i]), scope:
                         probe_tensors, side_effects = self.build_step(progress)
 
                     # copy probe data to array

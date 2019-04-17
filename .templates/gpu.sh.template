@@ -1,4 +1,4 @@
-{% extends "base_script.sh.template" %}
+{% extends "templates/base_script.sh.template" %}
 
 # see https://oncletom.io/2016/travis-ssh-deploy/ for instructions on how the
 # remote server is set up for this script to connect to

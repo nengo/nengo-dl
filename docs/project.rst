@@ -1,6 +1,6 @@
-*******************
+###################
 Project information
-*******************
+###################
 
 .. include:: ../CHANGES.rst
 
@@ -8,8 +8,9 @@ Project information
 
 .. include:: ../LICENSE.rst
 
+********
 Citation
-========
+********
 
 If you would like to cite NengoDL in your research, please cite the `white
 paper <https://arxiv.org/abs/1805.11144>`_:

@@ -253,7 +253,8 @@ def test_train_objective(Simulator, unroll, seed):
         z = np.zeros((minibatch_size, n_steps, 1)) + 0.1
 
         def obj(output, target):
-            return tf.reduce_mean(input_tensor=(output[:, -1] - 0.5 - target[:, -1]) ** 2)
+            return tf.reduce_mean(
+                input_tensor=(output[:, -1] - 0.5 - target[:, -1]) ** 2)
 
         sim.train({inp: x, p: y, p2: z},
                   tf_compat.train.MomentumOptimizer(1e-2, 0.9),
@@ -292,9 +293,10 @@ def test_train_sparse(Simulator, seed):
                         [[1, 0, 0, 0, 0]], [[1, 0, 1, 0, 0]]])
         y = np.asarray([[[0, 1]], [[1, 0]], [[1, 0]], [[0, 1]]])
 
-        sim.train({inp: x, p: y},
-                  tf_compat.train.MomentumOptimizer(0.1, 0.9, use_nesterov=True),
-                  n_epochs=500)
+        sim.train(
+            {inp: x, p: y},
+            tf_compat.train.MomentumOptimizer(0.1, 0.9, use_nesterov=True),
+            n_epochs=500)
 
         sim.step(data={inp: x})
 
@@ -648,8 +650,8 @@ def test_tensorboard(Simulator, tmpdir):
             # uses a variable to test that variables from summaries get
             # initialized correctly
             return tf_compat.get_variable(
-                "one", initializer=tf_compat.initializers.constant(1.0), dtype=x.dtype,
-                shape=(), use_resource=False)
+                "one", initializer=tf_compat.initializers.constant(1.0),
+                dtype=x.dtype, shape=(), use_resource=False)
 
         sim.train({a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1)),
                    p2: np.zeros((1, 10, 1))},
@@ -723,7 +725,8 @@ def test_profile(Simulator, mode, outfile):
             sim.run_steps(5, profile=prof)
         else:
             sim.train({a: np.zeros((1, 5, 1)), p: np.zeros((1, 5, 1))},
-                      tf_compat.train.GradientDescentOptimizer(1), profile=prof)
+                      tf_compat.train.GradientDescentOptimizer(1),
+                      profile=prof)
 
         assert os.path.exists(filename)
         os.remove(filename)
@@ -1440,7 +1443,8 @@ def test_synapse_warning(Simulator):
                                p: np.zeros((1, n_steps, 1))},
                               tf_compat.train.GradientDescentOptimizer(0))
                 else:
-                    sim.train(n_steps, tf_compat.train.GradientDescentOptimizer(0),
+                    sim.train(n_steps,
+                              tf_compat.train.GradientDescentOptimizer(0),
                               objective={p: lambda x: x})
         return any(str(w.message).startswith("Training for one timestep")
                    for w in rec)

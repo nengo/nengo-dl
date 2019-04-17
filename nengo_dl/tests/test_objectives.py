@@ -59,7 +59,8 @@ def test_regularize_train(Simulator, mode, seed):
 
     with Simulator(net) as sim:
         sim.train(
-            5, tf_compat.train.RMSPropOptimizer(0.01 if mode == "weights" else 0.1),
+            5, tf_compat.train.RMSPropOptimizer(
+                0.01 if mode == "weights" else 0.1),
             objective={p: objectives.Regularize()}, n_epochs=100)
 
         sim.step()

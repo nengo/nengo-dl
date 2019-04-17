@@ -143,8 +143,8 @@ class ConvIncBuilder(OpBuilder):
             W = tf.reshape(W, self.reshape_w)
 
         Y = tf_convolution(
-            input=X, filters=W, strides=self.conv.strides, data_format=self.fmt,
-            padding=self.conv.padding.upper())
+            input=X, filters=W, strides=self.conv.strides,
+            data_format=self.fmt, padding=self.conv.padding.upper())
 
         # move batch back to end, ops to front
         if self.reshape_y is not None:
