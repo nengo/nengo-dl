@@ -61,14 +61,22 @@ def test_soft_lif(Simulator, sigma, seed):
 @pytest.mark.parametrize(
     "neuron_type", (nengo.LIFRate, nengo.RectifiedLinear, SoftLIFRate))
 @pytest.mark.training
-def test_neuron_gradients(Simulator, neuron_type, seed):
+def test_neuron_gradients(Simulator, neuron_type, seed, rng):
+    # avoid intercepts around zero, which can cause errors in the
+    # finite differencing in check_gradients
+    intercepts = np.concatenate(
+        (rng.uniform(-0.5, -0.2, size=25),
+         rng.uniform(0.2, 0.5, size=25)))
+
+    kwargs = {"sigma": 0.1} if neuron_type == SoftLIFRate else {}
+
     with nengo.Network(seed=seed) as net:
         config.configure_settings(dtype=tf.float64)
-        net.config[nengo.Ensemble].intercepts = nengo.dists.Choice([-0.5])
-
-        a = nengo.Node(output=[0])
-        b = nengo.Ensemble(50, 1, neuron_type=neuron_type())
-        c = nengo.Ensemble(50, 1, neuron_type=neuron_type(amplitude=0.1))
+        net.config[nengo.Ensemble].intercepts = intercepts
+        a = nengo.Node(output=[0, 0])
+        b = nengo.Ensemble(50, 2, neuron_type=neuron_type(**kwargs))
+        c = nengo.Ensemble(50, 2, neuron_type=neuron_type(amplitude=0.1,
+                                                          **kwargs))
         nengo.Connection(a, b, synapse=None)
         nengo.Connection(b, c, synapse=None)
         nengo.Probe(c)
