@@ -27,7 +27,7 @@ ci_scripts:
   - template: deploy
 
 travis_yml:
-  python_version: 3.6
+  python: 3.6
   global_vars:
     NUMPY_VERSION: numpy
     TF_VERSION: tensorflow
@@ -44,8 +44,7 @@ travis_yml:
       env:
         NENGO_VERSION: nengo==2.7.0
         TF_VERSION: tensorflow==1.4.0
-        PIP_UPGRADE_STRATEGY: only-if-needed
-      python_version: 3.4
+      python: 3.4
     - test_args: --dtype float64 --simulator-only
     - test_args: --unroll-simulation 5 --simulator-only
     - test_args: --inference-only --simulator-only
