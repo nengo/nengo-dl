@@ -36,7 +36,8 @@ def test_mergeable():
     assert not mergeable(dummies.Op(sets=[dummies.Signal()]), [dummies.Op()])
     assert not mergeable(dummies.Op(incs=[dummies.Signal()]), [dummies.Op()])
     assert not mergeable(dummies.Op(reads=[dummies.Signal()]), [dummies.Op()])
-    assert not mergeable(dummies.Op(updates=[dummies.Signal()]), [dummies.Op()])
+    assert not mergeable(dummies.Op(updates=[dummies.Signal()]),
+                         [dummies.Op()])
     assert mergeable(dummies.Op(sets=[dummies.Signal()]),
                      [dummies.Op(sets=[dummies.Signal()])])
 
@@ -68,10 +69,13 @@ def test_mergeable():
         ElementwiseInc(dummies.Signal(), dummies.Signal(), dummies.Signal()),
         [ElementwiseInc(dummies.Signal(), dummies.Signal(), dummies.Signal())])
     assert mergeable(
-        ElementwiseInc(dummies.Signal(shape=(1,)), dummies.Signal(), dummies.Signal()),
-        [ElementwiseInc(dummies.Signal(shape=()), dummies.Signal(), dummies.Signal())])
+        ElementwiseInc(dummies.Signal(shape=(1,)), dummies.Signal(),
+                       dummies.Signal()),
+        [ElementwiseInc(dummies.Signal(shape=()), dummies.Signal(),
+                        dummies.Signal())])
     assert not mergeable(
-        ElementwiseInc(dummies.Signal(shape=(3,)), dummies.Signal(), dummies.Signal()),
+        ElementwiseInc(dummies.Signal(shape=(3,)), dummies.Signal(),
+                       dummies.Signal()),
         [ElementwiseInc(dummies.Signal(shape=(2,)), dummies.Signal(),
                         dummies.Signal())])
 
@@ -89,7 +93,8 @@ def test_mergeable():
     assert mergeable(SimNeurons(LIF(), dummies.Signal(), dummies.Signal()),
                      [SimNeurons(LIF(), dummies.Signal(), dummies.Signal())])
     assert not mergeable(SimNeurons(LIF(), dummies.Signal(), dummies.Signal()),
-                         [SimNeurons(LIFRate(), dummies.Signal(), dummies.Signal())])
+                         [SimNeurons(LIFRate(), dummies.Signal(),
+                                     dummies.Signal())])
 
     # check custom with non-custom implementation
     assert not mergeable(SimNeurons(LIF(), dummies.Signal(), dummies.Signal()),
@@ -151,10 +156,10 @@ def test_mergeable():
     assert not mergeable(a, [a])
 
     # learning rules
-    a = SimBCM(dummies.Signal((4,)), dummies.Signal(), dummies.Signal(), dummies.Signal(),
-               dummies.Signal())
-    b = SimBCM(dummies.Signal((5,)), dummies.Signal(), dummies.Signal(), dummies.Signal(),
-               dummies.Signal())
+    a = SimBCM(dummies.Signal((4,)), dummies.Signal(), dummies.Signal(),
+               dummies.Signal(), dummies.Signal())
+    b = SimBCM(dummies.Signal((5,)), dummies.Signal(), dummies.Signal(),
+               dummies.Signal(), dummies.Signal())
     assert not mergeable(a, [b])
 
 
@@ -420,7 +425,8 @@ def test_order_signals_multiread_unsatisfiable():
     inputs = [dummies.Signal(label=str(i)) for i in range(10)]
     plan = [
         tuple(dummies.Op(reads=[inputs[i], inputs[5 + i]]) for i in range(5)),
-        tuple(dummies.Op(reads=[inputs[1 - i], inputs[5 + i]]) for i in range(2)),
+        tuple(dummies.Op(reads=[inputs[1 - i], inputs[5 + i]])
+              for i in range(2)),
     ]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:5], sigs)
@@ -533,7 +539,8 @@ def test_order_signals_duplicate_read_blocks():
     plan = [
         tuple(dummies.Op(reads=[inputs[i], inputs[5 + i]]) for i in range(3)),
         tuple(dummies.Op(reads=[inputs[i], inputs[5 + i]]) for i in range(3)),
-        tuple(dummies.Op(reads=[inputs[5 + i], inputs[4 - i]]) for i in range(5))]
+        tuple(dummies.Op(reads=[inputs[5 + i], inputs[4 - i]])
+              for i in range(5))]
 
     sigs, new_plan = order_signals(plan)
     assert ordered(new_plan[0], sigs)
@@ -597,7 +604,8 @@ def test_remove_zero_incs():
     assert new_operators == []
 
     # check that zero inputs (copy) get removed
-    operators = [Copy(dummies.Signal(), dummies.Signal(), dummies.Signal(), inc=True)]
+    operators = [
+        Copy(dummies.Signal(), dummies.Signal(), dummies.Signal(), inc=True)]
     new_operators = remove_zero_incs(operators)
     assert new_operators == []
 

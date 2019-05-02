@@ -93,7 +93,7 @@ def align_func(output_shape, output_dtype):
 
     Raises
     ------
-    `~nengo.exceptions.SimulationError`
+    ``nengo.exceptions.SimulationError``
         If the function returns ``None`` or a non-finite value.
     """
 

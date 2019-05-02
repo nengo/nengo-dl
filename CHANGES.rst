@@ -1,5 +1,6 @@
+***************
 Release History
-===============
+***************
 
 .. Changelog entries should follow this format:
 
@@ -19,7 +20,7 @@ Release History
    - Removed
 
 2.1.2 (unreleased)
-------------------
+==================
 
 **Added**
 
@@ -41,7 +42,7 @@ Release History
   setting the Simulator seed.
 
 2.1.1 (January 11, 2019)
-------------------------
+========================
 
 **Added**
 
@@ -65,7 +66,7 @@ Release History
   tutorial).
 
 2.1.0 (December 5, 2018)
-------------------------
+========================
 
 **Added**
 
@@ -98,7 +99,7 @@ Release History
   supported.  Use the function ``nengo_dl.objectives.mse`` instead.
 
 2.0.0 (November 23, 2018)
--------------------------
+=========================
 
 **Breaking API changes**
 
@@ -192,7 +193,7 @@ Release History
   more information)
 
 1.2.1 (November 2, 2018)
-------------------------
+========================
 
 **Added**
 
@@ -226,7 +227,7 @@ Release History
   the optimization step).
 
 1.2.0 (September 5, 2018)
--------------------------
+=========================
 
 **Added**
 
@@ -274,7 +275,7 @@ Release History
   1.3.0.
 
 1.1.0 (July 24, 2018)
----------------------
+=====================
 
 **Added**
 
@@ -334,7 +335,7 @@ Release History
 
 
 1.0.0 (May 30, 2018)
---------------------
+====================
 
 **Added**
 
@@ -359,7 +360,7 @@ Release History
 - Removed ``sphinxcontrib-versioning`` dependency for building documentation
 
 0.6.2 (May 4, 2018)
--------------------
+===================
 
 **Added**
 
@@ -398,7 +399,7 @@ Release History
   ``size_in==0``
 
 0.6.1 (March 7, 2018)
----------------------
+=====================
 
 **Added**
 
@@ -433,7 +434,7 @@ Release History
 - Removed ``utils.cast_dtype`` function
 
 0.6.0 (December 13, 2017)
--------------------------
+=========================
 
 **Added**
 
@@ -482,7 +483,7 @@ Release History
   than ``sim.minibatch_size`` (`#30 <https://github.com/nengo/nengo-dl/issues/30>`_)
 
 0.5.2 (October 11, 2017)
-------------------------
+========================
 
 **Added**
 
@@ -530,7 +531,7 @@ Release History
   exist
 
 0.5.1 (August 28, 2017)
------------------------
+=======================
 
 **Changed**
 
@@ -542,7 +543,7 @@ Release History
 - Increased minimum TensorFlow version to 1.3.0.
 
 0.5.0 (July 11, 2017)
----------------------
+=====================
 
 **Added**
 
@@ -604,7 +605,7 @@ Release History
 - Fixed bug related to probes that do not contain any data yet
 
 0.4.0 (June 8, 2017)
---------------------
+====================
 
 **Added**
 
@@ -632,7 +633,7 @@ Release History
 
 
 0.3.1 (May 12, 2017)
---------------------
+====================
 
 **Added**
 
@@ -654,7 +655,7 @@ Release History
 
 
 0.3.0 (April 25, 2017)
-----------------------
+======================
 
 **Added**
 
@@ -705,12 +706,12 @@ Release History
 
 
 0.2.0 (March 13, 2017)
-----------------------
+======================
 
 Initial release of TensorFlow-based NengoDL
 
 
 0.1.0 (June 12, 2016)
----------------------
+=====================
 
 Initial release of Lasagne-based NengoDL
