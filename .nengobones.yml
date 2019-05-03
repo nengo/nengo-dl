@@ -119,11 +119,13 @@ travis_yml:
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo
         TF_VERSION: tensorflow
+      dist: xenial
+      python: 3.7
     - script: test-coverage
       env:
         NENGO_VERSION: nengo==2.7.0
         TF_VERSION: tensorflow==1.4.0
-      python: 3.4
+      python: 3.5
     - test_args: --dtype float64 --simulator-only
     - test_args: --unroll-simulation 5 --simulator-only
     - test_args: --inference-only --simulator-only
@@ -136,7 +138,6 @@ codecov_yml: {}
 
 setup_py:
   include_package_data: True
-  python_requires: ">=3.4"
   docs_req:
     - click>=6.7  # needed for sphinx-click
     - jupyter>=1.0.0
@@ -170,8 +171,8 @@ setup_py:
       - "Operating System :: Microsoft :: Windows"
       - "Operating System :: POSIX :: Linux"
       - "Programming Language :: Python"
-      - "Programming Language :: Python :: 3.4"
       - "Programming Language :: Python :: 3.5"
       - "Programming Language :: Python :: 3.6"
+      - "Programming Language :: Python :: 3.7"
       - "Topic :: Scientific/Engineering"
       - "Topic :: Scientific/Engineering :: Artificial Intelligence"
