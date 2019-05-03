@@ -19,7 +19,7 @@ Release History
    - Deprecated
    - Removed
 
-2.1.2 (unreleased)
+2.2.0 (unreleased)
 ==================
 
 **Added**
@@ -40,6 +40,12 @@ Release History
 
 - Fixed TensorFlow seeding so that randomness can be reliably controlled by
   setting the Simulator seed.
+
+**Removed**
+
+- NengoDL no longer supports Python 3.4 (official support for 3.4 ended in
+  March 2019).
+
 
 2.1.1 (January 11, 2019)
 ========================

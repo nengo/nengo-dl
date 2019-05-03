@@ -6,10 +6,10 @@ from nengo_dl.version import version as __version__
 
 # check python version
 import sys
-if sys.version_info < (3, 4):
+if sys.version_info < (3, 5):
     raise ImportError("""
 You are running Python version %s with NengoDL version %s. NengoDL requires
-at least Python 3.4.
+at least Python 3.5.
 
 The fact that this version was installed on your system probably means that you
 are using an older version of pip; you should consider upgrading with
@@ -18,7 +18,7 @@ are using an older version of pip; you should consider upgrading with
 
 There are two options for getting NengoDL working:
 
-- Upgrade to Python >= 3.4
+- Upgrade to Python >= 3.5
 
 - Install an older version of NengoDL:
 

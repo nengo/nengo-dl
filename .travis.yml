@@ -42,12 +42,14 @@ jobs:
       NENGO_VERSION="git+https://github.com/nengo/nengo.git#egg=nengo"
       TF_VERSION="tensorflow<2.0"
       SCRIPT="test-coverage"
+    dist: xenial
+    python: 3.7
   -
     env:
       NENGO_VERSION="nengo==2.7.0"
       TF_VERSION="tensorflow==1.4.0"
       SCRIPT="test-coverage"
-    python: 3.4
+    python: 3.5
   -
     env:
       TEST_ARGS="--dtype float64 --simulator-only"
