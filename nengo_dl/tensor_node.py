@@ -36,9 +36,9 @@ def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
                               "(got %s)" % type(output), attr="tensor_func")
 
     shape = output.get_shape()
-    if (shape.ndims != 2 or
-            (minibatch_size is not None and shape[0] != minibatch_size) or
-            (output_d is not None and shape[1] != output_d)):
+    if (shape.ndims != 2
+            or (minibatch_size is not None and shape[0] != minibatch_size)
+            or (output_d is not None and shape[1] != output_d)):
         raise ValidationError("TensorNode output should have shape (%s, %s) "
                               "(got shape %s)" % (minibatch_size, output_d,
                                                   output.get_shape()),
@@ -231,8 +231,8 @@ class SimTensorNodeBuilder(OpBuilder):
 
         if hasattr(self.func, "pre_build"):
             self.func.pre_build(
-                None if self.src_data is None else ((signals.minibatch_size,) +
-                                                    self.src_data.shape),
+                None if self.src_data is None else ((signals.minibatch_size,)
+                                                    + self.src_data.shape),
                 (signals.minibatch_size,) + self.dst_data.shape)
 
     def build_step(self, signals):

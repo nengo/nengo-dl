@@ -48,9 +48,10 @@ def mergeable(op, chosen_ops):
         return False
 
     # sets/incs/reads/updates must all match
-    if (len(op.sets) != len(c.sets) or len(op.incs) != len(c.incs) or
-            len(op.reads) != len(c.reads) or
-            len(op.updates) != len(c.updates)):
+    if (len(op.sets) != len(c.sets)
+            or len(op.incs) != len(c.incs)
+            or len(op.reads) != len(c.reads)
+            or len(op.updates) != len(c.updates)):
         return False
 
     # signals must be mergeable into the same base array
@@ -487,8 +488,8 @@ def transitive_closure_recurse(dg, ops, trans, builder_type, builder_types,
                                    builder_types, cache)
 
         merged = set(
-            x for x in dg[op] if x < len(builder_types) and
-            builder_types[x] == builder_type)
+            x for x in dg[op] if x < len(builder_types)
+            and builder_types[x] == builder_type)
 
         unique_posts = {id(trans[x]): trans[x] for x in dg[op]}
 
@@ -675,8 +676,9 @@ def order_signals(plan, n_passes=10):
         logger.debug(sig_idxs)
 
         if (all([x == y for ops in plan
-                 for x, y in zip(new_plan[ops], prev_plan[ops])]) and
-                all([sig_idxs[s] == prev_sig_idxs[s] for s in all_signals])):
+                 for x, y in zip(new_plan[ops], prev_plan[ops])])
+                and all([sig_idxs[s] == prev_sig_idxs[s]
+                         for s in all_signals])):
             # if the plan didn't change and the signals didn't change, then
             # there is no point in continuing (they're not going to change
             # in the future)
@@ -1074,10 +1076,10 @@ def remove_zero_incs(operators):
                 # input is a Reset(0) op, or the only input is a constant
                 # signal (not set/inc/updated) that is all zero
                 zero_input = (
-                    (len(pred) == 1 and type(pred[0]) == Reset and
-                     np.all(pred[0].value == 0)) or
-                    (len(pred) == 0 and np.all(src.initial_value == 0) and
-                     len(updates[src.base]) == 0) and not src.trainable)
+                    (len(pred) == 1 and type(pred[0]) == Reset
+                     and np.all(pred[0].value == 0))
+                    or (len(pred) == 0 and np.all(src.initial_value == 0)
+                        and len(updates[src.base]) == 0) and not src.trainable)
                 if zero_input:
                     if len(op.sets) > 0:
                         new_operators.append(Reset(op.sets[0]))
@@ -1171,8 +1173,8 @@ def remove_constant_copies(operators):
                 continue
 
             pred = sets[src.base] + incs[src.base]
-            if (len(pred) == 0 and not op.src.trainable and
-                    len(updates[src.base]) == 0):
+            if (len(pred) == 0 and not op.src.trainable
+                    and len(updates[src.base]) == 0):
                 # no predecessors means that the src is constant. but we also
                 # need to keep the bias signal if it is trainable (since
                 # changing it to a reset op would make it not trainable).
@@ -1261,10 +1263,10 @@ def remove_identity_muls(operators):
                 # the only input is a constant signal (not set/inc/updated)
                 # that is an identity value
                 identity_input = (
-                    (len(pred) == 1 and type(pred[0]) == Reset and
-                     is_identity(pred[0].value, src)) or
-                    (len(pred) == 0 and is_identity(src.initial_value, src) and
-                     len(updates[src.base]) == 0) and not src.trainable)
+                    (len(pred) == 1 and type(pred[0]) == Reset
+                     and is_identity(pred[0].value, src))
+                    or (len(pred) == 0 and is_identity(src.initial_value, src)
+                        and len(updates[src.base]) == 0) and not src.trainable)
 
                 if identity_input:
                     other_src = [x for x in op.reads if x is not src][0]

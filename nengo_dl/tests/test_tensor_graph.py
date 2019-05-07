@@ -408,10 +408,10 @@ def test_create_signals_views():
     assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
     assert np.all(graph.signals[sigs[0]].indices == (0, 1, 2, 3))
     assert np.all(graph.signals[sigs[1]].indices == (4, 5, 6, 7))
-    assert np.all(graph.signals[sigs[0]].indices ==
-                  graph.signals[sigs[2]].indices)
-    assert np.all(graph.signals[sigs[1]].indices ==
-                  graph.signals[sigs[3]].indices)
+    assert np.all(graph.signals[sigs[0]].indices
+                  == graph.signals[sigs[2]].indices)
+    assert np.all(graph.signals[sigs[1]].indices
+                  == graph.signals[sigs[3]].indices)
 
 
 def test_create_signals_partition():

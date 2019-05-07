@@ -1468,8 +1468,8 @@ def test_synapse_warning(Simulator):
 @pytest.mark.training
 def test_concat_hang(Simulator, pytestconfig):
     # TODO: check if this is fixed in 1.14
-    if ("1.11.0" <= LooseVersion(tf.__version__) < "1.14" and
-            pytestconfig.getoption("--unroll-simulation") > 1):
+    if ("1.11.0" <= LooseVersion(tf.__version__) < "1.14"
+            and pytestconfig.getoption("--unroll-simulation") > 1):
         pytest.xfail(
             "There is a bug in TensorFlow that causes this test to hang; see "
             "https://github.com/tensorflow/tensorflow/issues/23383")

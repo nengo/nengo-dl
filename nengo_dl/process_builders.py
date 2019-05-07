@@ -357,9 +357,9 @@ class SimProcessBuilder(OpBuilder):
             elif isinstance(x.process, LinearFilter):
                 # we can only merge linearfilters that have the same state
                 # dimensionality and the same signal dimensionality
-                if (not isinstance(y.process, LinearFilter) or
-                        len(y.process.den) != len(x.process.den) or
-                        x.input.shape[0] != y.input.shape[0]):
+                if (not isinstance(y.process, LinearFilter)
+                        or len(y.process.den) != len(x.process.den)
+                        or x.input.shape[0] != y.input.shape[0]):
                     return False
             else:
                 raise NotImplementedError()

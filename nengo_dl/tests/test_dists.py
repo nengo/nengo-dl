@@ -27,8 +27,8 @@ def tnorm_var(scale, limit):
     pdf_b = norm_pdf(b)
     z = norm_cdf(b) - norm_cdf(a)
 
-    return scale ** 2 * (1 + (a * pdf_a - b * pdf_b) / z -
-                         ((pdf_a - pdf_b) / z) ** 2)
+    return scale ** 2 * (1 + (a * pdf_a - b * pdf_b) / z
+                         - ((pdf_a - pdf_b) / z) ** 2)
 
 
 def _test_variance_scaling(dist, scale, mode, seed):

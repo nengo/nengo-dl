@@ -179,8 +179,8 @@ def compare_backends(ctx, batch, n_neurons):
                                            for t in d_range])
         for i, b in enumerate(backends):
             axes[subplot_idx].annotate(
-                b, (((n_bars - 1) / 2 + (n_bars + 1) * i + 1) /
-                    ((n_bars + 1) * len(backends)),
+                b, (((n_bars - 1) / 2 + (n_bars + 1) * i + 1)
+                    / ((n_bars + 1) * len(backends)),
                     -0.1),
                 xycoords="axes fraction", ha="center")
 
