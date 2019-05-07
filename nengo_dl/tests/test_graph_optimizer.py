@@ -256,13 +256,13 @@ def ordered(ops, all_signals, block=None):
 
     if block is None:
         read_indices = [
-            [all_signals.index(reads[op][i].base) * 10000 +
-             reads[op][i].elemoffset for op in ops]
+            [all_signals.index(reads[op][i].base) * 10000
+             + reads[op][i].elemoffset for op in ops]
             for i in range(len(ops[0].reads))]
     else:
         read_indices = [
-            [all_signals.index(reads[op][block].base) * 10000 +
-             reads[op][block].elemoffset for op in ops]]
+            [all_signals.index(reads[op][block].base) * 10000
+             + reads[op][block].elemoffset for op in ops]]
 
     return np.all(np.diff(read_indices, axis=1) > 0)
 
@@ -412,10 +412,10 @@ def test_order_signals_multiread_complex2():
     # TODO: technically it is always possible to order both blocks properly,
     # but it requires you to know which of the two equally sized blocks should
     # have priority, and I'm not sure there's a way to determine that.
-    assert (contiguous(inputs[:4], sigs) or
-            contiguous(inputs[2:6], sigs))
-    assert (ordered(new_plan[0], sigs, block=0) or
-            ordered(new_plan[0], sigs, block=1))
+    assert (contiguous(inputs[:4], sigs)
+            or contiguous(inputs[2:6], sigs))
+    assert (ordered(new_plan[0], sigs, block=0)
+            or ordered(new_plan[0], sigs, block=1))
 
 
 def test_order_signals_multiread_unsatisfiable():
@@ -434,8 +434,8 @@ def test_order_signals_multiread_unsatisfiable():
     assert contiguous(inputs[:2], sigs)
     assert contiguous(inputs[5:7], sigs)
     assert ordered(new_plan[0], sigs)
-    assert (ordered(new_plan[1], sigs, block=0) or
-            ordered(new_plan[1], sigs, block=1))
+    assert (ordered(new_plan[1], sigs, block=0)
+            or ordered(new_plan[1], sigs, block=1))
     assert not ordered(new_plan[1], sigs)
 
 
@@ -466,10 +466,10 @@ def test_order_signals_duplicates():
     # test where read blocks contain duplicate signals
     inputs = [dummies.Signal(label=str(i)) for i in range(4)]
     plan = [
-        tuple(dummies.Op(reads=[inputs[0]]) for _ in range(2)) +
-        (dummies.Op(reads=[inputs[2]]),),
-        tuple(dummies.Op(reads=[inputs[1]]) for _ in range(2)) +
-        (dummies.Op(reads=[inputs[3]]),)
+        tuple(dummies.Op(reads=[inputs[0]]) for _ in range(2))
+        + (dummies.Op(reads=[inputs[2]]),),
+        tuple(dummies.Op(reads=[inputs[1]]) for _ in range(2))
+        + (dummies.Op(reads=[inputs[3]]),)
     ]
     sigs, new_plan = order_signals(plan)
     assert contiguous([inputs[0], inputs[2]], sigs)
@@ -545,8 +545,8 @@ def test_order_signals_duplicate_read_blocks():
     sigs, new_plan = order_signals(plan)
     assert ordered(new_plan[0], sigs)
     assert ordered(new_plan[1], sigs)
-    assert (ordered(new_plan[2], sigs, block=0) or
-            ordered(new_plan[2], sigs, block=1))
+    assert (ordered(new_plan[2], sigs, block=0)
+            or ordered(new_plan[2], sigs, block=1))
     assert not ordered(new_plan[2], sigs)
 
 

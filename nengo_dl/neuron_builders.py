@@ -312,8 +312,8 @@ class LIFBuilder(SoftLIFRateBuilder):
         spiked = voltage > self.one
         spikes = tf.cast(spiked, J.dtype) * self.alpha
 
-        partial_ref = -self.tau_rc * tf_math.log1p((self.one - voltage) /
-                                                   (J - self.one))
+        partial_ref = -self.tau_rc * tf_math.log1p((self.one - voltage)
+                                                   / (J - self.one))
         # FastLIF version (linearly approximate spike time when calculating
         # remaining refractory period)
         # partial_ref = signals.dt * (voltage - self.one) / dV
@@ -403,4 +403,4 @@ class SimNeuronsBuilder(OpBuilder):
     @staticmethod
     def mergeable(x, y):
         # neuron ops must all have the same type
-        return type(x.neurons) == type(y.neurons)
+        return type(x.neurons) == type(y.neurons)  # noqa: E721

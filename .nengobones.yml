@@ -66,6 +66,9 @@ setup_cfg:
   coverage:
     omit_files:
       - nengo_dl/tests/dummies.py
+  flake8:
+    ignore:
+      - C901
 
 docs_conf_py:
   extensions:

@@ -493,11 +493,11 @@ class Simulator:
 
         # error checking
         synapses = [x.synapse is not None for x in
-                    (self.model.toplevel.all_connections +
-                     (list(p for p in data if isinstance(p, Probe))
-                      if isinstance(data, dict) else []))]
-        if (n_steps == 1 and self.model.toplevel is not None and
-                any(synapses)):
+                    (self.model.toplevel.all_connections
+                     + (list(p for p in data if isinstance(p, Probe))
+                        if isinstance(data, dict) else []))]
+        if (n_steps == 1 and self.model.toplevel is not None
+                and any(synapses)):
             warnings.warn(
                 "Training for one timestep, but the network contains "
                 "synaptic filters (which will introduce at least a "
@@ -560,8 +560,8 @@ class Simulator:
         progress = (
             utils.ProgressBar(
                 "Training", max_value=(
-                    n_epochs * (batch_size // self.minibatch_size) *
-                    (1 if truncation is None else n_steps // truncation)),
+                    n_epochs * (batch_size // self.minibatch_size)
+                    * (1 if truncation is None else n_steps // truncation)),
                 vars=["loss"]) if progress_bar else utils.NullProgressBar())
 
         objective_probes = tuple(objective.keys())
@@ -1018,8 +1018,8 @@ class Simulator:
             objs = [objs]
 
         for obj in objs:
-            if obj not in ([self.model.toplevel] +
-                           self.model.toplevel.all_objects):
+            if obj not in ([self.model.toplevel]
+                           + self.model.toplevel.all_objects):
                 raise ValueError("%s is not a member of the Network used to "
                                  "initialize the Simulator")
 
@@ -1657,8 +1657,8 @@ class SimulationData(collections.Mapping):
                     (obj, "scaled_encoders"), (obj, "bias"))
 
                 # infer the related values (rolled into scaled_encoders)
-                gain = (obj.radius * np.linalg.norm(scaled_encoders, axis=-1) /
-                        np.linalg.norm(data.encoders, axis=-1))
+                gain = (obj.radius * np.linalg.norm(scaled_encoders, axis=-1)
+                        / np.linalg.norm(data.encoders, axis=-1))
                 encoders = obj.radius * scaled_encoders / gain[:, None]
 
             # figure out max_rates/intercepts from neuron model

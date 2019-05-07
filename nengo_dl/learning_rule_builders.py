@@ -329,5 +329,5 @@ class SimPESBuilder(OpBuilder):
         # pre inputs must have the same dimensionality so that we can broadcast
         # them when computing the outer product.
         # the error signals also have to have the same shape.
-        return (x.pre_filtered.shape[0] == y.pre_filtered.shape[0] and
-                x.error.shape[0] == y.error.shape[0])
+        return (x.pre_filtered.shape[0] == y.pre_filtered.shape[0]
+                and x.error.shape[0] == y.error.shape[0])

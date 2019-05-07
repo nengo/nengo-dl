@@ -13,8 +13,8 @@ def test_simulator_fixture(Simulator, pytestconfig):
             tf.float64)
         assert sim.unroll == pytestconfig.getoption("--unroll-simulation")
         assert sim.tensor_graph.device == pytestconfig.getoption("--device")
-        assert (config.get_setting(sim.model, "inference_only") ==
-                pytestconfig.getoption("--inference-only"))
+        assert (config.get_setting(sim.model, "inference_only")
+                == pytestconfig.getoption("--inference-only"))
 
     # check that manually specified values aren't overridden
     with nengo.Network() as net:

@@ -86,8 +86,8 @@ class TensorGraph:
         else:
             self.invariant_inputs = OrderedDict(
                 (n, n.output) for n in self.model.toplevel.all_nodes
-                if n.size_in == 0 and
-                not isinstance(n, tensor_node.TensorNode))
+                if n.size_in == 0
+                and not isinstance(n, tensor_node.TensorNode))
 
         # filter unused operators
         # remove TimeUpdate because it is executed as part of the simulation
@@ -97,10 +97,10 @@ class TensorGraph:
                           if isinstance(n.output, Process)]
         operators = [
             op for op in self.model.operators if not (
-                isinstance(op, TimeUpdate) or
-                (isinstance(op, SimPyFunc) and op.x is None) or
-                (isinstance(op, SimProcess) and op.input is None and
-                 op.process in node_processes))]
+                isinstance(op, TimeUpdate)
+                or (isinstance(op, SimPyFunc) and op.x is None)
+                or (isinstance(op, SimProcess) and op.input is None
+                    and op.process in node_processes))]
 
         # mark trainable signals
         self.mark_signals()
@@ -397,8 +397,8 @@ class TensorGraph:
                     # increment. we also need to make sure that all the probe
                     # reads happen before those values get overwritten on the
                     # next timestep
-                    with self.graph.control_dependencies(side_effects +
-                                                         probe_tensors):
+                    with self.graph.control_dependencies(side_effects
+                                                         + probe_tensors):
                         loop_i += 1
 
             base_vars = tuple(self.signals.bases.values())
@@ -419,8 +419,8 @@ class TensorGraph:
         loop_vars = (
             self.step_var, self.stop_var, loop_i, probe_arrays,
             tuple(x[0]._ref() if isinstance(x[0], tf.Variable) else x[0]
-                  for x in self.base_vars.values()) +
-            tuple(x._ref() for x in self.signals.internal_vars.values()))
+                  for x in self.base_vars.values())
+            + tuple(x._ref() for x in self.signals.internal_vars.values()))
 
         loop_vars = tf.while_loop(
             cond=loop_condition, body=loop_body, loop_vars=loop_vars,
@@ -858,7 +858,7 @@ class TensorGraph:
                 if obj in net_config.params:
                     # priority #1: instance config
                     trainable = net_config[obj].trainable
-                elif network_trainable is not 1:
+                elif network_trainable is not 1:  # noqa: F632
                     # priority #2: network setting
                     trainable = network_trainable
                 else:
@@ -893,7 +893,7 @@ class TensorGraph:
                 if not isinstance(ens.neuron_type, Direct):
                     neurons_trainable = get_trainable(net_config, ens.neurons,
                                                       network_trainable)
-                    if neurons_trainable is 1:
+                    if neurons_trainable is 1:  # noqa: F632
                         neurons_trainable = ens_trainable
 
                     self.model.sig[ens.neurons]["bias"].trainable = (

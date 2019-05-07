@@ -79,15 +79,15 @@ def test_tensor_signal_broadcast():
     assert sig_broad.shape == (4, 2)
     assert sig_broad.key == sig.key
     assert np.all(
-        np.reshape(base[sig_broad.indices], sig_broad.shape) ==
-        base[:, None])
+        np.reshape(base[sig_broad.indices], sig_broad.shape)
+        == base[:, None])
 
     sig_broad = sig.broadcast(0, 2)
     assert sig_broad.shape == (2, 4)
     assert sig_broad.key == sig.key
     assert np.all(
-        np.reshape(base[sig_broad.indices], sig_broad.shape) ==
-        base[None, :])
+        np.reshape(base[sig_broad.indices], sig_broad.shape)
+        == base[None, :])
 
 
 def test_tensor_signal_load_indices(sess):

@@ -288,8 +288,8 @@ class SignalDict(Mapping):
         # align val shape with dst base shape
         self.bases[dst.key].get_shape().assert_is_fully_defined()
         val.get_shape().assert_is_fully_defined()
-        dst_shape = ((dst.shape[0],) +
-                     tuple(self.bases[dst.key].get_shape().as_list()[1:]))
+        dst_shape = ((dst.shape[0],)
+                     + tuple(self.bases[dst.key].get_shape().as_list()[1:]))
         if val.get_shape() != dst_shape:
             val = tf.reshape(val, dst.tf_shape)
 
@@ -307,11 +307,11 @@ class SignalDict(Mapping):
         with tf.control_dependencies(self.reads_by_base[self.bases[dst.key]]):
             var = self.bases[dst.key]
 
-            if (dst.tf_slice is not None and
-                    var.get_shape().is_compatible_with(val.get_shape()) and
-                    dst.indices[0] == 0 and
-                    dst.indices[-1] == var.get_shape()[0] - 1 and
-                    len(dst.indices) == var.get_shape()[0]):
+            if (dst.tf_slice is not None
+                    and var.get_shape().is_compatible_with(val.get_shape())
+                    and dst.indices[0] == 0
+                    and dst.indices[-1] == var.get_shape()[0] - 1
+                    and len(dst.indices) == var.get_shape()[0]):
                 if mode == "inc":
                     result = tf_compat.assign_add(var, val, use_locking=False)
                     self.write_types["assign_add"] += 1
@@ -373,9 +373,9 @@ class SignalDict(Mapping):
         if force_copy or src.tf_slice is None:
             result = tf.gather(var, src.tf_indices)
             self.read_types["gather"] += 1
-        elif (src.indices[0] == 0 and
-              src.indices[-1] == var.get_shape()[0] - 1 and
-              len(src.indices) == var.get_shape()[0]):
+        elif (src.indices[0] == 0
+              and src.indices[-1] == var.get_shape()[0] - 1
+              and len(src.indices) == var.get_shape()[0]):
             result = var
             self.read_types["identity"] += 1
         else:
