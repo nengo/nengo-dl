@@ -1,12 +1,14 @@
+import hashlib
+import os
 import shlex
 
 import nengo.conftest
-from nengo.conftest import seed, rng  # pylint: disable=unused-import
 from nengo.tests import test_synapses, test_learning_rules
 import numpy as np
 import pytest
 import tensorflow as tf
 
+import nengo_dl
 from nengo_dl import config, simulator, utils
 
 
@@ -64,9 +66,53 @@ def pytest_addoption(parser):
                            "exclusion")
 
 
+def function_seed(function, mod=0):
+    """
+    Generates a unique seed for the given test function.
+
+    The seed should be the same across all machines/platforms.
+    """
+    c = function.__code__
+
+    # get function file path relative to Nengo directory root
+    nengo_path = os.path.abspath(os.path.dirname(nengo_dl.__file__))
+    path = os.path.relpath(c.co_filename, start=nengo_path)
+
+    # take start of md5 hash of function file and name, should be unique
+    hash_list = os.path.normpath(path).split(os.path.sep) + [c.co_name]
+    hash_string = ('/'.join(hash_list)).encode("utf-8")
+    i = int(hashlib.md5(hash_string).hexdigest()[:15], 16)
+    s = (i + mod) % np.iinfo(np.int32).max
+    return s
+
+
+@pytest.fixture
+def rng(request):
+    """
+    A seeded random number generator.
+
+    This should be used in lieu of np.random because we control its seed.
+    """
+    # add 1 to seed to be different from `seed` fixture
+    seed = function_seed(request.function, mod=1)
+    return np.random.RandomState(seed)
+
+
+@pytest.fixture
+def seed(request):
+    """
+    A number for seeding random number generators.
+
+    This should be used in lieu of a fixed number so that we can ensure that
+    tests are not dependent on specific seeds.
+    """
+    return function_seed(request.function)
+
+
 @pytest.fixture(scope="session")
 def Simulator(request):
-    """Simulator class to be used in tests (use this instead of
+    """
+    Simulator class to be used in tests (use this instead of
     ``nengo_dl.Simulator``).
     """
 
@@ -102,8 +148,10 @@ def sess(request):
 
 
 def patch_nengo_tests():
-    """Monkey-patch various aspects of the Nengo test suite, so that things
-    work correctly when running those tests through NengoDL."""
+    """
+    Monkey-patch various aspects of the Nengo test suite, so that things
+    work correctly when running those tests through NengoDL.
+    """
 
     # replace nengo Simulator fixture
     nengo.conftest.Simulator = Simulator
