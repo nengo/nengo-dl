@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
+from nengo_dl.compat import tf_compat, RefVariable
 from nengo_dl.signals import TensorSignal, SignalDict
 
 
@@ -89,41 +90,37 @@ def test_tensor_signal_broadcast():
         base[None, :])
 
 
-def test_tensor_signal_load_indices():
-    sess = tf.InteractiveSession()
-
+def test_tensor_signal_load_indices(sess):
     sig = TensorSignal([2, 3, 4, 5], object(), None, (4,), None, tf.constant)
-    assert np.all(sig.tf_indices.eval() == sig.indices)
+    assert np.all(sess.run(sig.tf_indices) == sig.indices)
     start, stop, step = sess.run(sig.tf_slice)
     assert start == 2
     assert stop == 6
     assert step == 1
 
     sig = TensorSignal([2, 4, 6, 8], object(), None, (4,), None, tf.constant)
-    assert np.all(sig.tf_indices.eval() == sig.indices)
+    assert np.all(sess.run(sig.tf_indices) == sig.indices)
     start, stop, step = sess.run(sig.tf_slice)
     assert start == 2
     assert stop == 9
     assert step == 2
 
     sig = TensorSignal([2, 2, 3, 3], object(), None, (4,), None, tf.constant)
-    assert np.all(sig.tf_indices.eval() == sig.indices)
+    assert np.all(sess.run(sig.tf_indices) == sig.indices)
     assert sig.tf_slice is None
 
-    sess.close()
 
-
-def test_signal_dict_scatter():
+def test_signal_dict_scatter(sess):
     minibatch_size = 1
     var_size = 19
     signals = SignalDict(tf.float32, minibatch_size)
 
-    sess = tf.InteractiveSession()
-
     key = object()
     val = np.random.randn(var_size, minibatch_size)
-    signals.bases = {key: tf.assign(tf.Variable(val, dtype=tf.float32),
-                                    val)}
+    signals.bases = {
+        key: tf_compat.assign(RefVariable(val, dtype=tf.float32),
+                              val)
+    }
 
     x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), True)
     with pytest.raises(BuildError):
@@ -156,15 +153,11 @@ def test_signal_dict_scatter():
     signals.scatter(x, y)
     assert signals.bases[key].op.type == "ScatterUpdate"
 
-    sess.close()
 
-
-def test_signal_dict_gather():
+def test_signal_dict_gather(sess):
     minibatch_size = 1
     var_size = 19
     signals = SignalDict(tf.float32, minibatch_size)
-
-    sess = tf.InteractiveSession()
 
     key = object()
     val = np.random.randn(var_size, minibatch_size)
@@ -210,8 +203,6 @@ def test_signal_dict_gather():
     x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), False)
     assert signals.gather(x).get_shape() == (4,)
 
-    sess.close()
-
 
 def test_signal_dict_combine():
     minibatch_size = 1
@@ -246,8 +237,10 @@ def test_constant(dtype, sess):
     assert const0.dtype == (dtype if dtype else tf.as_dtype(val.dtype))
     assert const1.dtype == (dtype if dtype else tf.as_dtype(val.dtype))
 
-    sess.run(tf.variables_initializer(tf.get_collection("constants")),
-             feed_dict=signals.constant_phs)
+    sess.run(
+        tf_compat.variables_initializer(tf_compat.get_collection(
+            "constants")),
+        feed_dict=signals.constant_phs)
     c0, c1 = sess.run([const0, const1])
 
     assert np.allclose(c0, val)
@@ -265,8 +258,10 @@ def test_constant_gpu(sess):
         assert const.dtype == tf.int32
         assert "GPU" in const.device.upper()
 
-    sess.run(tf.variables_initializer(tf.get_collection("constants")),
-             feed_dict=signals.constant_phs)
+    sess.run(
+        tf_compat.variables_initializer(tf_compat.get_collection(
+            "constants")),
+        feed_dict=signals.constant_phs)
     c = sess.run(const)
 
     assert np.allclose(val, c)
@@ -292,8 +287,10 @@ def test_op_constant(dtype, diff, sess):
 
     assert const.dtype.base_dtype == dtype
 
-    sess.run(tf.variables_initializer(tf.get_collection("constants")),
-             feed_dict=signals.constant_phs)
+    sess.run(
+        tf_compat.variables_initializer(tf_compat.get_collection(
+            "constants")),
+        feed_dict=signals.constant_phs)
     x, x1, x3 = sess.run([const, const1, const3])
 
     if diff:

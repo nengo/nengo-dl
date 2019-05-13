@@ -14,6 +14,7 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import configure_settings, tensor_layer, dists, TensorNode
+from nengo_dl.compat import tf_compat, tf_uniform
 from nengo_dl.objectives import mse
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
@@ -179,7 +180,7 @@ def test_train_ff(Simulator, neurons, seed):
         y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
 
         sim.train({inp_a: x[..., [0]], inp_b: x[..., [1]], p: y},
-                  tf.train.AdamOptimizer(0.01), n_epochs=500)
+                  tf_compat.train.AdamOptimizer(0.01), n_epochs=500)
 
         sim.check_gradients(atol=5e-5)
 
@@ -215,7 +216,7 @@ def test_train_recurrent(Simulator, truncation, seed):
         y = np.outer(np.linspace(0, 1, batch_size),
                      np.linspace(0, 1, n_steps))[:, :, None]
 
-        sim.train({inp: x, p: y}, tf.train.RMSPropOptimizer(1e-3),
+        sim.train({inp: x, p: y}, tf_compat.train.RMSPropOptimizer(1e-3),
                   n_epochs=200, truncation=truncation)
 
         sim.check_gradients(
@@ -252,10 +253,10 @@ def test_train_objective(Simulator, unroll, seed):
         z = np.zeros((minibatch_size, n_steps, 1)) + 0.1
 
         def obj(output, target):
-            return tf.reduce_mean((output[:, -1] - 0.5 - target[:, -1]) ** 2)
+            return tf.reduce_mean(input_tensor=(output[:, -1] - 0.5 - target[:, -1]) ** 2)
 
         sim.train({inp: x, p: y, p2: z},
-                  tf.train.MomentumOptimizer(1e-2, 0.9),
+                  tf_compat.train.MomentumOptimizer(1e-2, 0.9),
                   n_epochs=200, objective={p: obj, p2: obj})
 
         sim.check_gradients([p, p2])
@@ -292,7 +293,7 @@ def test_train_sparse(Simulator, seed):
         y = np.asarray([[[0, 1]], [[1, 0]], [[1, 0]], [[0, 1]]])
 
         sim.train({inp: x, p: y},
-                  tf.train.MomentumOptimizer(0.1, 0.9, use_nesterov=True),
+                  tf_compat.train.MomentumOptimizer(0.1, 0.9, use_nesterov=True),
                   n_epochs=500)
 
         sim.step(data={inp: x})
@@ -340,12 +341,12 @@ def test_train_errors(Simulator):
         # deprecation warning when using "mse" string
         with pytest.warns(DeprecationWarning):
             sim.train({p: np.ones((1, n_steps, 1))},
-                      tf.train.GradientDescentOptimizer(0),
+                      tf_compat.train.GradientDescentOptimizer(0),
                       objective={p: "mse"})
 
         # must specify objective if no data
         with pytest.raises(ValidationError):
-            sim.train(5, tf.train.GradientDescentOptimizer(0.1))
+            sim.train(5, tf_compat.train.GradientDescentOptimizer(0.1))
 
     # error when calling train after closing
     with pytest.raises(SimulatorClosed):
@@ -367,7 +368,7 @@ def test_train_no_data(Simulator):
     net, _, p = dummies.linear_net()
 
     with Simulator(net) as sim:
-        sim.train(5, tf.train.GradientDescentOptimizer(0.1),
+        sim.train(5, tf_compat.train.GradientDescentOptimizer(0.1),
                   objective={p: lambda x: abs(2.0 - x)}, n_epochs=10)
         sim.step()
         assert np.allclose(sim.data[p], 2)
@@ -641,18 +642,18 @@ def test_tensorboard(Simulator, tmpdir):
     # check that training summaries are output properly
     with Simulator(net, tensorboard=str(tmpdir)) as sim:
         with tf.device("/cpu:0"):
-            summ = tf.summary.scalar("step_var", sim.training_step)
+            summ = tf_compat.summary.scalar("step_var", sim.training_step)
 
         def loss(x):
             # uses a variable to test that variables from summaries get
             # initialized correctly
-            return tf.get_variable(
-                "one", initializer=tf.constant_initializer(1.0), dtype=x.dtype,
-                shape=())
+            return tf_compat.get_variable(
+                "one", initializer=tf_compat.initializers.constant(1.0), dtype=x.dtype,
+                shape=(), use_resource=False)
 
         sim.train({a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1)),
                    p2: np.zeros((1, 10, 1))},
-                  tf.train.GradientDescentOptimizer(0.0),
+                  tf_compat.train.GradientDescentOptimizer(0.0),
                   objective={p: loss, p2: mse},
                   summaries=["loss", b, b.neurons, c, summ],
                   n_epochs=3)
@@ -662,7 +663,7 @@ def test_tensorboard(Simulator, tmpdir):
 
     assert os.path.exists(event_file)
 
-    for i, event in enumerate(tf.train.summary_iterator(event_file)):
+    for i, event in enumerate(tf_compat.train.summary_iterator(event_file)):
         if i < 3:
             # metadata stuff
             continue
@@ -684,14 +685,14 @@ def test_tensorboard(Simulator, tmpdir):
     with pytest.warns(UserWarning):
         with Simulator(net, tensorboard=None) as sim:
             sim.train({a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1))},
-                      tf.train.GradientDescentOptimizer(0.0),
+                      tf_compat.train.GradientDescentOptimizer(0.0),
                       summaries=["loss"])
 
     # check for error on invalid object
     with pytest.raises(SimulationError):
         with Simulator(net, tensorboard=str(tmpdir)) as sim:
             sim.train({a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1))},
-                      tf.train.GradientDescentOptimizer(0.0),
+                      tf_compat.train.GradientDescentOptimizer(0.0),
                       summaries=[a])
 
     # check that nonexistent dir gets created
@@ -722,7 +723,7 @@ def test_profile(Simulator, mode, outfile):
             sim.run_steps(5, profile=prof)
         else:
             sim.train({a: np.zeros((1, 5, 1)), p: np.zeros((1, 5, 1))},
-                      tf.train.GradientDescentOptimizer(1), profile=prof)
+                      tf_compat.train.GradientDescentOptimizer(1), profile=prof)
 
         assert os.path.exists(filename)
         os.remove(filename)
@@ -926,7 +927,7 @@ def test_train_state_save(Simulator):
         sim2.run_steps(10)
 
         sim2.train({u: np.ones((4, 10, 1)), p: np.ones((4, 10, 1))},
-                   optimizer=tf.train.GradientDescentOptimizer(0))
+                   optimizer=tf_compat.train.GradientDescentOptimizer(0))
 
         sim2.loss({u: np.ones((4, 10, 1)), p: np.ones((4, 10, 1))})
 
@@ -1026,7 +1027,7 @@ def test_simulation_data(Simulator, seed):
         sig = sim.model.sig[a]['encoders']
         tensor_sig = sim.tensor_graph.signals[sig]
         base = sim.tensor_graph.base_vars[tensor_sig.key][0]
-        op = tf.assign(base, tf.ones_like(base))
+        op = tf_compat.assign(base, tf.ones_like(base))
         sim.sess.run(op)
 
         assert np.allclose(sim.data[a].scaled_encoders, 1)
@@ -1061,12 +1062,12 @@ def test_learning_rate_schedule(Simulator):
     with Simulator(net) as sim:
         vals = [1.0, 0.1, 0.001]
         with tf.device("/cpu:0"):
-            l_rate = tf.train.piecewise_constant(
+            l_rate = tf_compat.train.piecewise_constant(
                 sim.training_step,
                 [tf.constant(4, dtype=tf.int64),
                  tf.constant(9, dtype=tf.int64)],
                 vals)
-        opt = tf.train.GradientDescentOptimizer(l_rate)
+        opt = tf_compat.train.GradientDescentOptimizer(l_rate)
 
         for i in range(3):
             assert np.allclose(sim.sess.run(l_rate), vals[i])
@@ -1108,7 +1109,7 @@ def test_multiple_objective(Simulator, seed):
 
         b_bias = np.copy(sim.data[b].bias)
         c_bias = sim.data[c].bias
-        sim.train(data, tf.train.GradientDescentOptimizer(1.0),
+        sim.train(data, tf_compat.train.GradientDescentOptimizer(1.0),
                   objective=objective, n_epochs=10)
         assert np.allclose(sim.data[c].bias, c_bias)
         assert not np.allclose(sim.data[b].bias, b_bias)
@@ -1185,7 +1186,7 @@ def test_progress_bar(Simulator, progress):
         sim.loss(10, {p: lambda x: x}, progress_bar=progress)
 
         if not sim.tensor_graph.inference_only:
-            sim.train(10, tf.train.GradientDescentOptimizer(0),
+            sim.train(10, tf_compat.train.GradientDescentOptimizer(0),
                       objective={p: lambda x: x}, progress_bar=progress)
 
 
@@ -1195,7 +1196,7 @@ def test_extra_feeds(Simulator):
     # placeholder
     class NodeFunc:
         def pre_build(self, *_):
-            self.ph = tf.placeholder_with_default(False, ())
+            self.ph = tf_compat.placeholder_with_default(False, ())
 
         def __call__(self, t, x):
             with tf.device("/cpu:0"):
@@ -1217,8 +1218,8 @@ def test_extra_feeds(Simulator):
 
         data = {a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1))}
         with pytest.raises(tf.errors.InvalidArgumentError):
-            sim.train(data, tf.train.GradientDescentOptimizer(1))
-        sim.train(data, tf.train.GradientDescentOptimizer(1),
+            sim.train(data, tf_compat.train.GradientDescentOptimizer(1))
+        sim.train(data, tf_compat.train.GradientDescentOptimizer(1),
                   extra_feeds={b.tensor_func.ph: True})
 
         with pytest.raises(tf.errors.InvalidArgumentError):
@@ -1241,7 +1242,7 @@ def test_direct_grads(Simulator, mixed):
 
     with Simulator(net, minibatch_size=1) as sim:
         n_steps = 10
-        opt = tf.train.GradientDescentOptimizer(0.45)
+        opt = tf_compat.train.GradientDescentOptimizer(0.45)
         for _ in range(10):
             sim.run_steps(n_steps)
 
@@ -1275,7 +1276,7 @@ def test_non_differentiable(Simulator):
     with Simulator(net) as sim:
         w0 = sim.data[c].weights
         sim.train({a: np.ones((1, 10, 1)), p: np.ones((1, 10, 1))},
-                  tf.train.GradientDescentOptimizer(100))
+                  tf_compat.train.GradientDescentOptimizer(100))
 
         # TODO: find another way to detect non-differentiable elements in graph
         # note: the challenge is that our stateful ops tend to mask the
@@ -1348,7 +1349,7 @@ def test_freeze_train(Simulator):
         assert np.allclose(sim.data[p], 1)
 
         sim.train({a: np.ones((1, 1, 1)), p: np.ones((1, 1, 1)) * 2},
-                  tf.train.GradientDescentOptimizer(0.5), n_epochs=10)
+                  tf_compat.train.GradientDescentOptimizer(0.5), n_epochs=10)
 
         sim.step()
         assert np.allclose(sim.data[p][-1], 2)
@@ -1410,7 +1411,7 @@ def test_inference_only(Simulator, neuron_type, seed):
         # validation checks (can't do train/gradients in inference-only mode)
         with pytest.raises(ValidationError):
             sim2.train({a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1))},
-                       tf.train.GradientDescentOptimizer(1))
+                       tf_compat.train.GradientDescentOptimizer(1))
 
         with pytest.raises(ValidationError):
             sim2.check_gradients()
@@ -1437,9 +1438,9 @@ def test_synapse_warning(Simulator):
                 if as_dict:
                     sim.train({a: np.zeros((1, n_steps, 1)),
                                p: np.zeros((1, n_steps, 1))},
-                              tf.train.GradientDescentOptimizer(0))
+                              tf_compat.train.GradientDescentOptimizer(0))
                 else:
-                    sim.train(n_steps, tf.train.GradientDescentOptimizer(0),
+                    sim.train(n_steps, tf_compat.train.GradientDescentOptimizer(0),
                               objective={p: lambda x: x})
         return any(str(w.message).startswith("Training for one timestep")
                    for w in rec)
@@ -1482,7 +1483,7 @@ def test_concat_hang(Simulator, pytestconfig):
 
     with Simulator(net) as sim:
         sim.train({a: np.zeros((1, 5, 1)), p: np.zeros((1, 5, 1))},
-                  tf.train.GradientDescentOptimizer(1))
+                  tf_compat.train.GradientDescentOptimizer(1))
 
 
 def test_run_batch(Simulator, rng):
@@ -1515,7 +1516,7 @@ def test_run_batch(Simulator, rng):
 
 def test_tf_seed(Simulator, seed):
     with nengo.Network() as net:
-        a = TensorNode(lambda t: tf.random_uniform((1, 1), dtype=t.dtype))
+        a = TensorNode(lambda t: tf_uniform((1, 1), dtype=t.dtype))
         p = nengo.Probe(a)
 
     with Simulator(net, seed=seed) as sim:

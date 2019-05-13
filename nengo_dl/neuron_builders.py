@@ -12,6 +12,7 @@ import tensorflow as tf
 
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
+from nengo_dl.compat import tf_compat, tf_math
 from nengo_dl.neurons import SoftLIFRate
 
 logger = logging.getLogger(__name__)
@@ -91,7 +92,7 @@ class GenericNeuronBuilder(OpBuilder):
         # has completed before the next starts, since we don't know that the
         # functions are thread safe
         with tf.control_dependencies(self.prev_result), tf.device("/cpu:0"):
-            ret = tf.py_func(
+            ret = tf_compat.py_func(
                 self.neuron_step_math, [signals.dt, J] + states,
                 [self.output_data.dtype] + states_dtype,
                 name=self.neuron_step_math.__name__)
@@ -172,9 +173,9 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
             rate_out = super(SpikingRectifiedLinearBuilder, self)._step(J)
 
             out, voltage = tf.cond(
-                signals.training,
-                lambda: (rate_out, voltage),
-                lambda: (spike_out, spike_voltage))
+                pred=signals.training,
+                true_fn=lambda: (rate_out, voltage),
+                false_fn=lambda: (spike_out, spike_voltage))
 
         signals.scatter(self.output_data, out)
         signals.scatter(self.voltage_data, voltage)
@@ -232,7 +233,7 @@ class LIFRateBuilder(OpBuilder):
         # (even though we'll only use the values that are already positive),
         # otherwise we can end up with nans in the gradient
         rates = self.amplitude / (
-            self.tau_ref + self.tau_rc * tf.log1p(tf.reciprocal(
+            self.tau_ref + self.tau_rc * tf_math.log1p(tf_math.reciprocal(
                 tf.maximum(j, self.epsilon))))
 
         return tf.where(j > self.zero, rates, self.zeros)
@@ -267,8 +268,8 @@ class SoftLIFRateBuilder(LIFRateBuilder):
         #   z = s*log(1 + e^js) = s*e^js
         #   log(1 + 1/z) = log(1/z) = -log(s*e^js) = -js - log(s)
         q = tf.where(j_valid,
-                     tf.log1p(tf.reciprocal(z)),
-                     -js - tf.log(self.sigma))
+                     tf_math.log1p(tf_math.reciprocal(z)),
+                     -js - tf_math.log(self.sigma))
 
         rates = self.amplitude / (self.tau_ref + self.tau_rc * q)
 
@@ -305,14 +306,14 @@ class LIFBuilder(SoftLIFRateBuilder):
     def _step(self, J, voltage, refractory, dt):
         delta_t = tf.clip_by_value(dt - refractory, self.zero, dt)
 
-        dV = (voltage - J) * tf.expm1(-delta_t / self.tau_rc)
+        dV = (voltage - J) * tf_math.expm1(-delta_t / self.tau_rc)
         voltage += dV
 
         spiked = voltage > self.one
         spikes = tf.cast(spiked, J.dtype) * self.alpha
 
-        partial_ref = -self.tau_rc * tf.log1p((self.one - voltage) /
-                                              (J - self.one))
+        partial_ref = -self.tau_rc * tf_math.log1p((self.one - voltage) /
+                                                   (J - self.one))
         # FastLIF version (linearly approximate spike time when calculating
         # remaining refractory period)
         # partial_ref = signals.dt * (voltage - self.one) / dV
@@ -345,9 +346,9 @@ class LIFBuilder(SoftLIFRateBuilder):
                         SoftLIFRateBuilder._step(self, J))
 
             spikes, voltage, refractory = tf.cond(
-                signals.training,
-                lambda: (rate_out, voltage, refractory),
-                lambda: (spike_out, spike_voltage, spike_ref)
+                pred=signals.training,
+                true_fn=lambda: (rate_out, voltage, refractory),
+                false_fn=lambda: (spike_out, spike_voltage, spike_ref)
             )
 
         signals.scatter(self.output_data, spikes)

@@ -85,7 +85,7 @@ def patch_state_grads():
                     "tmp" + "_%s" * (len(grad.get_shape()) + 1) % (
                         shape + (dtype.name,)),
                     shape=shape, dtype=dtype, trainable=False,
-                    collections=["gradient_vars"])
+                    collections=["gradient_vars"], use_resource=False)
 
             var_grad = state_ops.assign(var_grad, grad)
             var_grad = state_ops.scatter_update(

@@ -14,6 +14,7 @@ from tensorflow.python.ops import gen_sparse_ops
 
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
+from nengo_dl.compat import tf_compat
 
 logger = logging.getLogger(__name__)
 
@@ -249,10 +250,10 @@ class DotIncBuilder(OpBuilder):
             # note: this is just a duplicate of what einsum does internally;
             # we do it manually so that we can move the perm/perm_inv constants
             # into the pre-build step
-            A = tf.transpose(A, self.perm)
-            X = tf.transpose(X, self.perm)
+            A = tf.transpose(a=A, perm=self.perm)
+            X = tf.transpose(a=X, perm=self.perm)
             dot = tf.matmul(A, X)
-            dot = tf.transpose(dot, self.perm_inv)
+            dot = tf.transpose(a=dot, perm=self.perm_inv)
             dot.set_shape(self.A_data.shape[:2] + (1, signals.minibatch_size))
         elif not self.A_data.minibatched and self.X_data.minibatched:
             dot = tf.matmul(A, X)
@@ -445,7 +446,7 @@ class SimPyFuncBuilder(OpBuilder):
                   else signals.gather(self.input_data))
 
         with tf.device("/cpu:0"):
-            node_outputs = tf.py_func(
+            node_outputs = tf_compat.py_func(
                 self.merged_func, [time, inputs], self.output_dtype,
                 name=self.merged_func.__name__)
         node_outputs.set_shape(self.output_shape)

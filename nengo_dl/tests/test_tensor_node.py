@@ -7,6 +7,7 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import TensorNode, configure_settings, reshaped, tensor_layer
+from nengo_dl.compat import tf_compat, RefVariable
 
 
 def test_validation(Simulator):
@@ -105,7 +106,7 @@ def test_node(Simulator):
 def test_pre_build(Simulator):
     class TestFunc:
         def pre_build(self, size_in, size_out):
-            self.weights = tf.Variable(tf.ones((size_in[1], size_out[1])))
+            self.weights = RefVariable(tf.ones((size_in[1], size_out[1])))
 
         def __call__(self, t, x):
             return tf.matmul(x, tf.cast(self.weights, x.dtype))
@@ -141,12 +142,12 @@ def test_pre_build(Simulator):
 def test_post_build(Simulator):
     class TestFunc:
         def pre_build(self, size_in, size_out):
-            self.weights = tf.Variable(tf.zeros((size_in[1], size_out[1])))
+            self.weights = RefVariable(tf.zeros((size_in[1], size_out[1])))
 
         def post_build(self, sess, rng):
-            assert sess is tf.get_default_session()
+            assert sess is tf_compat.get_default_session()
             assert isinstance(rng, np.random.RandomState)
-            init_op = tf.assign(self.weights, tf.ones((2, 3)))
+            init_op = tf_compat.assign(self.weights, tf.ones((2, 3)))
             sess.run(init_op)
 
         def __call__(self, t, x):
@@ -172,8 +173,8 @@ def test_reshaped(sess):
 
     @reshaped((4, 3))
     def my_func(_, a):
-        with tf.control_dependencies([tf.assert_equal(tf.shape(a),
-                                                      (5, 4, 3))]):
+        with tf.control_dependencies(
+                [tf_compat.assert_equal(tf.shape(input=a), (5, 4, 3))]):
             return tf.identity(a)
 
     y = my_func(None, x)
@@ -193,8 +194,8 @@ def test_tensor_layer(Simulator):
 
         # check that arguments are passed to layer function
         layer1 = tensor_layer(
-            layer0, lambda x, axis: tf.reduce_sum(x, axis=axis), axis=1,
-            shape_in=(2, 6))
+            layer0, lambda x, axis: tf.reduce_sum(input_tensor=x, axis=axis),
+            axis=1, shape_in=(2, 6))
         assert layer1.size_out == 6
         p1 = nengo.Probe(layer1)
 
@@ -235,7 +236,8 @@ def test_reuse_vars(Simulator):
         # note: the control dependencies thing is due to some weird tensorflow
         # issue with creating variables inside while loops
         with tf.control_dependencies(None):
-            w = tf.get_variable("weights", initializer=tf.constant(2.0))
+            w = tf_compat.get_variable(
+                "weights", initializer=tf.constant(2.0), use_resource=False)
 
         return x * tf.cast(w, x.dtype)
 
@@ -245,9 +247,9 @@ def test_reuse_vars(Simulator):
         inp = nengo.Node([1])
         node = TensorNode(my_func, size_in=1)
         node2 = TensorNode(
-            lambda _, x: tf.layers.dense(
+            lambda _, x: tf_compat.layers.dense(
                 x, units=10, use_bias=False,
-                kernel_initializer=tf.constant_initializer(3)),
+                kernel_initializer=tf_compat.initializers.constant(3)),
             size_in=1, size_out=10)
         p = nengo.Probe(node)
         p2 = nengo.Probe(node2)
@@ -260,7 +262,7 @@ def test_reuse_vars(Simulator):
         assert np.allclose(sim.data[p2], 3)
 
         with sim.tensor_graph.graph.as_default():
-            vars = tf.trainable_variables()
+            vars = tf_compat.trainable_variables()
 
         assert len(vars) == 2
         assert vars[0].get_shape() == ()

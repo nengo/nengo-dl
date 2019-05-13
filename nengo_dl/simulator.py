@@ -32,6 +32,7 @@ from tensorflow.python.ops import gradient_checker
 
 from nengo_dl import utils, config, objectives
 from nengo_dl.builder import NengoBuilder, NengoModel
+from nengo_dl.compat import tf_compat
 from nengo_dl.tensor_graph import TensorGraph
 
 if LooseVersion(nengo_version) > "2.8.0":
@@ -141,7 +142,7 @@ class Simulator:
 
         # set TensorFlow graph seed
         with self.tensor_graph.graph.as_default():
-            tf.set_random_seed(self.seed)
+            tf_compat.set_random_seed(self.seed)
 
         # construct graph
         with ProgressBar("Constructing graph", "Construction",
@@ -156,7 +157,7 @@ class Simulator:
             run_number = max(
                 [int(x[4:]) for x in os.listdir(tensorboard)
                  if x.startswith("run")] or [-1]) + 1
-            self.summary = tf.summary.FileWriter(
+            self.summary = tf_compat.summary.FileWriter(
                 os.path.join(tensorboard, "run_%d" % run_number),
                 graph=self.tensor_graph.graph)
         else:
@@ -164,7 +165,7 @@ class Simulator:
 
         # start session
 
-        session_config = tf.ConfigProto(
+        session_config = tf_compat.ConfigProto(
             allow_soft_placement=False,
             log_device_placement=False,
         )
@@ -183,8 +184,8 @@ class Simulator:
                 x = getattr(x, a)
             setattr(x, attrs[-1], v)
 
-        self.sess = tf.Session(graph=self.tensor_graph.graph,
-                               config=session_config)
+        self.sess = tf_compat.Session(graph=self.tensor_graph.graph,
+                                      config=session_config)
 
         self.reset(seed=seed)
 
@@ -218,7 +219,7 @@ class Simulator:
             self.seed = seed
         self.rng = np.random.RandomState(self.seed)
         with self.tensor_graph.graph.as_default():
-            tf.set_random_seed(self.seed)
+            tf_compat.set_random_seed(self.seed)
 
         with self.sess.as_default():
             self.tensor_graph.build_post(self.sess, self.rng)
@@ -828,8 +829,9 @@ class Simulator:
 
         # set up profiling
         if profile:
-            run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-            run_metadata = tf.RunMetadata()
+            run_options = tf_compat.RunOptions(
+                trace_level=tf_compat.RunOptions.FULL_TRACE)
+            run_metadata = tf_compat.RunMetadata()
         else:
             run_options = None
             run_metadata = None
@@ -924,12 +926,12 @@ class Simulator:
         with self.tensor_graph.graph.as_default():
             vars = []
             if include_global:
-                vars.extend(tf.global_variables())
+                vars.extend(tf_compat.global_variables())
             if include_local:
-                vars.extend(tf.local_variables())
+                vars.extend(tf_compat.local_variables())
 
             with tf.device("/cpu:0"):
-                path = tf.train.Saver(vars).save(self.sess, path)
+                path = tf_compat.train.Saver(vars).save(self.sess, path)
 
         logger.info("Model parameters saved to %s", path)
 
@@ -960,12 +962,12 @@ class Simulator:
         with self.tensor_graph.graph.as_default():
             vars = []
             if include_global:
-                vars.extend(tf.global_variables())
+                vars.extend(tf_compat.global_variables())
             if include_local:
-                vars.extend(tf.local_variables())
+                vars.extend(tf_compat.local_variables())
 
             with tf.device("/cpu:0"):
-                tf.train.Saver(vars).restore(self.sess, path)
+                tf_compat.train.Saver(vars).restore(self.sess, path)
 
         logger.info("Model parameters loaded from %s", path)
 
@@ -1260,11 +1262,12 @@ class Simulator:
 
                 self.soft_reset()
 
-                with tf.variable_scope(tf.get_variable_scope()) as scope:
+                with tf_compat.variable_scope(
+                        tf_compat.get_variable_scope()) as scope:
                     dx, dy = gradient_checker._compute_dx_and_dy(
                         inp, out, out_shape)
 
-                    self.sess.run(tf.variables_initializer(
+                    self.sess.run(tf_compat.variables_initializer(
                         scope.get_collection("gradient_vars")))
 
                 with self.sess.as_default():

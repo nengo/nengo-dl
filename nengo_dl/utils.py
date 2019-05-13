@@ -18,6 +18,8 @@ import progressbar
 import tensorflow as tf
 from tensorflow.python.framework.ops import get_gradient_function
 
+from nengo_dl.compat import tf_compat
+
 logger = logging.getLogger(__name__)
 
 # check if GPU support is available
@@ -160,7 +162,7 @@ def print_op(input, message):
         return x
 
     with tf.device("/cpu:0"):
-        output = tf.py_func(print_func, [input], input.dtype)
+        output = tf_compat.py_func(print_func, [input], input.dtype)
     output.set_shape(input.get_shape())
 
     return output

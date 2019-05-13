@@ -26,6 +26,7 @@ import tensorflow as tf
 
 from nengo_dl import (builder, graph_optimizer, signals, utils, tensor_node,
                       config)
+from nengo_dl.compat import tf_compat
 
 logger = logging.getLogger(__name__)
 
@@ -179,11 +180,11 @@ class TensorGraph:
         if not self.inference_only:
             # this variable controls behaviour in the simulation that is
             # conditional on whether we are doing training or inference
-            self.signals.training = tf.placeholder(tf.bool, shape=(),
-                                                   name="training")
+            self.signals.training = tf_compat.placeholder(tf.bool, shape=(),
+                                                          name="training")
 
             # variable to track training step
-            self.training_step = tf.train.get_or_create_global_step()
+            self.training_step = tf_compat.train.get_or_create_global_step()
         else:
             self.training_step = None
 
@@ -201,15 +202,18 @@ class TensorGraph:
             # feed in the initial values when the init op is called. this
             # prevents TensorFlow from storing large constants in the graph
             # def, which can cause problems for large models
-            ph = tf.placeholder(v.dtype, v.shape, name="%s_init" % name)
+            ph = tf_compat.placeholder(v.dtype, v.shape, name="%s_init" % name)
 
             if trainable:
-                with tf.variable_scope("trainable_vars", reuse=False):
-                    var = tf.get_variable(name, initializer=ph, trainable=True)
+                with tf_compat.variable_scope("trainable_vars", reuse=False):
+                    var = tf_compat.get_variable(
+                        name, initializer=ph, trainable=True,
+                        use_resource=False)
             else:
-                with tf.variable_scope("local_vars", reuse=False):
-                    var = tf.get_local_variable(name, initializer=ph,
-                                                trainable=False)
+                with tf_compat.variable_scope("local_vars", reuse=False):
+                    var = tf_compat.get_local_variable(
+                        name, initializer=ph, trainable=False,
+                        use_resource=False)
 
             self.base_vars[k] = (var, ph, v)
 
@@ -230,15 +234,17 @@ class TensorGraph:
             self.build_loop(sub)
 
         # ops for initializing variables (will be called by simulator)
-        trainable_vars = tf.trainable_variables()
+        trainable_vars = tf_compat.trainable_variables()
         if not self.inference_only:
             trainable_vars.append(self.training_step)
-        self.trainable_init_op = tf.variables_initializer(trainable_vars)
-        self.local_init_op = tf.local_variables_initializer()
-        self.global_init_op = tf.variables_initializer(
-            [v for v in tf.global_variables() if v not in trainable_vars])
-        self.constant_init_op = tf.variables_initializer(
-            tf.get_collection("constants"))
+        self.trainable_init_op = tf_compat.variables_initializer(
+            trainable_vars)
+        self.local_init_op = tf_compat.local_variables_initializer()
+        self.global_init_op = tf_compat.variables_initializer(
+            [v for v in tf_compat.global_variables()
+             if v not in trainable_vars])
+        self.constant_init_op = tf_compat.variables_initializer(
+            tf_compat.get_collection("constants"))
 
         # logging
         logger.info("Number of reads: %d", sum(
@@ -368,8 +374,9 @@ class TensorGraph:
                     # unrolled iterations (this is really only a concern
                     # with TensorNodes)
                     with self.graph.control_dependencies([loop_i]), \
-                            tf.variable_scope(tf.get_variable_scope(),
-                                              reuse=iter > 0):
+                            tf_compat.variable_scope(
+                                    tf_compat.get_variable_scope(),
+                                    reuse=iter > 0):
                         probe_tensors, side_effects = self.build_step(progress)
 
                     # copy probe data to array
@@ -380,9 +387,10 @@ class TensorGraph:
                             probe_arrays[i] = probe_arrays[i].write(loop_i, p)
                         else:
                             probe_arrays[i] = tf.cond(
-                                tf.equal(step, stop),
-                                lambda p=p: probe_arrays[i].write(0, p),
-                                lambda: probe_arrays[i])
+                                pred=tf.equal(step, stop),
+                                true_fn=lambda p=p: probe_arrays[i].write(0,
+                                                                          p),
+                                false_fn=lambda: probe_arrays[i])
 
                     # need to make sure that any operators that could have side
                     # effects run each timestep, so we tie them to the loop
@@ -397,8 +405,8 @@ class TensorGraph:
 
             return step, stop, loop_i, probe_arrays, base_vars
 
-        self.step_var = tf.placeholder(tf.int32, shape=(), name="step")
-        self.stop_var = tf.placeholder(tf.int32, shape=(), name="stop")
+        self.step_var = tf_compat.placeholder(tf.int32, shape=(), name="step")
+        self.stop_var = tf_compat.placeholder(tf.int32, shape=(), name="stop")
         loop_i = tf.constant(0)
 
         probe_arrays = [
@@ -415,7 +423,7 @@ class TensorGraph:
             tuple(x._ref() for x in self.signals.internal_vars.values()))
 
         loop_vars = tf.while_loop(
-            loop_condition, loop_body, loop_vars=loop_vars,
+            cond=loop_condition, body=loop_body, loop_vars=loop_vars,
             parallel_iterations=1, back_prop=not self.inference_only)
 
         self.steps_run = loop_vars[2]
@@ -424,7 +432,9 @@ class TensorGraph:
             x = a.stack()
 
             if self.model.sig[p]["in"].minibatched:
-                x = tf.transpose(x, np.roll(np.arange(x.get_shape().ndims), 1))
+                x = tf.transpose(
+                    a=x,
+                    perm=np.roll(np.arange(x.get_shape().ndims), 1))
             else:
                 x = tf.expand_dims(x, 0)
 
@@ -445,7 +455,7 @@ class TensorGraph:
         for n in progress(self.invariant_inputs):
             if self.model.sig[n]["out"] in self.signals:
                 # set up a placeholder input for this node
-                self.input_ph[n] = tf.placeholder(
+                self.input_ph[n] = tf_compat.placeholder(
                     self.dtype, (None, n.size_out, self.minibatch_size),
                     name="%s_ph" % utils.sanitize_name(n))
 
@@ -525,7 +535,7 @@ class TensorGraph:
 
             agg_method = tf.AggregationMethod.DEFAULT
             grads = []
-            vars = tf.trainable_variables()
+            vars = tf_compat.trainable_variables()
 
             # compute loss
             # note: we drop the `None` items in objective, because we
@@ -538,35 +548,37 @@ class TensorGraph:
             # compute gradients wrt loss
             if len(loss) > 0:
                 # reduce loss to a scalar
-                loss = tf.reduce_sum([tf.reduce_sum(v) for v in loss.values()])
+                loss = tf.reduce_sum(
+                    input_tensor=[tf.reduce_sum(input_tensor=v)
+                                  for v in loss.values()])
 
                 grads.append(tf.gradients(
-                    loss, vars, aggregation_method=agg_method))
+                    ys=loss, xs=vars, aggregation_method=agg_method))
 
             # add in any gradients where the user directly specified the output
             # error grad
             for p, g in objective.items():
                 if g is None:
                     grads.append(tf.gradients(
-                        self.probe_arrays[p], vars, grad_ys=self.target_phs[p],
+                        ys=self.probe_arrays[p], xs=vars,
+                        grad_ys=self.target_phs[p],
                         aggregation_method=agg_method))
 
             # combine gradients for each variable
             if len(grads) == 1:
                 grads = grads[0]
             else:
-                grads = [tf.reduce_sum(gs, axis=0) for gs in zip(*grads)]
+                grads = [tf.reduce_sum(input_tensor=gs, axis=0)
+                         for gs in zip(*grads)]
 
             opt_op = optimizer.apply_gradients(
-                zip(grads, tf.trainable_variables()),
-                global_step=self.training_step)
+                zip(grads, tf_compat.trainable_variables()))
 
-            # this is the op that increments the global step. we set it to
-            # be the output value of that op, rather than the op itself, so
-            # that it returns the global step value.
-            opt_op = opt_op.outputs[0]
+            with tf.control_dependencies([opt_op]):
+                new_step = tf_compat.assign_add(
+                    self.training_step, tf.constant(1, dtype=tf.int64))
 
-            return opt_op, loss
+            return new_step, loss
 
         self.optimizers[key] = apply_optimizer
 
@@ -649,7 +661,7 @@ class TensorGraph:
                         # create a placeholder for the target values if one
                         # hasn't been created yet
                         if p not in self.target_phs:
-                            self.target_phs[p] = tf.placeholder(
+                            self.target_phs[p] = tf_compat.placeholder(
                                 self.dtype,
                                 (self.minibatch_size, None, p.size_in),
                                 name="%s_ph" % utils.sanitize_name(p))
@@ -664,19 +676,20 @@ class TensorGraph:
                         "outputs")
 
                 # apply output function
-                with tf.variable_scope(utils.function_name(out)) as scope:
+                with tf_compat.variable_scope(
+                        utils.function_name(out)) as scope:
                     output_vals[probes] = out(*args)
 
                 # collect any new variables from building the outputs
-                for collection in [tf.GraphKeys.GLOBAL_VARIABLES,
-                                   tf.GraphKeys.LOCAL_VARIABLES,
+                for collection in [tf_compat.GraphKeys.GLOBAL_VARIABLES,
+                                   tf_compat.GraphKeys.LOCAL_VARIABLES,
                                    "gradient_vars"]:
                     new_vars.extend(scope.get_collection(collection))
             else:
                 raise ValidationError("Outputs must be callable or None)",
                                       "outputs")
 
-        new_vars_init = (tf.variables_initializer(new_vars)
+        new_vars_init = (tf_compat.variables_initializer(new_vars)
                          if len(new_vars) > 0 else None)
 
         self.outputs[key] = output_vals
@@ -757,17 +770,18 @@ class TensorGraph:
                     loss, init = self.build_outputs(obj)
                     if init is not None:
                         inits.append(init)
-                    summary_ops.append(tf.summary.scalar(
-                        "loss", tf.reduce_sum([tf.reduce_sum(v)
-                                               for v in loss.values()]),
+                    summary_ops.append(tf_compat.summary.scalar(
+                        "loss", tf.reduce_sum(
+                            input_tensor=[tf.reduce_sum(input_tensor=v)
+                                          for v in loss.values()]),
                         family="loss"))
 
                     if len(obj) > 1:
                         # get loss for each probe
                         for p, t in loss.items():
-                            summary_ops.append(tf.summary.scalar(
+                            summary_ops.append(tf_compat.summary.scalar(
                                 utils.sanitize_name("Probe_%s_loss" % p.label),
-                                tf.reduce_sum(t), family="loss"))
+                                tf.reduce_sum(input_tensor=t), family="loss"))
                 elif isinstance(obj, (Ensemble, Neurons, Connection)):
                     if isinstance(obj, Ensemble):
                         param = "encoders"
@@ -779,7 +793,7 @@ class TensorGraph:
                         param = "weights"
                         name = "Connection_%s" % obj.label
 
-                    summary_ops.append(tf.summary.histogram(
+                    summary_ops.append(tf_compat.summary.histogram(
                         utils.sanitize_name("%s_%s" % (name, param)),
                         self.get_tensor(self.model.sig[obj][param])))
                 elif isinstance(obj, tf.Tensor):
@@ -789,8 +803,8 @@ class TensorGraph:
                     raise SimulationError(
                         "Unknown summary object: %s" % obj)
 
-            return tf.summary.merge(summary_ops), (None if len(inits) == 0 else
-                                                   inits)
+            return tf_compat.summary.merge(summary_ops), (
+                None if len(inits) == 0 else inits)
 
     @with_self
     def get_tensor(self, sig):

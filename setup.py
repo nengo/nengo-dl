@@ -49,7 +49,7 @@ version = runpy.run_path(os.path.join(
 install_requires = [
     "nengo>=2.7.0",
     "numpy>=1.12.1",
-    "%s>=1.4.0,<2.0.0" % tf_req,
+    "%s>=1.4.0" % tf_req,
     "progressbar2>=3.39.0",
 ]
 docs_require = [

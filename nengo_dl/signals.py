@@ -10,6 +10,8 @@ from nengo.exceptions import BuildError
 import numpy as np
 import tensorflow as tf
 
+from nengo_dl.compat import tf_compat
+
 logger = logging.getLogger(__name__)
 
 
@@ -308,21 +310,21 @@ class SignalDict(Mapping):
             if (dst.tf_slice is not None and
                     var.get_shape().is_compatible_with(val.get_shape()) and
                     dst.indices[0] == 0 and
-                    dst.indices[-1] == var.get_shape()[0].value - 1 and
+                    dst.indices[-1] == var.get_shape()[0] - 1 and
                     len(dst.indices) == var.get_shape()[0]):
                 if mode == "inc":
-                    result = tf.assign_add(var, val, use_locking=False)
+                    result = tf_compat.assign_add(var, val, use_locking=False)
                     self.write_types["assign_add"] += 1
                 else:
-                    result = tf.assign(var, val, use_locking=False)
+                    result = tf_compat.assign(var, val, use_locking=False)
                     self.write_types["assign"] += 1
             elif mode == "inc":
-                result = tf.scatter_add(var, dst.tf_indices, val,
-                                        use_locking=False)
+                result = tf_compat.scatter_add(var, dst.tf_indices, val,
+                                               use_locking=False)
                 self.write_types["scatter_add"] += 1
             else:
-                result = tf.scatter_update(var, dst.tf_indices, val,
-                                           use_locking=False)
+                result = tf_compat.scatter_update(var, dst.tf_indices, val,
+                                                  use_locking=False)
                 self.write_types["scatter_update"] += 1
 
             self.bases[dst.key] = result
@@ -372,7 +374,7 @@ class SignalDict(Mapping):
             result = tf.gather(var, src.tf_indices)
             self.read_types["gather"] += 1
         elif (src.indices[0] == 0 and
-              src.indices[-1] == var.get_shape()[0].value - 1 and
+              src.indices[-1] == var.get_shape()[0] - 1 and
               len(src.indices) == var.get_shape()[0]):
             result = var
             self.read_types["identity"] += 1
@@ -479,11 +481,13 @@ class SignalDict(Mapping):
             np.arange(shape[0]), object(), self.dtype, shape,
             minibatched, label=name)
 
-        with tf.variable_scope(tf.get_default_graph().get_name_scope(),
-                               reuse=False):
-            var = tf.get_local_variable(
+        with tf_compat.variable_scope(
+                tf_compat.get_default_graph().get_name_scope(),
+                reuse=False):
+            var = tf_compat.get_local_variable(
                 name, shape=sig.full_shape, dtype=sig.dtype, trainable=False,
-                initializer=tf.zeros_initializer())
+                initializer=tf_compat.initializers.zeros(),
+                use_resource=False)
 
         self.internal_vars[sig.key] = var
 
@@ -571,11 +575,11 @@ class SignalDict(Mapping):
 
         if value.nbytes > cutoff:
             def make_ph(shape, dtype, **_):
-                ph = tf.placeholder(dtype, shape)
+                ph = tf_compat.placeholder(dtype, shape)
                 self.constant_phs[ph] = value
                 return ph
 
-            with tf.variable_scope("constant_vars", reuse=False):
+            with tf_compat.variable_scope("constant_vars", reuse=False):
                 # tensorflow doesn't support int32 variables on the gpu, only
                 # int64 (for some reason). we don't want to use int64 since
                 # that would increase the size a lot, so we allow the variable
@@ -583,10 +587,11 @@ class SignalDict(Mapping):
                 # the GPU with the identity
                 # TODO: double check if this is still true in the future
                 with tf.device(None):
-                    const_var = tf.get_variable(
+                    const_var = tf_compat.get_variable(
                         "constant_%d" % len(self.constant_phs),
                         initializer=make_ph, shape=value.shape, dtype=dtype,
-                        collections=["constants"], trainable=False)
+                        collections=["constants"], trainable=False,
+                        use_resource=False)
 
                 return tf.identity(const_var)
         else:

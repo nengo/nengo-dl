@@ -15,6 +15,7 @@ import numpy as np
 import tensorflow as tf
 
 import nengo_dl
+from nengo_dl.compat import tf_compat
 
 
 def cconv(dimensions, neurons_per_d, neuron_type):
@@ -189,33 +190,34 @@ def mnist(use_tensor_layer=True):
             synapse = None
 
             x = nengo_dl.tensor_layer(
-                net.inp, tf.layers.conv2d, shape_in=(28, 28, 1), filters=32,
-                kernel_size=3
+                net.inp, tf_compat.layers.conv2d, shape_in=(28, 28, 1),
+                filters=32, kernel_size=3
             )
             x = nengo_dl.tensor_layer(x, nengo_nl,
                                       **ensemble_params)
 
             x = nengo_dl.tensor_layer(
-                x, tf.layers.conv2d, shape_in=(26, 26, 32),
+                x, tf_compat.layers.conv2d, shape_in=(26, 26, 32),
                 transform=amplitude, filters=32, kernel_size=3
             )
             x = nengo_dl.tensor_layer(x, nengo_nl,
                                       **ensemble_params)
 
             x = nengo_dl.tensor_layer(
-                x, tf.layers.average_pooling2d, shape_in=(24, 24, 32),
-                synapse=synapse, transform=amplitude, pool_size=2, strides=2)
+                x, tf_compat.layers.average_pooling2d,
+                shape_in=(24, 24, 32), synapse=synapse, transform=amplitude,
+                pool_size=2, strides=2)
 
             x = nengo_dl.tensor_layer(
-                x, tf.layers.dense, units=128
+                x, tf_compat.layers.dense, units=128
             )
             x = nengo_dl.tensor_layer(x, nengo_nl,
                                       **ensemble_params)
 
-            x = nengo_dl.tensor_layer(x, tf.layers.dropout, rate=0.4,
+            x = nengo_dl.tensor_layer(x, tf_compat.layers.dropout, rate=0.4,
                                       transform=amplitude)
 
-            x = nengo_dl.tensor_layer(x, tf.layers.dense, units=10)
+            x = nengo_dl.tensor_layer(x, tf_compat.layers.dense, units=10)
         else:
             nl = tf.nn.relu
 
@@ -229,15 +231,16 @@ def mnist(use_tensor_layer=True):
 
             @nengo_dl.reshaped((28, 28, 1))
             def mnist_node(_, x):  # pragma: no cover
-                x = tf.layers.conv2d(x, filters=32, kernel_size=3,
-                                     activation=nl)
-                x = tf.layers.conv2d(x, filters=32, kernel_size=3,
-                                     activation=nl)
-                x = tf.layers.average_pooling2d(x, pool_size=2, strides=2)
-                x = tf.contrib.layers.flatten(x)
-                x = tf.layers.dense(x, 128, activation=nl)
-                x = tf.layers.dropout(x, rate=0.4)
-                x = tf.layers.dense(x, 10)
+                x = tf_compat.layers.conv2d(
+                    x, filters=32, kernel_size=3, activation=nl)
+                x = tf_compat.layers.conv2d(
+                    x, filters=32, kernel_size=3, activation=nl)
+                x = tf_compat.layers.average_pooling2d(
+                    x, pool_size=2, strides=2)
+                x = tf_compat.layers.flatten(x)
+                x = tf_compat.layers.dense(x, 128, activation=nl)
+                x = tf_compat.layers.dropout(x, rate=0.4)
+                x = tf_compat.layers.dense(x, 10)
 
                 return x
 
@@ -388,7 +391,7 @@ def run_profile(net, train=False, n_steps=150, do_profile=True,
 
     with nengo_dl.Simulator(net, **kwargs) as sim:
         if train:
-            opt = tf.train.GradientDescentOptimizer(0.001)
+            opt = tf_compat.train.GradientDescentOptimizer(0.001)
             x = np.random.randn(sim.minibatch_size, n_steps, net.inp.size_out)
             y = np.random.randn(sim.minibatch_size, n_steps, net.p.size_in)
 
@@ -501,12 +504,16 @@ def matmul_vs_reduce():  # pragma: no cover
     # x_shape = (n_ops, 1, s1, mini)
     # for matmul we omit the 1 dimensions
 
-    a_c = tf.placeholder(tf.float64, shape=(None, None, None), name="a_c")
-    x_c = tf.placeholder(tf.float64, shape=(None, None, None), name="b_c")
-    a_d = tf.placeholder(tf.float64, shape=(None, None, None, 1), name="a_d")
-    x_d = tf.placeholder(tf.float64, shape=(None, 1, None, None), name="b_d")
+    a_c = tf_compat.placeholder(tf.float64, shape=(None, None, None),
+                                name="a_c")
+    x_c = tf_compat.placeholder(tf.float64, shape=(None, None, None),
+                                name="b_c")
+    a_d = tf_compat.placeholder(tf.float64, shape=(None, None, None, 1),
+                                name="a_d")
+    x_d = tf_compat.placeholder(tf.float64, shape=(None, 1, None, None),
+                                name="b_d")
     c = tf.matmul(a_c, x_c)
-    d = tf.reduce_sum(tf.multiply(a_d, x_d), axis=-2)
+    d = tf.reduce_sum(input_tensor=tf.multiply(a_d, x_d), axis=-2)
 
     reps = 100
     n_ops_range = [1, 4, 8, 16, 32, 64]
@@ -522,7 +529,7 @@ def matmul_vs_reduce():  # pragma: no cover
         enumerate(n_ops_range), enumerate(mini_range), enumerate(s0_range),
         enumerate(s1_range))
 
-    with tf.Session() as sess:
+    with tf_compat.Session() as sess:
         for (i, n_ops), (j, mini), (k, s0), (l, s1) in params:
             print(n_ops, mini, s0, s1)
 

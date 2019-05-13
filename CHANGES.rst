@@ -27,6 +27,7 @@ Release History
   `new example <https://www.nengo.ai/nengo-dl/examples/tensorflow-models>`_
   demonstrating how to integrate a Keras model with NengoDL (thanks to new
   contributor `@NickleDave <https://github.com/NickleDave>`_).
+- Added support for TensorFlow 2.0 (pre-release).
 
 **Changed**
 
@@ -34,6 +35,8 @@ Release History
   TensorNodes' ``post_build`` function.
 - Renamed the pytest ``unroll_simulation`` argument to ``unroll-simulation``.
 - Switched to nengo-bones templating system for TravisCI config/scripts.
+- NengoDL will disable eager execution on import (and will probably not
+  work properly if it is manually re-enabled).
 
 **Fixed**
 

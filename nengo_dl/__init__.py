@@ -29,11 +29,18 @@ del sys
 # filter out "INFO" level log messages
 import os
 import tensorflow as tf
+from nengo_dl.compat import tf_compat
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
-tf.logging.set_verbosity(tf.logging.WARN)
+tf_compat.logging.set_verbosity(tf_compat.logging.WARN)
+
+# disable eager execution (for now, pending full TF 2.0 compatibility)
+if hasattr(tf, "executing_eagerly") and tf.executing_eagerly():
+    tf_compat.disable_eager_execution()
+
 del os
 del tf
+del tf_compat
 
 # need to explicitly import these to trigger the builder registration
 from nengo_dl import (

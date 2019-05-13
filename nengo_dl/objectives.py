@@ -5,6 +5,8 @@ Some common objective functions (for use with the ``objective`` argument in
 
 import tensorflow as tf
 
+from nengo_dl.compat import tf_math
+
 
 def mse(outputs, targets):
     """
@@ -26,8 +28,8 @@ def mse(outputs, targets):
         Tensor representing the mean squared error.
     """
 
-    targets = tf.where(tf.is_nan(targets), outputs, targets)
-    return tf.reduce_mean(tf.square(targets - outputs))
+    targets = tf.where(tf_math.is_nan(targets), outputs, targets)
+    return tf.reduce_mean(input_tensor=tf.square(targets - outputs))
 
 
 class Regularize:
@@ -65,12 +67,12 @@ class Regularize:
         if self.axis is None:
             if x.get_shape().ndims > 3:
                 # flatten signal (keeping batch/time dimension)
-                x = tf.reshape(x, tf.concat([tf.shape(x)[:2], (-1,)], axis=0))
+                x = tf.reshape(x, tf.concat([tf.shape(input=x)[:2], (-1,)], axis=0))
             axis = 2
         else:
             axis = self.axis + 2
 
-        output = tf.reduce_mean(tf.norm(x, axis=axis, ord=self.order))
+        output = tf.reduce_mean(input_tensor=tf.norm(tensor=x, axis=axis, ord=self.order))
 
         if self.weight is not None:
             output *= self.weight

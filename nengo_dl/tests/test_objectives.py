@@ -6,6 +6,7 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import objectives
+from nengo_dl.compat import tf_compat
 
 
 @pytest.mark.parametrize("axis, weight, order",
@@ -19,7 +20,7 @@ def test_regularize(axis, weight, order, rng, sess):
 
     reg = objectives.Regularize(weight=weight, order=order, axis=axis)(x)
 
-    sess.run(tf.global_variables_initializer())
+    sess.run(tf_compat.global_variables_initializer())
     reg_val = sess.run(reg)
 
     if order == "euclidean":
@@ -58,7 +59,7 @@ def test_regularize_train(Simulator, mode, seed):
 
     with Simulator(net) as sim:
         sim.train(
-            5, tf.train.RMSPropOptimizer(0.01 if mode == "weights" else 0.1),
+            5, tf_compat.train.RMSPropOptimizer(0.01 if mode == "weights" else 0.1),
             objective={p: objectives.Regularize()}, n_epochs=100)
 
         sim.step()

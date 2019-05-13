@@ -10,6 +10,7 @@ import tensorflow as tf
 
 import nengo_dl
 from nengo_dl import config, simulator, utils
+from nengo_dl.compat import tf_compat
 
 
 def pytest_configure(config):
@@ -143,7 +144,7 @@ def Simulator(request):
 def sess(request):
     """Create a TensorFlow session with a unique scope per test."""
     with tf.Graph().as_default() as graph:
-        with tf.Session(graph=graph) as sess:
+        with tf_compat.Session(graph=graph) as sess:
             yield sess
 
 

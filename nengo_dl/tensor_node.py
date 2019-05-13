@@ -13,6 +13,7 @@ import numpy as np
 import tensorflow as tf
 
 from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
+from nengo_dl.compat import tf_shape
 
 
 def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
@@ -95,7 +96,7 @@ class TensorFuncParam(Parameter):
 
             validate_output(result)
 
-            node.size_out = result.get_shape()[1].value
+            node.size_out = tf_shape(result.get_shape())[1]
 
         return output
 
@@ -242,7 +243,7 @@ class SimTensorNodeBuilder(OpBuilder):
             input = signals.gather(self.src_data)
 
             # move minibatch dimension to front
-            input = tf.transpose(input, (1, 0))
+            input = tf.transpose(a=input, perm=(1, 0))
 
             output = self.func(signals.time, input)
 
@@ -250,7 +251,7 @@ class SimTensorNodeBuilder(OpBuilder):
                         output_d=self.dst_data.shape[0], dtype=signals.dtype)
 
         # move minibatch dimension back to end
-        output = tf.transpose(output, (1, 0))
+        output = tf.transpose(a=output, perm=(1, 0))
 
         signals.scatter(self.dst_data, output)
 
@@ -278,7 +279,7 @@ def reshaped(shape_in):
 
     def reshape_dec(func):
         def reshaped_func(t, x):
-            batch_size = x.get_shape()[0].value
+            batch_size = x.get_shape()[0]
             x = tf.reshape(x, (batch_size,) + shape_in)
             x = func(t, x)
             x = tf.reshape(x, (batch_size, -1))

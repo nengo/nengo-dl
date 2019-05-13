@@ -8,6 +8,7 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import tensor_graph, utils, graph_optimizer, config, objectives
+from nengo_dl.compat import tf_compat
 from nengo_dl.tests import dummies
 
 
@@ -86,12 +87,14 @@ def test_build_outputs(Simulator):
         class CallableLoss:
             def __call__(self, outputs, targets):
                 return outputs
+
         sim.tensor_graph.build_outputs({p: CallableLoss()})
 
         # arg parsing works with class methods
         class MethodLoss:
             def loss(self, outputs, targets):
                 return outputs
+
         sim.tensor_graph.build_outputs({p: MethodLoss().loss})
 
         # validation error for invalid output type
@@ -109,10 +112,10 @@ def test_build_optimizer(Simulator):
 
     # check optimizer caching
     with Simulator(net) as sim:
-        opt = tf.train.GradientDescentOptimizer(0)
+        opt = tf_compat.train.GradientDescentOptimizer(0)
         assert (
-            sim.tensor_graph.build_optimizer_func(opt, {p: objectives.mse}) is
-            sim.tensor_graph.build_optimizer_func(opt, {p: objectives.mse}))
+            sim.tensor_graph.build_optimizer_func(opt, {p: objectives.mse})
+            is sim.tensor_graph.build_optimizer_func(opt, {p: objectives.mse}))
 
     # error when no trainable elements
     with nengo.Network() as net:
@@ -128,13 +131,16 @@ def test_build_optimizer(Simulator):
     # capturing variables from nested loss function
     def loss(x):
         return abs(
-            tf.get_variable("two", initializer=tf.constant_initializer(2.0),
-                            shape=(), dtype=x.dtype) - x)
+            tf_compat.get_variable(
+                "two",
+                initializer=tf_compat.initializers.constant(2.0),
+                shape=(), dtype=x.dtype, use_resource=False)
+            - x)
 
     net, _, p = dummies.linear_net()
 
     with Simulator(net) as sim:
-        sim.train(5, tf.train.GradientDescentOptimizer(0.1),
+        sim.train(5, tf_compat.train.GradientDescentOptimizer(0.1),
                   objective={p: loss}, n_epochs=10)
         sim.step()
         assert np.allclose(sim.data[p], 2)

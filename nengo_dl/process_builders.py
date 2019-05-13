@@ -18,6 +18,7 @@ from tensorflow.python.ops import gen_sparse_ops
 
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
+from nengo_dl.compat import tf_compat
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,7 @@ class GenericProcessBuilder(OpBuilder):
         # has completed before the next starts, since we don't know that the
         # functions are thread safe
         with tf.control_dependencies(self.prev_result), tf.device("/cpu:0"):
-            result = tf.py_func(
+            result = tf_compat.py_func(
                 self.merged_func, [signals.time, input],
                 self.output_data.dtype, name=self.merged_func.__name__)
         result.set_shape(self.output_shape)
@@ -268,7 +269,7 @@ class LinearFilterBuilder(OpBuilder):
             output = tf.reshape(
                 output,
                 (self.n_ops, -1, signals.minibatch_size * self.signal_d))
-            output = tf.reduce_sum(output, axis=1)
+            output = tf.reduce_sum(input_tensor=output, axis=1)
 
         if self.D is not None:
             output += self.D * input

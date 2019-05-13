@@ -10,6 +10,7 @@ import numpy as np
 import tensorflow as tf
 
 from nengo_dl.builder import Builder, OpBuilder
+from nengo_dl.compat import tf_convolution
 
 if LooseVersion(nengo_version) > "2.8.0":
     from nengo.builder.transforms import ConvInc  # pylint: disable=ungrouped-imports
@@ -134,21 +135,21 @@ class ConvIncBuilder(OpBuilder):
         X = signals.gather(self.X_data)
 
         # put batch dimension first
-        X = tf.transpose(X, self.perm_x)
+        X = tf.transpose(a=X, perm=self.perm_x)
 
         if self.perm_w is not None:
             # concatenate kernels along output channel dimension
-            W = tf.transpose(W, self.perm_w)
+            W = tf.transpose(a=W, perm=self.perm_w)
             W = tf.reshape(W, self.reshape_w)
 
-        Y = tf.nn.convolution(
-            input=X, filter=W, strides=self.conv.strides, data_format=self.fmt,
+        Y = tf_convolution(
+            input=X, filters=W, strides=self.conv.strides, data_format=self.fmt,
             padding=self.conv.padding.upper())
 
         # move batch back to end, ops to front
         if self.reshape_y is not None:
             Y = tf.reshape(Y, self.reshape_y)
-        Y = tf.transpose(Y, self.perm_y)
+        Y = tf.transpose(a=Y, perm=self.perm_y)
 
         signals.scatter(self.Y_data, Y, mode="inc")
 
