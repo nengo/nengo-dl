@@ -6,6 +6,7 @@ from __future__ import print_function
 
 import logging
 import re
+import subprocess
 import sys
 import threading
 import time
@@ -13,17 +14,21 @@ import warnings
 
 from nengo.exceptions import SimulationError
 import numpy as np
-import pkg_resources
 import progressbar
 import tensorflow as tf
 from tensorflow.python.framework.ops import get_gradient_function
 
 logger = logging.getLogger(__name__)
 
-# check if tensorflow-gpu is installed
-tf_gpu_installed = len(
-    [d for d in pkg_resources.working_set
-     if d.project_name in ("tensorflow-gpu", "tf-nightly-gpu")]) > 0
+# check if GPU support is available
+# note: we run this in a subprocess because is_gpu_available() creates
+# a Session, which will fix certain process-level TensorFlow configuration
+# options the first time it is called
+tf_gpu_installed = subprocess.call(
+    ["python", "-c",
+     "import sys; "
+     "import tensorflow as tf; "
+     "sys.exit(tf.test.is_gpu_available())"])
 
 
 def sanitize_name(name):

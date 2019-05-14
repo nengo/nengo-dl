@@ -39,6 +39,8 @@ Release History
 
 - Fixed TensorFlow seeding so that randomness can be reliably controlled by
   setting the Simulator seed.
+- Improved robustness of ``tensorflow-gpu`` installation check (in particular,
+  it will now correctly detect GPU dists installed through ``conda``).
 
 2.1.1 (January 11, 2019)
 ------------------------

@@ -1,4 +1,4 @@
-# pylint: disable=wrong-import-order,wrong-import-position,missing-docstring
+# pylint: disable=wrong-import-order,wrong-import-position,missing-docstring,ungrouped-imports
 
 __copyright__ = "2015-2018, Applied Brain Research"
 __license__ = "Free for non-commercial use; see LICENSE.rst"
@@ -26,6 +26,15 @@ There are two options for getting NengoDL working:
 """ % (sys.version, __version__))
 del sys
 
+# filter out "INFO" level log messages
+import os
+import tensorflow as tf
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
+tf.logging.set_verbosity(tf.logging.WARN)
+del os
+del tf
+
 # need to explicitly import these to trigger the builder registration
 from nengo_dl import (
     op_builders, neuron_builders, process_builders, learning_rule_builders,
@@ -46,12 +55,3 @@ from nengo_dl import tensorflow_patch
 
 tensorflow_patch.patch_dynamic_stitch_grad()
 tensorflow_patch.patch_state_grads()
-
-# filter out "INFO" level log messages
-import os
-import tensorflow as tf
-
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
-tf.logging.set_verbosity(tf.logging.WARN)
-del os
-del tf

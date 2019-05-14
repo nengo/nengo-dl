@@ -164,3 +164,7 @@ def test_progress_bar():
     # check that closing the parent process closes the sub
     assert sub2.finished
     assert progress.finished
+
+
+def test_gpu_check():
+    assert utils.tf_gpu_installed == tf.test.is_gpu_available()
