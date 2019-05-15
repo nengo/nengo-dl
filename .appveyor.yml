@@ -24,15 +24,12 @@ install:
   - conda update -q conda
   - conda info -a
   - conda install "six>=1.11.0"
+  - pip install %NUMPY_VERSION% %TF_VERSION% %NENGO_VERSION%
   - pip install -e .[tests]
-  - pip install %TF_VERSION%
-  - pip install %NENGO_VERSION%
-  - pip uninstall -y numpy
-  - conda install "%NUMPY_VERSION%"
   - conda list -e
   - pip freeze
 
 build: false  # Not a C# project
 
 test_script:
-  - py.test -n 2 --pyargs nengo && py.test -n 2 --durations 20 nengo_dl
+  - pytest -n 2 --pyargs nengo && pytest -n 2 --durations 20 nengo_dl
