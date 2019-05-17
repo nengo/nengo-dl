@@ -1307,14 +1307,14 @@ def test_freeze_network(Simulator, net):
         assert np.allclose(sim.data[p], sim2.data[p])
 
 
-def test_freeze_obj(Simulator):
-    with nengo.Network() as net:
+def test_freeze_obj(Simulator, seed):
+    with nengo.Network(seed=seed) as net:
         a = nengo.Ensemble(10, 1)
         b = nengo.Node(size_in=1)
         c = nengo.Connection(a, b)
         p = nengo.Probe(b)
 
-    with nengo.Network():
+    with nengo.Network(seed=seed + 1):
         d = nengo.Ensemble(10, 1)
 
     with Simulator(net) as sim:
