@@ -145,8 +145,7 @@ setup_py:
     - click>=6.7  # needed for sphinx-click
     - jupyter>=1.0.0
     - matplotlib>=2.0.0
-    - nbconvert!=5.4  # doesn't work with nbsphinx TODO: remove this once there's an upstream fix; https://github.com/jupyter/nbconvert/issues/878
-    - nbsphinx>=0.2.13
+    - nbsphinx>=0.3.5
     - nengo-sphinx-theme>=0.7.0
     - numpydoc>=0.6.0
     - Pillow>=4.1.1
@@ -155,11 +154,10 @@ setup_py:
   tests_req:
     - click>=6.7
     - codespell>=1.12.0
-    - isort!=4.3.11  # has a bug with third party modules TODO: remove once there's an upstream fix; https://github.com/timothycrosley/isort/issues/882
     - matplotlib>=2.0.0,<3.1.0  # >=3.1.0 doesn't work with nengo tests TODO: remove once there is a compatible nengo release
     - nbval>=0.6.0
     - pylint>=1.9.2
-    - pytest>=3.6.0,<4.1.0  # >=4.1.0 doesn't work with nengo tests TODO: remove this once https://github.com/nengo/nengo/pull/1497 is merged
+    - pytest>=3.6.0,<4.1.0  # >=4.1.0 doesn't work with nengo tests TODO: remove this once there is a compatible nengo release
     - pytest-cov>=2.6.0
     - pytest-xdist>=1.16.0,<1.28.0  # 1.28.0 requires pytest>=4.4.0 (see above)
     - six>=1.11.0  # hint for pip dependency resolution, required by nbval
