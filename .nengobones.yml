@@ -76,6 +76,7 @@ docs_conf_py:
   nengo_logo: nengo-dl-full-light.svg
   sphinx_options:
     suppress_warnings: "['image.nonlocal_uri']"
+  analytics_id: UA-41658423-2
 
 ci_scripts:
   - template: static
