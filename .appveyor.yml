@@ -13,7 +13,7 @@ environment:
       TF_VERSION: tensorflow --pre
     - NENGO_VERSION: nengo==2.7.0
       TF_VERSION: tensorflow==1.4.0
-      NUMPY_VERSION: numpy==1.12.1
+      NUMPY_VERSION: numpy==1.14.5
       PYTHON_VERSION: C:\Miniconda35-x64
 
 init:

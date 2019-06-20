@@ -54,6 +54,7 @@ jobs:
     env:
       NENGO_VERSION="nengo==2.7.0"
       TF_VERSION="tensorflow==1.4.0"
+      NUMPY_VERSION="numpy==1.14.5"
       SCRIPT="test-coverage"
     python: 3.5
   -

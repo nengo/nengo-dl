@@ -38,6 +38,7 @@ Release History
 - Switched to nengo-bones templating system for TravisCI config/scripts.
 - NengoDL will disable eager execution on import (and will probably not
   work properly if it is manually re-enabled).
+- Increased minimum numpy version to 1.14.5 (required by TensorFlow 1.14).
 
 **Fixed**
 
