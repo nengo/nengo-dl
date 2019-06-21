@@ -23,7 +23,7 @@ else:
         tf_req = "tensorflow"
 
 install_req = [
-    "nengo>=2.7.0",
+    "nengo>=2.8.0",
     "numpy>=1.14.5",
     "%s>=1.4.0" % tf_req,
     "progressbar2>=3.39.0",

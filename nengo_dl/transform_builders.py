@@ -2,22 +2,13 @@
 Build classes for Nengo transform operators.
 """
 
-from distutils.version import LooseVersion
 import warnings
 
-from nengo.version import version as nengo_version
 import numpy as np
 import tensorflow as tf
 
 from nengo_dl.builder import Builder, OpBuilder
-from nengo_dl.compat import tf_convolution
-
-if LooseVersion(nengo_version) > "2.8.0":
-    from nengo.builder.transforms import ConvInc  # pylint: disable=ungrouped-imports
-else:
-    # using a Nengo version before ConvInc was added, so don't need to
-    # worry about building it
-    ConvInc = None
+from nengo_dl.compat import tf_convolution, ConvInc
 
 
 @Builder.register(ConvInc)

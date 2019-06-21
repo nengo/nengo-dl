@@ -2,18 +2,16 @@
 Build classes for Nengo learning rule operators.
 """
 
-from distutils.version import LooseVersion
-
-from nengo import Lowpass
 from nengo.builder import Signal
-from nengo.builder.learning_rules import SimBCM, SimOja, SimVoja, get_post_ens
-from nengo.builder.operator import Operator, Reset, DotInc, Copy
+from nengo.builder.learning_rules import (
+    SimBCM, SimOja, SimVoja, get_post_ens, build_or_passthrough)
+from nengo.builder.operator import Reset, DotInc, Copy
 from nengo.learning_rules import PES
-from nengo.version import version as nengo_version
 import numpy as np
 import tensorflow as tf
 
 from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
+from nengo_dl.compat import SimPES
 
 
 @Builder.register(SimBCM)
@@ -157,74 +155,6 @@ class SimVojaBuilder(OpBuilder):
         return x.pre_decoded.shape[0] == y.pre_decoded.shape[0]
 
 
-class SimPES(Operator):  # pylint: disable=abstract-method
-    r"""
-    Calculate connection weight change according to the PES rule.
-
-    Implements the PES learning rule of the form
-
-    .. math:: \Delta \omega_{ij} = \frac{\kappa}{n} e_j a_i
-
-    where
-
-    * :math:`\kappa` is a scalar learning rate,
-    * :math:`n` is the number of presynaptic neurons
-    * :math:`e_j` is the error for the jth output dimension, and
-    * :math:`a_i` is the activity of a presynaptic neuron.
-
-    Parameters
-    ----------
-    pre_filtered : Signal
-        The presynaptic activity, :math:`a_i`.
-    error : Signal
-        The error signal, :math:`e_j`.
-    delta : Signal
-        The synaptic weight change to be applied, :math:`\Delta \omega_{ij}`.
-    learning_rate : float
-        The scalar learning rate, :math:`\kappa`.
-    tag : str (Default: None)
-        A label associated with the operator, for debugging purposes.
-
-    Attributes
-    ----------
-    pre_filtered : Signal
-        The presynaptic activity, :math:`a_i`.
-    error : Signal
-        The error signal, :math:`e_j`.
-    delta : Signal
-        The synaptic weight change to be applied, :math:`\Delta \omega_{ij}`.
-    learning_rate : float
-        The scalar learning rate, :math:`\kappa`.
-    tag : str (Default: None)
-        A label associated with the operator, for debugging purposes.
-
-    Notes
-    -----
-    1. sets ``[delta]``
-    2. incs ``[]``
-    3. reads ``[pre_filtered, error]``
-    4. updates ``[]``
-    """
-
-    def __init__(self, pre_filtered, error, delta, learning_rate, tag=None):
-        super(SimPES, self).__init__(tag=tag)
-
-        self.pre_filtered = pre_filtered
-        self.error = error
-        self.delta = delta
-        self.learning_rate = learning_rate
-
-        # TODO: change this to an update when (if) we make that change in nengo
-        self.sets = [delta]
-        self.incs = []
-        self.reads = [pre_filtered, error]
-        self.updates = []
-
-    def _descstr(self):
-        return 'pre=%s, error=%s -> %s' % (
-            self.pre_filtered, self.error, self.delta)
-
-
 @NengoBuilder.register(PES)
 def build_pes(model, pes, rule):
     """
@@ -252,11 +182,8 @@ def build_pes(model, pes, rule):
     model.add_op(Reset(error))
     model.sig[rule]['in'] = error  # error connection will attach here
 
-    if LooseVersion(nengo_version) < "2.7.1":
-        acts = model.build(
-            Lowpass(pes.pre_tau), model.sig[conn.pre_obj]["out"])
-    else:
-        acts = model.build(pes.pre_synapse, model.sig[conn.pre_obj]["out"])
+    acts = build_or_passthrough(
+        model, pes.pre_synapse, model.sig[conn.pre_obj]["out"])
 
     if not conn.is_decoded:
         # multiply error by post encoders to get a per-neuron error
@@ -290,13 +217,9 @@ def build_pes(model, pes, rule):
     model.sig[rule]["activities"] = acts
 
 
-# remove 'correction' from probeable attributes
-PES.probeable = ("error", "activities", "delta")
-
-
 @Builder.register(SimPES)
 class SimPESBuilder(OpBuilder):
-    """Build a group of `.SimPES` operators."""
+    """Build a group of `~nengo.builder.learning_rules.SimPES` operators."""
 
     def __init__(self, ops, signals, config):
         super(SimPESBuilder, self).__init__(ops, signals, config)
@@ -312,6 +235,8 @@ class SimPESBuilder(OpBuilder):
         self.alpha = signals.op_constant(
             ops, [1 for _ in ops], "learning_rate", signals.dtype, ndims=4) * (
                 -signals.dt_val / ops[0].pre_filtered.shape[0])
+
+        assert all(op.encoders is None for op in ops)
 
         self.output_data = signals.combine([op.delta for op in ops])
 

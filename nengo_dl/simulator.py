@@ -6,16 +6,12 @@ a model.
 
 import collections
 import copy
-import datetime
-from distutils.version import LooseVersion
 import logging
 import os
 import tempfile
-import time
 import warnings
 
 from nengo import Ensemble, Connection, Probe, Network, Direct, Node
-from nengo.version import version as nengo_version
 from nengo.builder.connection import BuiltConnection
 from nengo.builder.ensemble import BuiltEnsemble
 from nengo.ensemble import Neurons
@@ -30,15 +26,9 @@ from tensorflow.python.ops import gradient_checker
 
 from nengo_dl import utils, config, objectives
 from nengo_dl.builder import NengoBuilder, NengoModel
-from nengo_dl.compat import tf_compat
+from nengo_dl.compat import tf_compat, Convolution
 from nengo_dl.tensor_graph import TensorGraph
 
-if LooseVersion(nengo_version) > "2.8.0":
-    from nengo.transforms import Convolution  # pylint: disable=ungrouped-imports
-else:
-    # using a version of Nengo before Convolution was added
-    class Convolution:
-        """Dummy convolution class."""
 
 logger = logging.getLogger(__name__)
 
@@ -113,15 +103,8 @@ class Simulator:
             self.model = model
 
         if network is not None:
-            if LooseVersion(nengo_version) < "2.7.1":
-                print("Building network")
-                start = time.time()
-                self.model.build(network, progress_bar=None)
-                print("\rBuild finished in %s " %
-                      datetime.timedelta(seconds=int(time.time() - start)))
-            else:
-                p = ProgressBar("Building network", "Build")
-                self.model.build(network, progress=p)
+            p = ProgressBar("Building network", "Build")
+            self.model.build(network, progress=p)
 
         if dtype is not None:
             warnings.warn(
@@ -1301,7 +1284,6 @@ class Simulator:
             If None, a time value for every ``dt`` will be produced.
         """
 
-        # TODO: can remove this if we upgrade minimum nengo version
         if dt is not None:
             if sample_every is not None:
                 raise ValidationError(

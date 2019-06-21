@@ -18,7 +18,7 @@ version = "{v}{dev}".format(v='.'.join(str(v) for v in version_info),
 try:
     import nengo.version
 
-    minimum_nengo_version = (2, 7, 0)
+    minimum_nengo_version = (2, 8, 0)
     latest_nengo_version = (3, 0, 0)
     if nengo.version.version_info < minimum_nengo_version:  # pragma: no cover
         raise ValueError(

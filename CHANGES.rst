@@ -39,6 +39,7 @@ Release History
 - NengoDL will disable eager execution on import (and will probably not
   work properly if it is manually re-enabled).
 - Increased minimum numpy version to 1.14.5 (required by TensorFlow 1.14).
+- Minimum Nengo version is now 2.8.0.
 
 **Fixed**
 
@@ -469,7 +470,7 @@ Release History
 - Changed the default ``tensorboard`` argument in ``Simulator`` from ``False``
   to ``None``
 - Use the new `tf.profiler
-  <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/profiler/README.md>`_
+  <https://www.tensorflow.org/api_docs/python/tf/profiler/profile>`_
   tool to collect profiling data in ``sim.run_steps`` and ``sim.train`` when
   ``profile=True``.
 - Minor improvements to efficiency of build process.
