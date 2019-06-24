@@ -74,8 +74,12 @@ class Simulator:
         self.unroll = unroll_simulation
         self.minibatch_size = 1 if minibatch_size is None else minibatch_size
         self.data = SimulationData(self, minibatch_size is not None)
-        self.seed = (np.random.randint(np.iinfo(np.int32).max) if seed is None
-                     else seed)
+        if seed is None:
+            if network is not None and network.seed is not None:
+                seed = network.seed + 1
+            else:
+                seed = np.random.randint(np.iinfo(np.int32).max)
+        self.seed = seed
 
         # TODO: multi-GPU support
 

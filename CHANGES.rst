@@ -49,6 +49,7 @@ Release History
   it will now correctly detect GPU dists installed through ``conda``).
 - Fixed inspection of ``TensorNode.tensor_func`` arguments for partial
   functions.
+- Simulator seed will now be deterministic for a given top-level Network seed.
 
 **Removed**
 
