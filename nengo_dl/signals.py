@@ -555,7 +555,7 @@ class SignalDict(Mapping):
         ----------
         value : `~numpy.ndarray`
             Array containing the value of the constant
-        dtype : ``tf.DType``
+        dtype : `~numpy.dtype`
             The type for the constant (if ``None``, the dtype of ``value``
             will be used)
         cutoff : int
@@ -609,7 +609,7 @@ class SignalDict(Mapping):
             The number of constant elements in each op
         attr : str
             The attribute of the op that describes the constant parameter
-        dtype : ``tf.DType``
+        dtype : `~numpy.dtype`
             Numeric type of the parameter
         ndims : int
             Empty dimensions will be added to the end of the returned tensor
@@ -625,11 +625,11 @@ class SignalDict(Mapping):
 
         vals = [getattr(op, attr) for op in ops]
         if np.allclose(vals, vals[0]):
-            return tf.constant(vals[0], dtype=dtype)
+            return tf.constant(vals[0], dtype=tf.as_dtype(dtype))
 
         assert len(op_sizes) == len(ops)
         v = np.zeros([sum(op_sizes)] + [1] * (ndims - 1),
-                     dtype=dtype.as_numpy_dtype())
+                     dtype=dtype)
         k = 0
         for val, size in zip(vals, op_sizes):
             v[k:k + size] = val

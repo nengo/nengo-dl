@@ -267,7 +267,7 @@ def test_constant_gpu(sess):
     assert np.allclose(val, c)
 
 
-@pytest.mark.parametrize("dtype", (tf.float32, tf.float64))
+@pytest.mark.parametrize("dtype", (np.float32, np.float64))
 @pytest.mark.parametrize("diff", (True, False))
 def test_op_constant(dtype, diff, sess):
     ops = (SimNeurons(LIF(tau_rc=1), Signal(np.zeros(10)), None),
