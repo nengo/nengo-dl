@@ -356,6 +356,11 @@ class NengoModel(builder.Model):
         addition of the ``if self.fail_fast`` condition.
         """
 
+        # TODO: nengo 3.0 adds something similar to this condition, but
+        # it uses an rc setting (so we can't change it in nengo-dl without
+        # also changing nengo core). if the rc system is reworked to allow
+        # backend-specific overrides, we could remove this class.
+
         self.operators.append(op)
         if self.fail_fast:
             # Fail fast by trying make_step with a temporary sigdict

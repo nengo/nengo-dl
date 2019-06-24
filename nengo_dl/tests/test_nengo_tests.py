@@ -100,3 +100,35 @@ def test_unconnected_node(Simulator):
         assert hits == 1
         sim.run(dt)
         assert hits == 2
+
+
+@pytest.mark.skipif(LooseVersion(nengo.__version__) <= "2.8.0",
+                    reason="Nengo precision option not implemented")
+@pytest.mark.parametrize('bits', ["16", "32", "64"])
+def test_dtype(Simulator, request, seed, bits):
+    # Ensure dtype is set back to default after the test, even if it fails
+    default = nengo.rc.get("precision", "bits")
+    request.addfinalizer(lambda: nengo.rc.set("precision", "bits", default))
+
+    float_dtype = np.dtype(getattr(np, "float%s" % bits))
+    int_dtype = np.dtype(getattr(np, "int%s" % bits))
+
+    with nengo.Network() as model:
+        u = nengo.Node([0.5, -0.4])
+        a = nengo.Ensemble(10, 2)
+        nengo.Connection(u, a)
+        nengo.Probe(a)
+
+    nengo.rc.set("precision", "bits", bits)
+    with Simulator(model) as sim:
+        sim.step()
+
+        # check that the builder has created signals of the correct dtype
+        # (note that we may not necessarily use that dtype during simulation)
+        for sig in sim.tensor_graph.signals:
+            assert sig.dtype in (
+                float_dtype, int_dtype), "Signal '%s' wrong dtype" % sig
+
+        # note: we do not check the dtypes of `sim.data` arrays in this
+        # version of the test, because those depend on the simulator dtype
+        # (which is not controlled by precision.bits)
