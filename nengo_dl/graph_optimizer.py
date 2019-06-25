@@ -353,7 +353,7 @@ def transitive_planner(op_list):
     # have higher priority, meaning that we will choose to merge those ops
     # and potentially break lower-priority groups)
     order = [
-        op_builders.SparseDotIncBuilder, op_builders.ElementwiseIncBuilder,
+        op_builders.DotIncBuilder, op_builders.ElementwiseIncBuilder,
         neuron_builders.SimNeuronsBuilder, process_builders.SimProcessBuilder,
         op_builders.SimPyFuncBuilder, learning_rule_builders.SimOjaBuilder,
         learning_rule_builders.SimVojaBuilder,
