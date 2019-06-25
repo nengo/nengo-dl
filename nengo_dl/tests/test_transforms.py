@@ -7,6 +7,7 @@ from nengo.exceptions import ValidationError
 import numpy as np
 import pytest
 
+from nengo_dl.compat import tf_compat
 from nengo_dl.utils import tf_gpu_installed
 
 
@@ -155,3 +156,61 @@ def test_convolution(
         truth = np.moveaxis(truth, -1, 0)
 
     assert np.allclose(sim.data[p][0], np.ravel(truth), atol=1e-6)
+
+
+@pytest.mark.skipif(LooseVersion(nengo.__version__) <= "2.8.0",
+                    reason="Nengo Sparse transforms not implemented")
+@pytest.mark.training
+def test_sparse(Simulator, rng):
+    with nengo.Network() as net:
+        # two parallel inputs so that we test the merging
+        in0 = nengo.Node(rng.rand(3))
+        in1 = nengo.Node(rng.rand(4))
+        out_dense = nengo.Node(size_in=5)
+        out_sparse = nengo.Node(size_in=5)
+        p_dense = nengo.Probe(out_dense)
+        p_sparse = nengo.Probe(out_sparse)
+
+        w0 = rng.rand(5, 3)
+        w1 = rng.rand(5, 4)
+
+        # dense connections
+        c_dense0 = nengo.Connection(in0, out_dense, transform=w0, synapse=None)
+        c_dense1 = nengo.Connection(in1, out_dense, transform=w1, synapse=None)
+
+        # sparse connections
+        c_sparse0 = nengo.Connection(
+            in0, out_sparse, transform=nengo.transforms.Sparse(
+                indices=np.reshape(np.dstack(np.meshgrid(
+                    np.arange(5), np.arange(3),
+                    indexing="ij")), (-1, 2)),
+                init=w0.ravel(), shape=(5, 3)),
+            synapse=None)
+        c_sparse1 = nengo.Connection(
+            in1, out_sparse, transform=nengo.transforms.Sparse(
+                indices=np.reshape(np.dstack(np.meshgrid(
+                    np.arange(5), np.arange(4),
+                    indexing="ij")), (-1, 2)),
+                init=w1.ravel(), shape=(5, 4)),
+            synapse=None)
+
+    with Simulator(net) as sim:
+        # check that operators are getting merged
+        assert len(
+            [p for p in sim.tensor_graph.plan
+             if isinstance(p[0], nengo.builder.transforms.SparseDotInc)]) == 1
+
+        # check that sparse and dense transforms produce the same result
+        sim.run_steps(10)
+        assert np.allclose(sim.data[p_dense], sim.data[p_sparse])
+
+        # check that training on sparse and dense transforms produces the
+        # same result
+        sim.train(
+            {in0: np.ones((10, 5, 3)), in1: np.ones((10, 5, 4)),
+             p_dense: np.ones((10, 5, 5)), p_sparse: np.ones((10, 5, 5))},
+            tf_compat.train.GradientDescentOptimizer(0.01), n_epochs=10)
+        assert np.allclose(sim.data[c_dense0].weights.ravel(),
+                           sim.data[c_sparse0].weights)
+        assert np.allclose(sim.data[c_dense1].weights.ravel(),
+                           sim.data[c_sparse1].weights)

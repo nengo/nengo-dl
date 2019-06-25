@@ -1,12 +1,12 @@
 # pylint: disable=missing-docstring
 
 from distutils.version import LooseVersion
-import pkg_resources
 
 import nengo
 from nengo.builder.signal import Signal
 from nengo.builder.operator import ElementwiseInc, DotInc
 import numpy as np
+import pkg_resources
 import pytest
 import tensorflow as tf
 
@@ -132,3 +132,64 @@ def test_dtype(Simulator, request, seed, bits):
         # note: we do not check the dtypes of `sim.data` arrays in this
         # version of the test, because those depend on the simulator dtype
         # (which is not controlled by precision.bits)
+
+
+@pytest.mark.skipif(LooseVersion(nengo.__version__) <= "2.8.0",
+                    reason="Nengo Sparse transforms not implemented")
+@pytest.mark.parametrize("use_dist", (False, True))
+def test_sparse(use_dist, Simulator, rng, seed, monkeypatch):
+    # modified version of nengo test_sparse for scipy=False, where we
+    # don't expect a warning
+
+    scipy_sparse = pytest.importorskip("scipy.sparse")
+
+    input_d = 4
+    output_d = 2
+    shape = (output_d, input_d)
+
+    inds = np.asarray(
+        [[0, 0],
+         [1, 1],
+         [0, 2],
+         [1, 3]])
+    weights = rng.uniform(0.25, 0.75, size=4)
+    if use_dist:
+        init = nengo.dists.Uniform(0.25, 0.75)
+        indices = inds
+    else:
+        init = scipy_sparse.csr_matrix((weights, inds.T), shape=shape)
+        indices = None
+
+    transform = nengo.transforms.Sparse(
+        shape, indices=indices, init=init)
+
+    sim_time = 1.
+    with nengo.Network(seed=seed) as net:
+        x = nengo.processes.WhiteSignal(period=sim_time, high=10,
+                                        seed=seed + 1)
+        u = nengo.Node(x, size_out=4)
+        a = nengo.Ensemble(100, 2)
+        conn = nengo.Connection(u, a, synapse=None, transform=transform)
+        ap = nengo.Probe(a, synapse=0.03)
+
+    def run_sim():
+        with Simulator(net) as sim:
+            sim.run(sim_time)
+        return sim
+
+    sim = run_sim()
+
+    actual_weights = sim.data[conn].weights
+
+    full_transform = np.zeros(shape)
+    full_transform[inds[:, 0], inds[:, 1]] = weights
+    if use_dist:
+        actual_weights = actual_weights.toarray()
+        assert np.array_equal(actual_weights != 0, full_transform != 0)
+        full_transform[:] = actual_weights
+
+    conn.transform = full_transform
+    with Simulator(net) as ref_sim:
+        ref_sim.run(sim_time)
+
+    assert np.allclose(sim.data[ap], ref_sim.data[ap])

@@ -10,7 +10,7 @@ from nengo.exceptions import BuildError
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl.compat import tf_compat
+from nengo_dl.compat import tf_compat, is_sparse
 
 logger = logging.getLogger(__name__)
 
@@ -534,9 +534,13 @@ class SignalDict(Mapping):
             self.constant, label=label)
 
         if signal is not None:
-            assert len(indices) == (1 if len(signal.shape) == 0 else
-                                    signal.shape[0])
-            assert signal.size == np.prod(shape)
+            if is_sparse(signal):
+                assert len(indices) == signal.size
+                assert shape == (signal.size,)
+            else:
+                assert len(indices) == (1 if len(signal.shape) == 0 else
+                                        signal.shape[0])
+                assert signal.size == np.prod(shape)
             assert signal.minibatched == minibatched
             self[signal] = tensor_sig
 

@@ -15,6 +15,7 @@ import numpy as np
 
 from nengo_dl import (process_builders, builder, tensor_node,
                       op_builders, learning_rule_builders, neuron_builders)
+from nengo_dl.compat import is_sparse, SparseMatrix
 
 logger = logging.getLogger(__name__)
 
@@ -60,18 +61,27 @@ def mergeable(op, chosen_ops):
         if s0.dtype != s1.dtype:
             return False
 
-        # shape of signal base must match on all axes > 0
-        if s0.base.shape[1:] != s1.base.shape[1:]:
-            return False
-
-        # display shape must also match (since we need the shape to be well
-        # defined when we combine the signals)
-        if s0.shape[1:] != s1.shape[1:]:
+        # sparse status of signals must match
+        if is_sparse(s0) != is_sparse(s1):
             return False
 
         # trainable/minibatched must match
         if s0.trainable != s1.trainable or s0.minibatched != s1.minibatched:
             return False
+
+        if not is_sparse(s0):
+            # note: for sparse signals we don't need to worry about the shape
+            # of the signal, since what we'll be combining is the underlying
+            # data (which is always a vector)
+
+            # shape of signal base must match on all axes > 0
+            if s0.base.shape[1:] != s1.base.shape[1:]:
+                return False
+
+            # display shape must also match (since we need the shape to be well
+            # defined when we combine the signals)
+            if s0.shape[1:] != s1.shape[1:]:
+                return False
 
     # operator-specific checks
     return builder.Builder.builders[type(op)].mergeable(op, c)
@@ -1056,6 +1066,15 @@ def remove_zero_incs(operators):
     logger.debug("input ops")
     logger.debug(operators)
 
+    def all_zero(sig):
+        data = sig.initial_value
+        if is_sparse(sig):
+            if not isinstance(data, SparseMatrix):
+                data = data.tocoo()
+            data = data.data
+
+        return np.all(data == 0)
+
     sets, incs, _, updates = signal_io_dicts(operators)
 
     new_operators = []
@@ -1078,7 +1097,7 @@ def remove_zero_incs(operators):
                 zero_input = (
                     (len(pred) == 1 and type(pred[0]) == Reset
                      and np.all(pred[0].value == 0))
-                    or (len(pred) == 0 and np.all(src.initial_value == 0)
+                    or (len(pred) == 0 and all_zero(src)
                         and len(updates[src.base]) == 0) and not src.trainable)
                 if zero_input:
                     if len(op.sets) > 0:

@@ -29,6 +29,8 @@ Release History
   demonstrating how to integrate a Keras model with NengoDL (thanks to new
   contributor `@NickleDave <https://github.com/NickleDave>`_).
 - Added support for TensorFlow 2.0 (pre-release).
+- Added support for sparse transforms
+  (see https://github.com/nengo/nengo/pull/1532).
 
 **Changed**
 

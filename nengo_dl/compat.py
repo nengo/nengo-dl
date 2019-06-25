@@ -129,11 +129,27 @@ if LooseVersion(nengo.__version__) < "3.0.0":
     nengo.PES.probeable = ("error", "activities", "delta")
 
     class Convolution:
-        """Dummy Convolution class."""
+        """Dummy `nengo.transforms.Convolution` class."""
 
     class ConvInc:
-        """Dummy ConvInc class."""
+        """Dummy `nengo.builder.transforms.ConvInc` class."""
+
+    class SparseMatrix:
+        """Dummy `nengo.transforms.SparseMatrix` class."""
+
+    class SparseDotInc:
+        """Dummy `nengo.builder.transforms.SparseDotInc` class."""
+
+    def is_sparse(sig):
+        """Check if Signal is sparse"""
+        # always False since Sparse signals didn't exist, but we use getattr
+        # so that dummies.Signal(sparse=False) will still work
+        return getattr(sig, "sparse", False)
 else:
     from nengo.builder.learning_rules import SimPES
-    from nengo.builder.transforms import ConvInc
-    from nengo.transforms import Convolution
+    from nengo.builder.transforms import ConvInc, SparseDotInc
+    from nengo.transforms import Convolution, SparseMatrix
+
+    def is_sparse(sig):
+        """Check if Signal is sparse"""
+        return sig.sparse

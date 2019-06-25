@@ -14,7 +14,7 @@ from tensorflow.python.ops import gen_sparse_ops
 
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
-from nengo_dl.compat import tf_compat
+from nengo_dl.compat import tf_compat, SparseDotInc, SparseMatrix
 
 logger = logging.getLogger(__name__)
 
@@ -414,3 +414,66 @@ class SimPyFuncBuilder(OpBuilder):
         # up confusing a node that only gets a scalar float input with
         # a node that only gets time as input
         return x.t == y.t
+
+
+@Builder.register(SparseDotInc)
+class SparseDotIncBuilder(OpBuilder):
+    """
+    Build a group of `~nengo.builder.operator.SparseDotInc` operators.
+    """
+    def __init__(self, ops, signals, config):
+        super().__init__(ops, signals, config)
+
+        self.Y_data = signals.combine([op.Y for op in ops])
+
+        # group all the A's and X's
+        self.A_data = signals.combine([op.A for op in ops])
+        self.X_data = signals.combine([op.X for op in ops])
+
+        # the only way A would be minibatched is if it is targeted by an
+        # online learning rule, which isn't supported for sparse transforms
+        assert not self.A_data.minibatched
+        assert self.X_data.minibatched and self.Y_data.minibatched
+
+        # arrange the sparse matrices into a (sparse) block diagonal matrix
+        # by adding an offset to each sparse matrix's indices
+        sparse_indices = []
+        corner = np.zeros(2, dtype=np.int64)
+        for op in ops:
+            if isinstance(op.A.initial_value, SparseMatrix):
+                idxs = np.array(op.A.initial_value.indices)
+            else:
+                initial_value = op.A.initial_value.tocoo()
+                idxs = np.stack((initial_value.row, initial_value.col), axis=1)
+
+            block_shape = (op.A.shape[0], op.A.shape[1])
+            idxs += corner
+            corner += block_shape
+            sparse_indices += [idxs]
+
+        sparse_indices = np.concatenate(sparse_indices, axis=0)
+        self.sparse_indices = signals.constant(sparse_indices, dtype=(
+            tf.int32 if np.all(sparse_indices < np.iinfo(np.int32).max)
+            else tf.int64))
+        self.A_shape = tf.constant(corner, dtype=tf.int64)
+
+    def build_step(self, signals):
+        A = signals.gather(self.A_data)
+        X = signals.gather(self.X_data)
+
+        assert A.get_shape()[0] == self.sparse_indices.get_shape()[0]
+
+        if (LooseVersion(tf.__version__)
+                < "1.7.0"):  # pragma: no cover (no ci build for this case)
+            mat_mul = gen_sparse_ops._sparse_tensor_dense_mat_mul
+        else:
+            mat_mul = gen_sparse_ops.sparse_tensor_dense_mat_mul
+        dot = mat_mul(self.sparse_indices, A, self.A_shape, X)
+
+        dot.set_shape(self.Y_data.shape + (signals.minibatch_size,))
+
+        signals.scatter(self.Y_data, dot, mode="inc")
+
+    @staticmethod
+    def mergeable(x, y):
+        return True

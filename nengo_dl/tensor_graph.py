@@ -25,7 +25,7 @@ import tensorflow as tf
 
 from nengo_dl import (builder, graph_optimizer, signals, utils, tensor_node,
                       config)
-from nengo_dl.compat import tf_compat
+from nengo_dl.compat import tf_compat, SparseMatrix, is_sparse
 
 logger = logging.getLogger(__name__)
 
@@ -1043,8 +1043,13 @@ class TensorGraph:
             else:
                 raise NotImplementedError("Unsupported signal dtype")
 
-            # resize scalars to length 1 vectors
-            shape = sig.shape if sig.shape != () else (1,)
+            if is_sparse(sig):
+                # for sparse tensors, what we care about is the shape of the
+                # underlying data, not the full matrix
+                shape = (sig.initial_value.size,)
+            else:
+                # resize scalars to length 1 vectors
+                shape = sig.shape if sig.shape != () else (1,)
 
             # parameters of signal that affect the base array
             array_params = (dtype, shape[1:], sig.trainable, sig.minibatched)
@@ -1054,10 +1059,17 @@ class TensorGraph:
                 curr_keys[array_params] = object()
             key = curr_keys[array_params]
 
-            initial_value = sig.initial_value.astype(dtype, copy=False)
+            initial_value = sig.initial_value
+            if is_sparse(sig):
+                if isinstance(initial_value, SparseMatrix):
+                    initial_value = initial_value.data
+                else:
+                    initial_value = initial_value.tocoo().data
+
+            initial_value = initial_value.astype(dtype, copy=False)
 
             # broadcast scalars up to full size
-            if initial_value.shape != shape:
+            if initial_value.shape == ():
                 initial_value = np.resize(initial_value, shape)
 
             if sig.minibatched:
@@ -1115,13 +1127,18 @@ class TensorGraph:
         # error checking
         for sig, tensor_sig in self.signals.items():
             # tensorsignal shapes should match signal shapes
-            assert tensor_sig.shape == (sig.shape if sig.shape != () else (1,))
+            assert tensor_sig.shape == (sig.size,) if is_sparse(sig) else (
+                sig.shape if sig.shape != () else (1,))
 
             # tensorsignal values should match signal values
             initial_value = sig.initial_value
+            if is_sparse(sig):
+                if isinstance(initial_value, SparseMatrix):
+                    initial_value = initial_value.data
+                else:
+                    initial_value = initial_value.tocoo().data
             if sig.minibatched:
                 initial_value = initial_value[..., None]
-
             assert np.allclose(
                 base_arrays[tensor_sig.key][0][tensor_sig.indices],
                 initial_value.astype(dtype))

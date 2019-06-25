@@ -61,6 +61,9 @@ setup_cfg:
       nengo/tests/test_transforms.py:test_convolution*:
         need to set looser tolerances due to float32 implementation, see
         tests/test_transforms.py:test_convolution
+      nengo/tests/test_transforms.py:test_sparse[False-*:
+        nengo-dl doesn't raise a warning for scipy=False, see
+        tests/test_nengo_tests.py:test_sparse
   pylint:
     known_third_party:
       - PIL
@@ -88,6 +91,7 @@ ci_scripts:
       - $NUMPY_VERSION
       - $TF_VERSION
       - $NENGO_VERSION
+      - $SCIPY_VERSION
       - git+https://github.com/drasmuss/spaun2.0.git
     nengo_tests: true
   - template: test
@@ -98,6 +102,7 @@ ci_scripts:
       - $NUMPY_VERSION
       - $TF_VERSION
       - $NENGO_VERSION
+      - $SCIPY_VERSION
       - git+https://github.com/drasmuss/spaun2.0.git
     nengo_tests: true
   - template: examples
@@ -113,6 +118,7 @@ travis_yml:
     NUMPY_VERSION: numpy
     TF_VERSION: tensorflow
     NENGO_VERSION: nengo
+    SCIPY_VERSION: noop
   jobs:
     - script: static
     - script: docs
@@ -126,6 +132,7 @@ travis_yml:
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo
         TF_VERSION: tensorflow
+        SCIPY_VERSION: scipy
       dist: xenial
       python: 3.7
     - script: test-coverage

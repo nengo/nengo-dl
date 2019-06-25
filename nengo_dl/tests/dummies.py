@@ -13,7 +13,7 @@ class Signal:
     Mock-up for `nengo.builder.Signal`.
     """
     def __init__(self, shape=None, dtype=None, base_shape=None, offset=0,
-                 trainable=False, label="", initial_value=0):
+                 trainable=False, label="", initial_value=0, sparse=False):
         self.shape = (1,) if shape is None else shape
         self.dtype = np.float32 if dtype is None else dtype
         self.base = (self if base_shape is None else
@@ -27,6 +27,7 @@ class Signal:
         self.trainable = trainable
         self.minibatched = not trainable
         self.init = initial_value
+        self.sparse = sparse
 
     @property
     def initial_value(self):
