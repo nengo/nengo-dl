@@ -52,55 +52,7 @@ else:
 
 if LooseVersion(nengo.__version__) < "3.0.0":
     class SimPES(nengo.builder.Operator):  # pylint: disable=abstract-method
-        r"""
-        Calculate connection weight change according to the PES rule.
-
-        Implements the PES learning rule of the form
-
-        .. math:: \Delta \omega_{ij} = \frac{\kappa}{n} e_j a_i
-
-        where
-
-        * :math:`\kappa` is a scalar learning rate,
-        * :math:`n` is the number of presynaptic neurons
-        * :math:`e_j` is the error for the jth output dimension, and
-        * :math:`a_i` is the activity of a presynaptic neuron.
-
-        Parameters
-        ----------
-        pre_filtered : Signal
-            The presynaptic activity, :math:`a_i`.
-        error : Signal
-            The error signal, :math:`e_j`.
-        delta : Signal
-            The synaptic weight change to be applied,
-            :math:`\Delta \omega_{ij}`.
-        learning_rate : float
-            The scalar learning rate, :math:`\kappa`.
-        tag : str (Default: None)
-            A label associated with the operator, for debugging purposes.
-
-        Attributes
-        ----------
-        pre_filtered : Signal
-            The presynaptic activity, :math:`a_i`.
-        error : Signal
-            The error signal, :math:`e_j`.
-        delta : Signal
-            The synaptic weight change to be applied,
-            :math:`\Delta \omega_{ij}`.
-        learning_rate : float
-            The scalar learning rate, :math:`\kappa`.
-        tag : str (Default: None)
-            A label associated with the operator, for debugging purposes.
-
-        Notes
-        -----
-        1. sets ``[delta]``
-        2. incs ``[]``
-        3. reads ``[pre_filtered, error]``
-        4. updates ``[]``
-        """
+        """Future `nengo.builder.operator.SimPES` class."""
 
         def __init__(self, pre_filtered, error, delta, learning_rate,
                      encoders=None, tag=None):
@@ -145,11 +97,83 @@ if LooseVersion(nengo.__version__) < "3.0.0":
         # always False since Sparse signals didn't exist, but we use getattr
         # so that dummies.Signal(sparse=False) will still work
         return getattr(sig, "sparse", False)
+
+    class Step:
+        """Future `nengo.synapses.LinearFilter.Step` class."""
+
+        def __init__(self, A, B, C, D):
+            self.A = A
+            self.B = B
+            self.C = C
+            self.D = D
+
+        @staticmethod
+        def check(A, B, C, D):
+            """Check if the given matrices represent a system of this type."""
+
+    class NoX(Step):
+        """Future `nengo.synapses.LinearFilter.NoX` class."""
+
+        @staticmethod
+        def check(A, B, C, D):
+            return A.size == 0
+
+    class OneX(Step):
+        """Future `nengo.synapses.LinearFilter.OneX` class."""
+
+        @staticmethod
+        def check(A, B, C, D):
+            return len(A) == 1 and (D == 0).all()
+
+    class NoD(Step):
+        """Future `nengo.synapses.LinearFilter.NoD` class."""
+
+        @staticmethod
+        def check(A, B, C, D):
+            return len(A) >= 1 and (D == 0).all()
+
+    class General(Step):
+        """Future `nengo.synapses.LinearFilter.General` class."""
+
+        @staticmethod
+        def check(A, B, C, D):
+            return len(A) >= 1
+
+    def make_linear_step(synapse, input_shape, output_shape, dt):
+        """Generate one of the future LinearFilter step types."""
+
+        from nengo.utils.filter_design import cont2discrete, tf2ss
+
+        A, B, C, D = tf2ss(synapse.num, synapse.den)
+
+        # discretize (if len(A) == 0, filter is stateless and already discrete)
+        if synapse.analog and len(A) > 0:
+            A, B, C, D, _ = cont2discrete((A, B, C, D), dt, method="zoh")
+
+        if NoX.check(A, B, C, D):
+            return NoX(A, B, C, D)
+        elif OneX.check(A, B, C, D):
+            return OneX(A, B, C, D)
+        elif NoD.check(A, B, C, D):
+            return NoD(A, B, C, D)
+        else:
+            assert General.check(A, B, C, D)
+            return General(A, B, C, D)
 else:
     from nengo.builder.learning_rules import SimPES
     from nengo.builder.transforms import ConvInc, SparseDotInc
     from nengo.transforms import Convolution, SparseMatrix
+    from nengo.synapses import LinearFilter
 
     def is_sparse(sig):
         """Check if Signal is sparse"""
         return sig.sparse
+
+    NoX = LinearFilter.NoX
+    OneX = LinearFilter.OneX
+    NoD = LinearFilter.NoD
+    General = LinearFilter.General
+
+    def make_linear_step(synapse, input_shape, output_shape, dt):
+        """Call synapse.make_step to compute everything."""
+        return synapse.make_step(input_shape, output_shape, dt, None)

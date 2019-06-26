@@ -42,6 +42,8 @@ Release History
   work properly if it is manually re-enabled).
 - Increased minimum numpy version to 1.14.5 (required by TensorFlow 1.14).
 - Minimum Nengo version is now 2.8.0.
+- Update LinearFilter synapse implementation to match recent changes in
+  Nengo core (see https://github.com/nengo/nengo/pull/1535).
 
 **Fixed**
 

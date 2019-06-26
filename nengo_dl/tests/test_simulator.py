@@ -1437,7 +1437,7 @@ def test_synapse_warning(Simulator):
 
     def does_warn(n_steps=1, as_dict=True):
         with Simulator(net, unroll_simulation=1) as sim:
-            with pytest.warns(UserWarning) as rec:
+            with pytest.warns(None) as rec:
                 if as_dict:
                     sim.train({a: np.zeros((1, n_steps, 1)),
                                p: np.zeros((1, n_steps, 1))},

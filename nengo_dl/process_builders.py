@@ -3,22 +3,19 @@ Build classes for Nengo process operators.
 """
 
 from collections import OrderedDict
-from distutils.version import LooseVersion
 import logging
-import warnings
 
 from nengo.builder.processes import SimProcess
 from nengo.exceptions import SimulationError
 from nengo.synapses import Lowpass, LinearFilter
-from nengo.utils.filter_design import (cont2discrete, tf2ss, ss2tf,
-                                       BadCoefficients)
+from nengo.utils.filter_design import cont2discrete
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.ops import gen_sparse_ops
 
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
-from nengo_dl.compat import tf_compat
+from nengo_dl.compat import (
+    tf_compat, make_linear_step, NoX, OneX, NoD, General)
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +105,12 @@ class LowpassBuilder(OpBuilder):
     def __init__(self, ops, signals, config):
         super(LowpassBuilder, self).__init__(ops, signals, config)
 
+        # the main difference between this and the general linearfilter
+        # OneX implementation is that this version allows us to merge
+        # synapses with different input dimensionality (by duplicating
+        # the synapse parameters for every input, rather than using
+        # broadcasting)
+
         self.input_data = signals.combine([op.input for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
 
@@ -178,123 +181,132 @@ class LinearFilterBuilder(OpBuilder):
     def __init__(self, ops, signals, config):
         super(LinearFilterBuilder, self).__init__(ops, signals, config)
 
+        # note: linear filters are linear systems with n_inputs/n_outputs == 1.
+        # we apply them to multidimensional inputs, but we do so by
+        # broadcasting that SISO linear system (so it's effectively
+        # d 1-dimensional linear systems). this means that we can make
+        # some simplifying assumptions, namely that B has shape (state_d, 1),
+        # C has shape (1, state_d), and D has shape (1, 1), and then we can
+        # implement those operations as (broadcasted) multiplies rather than
+        # full matrix multiplications.
+        # this also means that the minibatch dimension is identical to the
+        # signal dimension (i.e. n m-dimensional signals is the same as
+        # 1 n*m-dimensional signal); in either case we're just doing that
+        # B/C/D broadcasting along all the non-state dimensions. so in these
+        # computations we collapse minibatch and signal dimensions into one.
+
         self.input_data = signals.combine([op.input for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
 
+        steps = [
+            make_linear_step(
+                op.process, op.input.shape, op.output.shape, signals.dt_val)
+            for op in ops]
+        self.step_type = type(steps[0])
+        assert all(type(step) == self.step_type for step in steps)
+
         self.n_ops = len(ops)
         self.signal_d = ops[0].input.shape[0]
-        As = []
-        Cs = []
-        Ds = []
-        # compute the A/C/D matrices for each operator
-        for op in ops:
-            A, B, C, D = tf2ss(op.process.num, op.process.den)
+        self.state_d = steps[0].A.shape[0]
 
-            if op.process.analog:
-                # convert to discrete system
-                A, B, C, D, _ = cont2discrete((A, B, C, D), signals.dt_val,
-                                              method="zoh")
-
-            # convert to controllable form
-            num, den = ss2tf(A, B, C, D)
-
-            if op.process.analog:
-                # add shift
-                num = np.concatenate((num, [[0]]), axis=1)
-
-            with warnings.catch_warnings():
-                # ignore the warning about B, since we aren't using it anyway
-                warnings.simplefilter("ignore", BadCoefficients)
-                A, _, C, D = tf2ss(num, den)
-
-            As.append(A)
-            Cs.append(C[0])
-            Ds.append(D.item())
-
-        self.state_d = sum(x.shape[0] for x in Cs)
-
-        # build a sparse matrix containing the A matrices as blocks
-        # along the diagonal
-        sparse_indices = []
-        corner = np.zeros(2, dtype=np.int64)
-        for A in As:
-            idxs = np.reshape(np.dstack(np.meshgrid(
-                np.arange(A.shape[0]), np.arange(A.shape[1]),
-                indexing="ij")), (-1, 2))
-            idxs += corner
-            corner += A.shape
-            sparse_indices += [idxs]
-        sparse_indices = np.concatenate(sparse_indices, axis=0)
-        self.A = signals.constant(np.concatenate(As, axis=0).flatten(),
-                                  dtype=signals.dtype)
-        self.A_indices = signals.constant(sparse_indices, dtype=(
-            tf.int32 if np.all(sparse_indices < np.iinfo(np.int32).max)
-            else tf.int64))
-        self.A_shape = tf.constant(corner, dtype=tf.int64)
-
-        if np.allclose(Cs, 0):
+        if self.step_type == NoX:
+            self.A = None
+            self.B = None
             self.C = None
-        else:
-            # add empty dimension for broadcasting
-            self.C = signals.constant(np.concatenate(Cs)[:, None],
-                                      dtype=signals.dtype)
+            # combine D scalars for each op, and broadcast along signal_d
+            self.D = signals.constant(
+                np.concatenate([step.D[:, None] for step in steps]),
+                dtype=signals.dtype)
 
-        if np.allclose(Ds, 0):
+            assert self.D.get_shape() == (self.n_ops, 1)
+        elif self.step_type == OneX:
+            # combine A scalars for each op, and broadcast along state_d
+            self.A = signals.constant(
+                np.concatenate([step.A for step in steps]),
+                dtype=signals.dtype)
+            # combine B and C scalars for each op, and broadcast along signal_d
+            self.B = signals.constant(
+                np.concatenate([step.B * step.C for step in steps]),
+                dtype=signals.dtype)
+            self.C = None
             self.D = None
+
+            assert self.A.get_shape() == (self.n_ops, 1)
+            assert self.B.get_shape() == (self.n_ops, 1)
         else:
-            # add empty dimension for broadcasting
-            self.D = signals.constant(np.asarray(Ds)[:, None],
-                                      dtype=signals.dtype)
+            self.A = signals.constant(
+                np.stack([step.A for step in steps], axis=0),
+                dtype=signals.dtype)
+            self.B = signals.constant(
+                np.stack([step.B for step in steps], axis=0),
+                dtype=signals.dtype)
+            self.C = signals.constant(
+                np.stack([step.C for step in steps], axis=0),
+                dtype=signals.dtype)
 
-        self.offsets = tf.expand_dims(
-            tf.range(0, len(ops) * As[0].shape[0], As[0].shape[0]),
-            axis=1)
+            if self.step_type == NoD:
+                self.D = None
+            else:
+                self.D = signals.constant(
+                    np.concatenate([step.D[:, None, None] for step in steps]),
+                    dtype=signals.dtype)
+                assert self.D.get_shape() == (self.n_ops, 1, 1)
 
-        # create a variable to represent the internal state of the filter
-        self.state_sig = signals.make_internal(
-            "state", (self.state_d, signals.minibatch_size * self.signal_d),
-            minibatched=False)
+            # create a variable to represent the internal state of the filter
+            self.state_data = signals.make_internal(
+                "state",
+                (self.n_ops, self.state_d,
+                 self.signal_d * signals.minibatch_size),
+                minibatched=False)
+
+            assert self.A.get_shape() == (
+                self.n_ops, self.state_d, self.state_d)
+            assert self.B.get_shape() == (self.n_ops, self.state_d, 1)
+            assert self.C.get_shape() == (self.n_ops, 1, self.state_d)
 
     def build_step(self, signals):
         input = signals.gather(self.input_data)
-        input = tf.reshape(input, (self.n_ops, -1))
 
-        state = signals.gather(self.state_sig)
+        if self.step_type == NoX:
+            signals.scatter(self.output_data, self.D * input)
+        elif self.step_type == OneX:
+            input = tf.reshape(input, (self.n_ops, -1))
 
-        # compute output
-        if self.C is None:
-            output = tf.zeros_like(input)
+            # note: we use the output signal in place of a separate state
+            output = signals.gather(self.output_data)
+            output = tf.reshape(output, (self.n_ops, -1))
+
+            signals.scatter(self.output_data, self.A * output + self.B * input)
+        elif self.step_type == NoD:
+            # for NoD, we update the state before computing the output
+
+            input = tf.reshape(input, (self.n_ops, 1, -1))
+
+            state = signals.gather(self.state_data)
+
+            new_state = tf.matmul(self.A, state) + self.B * input
+            signals.scatter(self.state_data, new_state)
+
+            output = tf.matmul(self.C, new_state)
+
+            signals.scatter(self.output_data, output)
         else:
-            output = state * self.C
-            output = tf.reshape(
-                output,
-                (self.n_ops, -1, signals.minibatch_size * self.signal_d))
-            output = tf.reduce_sum(input_tensor=output, axis=1)
+            # in the general case, we compute the output before updating the
+            # state
 
-        if self.D is not None:
-            output += self.D * input
+            input = tf.reshape(input, (self.n_ops, 1, -1))
 
-        signals.scatter(self.output_data, output)
+            state = signals.gather(self.state_data)
+            output = tf.matmul(self.C, state)
+            if self.step_type == General:
+                output += self.D * input
+            signals.scatter(self.output_data, output)
 
-        # update state
-        if LooseVersion(tf.__version__) < LooseVersion("1.7.0"):
-            mat_mul = gen_sparse_ops._sparse_tensor_dense_mat_mul
-        else:
-            mat_mul = gen_sparse_ops.sparse_tensor_dense_mat_mul
-        r = mat_mul(self.A_indices, self.A, self.A_shape, state)
+            new_state = tf.matmul(self.A, state) + self.B * input
 
-        with tf.control_dependencies([output]):
-            state = r + tf.scatter_nd(self.offsets, input,
-                                      self.state_sig.shape)
-            # TODO: tensorflow does not yet support sparse_tensor_dense_add
-            # on the GPU
-            # state = gen_sparse_ops._sparse_tensor_dense_add(
-            #     self.offsets, input, self.state_sig.shape, r)
-        state.set_shape(self.state_sig.shape)
-
-        signals.mark_gather(self.input_data)
-        signals.mark_gather(self.state_sig)
-        signals.scatter(self.state_sig, state)
+            signals.mark_gather(self.state_data)
+            signals.mark_gather(self.input_data)
+            signals.scatter(self.state_data, new_state)
 
 
 @Builder.register(SimProcess)
@@ -350,15 +362,17 @@ class SimProcessBuilder(OpBuilder):
         # generic processes, but can't mix the two
         custom_impl = tuple(SimProcessBuilder.TF_PROCESS_IMPL.keys())
         if isinstance(x.process, custom_impl):
-            if type(x.process) == Lowpass:
+            if type(x.process) == Lowpass or type(y.process) == Lowpass:
                 # lowpass ops can only be merged with other lowpass ops, since
                 # they have a custom implementation
-                if type(y.process) != Lowpass:
+                if type(x.process) != type(y.process):  # noqa: E721
                     return False
             elif isinstance(x.process, LinearFilter):
                 # we can only merge linearfilters that have the same state
-                # dimensionality and the same signal dimensionality
+                # dimensionality (den), the same step type (num), and the same
+                # input signal dimensionality
                 if (not isinstance(y.process, LinearFilter)
+                        or len(y.process.num) != len(x.process.num)
                         or len(y.process.den) != len(x.process.den)
                         or x.input.shape[0] != y.input.shape[0]):
                     return False

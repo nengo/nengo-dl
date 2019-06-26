@@ -152,13 +152,24 @@ def test_mergeable():
                      [SimProcess(Lowpass(0), None, None, dummies.Signal())])
 
     # check that lowpass and linear don't match
-    assert not mergeable(SimProcess(Lowpass(0), None, None, dummies.Signal()),
-                         [SimProcess(Alpha(0), None, None, dummies.Signal())])
+    assert not mergeable(
+        SimProcess(Lowpass(1), None, None, dummies.Signal()),
+        [SimProcess(LinearFilter([1], [1, 1]), None, None, dummies.Signal())])
+    assert not mergeable(
+        SimProcess(LinearFilter([1], [1, 1]), None, None, dummies.Signal()),
+        [SimProcess(Lowpass(1), None, None, dummies.Signal())])
 
     # check that two linear do match
     assert mergeable(
         SimProcess(Alpha(0.1), dummies.Signal(), None, dummies.Signal()),
         [SimProcess(LinearFilter([1], [1, 1, 1]), dummies.Signal(), None,
+                    dummies.Signal())])
+
+    # check that linear with different types don't match
+    assert not mergeable(
+        SimProcess(LinearFilter([1], [1, 1, 1]), dummies.Signal(), None,
+                   dummies.Signal()),
+        [SimProcess(LinearFilter([1, 1, 1], [1, 1, 1]), dummies.Signal(), None,
                     dummies.Signal())])
 
     # check custom and non-custom don't match
