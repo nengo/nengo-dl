@@ -8,7 +8,7 @@ a release version. Release versions are git tagged with the version.
 import warnings
 
 name = "nengo-dl"
-version_info = (2, 2, 2)  # (major, minor, patch)
+version_info = (3, 0, 0)  # (major, minor, patch)
 dev = 0  # set to None for releases
 
 version = "{v}{dev}".format(

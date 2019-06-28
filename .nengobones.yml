@@ -152,7 +152,7 @@ travis_yml:
     - script: test-coverage
       env:
         NENGO_VERSION: nengo[tests]==2.8.0
-        TF_VERSION: tensorflow==1.4.0
+        TF_VERSION: tensorflow==2.0.0
         NUMPY_VERSION: numpy==1.14.5
       test_args: -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
       python: 3.5
