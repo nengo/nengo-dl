@@ -83,12 +83,12 @@ class TensorFuncParam(Parameter):
 
         output = super(TensorFuncParam, self).coerce(node, func)
 
-        if node.size_out is None:
-            if not callable(func):
-                raise ValidationError(
-                    "TensorNode output must be a function", attr=self.name, obj=node
-                )
+        if not callable(func):
+            raise ValidationError(
+                "TensorNode output must be a function", attr=self.name, obj=node
+            )
 
+        if node.size_out is None:
             with tf.Graph().as_default():
                 t, x = tf.constant(0.0), tf.zeros((1, node.size_in))
                 args = (t, x) if node.size_in > 0 else (t,)
@@ -369,7 +369,14 @@ def tensor_layer(
         if shape_in is not None:
             node_func = reshaped(shape_in)(node_func)
 
-        node = TensorNode(node_func, size_in=size_in)
+        if isinstance(layer_func, tf.keras.layers.Layer):
+            # we can use Keras' static shape inference to get the
+            # output shape, which avoids having to build/call the layer
+            size_out = layer_func.compute_output_shape((1, size_in))[1].value
+        else:
+            size_out = None
+
+        node = TensorNode(node_func, size_in=size_in, size_out=size_out)
 
     conn = Connection(input, node, synapse=synapse, transform=transform)
 

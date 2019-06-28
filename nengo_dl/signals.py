@@ -10,7 +10,7 @@ from nengo.exceptions import BuildError
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl.compat import tf_compat, is_sparse
+from nengo_dl.compat import tf_compat, is_sparse, RefVariable
 
 logger = logging.getLogger(__name__)
 
@@ -510,17 +510,12 @@ class SignalDict(Mapping):
             np.arange(shape[0]), object(), self.dtype, shape, minibatched, label=name
         )
 
-        with tf_compat.variable_scope(
-            tf_compat.get_default_graph().get_name_scope(), reuse=False
-        ):
-            var = tf_compat.get_local_variable(
-                name,
-                shape=sig.full_shape,
-                dtype=sig.dtype,
-                trainable=False,
-                initializer=tf_compat.initializers.zeros(),
-                use_resource=False,
-            )
+        var = RefVariable(
+            initial_value=tf.zeros(sig.full_shape, dtype=sig.dtype),
+            trainable=False,
+            collections=[tf_compat.GraphKeys.LOCAL_VARIABLES],
+            name="%s/%s" % (tf_compat.get_default_graph().get_name_scope(), name),
+        )
 
         self.internal_vars[sig.key] = var
 
@@ -618,31 +613,23 @@ class SignalDict(Mapping):
         dtype = tf.as_dtype(dtype)
 
         if value.nbytes > cutoff:
-
-            def make_ph(shape, dtype, **_):
-                ph = tf_compat.placeholder(dtype, shape)
+            # tensorflow doesn't support int32 variables on the gpu, only
+            # int64 (for some reason). we don't want to use int64 since
+            # that would increase the size a lot, so we allow the variable
+            # to be created on the CPU if necessary, and then move it to
+            # the GPU with the identity
+            # TODO: double check if this is still true in the future
+            with tf.device(None):
+                ph = tf_compat.placeholder(dtype, value.shape)
+                const_var = RefVariable(
+                    initial_value=ph,
+                    collections=["constants"],
+                    trainable=False,
+                    name="constant_vars/%d" % len(self.constant_phs),
+                )
                 self.constant_phs[ph] = value
-                return ph
 
-            with tf_compat.variable_scope("constant_vars", reuse=False):
-                # tensorflow doesn't support int32 variables on the gpu, only
-                # int64 (for some reason). we don't want to use int64 since
-                # that would increase the size a lot, so we allow the variable
-                # to be created on the CPU if necessary, and then move it to
-                # the GPU with the identity
-                # TODO: double check if this is still true in the future
-                with tf.device(None):
-                    const_var = tf_compat.get_variable(
-                        "constant_%d" % len(self.constant_phs),
-                        initializer=make_ph,
-                        shape=value.shape,
-                        dtype=dtype,
-                        collections=["constants"],
-                        trainable=False,
-                        use_resource=False,
-                    )
-
-                return tf.identity(const_var)
+            return tf.identity(const_var)
         else:
             return tf.constant(value, dtype=dtype)
 

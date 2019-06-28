@@ -1425,14 +1425,17 @@ class Simulator:
 
                 self.soft_reset()
 
-                with tf_compat.variable_scope(tf_compat.get_variable_scope()) as scope:
-                    dx, dy = gradient_checker._compute_dx_and_dy(inp, out, out_shape)
+                dx, dy = gradient_checker._compute_dx_and_dy(inp, out, out_shape)
 
-                    self.sess.run(
-                        tf_compat.variables_initializer(
-                            scope.get_collection("gradient_vars")
+                self.sess.run(
+                    tf_compat.variables_initializer(
+                        list(
+                            getattr(
+                                self.tensor_graph.graph, "nengo_dl_gradient_vars", {}
+                            ).values()
                         )
                     )
+                )
 
                 with self.sess.as_default():
                     analytic = gradient_checker._compute_theoretical_jacobian(

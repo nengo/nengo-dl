@@ -237,35 +237,31 @@ def test_tensor_layer(Simulator):
 
 
 def test_reuse_vars(Simulator):
-    def my_func(_, x):
-        # note: the control dependencies thing is due to some weird tensorflow
-        # issue with creating variables inside while loops
-        with tf.control_dependencies(None):
-            w = tf_compat.get_variable(
-                "weights", initializer=tf.constant(2.0), use_resource=False
-            )
+    class MyFunc:
+        def pre_build(self, *_):
+            self.w = RefVariable(initial_value=tf.constant(2.0), name="weights")
 
-        return x * tf.cast(w, x.dtype)
+        def __call__(self, _, x):
+            return x * tf.cast(self.w, x.dtype)
 
     with nengo.Network() as net:
         configure_settings(trainable=False)
 
         inp = nengo.Node([1])
-        node = TensorNode(my_func, size_in=1)
-        node2 = TensorNode(
-            lambda _, x: tf_compat.layers.dense(
-                x,
+        node = TensorNode(MyFunc(), size_in=1, size_out=1)
+        nengo.Connection(inp, node, synapse=None)
+
+        node2 = tensor_layer(
+            inp,
+            tf.keras.layers.Dense(
                 units=10,
                 use_bias=False,
                 kernel_initializer=tf_compat.initializers.constant(3),
             ),
-            size_in=1,
-            size_out=10,
         )
+
         p = nengo.Probe(node)
         p2 = nengo.Probe(node2)
-        nengo.Connection(inp, node, synapse=None)
-        nengo.Connection(inp, node2, synapse=None)
 
     with Simulator(net, unroll_simulation=5) as sim:
         sim.run_steps(5)
