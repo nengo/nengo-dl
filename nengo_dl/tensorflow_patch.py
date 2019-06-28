@@ -7,7 +7,8 @@ import traceback
 
 from tensorflow.python.framework import dtypes, ops
 from tensorflow.python.ops import (math_ops, array_ops, data_flow_ops,
-                                   state_ops, variable_scope)
+                                   state_ops)
+from tensorflow.compat.v1 import Variable
 
 saved_registry = copy.copy(ops._gradient_registry._registry)
 
@@ -78,14 +79,27 @@ def patch_state_grads():
         else:
             shape = tuple(grad.get_shape().as_list())
             dtype = grad.dtype.base_dtype
+            key = shape + (dtype.name,)
 
-            with variable_scope.variable_scope(
-                    "gradient_vars", reuse=variable_scope.AUTO_REUSE):
-                var_grad = variable_scope.get_variable(
-                    "tmp" + "_%s" * (len(grad.get_shape()) + 1) % (
-                        shape + (dtype.name,)),
-                    shape=shape, dtype=dtype, trainable=False,
-                    collections=["gradient_vars"], use_resource=False)
+            # cache the temporary gradient variables in the graph (rather than
+            # creating new ones each time)
+            try:
+                gradient_vars = op.graph.nengo_dl_gradient_vars
+            except AttributeError:
+                gradient_vars = {}
+                op.graph.nengo_dl_gradient_vars = gradient_vars
+
+            try:
+                var_grad = gradient_vars[key]
+            except KeyError:
+                var_grad = Variable(
+                    initial_value=lambda: array_ops.zeros(shape, dtype=dtype),
+                    trainable=False,
+                    collections=["gradient_vars"],
+                    name="gradient_vars/%s" % "_".join(str(x) for x in key),
+                    use_resource=False,
+                )
+                gradient_vars[key] = var_grad
 
             var_grad = state_ops.assign(var_grad, grad)
             var_grad = state_ops.scatter_update(
