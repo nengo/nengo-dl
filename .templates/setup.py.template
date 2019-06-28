@@ -25,7 +25,7 @@ else:
 install_req = [
     "nengo>=2.8.0",
     "numpy>=1.14.5",
-    "%s>=1.4.0" % tf_req,
+    "%s>=2.0.0b1" % tf_req,
     "progressbar2>=3.39.0",
 ]
 {% endblock %}

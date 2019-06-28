@@ -94,6 +94,7 @@ ci_scripts:
   - template: static
   - template: test
     pip_install:
+      - --pre
       - $NUMPY_VERSION
       - $TF_VERSION
       - $NENGO_VERSION
@@ -144,7 +145,7 @@ travis_yml:
     - script: test-coverage
       env:
         NENGO_VERSION: nengo==2.8.0
-        TF_VERSION: tensorflow==1.4.0
+        TF_VERSION: tensorflow==2.0.0b1
         NUMPY_VERSION: numpy==1.14.5
       python: 3.5
     - test_args: --dtype float64 --simulator-only

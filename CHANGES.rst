@@ -19,6 +19,13 @@ Release History
    - Deprecated
    - Removed
 
+3.0.0 (unreleased)
+==================
+
+**Changed**
+
+- Minimum TensorFlow version is now 2.0.0.
+
 2.2.0 (unreleased)
 ==================
 

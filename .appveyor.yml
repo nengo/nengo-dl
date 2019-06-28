@@ -2,7 +2,7 @@ skip_branch_with_pr: true
 
 environment:
   MODE: test
-  PYTHON_VERSION: C:\Miniconda36-x64
+  PYTHON_VERSION: C:\Python36-x64
   NUMPY_VERSION: numpy
   TF_VERSION: tensorflow
   NENGO_VERSION: nengo
@@ -12,21 +12,17 @@ environment:
     - NENGO_VERSION: git+https://github.com/nengo/nengo.git
       TF_VERSION: tensorflow --pre
     - NENGO_VERSION: nengo==2.8.0
-      TF_VERSION: tensorflow==1.4.0
-      NUMPY_VERSION: numpy==1.14.5
-      PYTHON_VERSION: C:\Miniconda35-x64
+      TF_VERSION: tensorflow==2.0.0b1 --pre
+      NUMPY_VERSION: numpy==1.16
+      PYTHON_VERSION: C:\Python35-x64
 
 init:
-  - set PATH=%PYTHON_VERSION%;%PYTHON_VERSION%\\Scripts;%PATH%
+  - set PATH=%PYTHON_VERSION%;%PYTHON_VERSION%\Scripts;%PATH%
 
 install:
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-  - conda info -a
-  - conda install "six>=1.11.0"
+  - pip install setuptools --upgrade
   - pip install %NUMPY_VERSION% %TF_VERSION% %NENGO_VERSION%
   - pip install -e .[tests]
-  - conda list -e
   - pip freeze
 
 build: false  # Not a C# project
