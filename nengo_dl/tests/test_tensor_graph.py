@@ -10,7 +10,7 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import tensor_graph, utils, graph_optimizer, config, objectives
-from nengo_dl.compat import tf_compat
+from nengo_dl.compat import tf_compat, RefVariable
 from nengo_dl.tests import dummies
 
 
@@ -137,22 +137,16 @@ def test_build_optimizer(Simulator):
                 {p: sim.tensor_graph.build_optimizer_func(opt, {p: objectives.mse})}
             )
 
-    # capturing variables from nested loss function
-    def loss(x):
-        return abs(
-            tf_compat.get_variable(
-                "two",
-                initializer=tf_compat.initializers.constant(2.0),
-                shape=(),
-                dtype=x.dtype,
-                use_resource=False,
-            )
-            - x
-        )
-
     net, _, p = dummies.linear_net()
 
     with Simulator(net) as sim:
+        # capturing variables from nested loss function
+        def loss(x):
+            return abs(
+                RefVariable(tf.constant(2.0, dtype=sim.tensor_graph.dtype), name="two")
+                - x
+            )
+
         sim.train(
             5,
             tf_compat.train.GradientDescentOptimizer(0.1),

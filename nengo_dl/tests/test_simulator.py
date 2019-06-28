@@ -19,7 +19,7 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import configure_settings, tensor_layer, dists, TensorNode
-from nengo_dl.compat import tf_compat, tf_uniform
+from nengo_dl.compat import tf_compat, tf_uniform, RefVariable
 from nengo_dl.objectives import mse
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
@@ -696,12 +696,8 @@ def test_tensorboard(Simulator, tmpdir):
         def loss(x):
             # uses a variable to test that variables from summaries get
             # initialized correctly
-            return tf_compat.get_variable(
-                "one",
-                initializer=tf_compat.initializers.constant(1.0),
-                dtype=x.dtype,
-                shape=(),
-                use_resource=False,
+            return RefVariable(
+                initial_value=tf.constant(1.0, dtype=sim.tensor_graph.dtype), name="one"
             )
 
         sim.train(

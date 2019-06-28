@@ -30,6 +30,7 @@ from nengo_dl.compat import (
     is_sparse,
     make_process_state,
     make_process_step,
+    RefVariable,
 )
 
 logger = logging.getLogger(__name__)
@@ -224,18 +225,19 @@ class TensorGraph:
             # prevents TensorFlow from storing large constants in the graph
             # def, which can cause problems for large models
             ph = tf_compat.placeholder(v.dtype, v.shape, name="%s_init" % name)
-
-            if trainable:
-                with tf_compat.variable_scope("trainable_vars", reuse=False):
-                    var = tf_compat.get_variable(
-                        name, initializer=ph, trainable=True, use_resource=False
-                    )
-            else:
-                with tf_compat.variable_scope("local_vars", reuse=False):
-                    var = tf_compat.get_local_variable(
-                        name, initializer=ph, trainable=False, use_resource=False
-                    )
-
+            var = RefVariable(
+                initial_value=ph,
+                trainable=trainable,
+                collections=(
+                    [
+                        tf_compat.GraphKeys.GLOBAL_VARIABLES,
+                        tf_compat.GraphKeys.TRAINABLE_VARIABLES,
+                    ]
+                    if trainable
+                    else [tf_compat.GraphKeys.LOCAL_VARIABLES]
+                ),
+                name="%s/%s" % ("trainable_vars" if trainable else "local_vars", name),
+            )
             self.base_vars[k] = (var, ph, v)
 
         logger.debug("created base arrays")
@@ -396,14 +398,7 @@ class TensorGraph:
                     # simulation step (side effects and probes) from the
                     # previous timestep are executed before the next step
                     # starts
-                    # note2: we use the variable scope to make sure that we
-                    # aren't accidentally creating new variables for
-                    # unrolled iterations (this is really only a concern
-                    # with TensorNodes)
-                    scope = tf_compat.variable_scope(
-                        tf_compat.get_variable_scope(), reuse=iter > 0
-                    )
-                    with self.graph.control_dependencies([loop_i]), scope:
+                    with self.graph.control_dependencies([loop_i]):
                         probe_tensors, side_effects = self.build_step(progress)
 
                     # copy probe data to array
@@ -675,8 +670,15 @@ class TensorGraph:
         except KeyError:
             pass
 
+        def get_vars():
+            return set(
+                tf_compat.get_collection(tf_compat.GraphKeys.GLOBAL_VARIABLES)
+                + tf_compat.get_collection(tf_compat.GraphKeys.LOCAL_VARIABLES)
+                + tf_compat.get_collection("gradient_vars")
+            )
+
         output_vals = {}
-        new_vars = []
+        pre_vars = get_vars()
         for probes, out in outputs.items():
             is_tuple = isinstance(probes, tuple)
             probe_arrays = (
@@ -730,19 +732,14 @@ class TensorGraph:
                     )
 
                 # apply output function
-                with tf_compat.variable_scope(utils.function_name(out)) as scope:
+                with tf_compat.name_scope(utils.function_name(out)):
                     output_vals[probes] = out(*args)
 
-                # collect any new variables from building the outputs
-                for collection in [
-                    tf_compat.GraphKeys.GLOBAL_VARIABLES,
-                    tf_compat.GraphKeys.LOCAL_VARIABLES,
-                    "gradient_vars",
-                ]:
-                    new_vars.extend(scope.get_collection(collection))
             else:
                 raise ValidationError("Outputs must be callable or None)", "outputs")
 
+        # collect any new variables created during build process
+        new_vars = get_vars() - pre_vars
         new_vars_init = (
             tf_compat.variables_initializer(new_vars) if len(new_vars) > 0 else None
         )
