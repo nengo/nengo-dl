@@ -128,10 +128,10 @@ travis_yml:
     SCIPY_VERSION: noop
   jobs:
     - script: static
-    - script: docs
-      env:
-        TF_VERSION: tensorflow<1.13
-        NUMPY_VERSION: numpy>=1.14.5,<1.16
+#    - script: docs
+#      env:
+#        TF_VERSION: tensorflow<1.13
+#        NUMPY_VERSION: numpy>=1.14.5,<1.16
     - cache: false
       test_args: -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
     - script: gpu
@@ -156,9 +156,9 @@ travis_yml:
     - test_args: --dtype float64 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
     - test_args: --unroll-simulation 5 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
     - test_args: --inference-only --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
-    - script: examples
-      env:
-        TF_VERSION: tensorflow<2.0.0
+#    - script: examples
+#      env:
+#        TF_VERSION: tensorflow<2.0.0
   pypi_user: drasmuss
   deploy_dists:
     - sdist

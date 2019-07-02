@@ -30,15 +30,6 @@ jobs:
       SCRIPT="static"
   -
     env:
-      TF_VERSION="tensorflow<1.13"
-      NUMPY_VERSION="numpy>=1.14.5,<1.16"
-      SCRIPT="docs"
-    addons:
-      apt:
-        packages:
-          - pandoc
-  -
-    env:
       TEST_ARGS="-p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator"
     cache: False
   -
@@ -72,10 +63,6 @@ jobs:
   -
     env:
       TEST_ARGS="--inference-only --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator"
-  -
-    env:
-      TF_VERSION="tensorflow<2.0.0"
-      SCRIPT="examples"
   - stage: deploy
     if: branch =~ ^release-candidate-* OR tag =~ ^v[0-9]*
     env: SCRIPT="deploy"
