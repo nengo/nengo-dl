@@ -127,7 +127,7 @@ travis_yml:
     SCIPY_VERSION: noop
   jobs:
     - script: static
-    - script: docs
+#    - script: docs
     - cache: false
     - script: gpu
       test_args: --device /gpu:3 --performance
@@ -150,7 +150,7 @@ travis_yml:
     - test_args: --dtype float64 --simulator-only
     - test_args: --unroll-simulation 5 --simulator-only
     - test_args: --inference-only --simulator-only
-    - script: examples
+#    - script: examples
   pypi_user: drasmuss
   deploy_dists:
     - sdist

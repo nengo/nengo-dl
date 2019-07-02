@@ -30,13 +30,6 @@ jobs:
     env:
       SCRIPT="static"
   -
-    env:
-      SCRIPT="docs"
-    addons:
-      apt:
-        packages:
-          - pandoc
-  -
     cache: False
   -
     env:
@@ -68,9 +61,6 @@ jobs:
   -
     env:
       TEST_ARGS="--inference-only --simulator-only"
-  -
-    env:
-      SCRIPT="examples"
   - stage: deploy
     if: branch =~ ^release-candidate-* OR tag =~ ^v[0-9]*
     env: SCRIPT="deploy"
