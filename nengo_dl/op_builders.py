@@ -5,6 +5,7 @@ Build classes for basic Nengo operators.
 from collections import defaultdict
 from distutils.version import LooseVersion
 import logging
+import warnings
 
 from nengo.builder.operator import (
     Reset, Copy, ElementwiseInc, DotInc, SimPyFunc)
@@ -185,6 +186,51 @@ class ElementwiseIncBuilder(OpBuilder):
         return True
 
 
+def sparse_matmul(A_indices, A_data, A_shape, X):
+    """
+    Matrix multiplication between sparse matrix A and dense matrix X
+
+    Parameters
+    ----------
+    A_indices : ``tf.Tensor``
+        N, 2) rray of [row,col] non-zero entries
+    A_data : ``tf.Tensor``
+        (N,) array of data in the nonzero entries specified in ``A_indices``
+    A_shape : tuple of int
+        Shape of full A matrix
+    X : ``tf.Tensor``
+        Dense matrix being multiplied by A
+
+    Returns
+    -------
+    dot : ``tf.Tensor``
+        Result of matrix multiplication between A and X
+    """
+
+    must_downcast = (
+        A_data.dtype.base_dtype != tf.float32
+        and ("gpu" in A_data.device.lower()
+             or (A_data.device == "" and utils.tf_gpu_installed)))
+    if must_downcast:
+        assert A_data.dtype.base_dtype == X.dtype.base_dtype
+        warnings.warn("Downcasting data to float32 in sparse_matmul, since "
+                      "only float32 is supported on the GPU.")
+        A = tf.cast(A_data, tf.float32)
+        X = tf.cast(X, tf.float32)
+    else:
+        A = A_data
+
+    if LooseVersion(tf.__version__) < LooseVersion("1.7.0"):
+        mat_mul = gen_sparse_ops._sparse_tensor_dense_mat_mul
+    else:
+        mat_mul = gen_sparse_ops.sparse_tensor_dense_mat_mul
+    dot = mat_mul(A_indices, A, A_shape, X)
+
+    if must_downcast:
+        dot = tf.cast(dot, A_data.dtype.base_dtype)
+
+    return dot
+
 # class DotSet(DotInc):
 #     @property
 #     def Y(self):
@@ -303,13 +349,7 @@ class DotIncBuilder(OpBuilder):
                 # dot = tf.einsum("ijk,ik->ij", A, X)
                 raise NotImplementedError
         else:
-            assert A.get_shape()[0] == self.sparse_indices.get_shape()[0]
-
-            if LooseVersion(tf.__version__) < LooseVersion("1.7.0"):
-                mat_mul = gen_sparse_ops._sparse_tensor_dense_mat_mul
-            else:
-                mat_mul = gen_sparse_ops.sparse_tensor_dense_mat_mul
-            dot = mat_mul(self.sparse_indices, A, self.A_shape, X)
+            dot = sparse_matmul(self.sparse_indices, A, self.A_shape, X)
 
             dot.set_shape(self.Y_data.shape + (signals.minibatch_size,))
 
@@ -461,14 +501,7 @@ class SparseDotIncBuilder(OpBuilder):
         A = signals.gather(self.A_data)
         X = signals.gather(self.X_data)
 
-        assert A.get_shape()[0] == self.sparse_indices.get_shape()[0]
-
-        if (LooseVersion(tf.__version__)
-                < "1.7.0"):  # pragma: no cover (no ci build for this case)
-            mat_mul = gen_sparse_ops._sparse_tensor_dense_mat_mul
-        else:
-            mat_mul = gen_sparse_ops.sparse_tensor_dense_mat_mul
-        dot = mat_mul(self.sparse_indices, A, self.A_shape, X)
+        dot = sparse_matmul(self.sparse_indices, A, self.A_shape, X)
 
         dot.set_shape(self.Y_data.shape + (signals.minibatch_size,))
 
