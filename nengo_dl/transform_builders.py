@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow as tf
 
 from nengo_dl.builder import Builder, OpBuilder
-from nengo_dl.compat import tf_convolution, ConvInc
+from nengo_dl.compat import ConvInc
 
 
 @Builder.register(ConvInc)
@@ -140,7 +140,7 @@ class ConvIncBuilder(OpBuilder):
             W = tf.transpose(a=W, perm=self.perm_w)
             W = tf.reshape(W, self.reshape_w)
 
-        Y = tf_convolution(
+        Y = tf.nn.convolution(
             input=X,
             filters=W,
             strides=self.conv.strides,

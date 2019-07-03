@@ -11,7 +11,7 @@ import tensorflow as tf
 
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
-from nengo_dl.compat import tf_compat, tf_math
+from nengo_dl.compat import tf_compat
 from nengo_dl.neurons import SoftLIFRate
 
 logger = logging.getLogger(__name__)
@@ -254,7 +254,7 @@ class LIFRateBuilder(OpBuilder):
         rates = self.amplitude / (
             self.tau_ref
             + self.tau_rc
-            * tf_math.log1p(tf_math.reciprocal(tf.maximum(j, self.epsilon)))
+            * tf.math.log1p(tf.math.reciprocal(tf.maximum(j, self.epsilon)))
         )
 
         return tf.where(j > self.zero, rates, self.zeros)
@@ -292,7 +292,7 @@ class SoftLIFRateBuilder(LIFRateBuilder):
         #   z = s*log(1 + e^js) = s*e^js
         #   log(1 + 1/z) = log(1/z) = -log(s*e^js) = -js - log(s)
         q = tf.where(
-            j_valid, tf_math.log1p(tf_math.reciprocal(z)), -js - tf_math.log(self.sigma)
+            j_valid, tf.math.log1p(tf.math.reciprocal(z)), -js - tf.math.log(self.sigma)
         )
 
         rates = self.amplitude / (self.tau_ref + self.tau_rc * q)
@@ -332,13 +332,13 @@ class LIFBuilder(SoftLIFRateBuilder):
     def _step(self, J, voltage, refractory, dt):
         delta_t = tf.clip_by_value(dt - refractory, self.zero, dt)
 
-        dV = (voltage - J) * tf_math.expm1(-delta_t / self.tau_rc)
+        dV = (voltage - J) * tf.math.expm1(-delta_t / self.tau_rc)
         voltage += dV
 
         spiked = voltage > self.one
         spikes = tf.cast(spiked, J.dtype) * self.alpha
 
-        partial_ref = -self.tau_rc * tf_math.log1p(
+        partial_ref = -self.tau_rc * tf.math.log1p(
             (self.one - voltage) / (J - self.one)
         )
         # FastLIF version (linearly approximate spike time when calculating

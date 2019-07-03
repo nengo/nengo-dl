@@ -19,7 +19,7 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import configure_settings, tensor_layer, dists, TensorNode
-from nengo_dl.compat import tf_compat, tf_uniform, RefVariable
+from nengo_dl.compat import tf_compat, RefVariable
 from nengo_dl.objectives import mse
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
@@ -1620,7 +1620,7 @@ def test_run_batch(Simulator, rng):
 
 def test_tf_seed(Simulator, seed):
     with nengo.Network() as net:
-        a = TensorNode(lambda t: tf_uniform((1, 1), dtype=t.dtype))
+        a = TensorNode(lambda t: tf.random.uniform((1, 1), dtype=t.dtype))
         p = nengo.Probe(a)
 
     with Simulator(net, seed=seed) as sim:

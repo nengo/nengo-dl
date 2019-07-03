@@ -5,8 +5,6 @@ Some common objective functions (for use with the ``objective`` argument in
 
 import tensorflow as tf
 
-from nengo_dl.compat import tf_math
-
 
 def mse(outputs, targets):
     """
@@ -28,7 +26,7 @@ def mse(outputs, targets):
         Tensor representing the mean squared error.
     """
 
-    targets = tf.where(tf_math.is_nan(targets), outputs, targets)
+    targets = tf.where(tf.math.is_nan(targets), outputs, targets)
     return tf.reduce_mean(input_tensor=tf.square(targets - outputs))
 
 
