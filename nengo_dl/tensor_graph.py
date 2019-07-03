@@ -209,7 +209,6 @@ class TensorGraph:
 
         # create base arrays
         sub = progress.sub("creating base arrays")
-        self.base_vars = OrderedDict()
         unique_ids = defaultdict(int)
         for k, (v, trainable) in sub(self.base_arrays_init.items()):
             name = "%s_%s_%s_%d" % (
@@ -228,20 +227,12 @@ class TensorGraph:
             var = RefVariable(
                 initial_value=ph,
                 trainable=trainable,
-                collections=(
-                    [
-                        tf_compat.GraphKeys.GLOBAL_VARIABLES,
-                        tf_compat.GraphKeys.TRAINABLE_VARIABLES,
-                    ]
-                    if trainable
-                    else [tf_compat.GraphKeys.LOCAL_VARIABLES]
-                ),
                 name="%s/%s" % ("trainable_vars" if trainable else "local_vars", name),
             )
-            self.base_vars[k] = (var, ph, v)
+            self.signals.base_vars[k] = (var, ph, v)
 
         logger.debug("created base arrays")
-        logger.debug([str(x[0]) for x in self.base_vars.values()])
+        logger.debug([str(x[0]) for x in self.signals.base_vars.values()])
 
         # set up invariant inputs
         sub = progress.sub("building inputs")
@@ -256,16 +247,15 @@ class TensorGraph:
             self.build_loop(sub)
 
         # ops for initializing variables (will be called by simulator)
-        trainable_vars = tf_compat.trainable_variables()
+        trainable_vars = self.signals.trainable_variables
         if not self.inference_only:
             trainable_vars.append(self.training_step)
         self.trainable_init_op = tf_compat.variables_initializer(trainable_vars)
-        self.local_init_op = tf_compat.local_variables_initializer()
-        self.global_init_op = tf_compat.variables_initializer(
-            [v for v in tf_compat.global_variables() if v not in trainable_vars]
+        self.local_init_op = tf_compat.variables_initializer(
+            self.signals.local_variables
         )
         self.constant_init_op = tf_compat.variables_initializer(
-            tf_compat.get_collection("constants")
+            [v for v, _ in self.signals.constant_vars.values()]
         )
 
         # logging
@@ -372,7 +362,7 @@ class TensorGraph:
             assert len(self.signals.bases) == 0
             for i, key in enumerate(
                 itertools.chain(
-                    self.base_vars.keys(), self.signals.internal_vars.keys()
+                    self.signals.base_vars.keys(), self.signals.internal_vars.keys()
                 )
             ):
                 self.signals.bases[key] = base_vars[i]
@@ -446,7 +436,7 @@ class TensorGraph:
             probe_arrays,
             tuple(
                 x[0]._ref() if isinstance(x[0], tf.Variable) else x[0]
-                for x in self.base_vars.values()
+                for x in self.signals.base_vars.values()
             )
             + tuple(x._ref() for x in self.signals.internal_vars.values()),
         )
@@ -492,7 +482,7 @@ class TensorGraph:
                     name="%s_ph" % utils.sanitize_name(n),
                 )
 
-    def build_optimizer_func(self, optimizer, objective):
+    def build_optimizer_func(self, optimizer, loss, direct_grads=None):
         """
         Adds elements into the graph to execute the given optimizer.
 
@@ -539,7 +529,10 @@ class TensorGraph:
         calls share the same internal state.
         """
 
-        key = (optimizer, frozenset(objective.items()))
+        if direct_grads is None:
+            direct_grads = []
+
+        key = (optimizer, frozenset(loss.items()), frozenset(direct_grads))
 
         try:
             # return the cached optimizer function if it exists
@@ -555,29 +548,13 @@ class TensorGraph:
         # allowing us to consolidate certain logic there (like capturing
         # new variables)
         def apply_optimizer(outputs, targets):
-            # note: we don't actually use outputs/targets, because the same
-            # data is pulled implicitly from `objective` below.
-            # we just check that outputs and targets match up with
-            # objective, to make sure there's nothing weird going on.
-            if not isinstance(outputs, tuple):
-                outputs = (outputs,)
-            if not isinstance(targets, tuple):
-                targets = (targets,)
-            assert set(outputs) == set(self.probe_arrays[p] for p in objective)
-            assert set(targets) == set(self.target_phs[p] for p in objective)
+            # note: we don't actually use outputs/targets, because the loss
+            # has already been computed outside this function
+            nonlocal loss
 
             agg_method = tf.AggregationMethod.DEFAULT
             grads = []
-            vars = tf_compat.trainable_variables()
-
-            # compute loss
-            # note: we drop the `None` items in objective, because we
-            # want to treat those as direct gradients (rather than
-            # returning the probe value, which is the standard behaviour for
-            # build_outputs)
-            loss, _ = self.build_outputs(
-                {k: v for k, v in objective.items() if v is not None}
-            )
+            vars = self.signals.trainable_variables
 
             # compute gradients wrt loss
             if len(loss) > 0:
@@ -592,16 +569,15 @@ class TensorGraph:
 
             # add in any gradients where the user directly specified the output
             # error grad
-            for p, g in objective.items():
-                if g is None:
-                    grads.append(
-                        tf.gradients(
-                            ys=self.probe_arrays[p],
-                            xs=vars,
-                            grad_ys=self.target_phs[p],
-                            aggregation_method=agg_method,
-                        )
+            for p in direct_grads:
+                grads.append(
+                    tf.gradients(
+                        ys=self.probe_arrays[p],
+                        xs=vars,
+                        grad_ys=self.target_phs[p],
+                        aggregation_method=agg_method,
                     )
+                )
 
             # combine gradients for each variable
             if len(grads) == 1:
@@ -609,9 +585,7 @@ class TensorGraph:
             else:
                 grads = [tf.reduce_sum(input_tensor=gs, axis=0) for gs in zip(*grads)]
 
-            opt_op = optimizer.apply_gradients(
-                zip(grads, tf_compat.trainable_variables())
-            )
+            opt_op = optimizer.apply_gradients(zip(grads, vars))
 
             with tf.control_dependencies([opt_op]):
                 new_step = tf_compat.assign_add(
@@ -622,7 +596,7 @@ class TensorGraph:
 
         self.optimizers[key] = apply_optimizer
 
-        return apply_optimizer
+        return self.optimizers[key]
 
     @with_self
     def build_outputs(self, outputs):
@@ -670,15 +644,15 @@ class TensorGraph:
         except KeyError:
             pass
 
-        def get_vars():
-            return set(
-                tf_compat.get_collection(tf_compat.GraphKeys.GLOBAL_VARIABLES)
-                + tf_compat.get_collection(tf_compat.GraphKeys.LOCAL_VARIABLES)
-                + tf_compat.get_collection("gradient_vars")
-            )
-
         output_vals = {}
-        pre_vars = get_vars()
+        new_vars = []
+        pre_vars = set(
+            self.graph.get_collection("gradient_vars")
+            # certain optimizers add variables to the
+            # global_variables collection
+            # TODO: remove this if we switch completely to keras optimizers
+            + self.graph.get_collection(tf_compat.GraphKeys.GLOBAL_VARIABLES)
+        )
         for probes, out in outputs.items():
             is_tuple = isinstance(probes, tuple)
             probe_arrays = (
@@ -731,6 +705,23 @@ class TensorGraph:
                         "outputs",
                     )
 
+                # call output pre_build function (if any)
+                if hasattr(out, "pre_build"):
+                    vars = out.pre_build(
+                        *[
+                            (
+                                [x.shape.as_list() for x in arg]
+                                if is_tuple
+                                else arg.shape.as_list()
+                            )
+                            for arg in args
+                        ]
+                    )
+                    if isinstance(vars, (list, tuple)):
+                        new_vars.extend(vars)
+                    elif vars is not None:
+                        new_vars.append(vars)
+
                 # apply output function
                 with tf_compat.name_scope(utils.function_name(out)):
                     output_vals[probes] = out(*args)
@@ -739,13 +730,19 @@ class TensorGraph:
                 raise ValidationError("Outputs must be callable or None)", "outputs")
 
         # collect any new variables created during build process
-        new_vars = get_vars() - pre_vars
+        self.signals.user_vars.extend(new_vars)
+        new_vars.extend(
+            set(
+                self.graph.get_collection("gradient_vars")
+                + self.graph.get_collection(tf_compat.GraphKeys.GLOBAL_VARIABLES)
+            )
+            - pre_vars
+        )
         new_vars_init = (
             tf_compat.variables_initializer(new_vars) if len(new_vars) > 0 else None
         )
 
         self.outputs[key] = output_vals
-
         return output_vals, new_vars_init
 
     @with_self
@@ -898,7 +895,7 @@ class TensorGraph:
 
         tensor_sig = self.signals[sig]
 
-        base = self.base_vars[tensor_sig.key][0]
+        base = self.signals.base_vars[tensor_sig.key][0]
 
         if "while/" in tensor_sig.tf_indices.name:
             # rebuild tf indices outside the while loop

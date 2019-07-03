@@ -19,7 +19,6 @@ def test_regularize(axis, weight, order, rng, sess):
 
     reg = objectives.Regularize(weight=weight, order=order, axis=axis)(x)
 
-    sess.run(tf_compat.global_variables_initializer())
     reg_val = sess.run(reg)
 
     if order == "euclidean":

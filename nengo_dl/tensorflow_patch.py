@@ -64,7 +64,7 @@ def patch_state_grads():
     scatter_add/update).  This adds them in."""
 
     def ScatterUpdateGrads(op, grad):
-        var, indices, updates = op.inputs
+        _, indices, updates = op.inputs
 
         updates_grad = array_ops.gather(grad, indices)
 
@@ -74,47 +74,39 @@ def patch_state_grads():
         #     [grad_range, indices],
         #     [grad, array_ops.zeros(updates.get_shape())])
 
-        if isinstance(grad, ops.IndexedSlices):
-            # note: we could use this approach for everything, but the
-            # temporary variable approach seems to be slightly faster (but we
-            # can't use that on indexedslices)
-            var_grad = grad - array_ops.scatter_nd(
-                array_ops.expand_dims(indices, 1), updates_grad, var.get_shape()
+        # scatter_nd approach (also seems to be a bit slower)
+        # var_grad = grad - array_ops.scatter_nd(
+        #     array_ops.expand_dims(indices, 1), updates_grad,
+        #     var.get_shape())
+
+        shape = tuple(grad.get_shape().as_list())
+        dtype = grad.dtype.base_dtype
+        name = "gradient_vars/%s" % "_".join(str(x) for x in shape + (dtype.name,))
+
+        # cache the temporary gradient variables in the graph (rather than
+        # creating new ones each time)
+        vars = op.graph.get_collection("gradient_vars", scope=".*" + name)
+        if len(vars) == 0:
+            var_grad = Variable(
+                initial_value=lambda: array_ops.zeros(shape, dtype=dtype),
+                trainable=False,
+                name=name,
+                use_resource=False,
             )
+            op.graph.add_to_collection("gradient_vars", var_grad)
         else:
-            shape = tuple(grad.get_shape().as_list())
-            dtype = grad.dtype.base_dtype
-            key = shape + (dtype.name,)
+            assert len(vars) == 1
+            var_grad = vars[0]
 
-            # cache the temporary gradient variables in the graph (rather than
-            # creating new ones each time)
-            try:
-                gradient_vars = op.graph.nengo_dl_gradient_vars
-            except AttributeError:
-                gradient_vars = {}
-                op.graph.nengo_dl_gradient_vars = gradient_vars
+        var_grad = state_ops.assign(var_grad, grad)
+        var_grad = state_ops.scatter_update(
+            var_grad, indices, array_ops.zeros_like(updates)
+        )
 
-            try:
-                var_grad = gradient_vars[key]
-            except KeyError:
-                var_grad = Variable(
-                    initial_value=lambda: array_ops.zeros(shape, dtype=dtype),
-                    trainable=False,
-                    collections=["gradient_vars"],
-                    name="gradient_vars/%s" % "_".join(str(x) for x in key),
-                    use_resource=False,
-                )
-                gradient_vars[key] = var_grad
-
-            var_grad = state_ops.assign(var_grad, grad)
-            var_grad = state_ops.scatter_update(
-                var_grad, indices, array_ops.zeros_like(updates)
-            )
-
-            # we need to force a copy so that any future assignments to the
-            # variable will not affect the value we return here
-            # TODO: check if this is still necessary in TensorFlow 2.0
-            var_grad = var_grad + 0
+        # we need to force a copy so that any future assignments to the
+        # variable will not affect the value we return here
+        # TODO: check if this is still necessary in TensorFlow 2.0
+        var_grad = var_grad + 0
 
         return var_grad, None, updates_grad
 

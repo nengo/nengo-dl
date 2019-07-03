@@ -3,6 +3,8 @@ TensorNodes allow parts of a model to be defined using TensorFlow and smoothly
 integrated with the rest of a Nengo model.
 """
 
+import inspect
+
 from nengo import Node, Connection, Ensemble, builder
 from nengo.base import NengoObject
 from nengo.builder.operator import Reset
@@ -239,12 +241,17 @@ class SimTensorNodeBuilder(OpBuilder):
         self.func = op.func
 
         if hasattr(self.func, "pre_build"):
-            self.func.pre_build(
+            vars = self.func.pre_build(
                 None
                 if self.src_data is None
                 else ((signals.minibatch_size,) + self.src_data.shape),
                 (signals.minibatch_size,) + self.dst_data.shape,
             )
+
+            if isinstance(vars, (list, tuple)):
+                signals.user_vars.extend(vars)
+            elif vars is not None:
+                signals.user_vars.append(vars)
 
     def build_step(self, signals):
         if self.src_data is None:
@@ -324,10 +331,12 @@ def tensor_layer(
     ----------
     input : ``NengoObject``
         Object providing input to the layer
-    layer_func : callable or `~nengo.neurons.NeuronType`
+    layer_func : callable or ``keras.Layer`` or `~nengo.neurons.NeuronType`
         A function that takes the value from ``input`` (represented as a
-        ``tf.Tensor``) and maps it to some output value, or a Nengo neuron
-        type, defining a nonlinearity that will be applied to ``input``.
+        ``tf.Tensor``) and maps it to some output value,
+        or a Keras layer type (which will be instantiated and applied
+        to ``input``), or a Nengo neuron type (which will be instantiated in
+        a Nengo Ensemble and applied to ``input``).
     shape_in : tuple of int
         If not None, reshape the input to the given shape
     synapse : float or `~nengo.synapses.Synapse`
@@ -361,20 +370,44 @@ def tensor_layer(
     if isinstance(layer_func, NeuronType):
         node = Ensemble(size_in, 1, neuron_type=layer_func, **layer_args).neurons
     else:
-        # add (ignored) time input and pass kwargs
-        def node_func(_, x):
-            return layer_func(x, **layer_args)
+        if inspect.isclass(layer_func) and issubclass(
+            layer_func, tf.keras.layers.Layer
+        ):
+
+            class WrappedLayer:
+                """Wraps a Keras Layer in a TensorNode function."""
+
+                def pre_build(self, pre_shape_in, _):
+                    """Build the layer and return the weights."""
+
+                    self.layer = layer_func(**layer_args)
+                    self.layer.build(
+                        pre_shape_in
+                        if shape_in is None
+                        else (pre_shape_in[0],) + shape_in
+                    )
+                    return self.layer.weights
+
+                def __call__(self, _, x):
+                    return self.layer(x)
+
+            node_func = WrappedLayer()
+
+            # we can use Keras' static shape inference to get the
+            # output shape, which avoids having to build/call the layer
+            size_out = (
+                layer_func(**layer_args).compute_output_shape((1, size_in))[1].value
+            )
+        else:
+            # add (ignored) time input and pass kwargs
+            def node_func(_, x):
+                return layer_func(x, **layer_args)
+
+            size_out = None
 
         # reshape input if necessary
         if shape_in is not None:
             node_func = reshaped(shape_in)(node_func)
-
-        if isinstance(layer_func, tf.keras.layers.Layer):
-            # we can use Keras' static shape inference to get the
-            # output shape, which avoids having to build/call the layer
-            size_out = layer_func.compute_output_shape((1, size_in))[1].value
-        else:
-            size_out = None
 
         node = TensorNode(node_func, size_in=size_in, size_out=size_out)
 

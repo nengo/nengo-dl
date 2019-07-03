@@ -22,9 +22,29 @@ Release History
 3.0.0 (unreleased)
 ==================
 
+**Added**
+
+- Objective functions passed to ``Simulator.loss/train`` (or any output
+  functions passed to ``Simulator.run_batch`` in general) can now define
+  a ``pre_build`` function (similar to TensorNodes). This function should
+  perform any setup required by the objective (in particular, creating any
+  Variables, which should be returned from the ``pre_build`` function).
+  The input to the ``pre_build`` function will be the shapes of the inputs to
+  the main function, mirroring the structure of those arguments.
+- Keras ``Layer`` classes can now be used with ``nengo_dl.tensor_layer``.
+
 **Changed**
 
 - Minimum TensorFlow version is now 2.0.0.
+- ``Simulator.save/load_params`` now uses a single ``trainable=True/False``
+  parameter rather than the previous ``include_global`` and ``include_local``.
+- Any Variables created by a TensorNode should be returned from the
+  ``pre_build`` function, so that they can be properly initialized
+  (TensorFlow no longer uses global Variable collections).
+- NengoDL will now change the default Keras float type to match the
+  default NengoDL float type when a model is built (this is a global setting
+  in Keras, so will affect any Keras operations in the same process until
+  the Simulator is closed).
 
 2.2.2 (unreleased)
 ==================
