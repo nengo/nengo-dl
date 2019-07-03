@@ -111,6 +111,57 @@ def test_build_outputs(Simulator):
             sim.tensor_graph.build_outputs({p: 1})
 
 
+def test_build_outputs_variables(Simulator):
+    with nengo.Network() as net:
+        a = nengo.Node([0])
+        b = nengo.Node([0, 0])
+        p_a = nengo.Probe(a)
+        p_b = nengo.Probe(b)
+
+    with Simulator(net, minibatch_size=5) as sim:
+
+        class VarFunc:
+            def pre_build(self, probes_shape, targets_shape):
+                assert probes_shape == [[5, None, 1], [5, None, 2]]
+                assert targets_shape == probes_shape
+
+                self.var = RefVariable(
+                    tf.ones((5, 1), dtype=sim.tensor_graph.dtype), name="one"
+                )
+
+                return self.var
+
+            def __call__(self, outputs, targets):
+                return self.var
+
+        class VarFunc2:
+            def pre_build(self, probes_shape):
+                assert probes_shape == [5, None, 2]
+
+                self.var0 = RefVariable(
+                    tf.ones((5, 2), dtype=sim.tensor_graph.dtype), name="var0"
+                )
+                self.var1 = RefVariable(
+                    tf.ones((5, 2), dtype=sim.tensor_graph.dtype), name="var1"
+                )
+
+                return [self.var0, self.var1]
+
+            def __call__(self, outputs):
+                return self.var0 + self.var1
+
+        func = VarFunc()
+        func2 = VarFunc2()
+
+        _, init_op = sim.tensor_graph.build_outputs({(p_a, p_b): func, p_b: func2})
+
+        sim.sess.run(init_op)
+        var, var0, var1 = sim.sess.run([func.var, func2.var0, func2.var1])
+        assert np.allclose(var, 1)
+        assert np.allclose(var0, 1)
+        assert np.allclose(var1, 1)
+
+
 @pytest.mark.training
 def test_build_optimizer(Simulator):
     with nengo.Network() as net:
@@ -134,23 +185,33 @@ def test_build_optimizer(Simulator):
     with Simulator(net) as sim:
         with pytest.raises(ValueError):
             sim.tensor_graph.build_outputs(
-                {p: sim.tensor_graph.build_optimizer_func(opt, {p: objectives.mse})}
+                {
+                    p: sim.tensor_graph.build_optimizer_func(
+                        opt, sim.tensor_graph.build_outputs({p: objectives.mse})[0]
+                    )
+                }
             )
 
     net, _, p = dummies.linear_net()
 
     with Simulator(net) as sim:
         # capturing variables from nested loss function
-        def loss(x):
-            return abs(
-                RefVariable(tf.constant(2.0, dtype=sim.tensor_graph.dtype), name="two")
-                - x
-            )
+        class Loss:
+            def pre_build(self, *_):
+                self.var = RefVariable(
+                    tf.constant(2.0, dtype=sim.tensor_graph.dtype),
+                    name="two",
+                    trainable=False,
+                )
+                return self.var
+
+            def __call__(self, x):
+                return abs(self.var - x)
 
         sim.train(
             5,
             tf_compat.train.GradientDescentOptimizer(0.1),
-            objective={p: loss},
+            objective={p: Loss()},
             n_epochs=10,
         )
         sim.step()

@@ -238,8 +238,8 @@ def test_constant(dtype, sess):
     assert const1.dtype == (dtype if dtype else tf.as_dtype(val.dtype))
 
     sess.run(
-        tf_compat.variables_initializer(tf_compat.get_collection("constants")),
-        feed_dict=signals.constant_phs,
+        tf_compat.variables_initializer([v[0] for v in signals.constant_vars.values()]),
+        feed_dict={ph: val for ph, (_, val) in signals.constant_vars.items()},
     )
     c0, c1 = sess.run([const0, const1])
 
@@ -259,8 +259,8 @@ def test_constant_gpu(sess):
         assert "GPU" in const.device.upper()
 
     sess.run(
-        tf_compat.variables_initializer(tf_compat.get_collection("constants")),
-        feed_dict=signals.constant_phs,
+        tf_compat.variables_initializer([v[0] for v in signals.constant_vars.values()]),
+        feed_dict={ph: val for ph, (_, val) in signals.constant_vars.items()},
     )
     c = sess.run(const)
 
@@ -297,8 +297,8 @@ def test_op_constant(dtype, diff, sess):
     assert const.dtype.base_dtype == dtype
 
     sess.run(
-        tf_compat.variables_initializer(tf_compat.get_collection("constants")),
-        feed_dict=signals.constant_phs,
+        tf_compat.variables_initializer([v[0] for v in signals.constant_vars.values()]),
+        feed_dict={ph: val for ph, (_, val) in signals.constant_vars.items()},
     )
     x, x1, x3 = sess.run([const, const1, const3])
 

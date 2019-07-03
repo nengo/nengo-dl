@@ -279,8 +279,10 @@ class SignalDict(Mapping):
         self.bases = OrderedDict()  # will be filled in tensor_graph.build_loop
         self.reads_by_base = defaultdict(list)
         self.gather_bases = []
+        self.base_vars = OrderedDict()
         self.internal_vars = OrderedDict()
-        self.constant_phs = {}
+        self.constant_vars = OrderedDict()
+        self.user_vars = []
 
         # logging
         self.read_types = defaultdict(int)
@@ -513,7 +515,6 @@ class SignalDict(Mapping):
         var = RefVariable(
             initial_value=tf.zeros(sig.full_shape, dtype=sig.dtype),
             trainable=False,
-            collections=[tf_compat.GraphKeys.LOCAL_VARIABLES],
             name="%s/%s" % (tf_compat.get_default_graph().get_name_scope(), name),
         )
 
@@ -623,11 +624,10 @@ class SignalDict(Mapping):
                 ph = tf_compat.placeholder(dtype, value.shape)
                 const_var = RefVariable(
                     initial_value=ph,
-                    collections=["constants"],
                     trainable=False,
-                    name="constant_vars/%d" % len(self.constant_phs),
+                    name="constant_vars/%d" % len(self.constant_vars),
                 )
-                self.constant_phs[ph] = value
+                self.constant_vars[ph] = (const_var, value)
 
             return tf.identity(const_var)
         else:
@@ -685,3 +685,29 @@ class SignalDict(Mapping):
 
     def __contains__(self, sig):
         return sig in self.sig_map
+
+    @property
+    def local_variables(self):
+        """All local (non-trainable) variables in the model."""
+        return [v for v in self.all_variables if not v.trainable]
+
+    @property
+    def trainable_variables(self):
+        """All trainable variables in the model."""
+        return [v for v in self.all_variables if v.trainable]
+
+    @property
+    def all_variables(self):
+        """All variables in the model."""
+
+        # note: does not include constant vars, as practically speaking
+        # we want the fact that those are implemented as variables (or not)
+        # to be completely transparent.
+        # there may also be other variables managed by other processes
+        # (e.g. TensorFlow optimizers) that are not captured here. these are
+        # only the variables associated with the NengoDL simulation.
+        return (
+            list(v for v, _, _ in self.base_vars.values())
+            + list(self.internal_vars.values())
+            + self.user_vars
+        )

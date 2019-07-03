@@ -6,7 +6,6 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import config, dists, SoftLIFRate
-from nengo_dl.compat import tf_compat
 
 
 def test_lif_deterministic(Simulator, seed):
@@ -121,7 +120,7 @@ def test_spiking_swap(Simulator, rate, spiking, seed):
                 sim.sess.run(
                     tf.gradients(
                         ys=sim.tensor_graph.probe_arrays[p],
-                        xs=tf_compat.trainable_variables(),
+                        xs=sim.tensor_graph.signals.trainable_variables,
                     ),
                     feed_dict=sim._fill_feed(10, training=True),
                 )

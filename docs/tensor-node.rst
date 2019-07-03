@@ -26,13 +26,18 @@ checking the output, if it isn't set when the Node is created.
 If ``tensor_func`` has a ``pre_build`` attribute, that function will be
 called once when the model is constructed.  This can be used to compute any
 constant values or set up variables -- things that don't need to
-execute every simulation timestep.
+execute every simulation timestep.  Any created Variables should be returned
+from the ``pre_build`` function, so that they can be properly initialized.
 
 .. code-block:: python
 
-    def pre_build(shape_in, shape_out):
+    def pre_build(self, shape_in, shape_out):
         print(shape_in)  # (minibatch_size, node.size_in)
         print(shape_out)  # (minibatch_size, node.size_out)
+
+        self.my_var = tf.Variable(...)
+
+        return self.my_var
 
 If ``tensor_func`` has a ``post_build`` attribute, that function will be
 called after the simulator is created and whenever it is reset.  This can
@@ -42,7 +47,7 @@ weights).
 
 .. code-block:: python
 
-    def post_build(sess, rng):
+    def post_build(self, sess, rng):
         print(sess)  # the TensorFlow simulation session object
         print(rng)  # random number generator (np.random.RandomState)
 
@@ -50,6 +55,12 @@ weights).
 designed to mimic the layer-based model construction style of many deep
 learning packages.  It combines the creation of a `.TensorNode` or
 `~nengo.Ensemble` and a `~nengo.Connection` in a single step.
+
+For example, a Keras Layer could be wrapped in a ``tensor_layer``:
+
+.. code-block:: python
+
+    nengo_dl.tensor_layer(x, keras.layers.Dense, units=10, ...)
 
 See the :ref:`TensorNode API <tensornode-api>` for more details, or the
 examples below for demonstrations of using TensorNodes in practice.

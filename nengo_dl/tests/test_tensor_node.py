@@ -108,6 +108,7 @@ def test_pre_build(Simulator):
     class TestFunc:
         def pre_build(self, size_in, size_out):
             self.weights = RefVariable(tf.ones((size_in[1], size_out[1])))
+            return self.weights
 
         def __call__(self, t, x):
             return tf.matmul(x, tf.cast(self.weights, x.dtype))
@@ -144,6 +145,7 @@ def test_post_build(Simulator):
     class TestFunc:
         def pre_build(self, size_in, size_out):
             self.weights = RefVariable(tf.zeros((size_in[1], size_out[1])))
+            return self.weights
 
         def post_build(self, sess, rng):
             assert sess is tf_compat.get_default_session()
@@ -240,6 +242,7 @@ def test_reuse_vars(Simulator):
     class MyFunc:
         def pre_build(self, *_):
             self.w = RefVariable(initial_value=tf.constant(2.0), name="weights")
+            return self.w
 
         def __call__(self, _, x):
             return x * tf.cast(self.w, x.dtype)
@@ -253,11 +256,10 @@ def test_reuse_vars(Simulator):
 
         node2 = tensor_layer(
             inp,
-            tf.keras.layers.Dense(
-                units=10,
-                use_bias=False,
-                kernel_initializer=tf_compat.initializers.constant(3),
-            ),
+            tf.keras.layers.Dense,
+            units=10,
+            use_bias=False,
+            kernel_initializer=tf_compat.initializers.constant(3),
         )
 
         p = nengo.Probe(node)
@@ -269,7 +271,7 @@ def test_reuse_vars(Simulator):
         assert np.allclose(sim.data[p2], 3)
 
         with sim.tensor_graph.graph.as_default():
-            vars = tf_compat.trainable_variables()
+            vars = sim.tensor_graph.signals.trainable_variables
 
         assert len(vars) == 2
         assert vars[0].get_shape() == ()
