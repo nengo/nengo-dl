@@ -20,6 +20,7 @@
         cd /tmp/nengo-dl-$TRAVIS_JOB_NUMBER
         conda create -q -y -n travis-ci-$TRAVIS_JOB_NUMBER python=$PYTHON_VERSION $TF_VERSION
         source activate travis-ci-$TRAVIS_JOB_NUMBER
+        pip install "tensorflow-gpu>=2.0.0b1" --pre
         pip install $NENGO_VERSION $NUMPY_VERSION
         pip install git+https://github.com/drasmuss/spaun2.0.git
         pip install -e .[tests]
