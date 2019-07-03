@@ -117,6 +117,8 @@ class Simulator:
                 DeprecationWarning)
         else:
             dtype = config.get_setting(self.model, "dtype", tf.float32)
+        self._keras_dtype = tf.keras.backend.floatx()
+        tf.keras.backend.set_floatx(dtype.name)
 
         # set up tensorflow graph plan
         with ProgressBar("Optimizing graph", "Optimization",
@@ -194,8 +196,16 @@ class Simulator:
         self.time = 0.0
 
         # initialize variables
-        self.sess.run(self.tensor_graph.constant_init_op,
-                      feed_dict=self.tensor_graph.signals.constant_phs)
+        with self.tensor_graph.graph.as_default():
+            # user_init_op cannot be pre-built like the others,
+            # because new user variables may be added after
+            # the initial build process
+            user_init_op = tf_compat.variables_initializer(
+                self.tensor_graph.signals.user_vars)
+        self.sess.run(
+            [self.tensor_graph.constant_init_op, user_init_op],
+            feed_dict={ph: val for ph, (_, val)
+                       in self.tensor_graph.signals.constant_vars.items()})
         self.soft_reset(include_trainable=True, include_probes=True)
 
         # execute post-build processes (we do this here because
@@ -223,12 +233,12 @@ class Simulator:
             If True, also clear probe data
         """
 
-        init_ops = [self.tensor_graph.local_init_op,
-                    self.tensor_graph.global_init_op]
+        init_ops = [self.tensor_graph.local_init_op]
         if include_trainable:
             init_ops.append(self.tensor_graph.trainable_init_op)
         self.sess.run(init_ops, feed_dict={
-            ph: v for _, ph, v in self.tensor_graph.base_vars.values()})
+            ph: v for _, ph, v in
+            self.tensor_graph.signals.base_vars.values()})
 
         if include_probes:
             for p in self.model.probes:
@@ -516,14 +526,21 @@ class Simulator:
                 warnings.warn(
                     "Using the string 'mse' for the objective is deprecated, "
                     "and will no longer be supported in the future; please "
-                    "use the function `nengo_dl.objectives.mse` in the future",
+                    "use the function `nengo_dl.objectives.mse`",
                     DeprecationWarning)
 
                 objective[p] = objectives.mse
 
-        # build the output function
+        # build the objective
+        loss, init_ops = self.tensor_graph.build_outputs(
+            {k: v for k, v in objective.items() if v is not None})
+        if init_ops is not None:
+            self.sess.run(init_ops)
+
+        # create the optimizer function
         apply_optimizer = self.tensor_graph.build_optimizer_func(
-            optimizer, objective)
+            optimizer, loss,
+            direct_grads=[p for p, g in objective.items() if g is None])
 
         extra_fetches = dict()
 
@@ -809,8 +826,7 @@ class Simulator:
         # save the internal state of the simulator
         if isolate_state:
             tmpdir = tempfile.TemporaryDirectory()
-            self.save_params(os.path.join(tmpdir.name, "tmp"),
-                             include_local=True, include_global=False)
+            self.save_params(os.path.join(tmpdir.name, "tmp"), trainable=False)
 
         # set up profiling
         if profile:
@@ -863,8 +879,7 @@ class Simulator:
 
         # restore internal state of simulator
         if isolate_state:
-            self.load_params(os.path.join(tmpdir.name, "tmp"),
-                             include_local=True, include_global=False)
+            self.load_params(os.path.join(tmpdir.name, "tmp"), trainable=False)
             tmpdir.cleanup()
 
         # combine outputs from each minibatch
@@ -884,7 +899,7 @@ class Simulator:
 
         return output_vals
 
-    def save_params(self, path, include_global=True, include_local=False):
+    def save_params(self, path, trainable=True):
         """
         Save network parameters to the given ``path``.
 
@@ -892,11 +907,10 @@ class Simulator:
         ----------
         path : str
             Filepath of parameter output file
-        include_global : bool
-            If True (default True), save global/trainable network variables
-        include_local : bool
-            If True (default False), save local (non-trainable) network
-            variables
+        trainable : bool
+            If True (default) save trainable network variables, otherwise
+            save non-trainable variables (generally representing internal
+            simulation state).
 
         Notes
         -----
@@ -909,18 +923,15 @@ class Simulator:
                                   "parameters")
 
         with self.tensor_graph.graph.as_default():
-            vars = []
-            if include_global:
-                vars.extend(tf_compat.global_variables())
-            if include_local:
-                vars.extend(tf_compat.local_variables())
+            vars = (self.tensor_graph.signals.trainable_variables if trainable
+                    else self.tensor_graph.signals.local_variables)
 
             with tf.device("/cpu:0"):
                 path = tf_compat.train.Saver(vars).save(self.sess, path)
 
         logger.info("Model parameters saved to %s", path)
 
-    def load_params(self, path, include_global=True, include_local=False):
+    def load_params(self, path, trainable=True):
         """
         Load network parameters from the given ``path``.
 
@@ -928,11 +939,10 @@ class Simulator:
         ----------
         path : str
             Filepath of parameter input file
-        include_global : bool
-            If True (default True), load global (trainable) network variables
-        include_local : bool
-            If True (default False), load local (non-trainable) network
-            variables
+        trainable : bool
+            If True (default) load trainable network variables, otherwise
+            load non-trainable variables (generally representing internal
+            simulation state).
 
         Notes
         -----
@@ -945,11 +955,8 @@ class Simulator:
                                   "parameters")
 
         with self.tensor_graph.graph.as_default():
-            vars = []
-            if include_global:
-                vars.extend(tf_compat.global_variables())
-            if include_local:
-                vars.extend(tf_compat.local_variables())
+            vars = (self.tensor_graph.signals.trainable_variables if trainable
+                    else self.tensor_graph.signals.local_variables)
 
             with tf.device("/cpu:0"):
                 tf_compat.train.Saver(vars).restore(self.sess, path)
@@ -1250,9 +1257,8 @@ class Simulator:
                 dx, dy = gradient_checker._compute_dx_and_dy(
                     inp, out, out_shape)
 
-                self.sess.run(tf_compat.variables_initializer(list(
-                    getattr(self.tensor_graph.graph,
-                            "nengo_dl_gradient_vars", {}).values())))
+                self.sess.run(tf_compat.variables_initializer(
+                    self.tensor_graph.graph.get_collection("gradient_vars")))
 
                 with self.sess.as_default():
                     analytic = gradient_checker._compute_theoretical_jacobian(
@@ -1319,6 +1325,8 @@ class Simulator:
 
             if getattr(self, "summary", None) is not None:
                 self.summary.close()
+
+            tf.keras.backend.set_floatx(self._keras_dtype)
 
             self.closed = True
 

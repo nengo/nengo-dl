@@ -488,14 +488,15 @@ def test_save_load_params(Simulator, tmpdir):
         net.config[ens].trainable = False
 
     with Simulator(net) as sim:
-        weights_var = [x[0] for x in sim.tensor_graph.base_vars.values()
-                       if x[0].get_shape() == (1, 10)][0]
-        enc_var = sim.tensor_graph.base_vars[
+        weights_var = [
+            x[0] for x in sim.tensor_graph.signals.base_vars.values()
+            if x[0].get_shape() == (1, 10)][0]
+        enc_var = sim.tensor_graph.signals.base_vars[
             sim.tensor_graph.signals[sim.model.sig[ens]["encoders"]].key][0]
         weights0, enc0 = sim.sess.run([weights_var, enc_var])
         sim.save_params(os.path.join(str(tmpdir), "train"))
         sim.save_params(os.path.join(str(tmpdir), "local"),
-                        include_local=True)
+                        trainable=False)
 
     with pytest.raises(SimulatorClosed):
         sim.save_params(None)
@@ -513,9 +514,10 @@ def test_save_load_params(Simulator, tmpdir):
         net2.config[ens].trainable = False
 
     with Simulator(net2) as sim:
-        weights_var = [x[0] for x in sim.tensor_graph.base_vars.values()
-                       if x[0].get_shape() == (1, 10)][0]
-        enc_var = sim.tensor_graph.base_vars[
+        weights_var = [
+            x[0] for x in sim.tensor_graph.signals.base_vars.values()
+            if x[0].get_shape() == (1, 10)][0]
+        enc_var = sim.tensor_graph.signals.base_vars[
             sim.tensor_graph.signals[sim.model.sig[ens]["encoders"]].key][0]
         weights1, enc1 = sim.sess.run([weights_var, enc_var])
         assert not np.allclose(weights0, weights1)
@@ -527,7 +529,7 @@ def test_save_load_params(Simulator, tmpdir):
         assert np.allclose(weights0, weights2)
         assert not np.allclose(enc0, enc2)
 
-        sim.load_params(os.path.join(str(tmpdir), "local"), include_local=True)
+        sim.load_params(os.path.join(str(tmpdir), "local"), trainable=False)
 
         weights3, enc3 = sim.sess.run([weights_var, enc_var])
         assert np.allclose(weights0, weights3)
@@ -647,18 +649,21 @@ def test_tensorboard(Simulator, tmpdir):
         with tf.device("/cpu:0"):
             summ = tf_compat.summary.scalar("step_var", sim.training_step)
 
-        def loss(x):
-            # uses a variable to test that variables from summaries get
-            # initialized correctly
-            return RefVariable(
-                initial_value=tf.constant(1.0, dtype=sim.tensor_graph.dtype),
-                name="one")
+        class Loss:
+            def pre_build(self, *_):
+                self.var = RefVariable(
+                    tf.constant(1.0, dtype=sim.tensor_graph.dtype),
+                    name="one")
+                return self.var
+
+            def __call__(self, x):
+                return self.var
 
         sim.train({a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1)),
                    p2: np.zeros((1, 10, 1))},
                   tf_compat.train.GradientDescentOptimizer(0.0),
-                  objective={p: loss, p2: mse},
-                  summaries=["loss", b, b.neurons, c, summ],
+                  objective={p: Loss(), p2: mse},
+                  summaries=["loss", b, b.neurons, c, summ, {p: Loss()}],
                   n_epochs=3)
 
     event_file = os.path.join(
@@ -673,7 +678,7 @@ def test_tensorboard(Simulator, tmpdir):
 
         assert event.step == i - 2
         tags = [s.tag for s in event.summary.value]
-        assert len(tags) == 7
+        assert len(tags) == 8
         assert "loss/loss" in tags[0]
         assert "loss/Probe_None_loss" in tags[1]
         assert "loss/Probe_None_loss" in tags[2]
@@ -681,6 +686,7 @@ def test_tensorboard(Simulator, tmpdir):
         assert tags[4] == "Ensemble.neurons_None_bias"
         assert tags[5] == "Connection_None_weights"
         assert tags[6] == "step_var"
+        assert "loss/loss" in tags[7]
 
     assert i == 5  # pylint: disable=undefined-loop-variable
 
@@ -1030,7 +1036,7 @@ def test_simulation_data(Simulator, seed):
         # check that values can be updated live
         sig = sim.model.sig[a]['encoders']
         tensor_sig = sim.tensor_graph.signals[sig]
-        base = sim.tensor_graph.base_vars[tensor_sig.key][0]
+        base = sim.tensor_graph.signals.base_vars[tensor_sig.key][0]
         op = tf_compat.assign(base, tf.ones_like(base))
         sim.sess.run(op)
 
