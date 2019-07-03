@@ -3,7 +3,6 @@ Build classes for basic Nengo operators.
 """
 
 from collections import defaultdict
-from distutils.version import LooseVersion
 import logging
 import warnings
 
@@ -223,11 +222,7 @@ def sparse_matmul(A_indices, A_data, A_shape, X):
     else:
         A = A_data
 
-    if LooseVersion(tf.__version__) < LooseVersion("1.7.0"):
-        mat_mul = gen_sparse_ops._sparse_tensor_dense_mat_mul
-    else:
-        mat_mul = gen_sparse_ops.sparse_tensor_dense_mat_mul
-    dot = mat_mul(A_indices, A, A_shape, X)
+    dot = gen_sparse_ops.sparse_tensor_dense_mat_mul(A_indices, A, A_shape, X)
 
     if must_downcast:
         dot = tf.cast(dot, A_data.dtype.base_dtype)
