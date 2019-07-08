@@ -108,9 +108,8 @@ def test_minibatch(Simulator, seed):
     with Simulator(net, minibatch_size=5) as sim:
         sim.run_steps(100)
 
-    assert np.allclose(sim.data[ps[0]], probe_data[0], atol=1e-6)
-    assert np.allclose(sim.data[ps[1]], probe_data[1], atol=1e-6)
-    assert np.allclose(sim.data[ps[2]], probe_data[2], atol=1e-6)
+    for i, p in enumerate(ps):
+        assert np.allclose(sim.data[p], probe_data[i], atol=1e-6)
 
 
 def test_input_feeds(Simulator):
@@ -213,12 +212,15 @@ def test_train_recurrent(Simulator, truncation, seed):
             1,
             neuron_type=nengo.RectifiedLinear(),
             gain=np.ones(n_hidden),
-            bias=np.linspace(-1, 1, n_hidden),
+            # note: using non-zero biases because otherwise we tend to get a lot
+            # of neurons with an inflection point right around zero, which causes
+            # numerical errors in the check_gradients finite differencing
+            bias=np.linspace(-0.1, 0.1, n_hidden),
         )
         out = nengo.Node(size_in=1)
 
         nengo.Connection(inp, ens, synapse=None)
-        nengo.Connection(ens, ens, synapse=0)
+        nengo.Connection(ens.neurons, ens.neurons, transform=dists.He(), synapse=0)
         nengo.Connection(ens, out, synapse=None)
 
         p = nengo.Probe(out)
@@ -241,7 +243,7 @@ def test_train_recurrent(Simulator, truncation, seed):
         sim.run_steps(n_steps, data={inp: x[:minibatch_size]})
 
     assert np.sqrt(np.mean((sim.data[p] - y[:minibatch_size]) ** 2)) < (
-        0.1 if truncation else 0.055
+        0.07 if truncation else 0.05
     )
 
 
@@ -529,15 +531,17 @@ def test_save_load_params(Simulator, tmpdir):
     with Simulator(net) as sim:
         weights_var = [
             x[0]
-            for x in sim.tensor_graph.signals.base_vars.values()
+            for x in sim.tensor_graph.signals.base_params.values()
             if x[0].get_shape() == (1, 10)
         ][0]
-        enc_var = sim.tensor_graph.signals.base_vars[
+        enc_var = sim.tensor_graph.signals.base_tensors[
             sim.tensor_graph.signals[sim.model.sig[ens]["encoders"]].key
         ][0]
-        weights0, enc0 = sim.sess.run([weights_var, enc_var])
+        weights0, enc0 = sim.sess.run(
+            [weights_var, enc_var], feed_dict=sim._internal_state
+        )
         sim.save_params(os.path.join(str(tmpdir), "train"))
-        sim.save_params(os.path.join(str(tmpdir), "local"), trainable=False)
+        sim.save_params(os.path.join(str(tmpdir), "local"), include_internal=True)
 
     with pytest.raises(SimulatorClosed):
         sim.save_params(None)
@@ -557,25 +561,31 @@ def test_save_load_params(Simulator, tmpdir):
     with Simulator(net2) as sim:
         weights_var = [
             x[0]
-            for x in sim.tensor_graph.signals.base_vars.values()
+            for x in sim.tensor_graph.signals.base_params.values()
             if x[0].get_shape() == (1, 10)
         ][0]
-        enc_var = sim.tensor_graph.signals.base_vars[
+        enc_var = sim.tensor_graph.signals.base_tensors[
             sim.tensor_graph.signals[sim.model.sig[ens]["encoders"]].key
         ][0]
-        weights1, enc1 = sim.sess.run([weights_var, enc_var])
+        weights1, enc1 = sim.sess.run(
+            [weights_var, enc_var], feed_dict=sim._internal_state
+        )
         assert not np.allclose(weights0, weights1)
         assert not np.allclose(enc0, enc1)
 
         sim.load_params(os.path.join(str(tmpdir), "train"))
 
-        weights2, enc2 = sim.sess.run([weights_var, enc_var])
+        weights2, enc2 = sim.sess.run(
+            [weights_var, enc_var], feed_dict=sim._internal_state
+        )
         assert np.allclose(weights0, weights2)
         assert not np.allclose(enc0, enc2)
 
-        sim.load_params(os.path.join(str(tmpdir), "local"), trainable=False)
+        sim.load_params(os.path.join(str(tmpdir), "local"), include_internal=True)
 
-        weights3, enc3 = sim.sess.run([weights_var, enc_var])
+        weights3, enc3 = sim.sess.run(
+            [weights_var, enc_var], feed_dict=sim._internal_state
+        )
         assert np.allclose(weights0, weights3)
         assert np.allclose(enc0, enc3)
 
@@ -987,7 +997,7 @@ def test_train_state_save(Simulator):
         u = nengo.Node([1])
         o = nengo.Node(size_in=1)
         nengo.Connection(u, o)
-        p = nengo.Probe(u, synapse=0.1)
+        p = nengo.Probe(o, synapse=0.1)
 
     with Simulator(net) as sim:
         sim.run_steps(20)
@@ -1088,9 +1098,13 @@ def test_simulation_data(Simulator, seed):
         # check that values can be updated live
         sig = sim.model.sig[a]["encoders"]
         tensor_sig = sim.tensor_graph.signals[sig]
-        base = sim.tensor_graph.signals.base_vars[tensor_sig.key][0]
-        op = tf_compat.assign(base, tf.ones_like(base))
-        sim.sess.run(op)
+        if sim.tensor_graph.inference_only:
+            base = sim.tensor_graph.signals.base_tensors[tensor_sig.key][0]
+            sim._internal_state[base][...] = 1
+        else:
+            base = sim.tensor_graph.signals.base_params[tensor_sig.key][0]
+            op = tf_compat.assign(base, tf.ones_like(base))
+            sim.sess.run(op)
 
         assert np.allclose(sim.data[a].scaled_encoders, 1)
         assert np.allclose(sim.data[a].gain, np.sqrt(2) * a.radius)

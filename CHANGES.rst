@@ -36,8 +36,10 @@ Release History
 **Changed**
 
 - Minimum TensorFlow version is now 2.0.0.
-- ``Simulator.save/load_params`` now uses a single ``trainable=True/False``
-  parameter rather than the previous ``include_global`` and ``include_local``.
+- ``Simulator.save/load_params`` now uses a single
+  ``include_internal=True/False`` (equivalent to the previous
+  ``include_local``). Trainable parameters will always be saved, so the
+  ``include_global`` argument is removed.
 - Any Variables created by a TensorNode should be returned from the
   ``pre_build`` function, so that they can be properly initialized
   (TensorFlow no longer uses global Variable collections).
@@ -45,6 +47,13 @@ Release History
   default NengoDL float type when a model is built (this is a global setting
   in Keras, so will affect any Keras operations in the same process until
   the Simulator is closed).
+- ``Simulator.soft_reset`` ``include_trainable`` parameter renamed to
+  ``include_params``, which now resets all Variables in the model (not just
+  those marked as trainable).  In most cases this won't make a difference,
+  as non-trainable Variables won't have changed from their initial value.
+- ``Simulator.save_params`` now saves internal state as a separate
+  ``<filepath>.internal.npz`` file (if ``include_internal=True``), rather than
+  including it in the TensorFlow checkpoint file.
 
 2.2.2 (unreleased)
 ==================

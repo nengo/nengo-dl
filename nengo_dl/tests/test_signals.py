@@ -138,7 +138,7 @@ def test_signal_dict_scatter(sess):
     )
     y = tf.ones((var_size, 1))
     signals.scatter(x, y)
-    assert signals.bases[key].op.type == "Assign"
+    assert signals.bases[key] is y
 
     # recognize assignment to strided full array
     x = signals.get_tensor_signal(
@@ -146,7 +146,7 @@ def test_signal_dict_scatter(sess):
     )
     y = tf.ones((var_size // 2 + 1, 1))
     signals.scatter(x, y)
-    assert signals.bases[key].op.type == "ScatterUpdate"
+    assert signals.bases[key].op.type == "TensorScatterUpdate"
 
 
 def test_signal_dict_gather(sess):
@@ -232,16 +232,12 @@ def test_constant(dtype, sess):
     const1 = signals.constant(val, dtype=dtype, cutoff=0)
 
     assert const0.op.type == "Const"
-    assert const1.op.type == "Identity"
+    assert const1.op.type == "Placeholder"
 
     assert const0.dtype == (dtype if dtype else tf.as_dtype(val.dtype))
     assert const1.dtype == (dtype if dtype else tf.as_dtype(val.dtype))
 
-    sess.run(
-        tf_compat.variables_initializer([v[0] for v in signals.constant_vars.values()]),
-        feed_dict={ph: val for ph, (_, val) in signals.constant_vars.items()},
-    )
-    c0, c1 = sess.run([const0, const1])
+    c0, c1 = sess.run([const0, const1], feed_dict=signals.constant_phs)
 
     assert np.allclose(c0, val)
     assert np.allclose(c1, val)
@@ -258,11 +254,7 @@ def test_constant_gpu(sess):
         assert const.dtype == tf.int32
         assert "GPU" in const.device.upper()
 
-    sess.run(
-        tf_compat.variables_initializer([v[0] for v in signals.constant_vars.values()]),
-        feed_dict={ph: val for ph, (_, val) in signals.constant_vars.items()},
-    )
-    c = sess.run(const)
+    c = sess.run(const, feed_dict=signals.constant_phs)
 
     assert np.allclose(val, c)
 
@@ -296,10 +288,6 @@ def test_op_constant(dtype, diff, sess):
 
     assert const.dtype.base_dtype == dtype
 
-    sess.run(
-        tf_compat.variables_initializer([v[0] for v in signals.constant_vars.values()]),
-        feed_dict={ph: val for ph, (_, val) in signals.constant_vars.items()},
-    )
     x, x1, x3 = sess.run([const, const1, const3])
 
     if diff:
@@ -362,3 +350,21 @@ def test_get_tensor_signal():
         signals.get_tensor_signal(
             np.arange(4), key, np.float64, (2, 2), True, signal=sig
         )
+
+
+@pytest.mark.parametrize("ndims", (1, 2, 3))
+def test_tf_indices_nd(sess, ndims):
+    signals = SignalDict(tf.float32, 10, False)
+    shape = (3, 4, 5)[:ndims]
+    x = tf.ones(shape) * tf.reshape(
+        tf.range(0, 3, dtype=tf.float32), (-1,) + (1,) * (ndims - 1)
+    )
+    assert x.shape == shape
+    sig = signals.get_tensor_signal([0, 2], None, np.float32, shape, False)
+    indices = sig.tf_indices_nd
+
+    result = sess.run(tf.gather_nd(x, indices))
+
+    assert result.shape == (2,) + shape[1:]
+    assert np.allclose(result[0], 0)
+    assert np.allclose(result[1], 2)

@@ -8,7 +8,6 @@ network, which will be executed by the simulator.
 from collections import OrderedDict, defaultdict
 import functools
 import inspect
-import itertools
 import logging
 import warnings
 
@@ -80,8 +79,10 @@ class TensorGraph:
         self.minibatch_size = minibatch_size
         self.device = device
         self.graph = tf.Graph()
-        self.signals = signals.SignalDict(self.dtype, self.minibatch_size)
         self.inference_only = config.get_setting(model, "inference_only", False)
+        self.signals = signals.SignalDict(
+            self.dtype, self.minibatch_size, self.inference_only
+        )
 
         # find invariant inputs (nodes that don't receive any input other
         # than the simulation time). we'll compute these outside the simulation
@@ -219,20 +220,25 @@ class TensorGraph:
             )
             unique_ids[(v.dtype, v.shape, trainable)] += 1
 
-            # we initialize all the variables from placeholders, and then
-            # feed in the initial values when the init op is called. this
-            # prevents TensorFlow from storing large constants in the graph
-            # def, which can cause problems for large models
-            ph = tf_compat.placeholder(v.dtype, v.shape, name="%s_init" % name)
-            var = RefVariable(
-                initial_value=ph,
-                trainable=trainable,
-                name="%s/%s" % ("trainable_vars" if trainable else "local_vars", name),
-            )
-            self.signals.base_vars[k] = (var, ph, v)
+            if trainable:
+                # we initialize all the variables from placeholders, and then
+                # feed in the initial values when the init op is called. this
+                # prevents TensorFlow from storing large constants in the graph
+                # def, which can cause problems for large models
+                ph = tf_compat.placeholder(v.dtype, v.shape, name="%s_init" % name)
+                var = RefVariable(
+                    initial_value=ph, trainable=trainable, name="base_params/%s" % name
+                )
+                self.signals.base_params[k] = (var, ph, v)
+            else:
+                ph = tf_compat.placeholder(
+                    v.dtype, v.shape, name="base_tensors/%s" % name
+                )
+                self.signals.base_tensors[k] = (ph, v)
 
         logger.debug("created base arrays")
-        logger.debug([str(x[0]) for x in self.signals.base_vars.values()])
+        logger.debug([str(x[0]) for x in self.signals.base_tensors.values()])
+        logger.debug([str(x[0]) for x in self.signals.base_params.values()])
 
         # set up invariant inputs
         sub = progress.sub("building inputs")
@@ -247,16 +253,10 @@ class TensorGraph:
             self.build_loop(sub)
 
         # ops for initializing variables (will be called by simulator)
-        trainable_vars = self.signals.trainable_variables
+        all_vars = self.signals.all_variables
         if not self.inference_only:
-            trainable_vars.append(self.training_step)
-        self.trainable_init_op = tf_compat.variables_initializer(trainable_vars)
-        self.local_init_op = tf_compat.variables_initializer(
-            self.signals.local_variables
-        )
-        self.constant_init_op = tf_compat.variables_initializer(
-            [v for v, _ in self.signals.constant_vars.values()]
-        )
+            all_vars.append(self.training_step)
+        self.variable_init_op = tf_compat.variables_initializer(all_vars)
 
         # logging
         logger.info(
@@ -355,17 +355,18 @@ class TensorGraph:
         def loop_condition(step, stop, *_):
             return step < stop
 
-        def loop_body(step, stop, loop_i, probe_arrays, base_vars):
+        def loop_body(step, stop, loop_i, probe_arrays, base_tensors):
             # fill in signals.bases (note: we need to do this here because we
-            # need to use the versions of the base vars from inside the
-            # loop, not the static variables in self.base_vars)
+            # need to use the versions of the base tensors from inside the
+            # loop, not the static variables in signals.base_tensors)
             assert len(self.signals.bases) == 0
-            for i, key in enumerate(
-                itertools.chain(
-                    self.signals.base_vars.keys(), self.signals.internal_vars.keys()
-                )
-            ):
-                self.signals.bases[key] = base_vars[i]
+            for i, key in enumerate(self.signals.base_tensors):
+                self.signals.bases[key] = base_tensors[i]
+            # for the parameter variables we can just use the base variable
+            # (since we'll only be reading inside the loop, not updating
+            # the variables)
+            for key in self.signals.base_params:
+                self.signals.bases[key] = self.signals.base_params[key][0]
 
             for iter in range(self.unroll):
                 logger.debug("BUILDING ITERATION %d", iter)
@@ -415,9 +416,11 @@ class TensorGraph:
                     with self.graph.control_dependencies(side_effects + probe_tensors):
                         loop_i += 1
 
-            base_vars = tuple(self.signals.bases.values())
+            base_tensors = tuple(
+                self.signals.bases[key] for key in self.signals.base_tensors
+            )
 
-            return step, stop, loop_i, probe_arrays, base_vars
+            return step, stop, loop_i, probe_arrays, base_tensors
 
         self.step_var = tf_compat.placeholder(tf.int32, shape=(), name="step")
         self.stop_var = tf_compat.placeholder(tf.int32, shape=(), name="stop")
@@ -434,13 +437,10 @@ class TensorGraph:
             self.stop_var,
             loop_i,
             probe_arrays,
-            tuple(
-                x[0]._ref() if isinstance(x[0], tf.Variable) else x[0]
-                for x in self.signals.base_vars.values()
-            )
-            + tuple(x._ref() for x in self.signals.internal_vars.values()),
+            tuple(x[0] for x in self.signals.base_tensors.values()),
         )
 
+        # TODO: try out parallel_iterations again with tensors?
         loop_vars = tf.while_loop(
             cond=loop_condition,
             body=loop_body,
@@ -460,6 +460,9 @@ class TensorGraph:
                 x = tf.expand_dims(x, 0)
 
             self.probe_arrays[p] = x
+        self.final_internal_state = {
+            base: state for base, state in zip(self.signals.base_tensors, loop_vars[4])
+        }
 
     def build_inputs(self, progress):
         """
@@ -554,7 +557,7 @@ class TensorGraph:
 
             agg_method = tf.AggregationMethod.DEFAULT
             grads = []
-            vars = self.signals.trainable_variables
+            vars = [v for v in self.signals.all_variables if v.trainable]
 
             # compute gradients wrt loss
             if len(loss) > 0:
@@ -895,7 +898,10 @@ class TensorGraph:
 
         tensor_sig = self.signals[sig]
 
-        base = self.signals.base_vars[tensor_sig.key][0]
+        try:
+            base = self.signals.base_params[tensor_sig.key][0]
+        except KeyError:
+            base = self.signals.base_tensors[tensor_sig.key][0]
 
         if "while/" in tensor_sig.tf_indices.name:
             # rebuild tf indices outside the while loop
