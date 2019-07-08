@@ -271,7 +271,7 @@ def test_reuse_vars(Simulator):
         assert np.allclose(sim.data[p2], 3)
 
         with sim.tensor_graph.graph.as_default():
-            vars = sim.tensor_graph.signals.trainable_variables
+            vars = sim.tensor_graph.signals.all_variables
 
         assert len(vars) == 2
         assert vars[0].get_shape() == ()

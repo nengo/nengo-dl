@@ -8,7 +8,6 @@ import collections
 import copy
 import logging
 import os
-import tempfile
 import warnings
 
 from nengo import Ensemble, Connection, Probe, Network, Direct, Node
@@ -94,6 +93,7 @@ class Simulator:
             else:
                 seed = np.random.randint(np.iinfo(np.int32).max)
         self.seed = seed
+        self._internal_state = None
 
         # TODO: multi-GPU support
 
@@ -231,7 +231,7 @@ class Simulator:
         self.n_steps = 0
         self.time = 0.0
 
-        # initialize variables
+        # initialize variables and internal simulation state
         with self.tensor_graph.graph.as_default():
             # user_init_op cannot be pre-built like the others,
             # because new user variables may be added after
@@ -239,14 +239,8 @@ class Simulator:
             user_init_op = tf_compat.variables_initializer(
                 self.tensor_graph.signals.user_vars
             )
-        self.sess.run(
-            [self.tensor_graph.constant_init_op, user_init_op],
-            feed_dict={
-                ph: val
-                for ph, (_, val) in self.tensor_graph.signals.constant_vars.items()
-            },
-        )
-        self.soft_reset(include_trainable=True, include_probes=True)
+        self.sess.run(user_init_op)
+        self.soft_reset(include_params=True, include_probes=True)
 
         # execute post-build processes (we do this here because
         # seed can change each call to reset)
@@ -259,29 +253,36 @@ class Simulator:
         with self.sess.as_default():
             self.tensor_graph.build_post(self.sess, self.rng)
 
-    def soft_reset(self, include_trainable=False, include_probes=False):
+    def soft_reset(self, include_params=False, include_probes=False):
         """
         Resets the internal state of the simulation, but doesn't
         rebuild the graph.
 
         Parameters
         ----------
-        include_trainable : bool
+        include_params : bool
             If True, also reset any training that has been performed on
             network parameters (e.g., connection weights)
         include_probes : bool
             If True, also clear probe data
         """
 
-        init_ops = [self.tensor_graph.local_init_op]
-        if include_trainable:
-            init_ops.append(self.tensor_graph.trainable_init_op)
-        self.sess.run(
-            init_ops,
-            feed_dict={
-                ph: v for _, ph, v in self.tensor_graph.signals.base_vars.values()
-            },
-        )
+        if self._internal_state is None:
+            self._internal_state = {
+                ph: val.copy()
+                for ph, val in self.tensor_graph.signals.base_tensors.values()
+            }
+        else:
+            for ph, val in self.tensor_graph.signals.base_tensors.values():
+                self._internal_state[ph][...] = val
+
+        if include_params:
+            self.sess.run(
+                self.tensor_graph.variable_init_op,
+                feed_dict={
+                    ph: v for _, ph, v in self.tensor_graph.signals.base_params.values()
+                },
+            )
 
         if include_probes:
             for p in self.model.probes:
@@ -966,8 +967,7 @@ class Simulator:
 
         # save the internal state of the simulator
         if isolate_state:
-            tmpdir = tempfile.TemporaryDirectory()
-            self.save_params(os.path.join(tmpdir.name, "tmp"), trainable=False)
+            saved_state = {ph: val.copy() for ph, val in self._internal_state.items()}
 
         # set up profiling
         if profile:
@@ -1009,8 +1009,12 @@ class Simulator:
 
                 # run the simulation
                 try:
-                    out_vals, extra_vals = self.sess.run(
-                        (output_ops, extra_fetches),
+                    out_vals, state, extra_vals = self.sess.run(
+                        (
+                            output_ops,
+                            self.tensor_graph.final_internal_state,
+                            extra_fetches,
+                        ),
                         feed_dict=feed,
                         options=run_options,
                         run_metadata=run_metadata,
@@ -1030,10 +1034,15 @@ class Simulator:
                 for k, v in out_vals.items():
                     output_vals[k].append(v)
 
-        # restore internal state of simulator
+                # update internal state (so next sess.run call resumes
+                # from the terminal state of this past run)
+                for base, val in state.items():
+                    ph = self.tensor_graph.signals.base_tensors[base][0]
+                    self._internal_state[ph][...] = val
+
         if isolate_state:
-            self.load_params(os.path.join(tmpdir.name, "tmp"), trainable=False)
-            tmpdir.cleanup()
+            # restore internal state of simulator
+            self._internal_state = saved_state
 
         # combine outputs from each minibatch
         for probe, vals in output_vals.items():
@@ -1052,7 +1061,7 @@ class Simulator:
 
         return output_vals
 
-    def save_params(self, path, trainable=True):
+    def save_params(self, path, include_internal=False):
         """
         Save network parameters to the given ``path``.
 
@@ -1060,10 +1069,9 @@ class Simulator:
         ----------
         path : str
             Filepath of parameter output file
-        trainable : bool
-            If True (default) save trainable network variables, otherwise
-            save non-trainable variables (generally representing internal
-            simulation state).
+        include_internal : bool
+            If True (default False) also save information representing
+            internal simulation state.
 
         Notes
         -----
@@ -1075,18 +1083,23 @@ class Simulator:
             raise SimulatorClosed("Simulation has been closed, cannot save parameters")
 
         with self.tensor_graph.graph.as_default():
-            vars = (
-                self.tensor_graph.signals.trainable_variables
-                if trainable
-                else self.tensor_graph.signals.local_variables
-            )
+            vars = self.tensor_graph.signals.all_variables
 
             with tf.device("/cpu:0"):
                 path = tf_compat.train.Saver(vars).save(self.sess, path)
 
+        if include_internal:
+            np.savez_compressed(
+                path + ".internal.npz",
+                *[
+                    self._internal_state[ph]
+                    for ph, _ in self.tensor_graph.signals.base_tensors.values()
+                ],
+            )
+
         logger.info("Model parameters saved to %s", path)
 
-    def load_params(self, path, trainable=True):
+    def load_params(self, path, include_internal=False):
         """
         Load network parameters from the given ``path``.
 
@@ -1094,10 +1107,9 @@ class Simulator:
         ----------
         path : str
             Filepath of parameter input file
-        trainable : bool
-            If True (default) load trainable network variables, otherwise
-            load non-trainable variables (generally representing internal
-            simulation state).
+        include_internal : bool
+            If True (default False) also load information representing
+            internal simulation state.
 
         Notes
         -----
@@ -1109,14 +1121,19 @@ class Simulator:
             raise SimulatorClosed("Simulation has been closed, cannot load parameters")
 
         with self.tensor_graph.graph.as_default():
-            vars = (
-                self.tensor_graph.signals.trainable_variables
-                if trainable
-                else self.tensor_graph.signals.local_variables
-            )
+            vars = self.tensor_graph.signals.all_variables
 
             with tf.device("/cpu:0"):
                 tf_compat.train.Saver(vars).restore(self.sess, path)
+
+        if include_internal:
+            with np.load(path + ".internal.npz") as data:
+                self._internal_state = {
+                    ph: data["arr_%d" % i]
+                    for i, (ph, _) in enumerate(
+                        self.tensor_graph.signals.base_tensors.values()
+                    )
+                }
 
         logger.info("Model parameters loaded from %s", path)
 
@@ -1524,6 +1541,10 @@ class Simulator:
 
             tf.keras.backend.set_floatx(self._keras_dtype)
 
+            # free up memory
+            self._internal_state = None
+            # TODO: clear up tensor_graph.signals as well?
+
             self.closed = True
 
     def _fill_feed(self, n_steps, data=None, start=0, training=False):
@@ -1558,6 +1579,10 @@ class Simulator:
         if not self.tensor_graph.inference_only:
             feed_dict[self.tensor_graph.signals.training] = training
 
+        # fill in base tensors
+        feed_dict.update(self._internal_state)
+
+        # fill in input/target values
         inputs = {}
         targets = {}
         if data is not None:
@@ -1570,10 +1595,10 @@ class Simulator:
                     # this should be caught in check_data
                     raise NotImplementedError()
 
-        # fill in input values
+        # inputs
         feed_dict.update(self._generate_inputs(inputs, n_steps))
 
-        # fill in target values
+        # targets
         for p, t in targets.items():
             if p not in self.tensor_graph.target_phs:
                 raise ValidationError(
@@ -1954,7 +1979,7 @@ class SimulationData(collections.Mapping):
                 params.append(placeholder)
 
         # get the live parameter values
-        fetched = self.sim.sess.run(fetches)
+        fetched = self.sim.sess.run(fetches, feed_dict=self.sim._internal_state)
 
         # final updating of parameters
         for i, sig in enumerate(sigs):

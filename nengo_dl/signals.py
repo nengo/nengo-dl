@@ -10,7 +10,7 @@ from nengo.exceptions import BuildError
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl.compat import tf_compat, is_sparse, RefVariable
+from nengo_dl.compat import tf_compat, is_sparse
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,7 @@ class TensorSignal:
         self._indices.flags.writeable = False
         self._tf_shape = None
         self._tf_indices = None
+        self._tf_indices_nd = None
         self._tf_slice = -1
 
         self.key = key
@@ -220,6 +221,18 @@ class TensorSignal:
         return self._tf_indices
 
     @property
+    def tf_indices_nd(self):
+        """
+        A ``tf.Tensor`` representing the indices of this signal, including
+        empty dimensions for axes > 0.
+        """
+
+        if self._tf_indices_nd is None:
+            self._tf_indices_nd = tf.expand_dims(self.tf_indices, -1)
+
+        return self._tf_indices_nd
+
+    @property
     def tf_slice(self):
         """
         A tuple of ``tf.Tensors`` representing the ``(start, stop, stride)``
@@ -270,18 +283,22 @@ class SignalDict(Mapping):
         Floating point precision used in signals
     minibatch_size : int
         Number of items in each minibatch
+    inference_only : bool
+        If True the network should be constructed in "inference only" mode
+        (not including any support for training operations).
     """
 
-    def __init__(self, dtype, minibatch_size):
+    def __init__(self, dtype, minibatch_size, inference_only):
         self.dtype = dtype
         self.minibatch_size = minibatch_size
+        self.inference_only = inference_only
         self.sig_map = {}
         self.bases = OrderedDict()  # will be filled in tensor_graph.build_loop
         self.reads_by_base = defaultdict(list)
         self.gather_bases = []
-        self.base_vars = OrderedDict()
-        self.internal_vars = OrderedDict()
-        self.constant_vars = OrderedDict()
+        self.base_params = OrderedDict()
+        self.base_tensors = OrderedDict()
+        self.constant_phs = OrderedDict()
         self.user_vars = []
 
         # logging
@@ -331,6 +348,9 @@ class SignalDict(Mapping):
         with tf.control_dependencies(self.reads_by_base[self.bases[dst.key]]):
             var = self.bases[dst.key]
 
+            # should never be writing to a variable
+            assert isinstance(var, tf.Tensor)
+
             if (
                 dst.tf_slice is not None
                 and var.get_shape().is_compatible_with(val.get_shape())
@@ -339,20 +359,16 @@ class SignalDict(Mapping):
                 and len(dst.indices) == var.get_shape()[0]
             ):
                 if mode == "inc":
-                    result = tf_compat.assign_add(var, val, use_locking=False)
+                    result = var + val
                     self.write_types["assign_add"] += 1
                 else:
-                    result = tf_compat.assign(var, val, use_locking=False)
+                    result = val
                     self.write_types["assign"] += 1
             elif mode == "inc":
-                result = tf_compat.scatter_add(
-                    var, dst.tf_indices, val, use_locking=False
-                )
+                result = tf.tensor_scatter_nd_add(var, dst.tf_indices_nd, val)
                 self.write_types["scatter_add"] += 1
             else:
-                result = tf_compat.scatter_update(
-                    var, dst.tf_indices, val, use_locking=False
-                )
+                result = tf.tensor_scatter_nd_update(var, dst.tf_indices_nd, val)
                 self.write_types["scatter_update"] += 1
 
             self.bases[dst.key] = result
@@ -399,6 +415,13 @@ class SignalDict(Mapping):
         # we prefer to get the data via `strided_slice` or `identity` if
         # possible, as it is more efficient
         if force_copy or src.tf_slice is None:
+            if isinstance(var, tf.Variable) and not self.inference_only:
+                # TensorFlow gets confused if we apply an optimizer to gathered
+                # variables, so we add the + 0 so the gather is applied
+                # to a separate tensor instead.
+                # See https://github.com/tensorflow/tensorflow/issues/30537
+                var = var + 0
+
             result = tf.gather(var, src.tf_indices)
             self.read_types["gather"] += 1
         elif (
@@ -489,7 +512,8 @@ class SignalDict(Mapping):
 
     def make_internal(self, name, shape, minibatched=True):
         """
-        Creates a variable to represent an internal simulation signal.
+        Creates a new `.TensorSignal` to represent an internal
+        simulation signal.
 
         This is to handle the case where we want to add a signal that is
         not represented as a `nengo.builder.Signal` in the Nengo op graph.
@@ -497,28 +521,31 @@ class SignalDict(Mapping):
         Parameters
         ----------
         name : str
-            Name for the signal/variable.
+            Name for the signal/tensor.
         shape : tuple of int
-            Shape of the signal/variable.
+            Shape of the signal/tensor.
         minibatched : bool
             Whether or not this signal contains a minibatch dimension.
 
         Returns
         -------
         sig : `.TensorSignal`
-            A TensorSignal representing the newly created variable.
+            A TensorSignal representing the newly created tensor.
         """
         sig = self.get_tensor_signal(
             np.arange(shape[0]), object(), self.dtype, shape, minibatched, label=name
         )
 
-        var = RefVariable(
-            initial_value=tf.zeros(sig.full_shape, dtype=sig.dtype),
-            trainable=False,
+        ph = tf_compat.placeholder(
+            sig.dtype,
+            sig.full_shape,
             name="%s/%s" % (tf_compat.get_default_graph().get_name_scope(), name),
         )
 
-        self.internal_vars[sig.key] = var
+        self.base_tensors[sig.key] = (
+            ph,
+            np.zeros(sig.full_shape, dtype=sig.dtype.as_numpy_dtype()),
+        )
 
         return sig
 
@@ -587,9 +614,10 @@ class SignalDict(Mapping):
         Returns a constant Tensor containing the given value.
 
         The returned Tensor may be underpinned by a ``tf.constant`` op, or
-        a ``tf.Variable`` that will be initialized to the constant value.  We
-        use the latter in order to avoid storing large constant values in the
-        TensorFlow GraphDef, which has a hard-coded limit of 2GB at the moment.
+        a ``tf.placeholder`` that will be initialized to the constant value.
+        We use the latter in order to avoid storing large constant values in
+        the TensorFlow GraphDef, which has a hard-coded limit of 2GB at the
+        moment.
 
         Parameters
         ----------
@@ -600,7 +628,7 @@ class SignalDict(Mapping):
             will be used)
         cutoff : int
             The size of constant (in bytes) for which we will switch from
-            ``tf.constant`` to ``tf.Variable``
+            ``tf.constant`` to ``tf.placeholder``
 
         Returns
         -------
@@ -614,22 +642,11 @@ class SignalDict(Mapping):
         dtype = tf.as_dtype(dtype)
 
         if value.nbytes > cutoff:
-            # tensorflow doesn't support int32 variables on the gpu, only
-            # int64 (for some reason). we don't want to use int64 since
-            # that would increase the size a lot, so we allow the variable
-            # to be created on the CPU if necessary, and then move it to
-            # the GPU with the identity
-            # TODO: double check if this is still true in the future
-            with tf.device(None):
-                ph = tf_compat.placeholder(dtype, value.shape)
-                const_var = RefVariable(
-                    initial_value=ph,
-                    trainable=False,
-                    name="constant_vars/%d" % len(self.constant_vars),
-                )
-                self.constant_vars[ph] = (const_var, value)
-
-            return tf.identity(const_var)
+            ph = tf_compat.placeholder(
+                dtype, value.shape, name="constant_phs/%d" % len(self.constant_phs)
+            )
+            self.constant_phs[ph] = value
+            return ph
         else:
             return tf.constant(value, dtype=dtype)
 
@@ -687,27 +704,15 @@ class SignalDict(Mapping):
         return sig in self.sig_map
 
     @property
-    def local_variables(self):
-        """All local (non-trainable) variables in the model."""
-        return [v for v in self.all_variables if not v.trainable]
-
-    @property
-    def trainable_variables(self):
-        """All trainable variables in the model."""
-        return [v for v in self.all_variables if v.trainable]
-
-    @property
     def all_variables(self):
-        """All variables in the model."""
+        """
+        All variables in the model.
 
-        # note: does not include constant vars, as practically speaking
-        # we want the fact that those are implemented as variables (or not)
-        # to be completely transparent.
-        # there may also be other variables managed by other processes
-        # (e.g. TensorFlow optimizers) that are not captured here. these are
-        # only the variables associated with the NengoDL simulation.
-        return (
-            list(v for v, _, _ in self.base_vars.values())
-            + list(self.internal_vars.values())
-            + self.user_vars
-        )
+        Notes
+        -----
+        There may be variables managed by other processes
+        (e.g. TensorFlow optimizers) that are not captured here. These are
+        only the variables associated with the NengoDL simulation.
+        """
+
+        return [v[0] for v in self.base_params.values()] + self.user_vars

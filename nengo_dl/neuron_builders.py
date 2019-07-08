@@ -11,7 +11,6 @@ import tensorflow as tf
 
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
-from nengo_dl.compat import tf_compat
 from nengo_dl.neurons import SoftLIFRate
 
 logger = logging.getLogger(__name__)
@@ -94,7 +93,7 @@ class GenericNeuronBuilder(OpBuilder):
         # has completed before the next starts, since we don't know that the
         # functions are thread safe
         with tf.control_dependencies(self.prev_result), tf.device("/cpu:0"):
-            ret = tf_compat.py_func(
+            ret = tf.numpy_function(
                 self.neuron_step_math,
                 [signals.dt, J] + states,
                 [self.output_data.dtype] + states_dtype,
