@@ -25,8 +25,7 @@ import tensorflow as tf
 from nengo_dl import (
     builder, graph_optimizer, signals, utils, tensor_node, config)
 from nengo_dl.compat import (
-    tf_compat, SparseMatrix, is_sparse, make_process_state, make_process_step,
-    RefVariable)
+    tf_compat, SparseMatrix, is_sparse, make_process_state, make_process_step)
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +73,10 @@ class TensorGraph:
         self.minibatch_size = minibatch_size
         self.device = device
         self.graph = tf.Graph()
-        self.signals = signals.SignalDict(self.dtype, self.minibatch_size)
         self.inference_only = config.get_setting(model, "inference_only",
                                                  False)
+        self.signals = signals.SignalDict(self.dtype, self.minibatch_size,
+                                          self.inference_only)
 
         # find invariant inputs (nodes that don't receive any input other
         # than the simulation time). we'll compute these outside the simulation
@@ -204,7 +204,7 @@ class TensorGraph:
                 # def, which can cause problems for large models
                 ph = tf_compat.placeholder(v.dtype, v.shape,
                                            name="%s_init" % name)
-                var = RefVariable(
+                var = tf.Variable(
                     initial_value=ph,
                     trainable=trainable,
                     name="base_params/%s" % name,
@@ -612,13 +612,14 @@ class TensorGraph:
 
         output_vals = {}
         new_vars = []
+        # certain output functions may not return variables in a pre_build
+        # function, but do add them to the global_variables collection
+        # (e.g., tf.train.Optimizers). so we can compare the items
+        # in that collection before and after building the function to
+        # try to capture those variables as well.
+        # TODO: remove this if we switch completely to keras optimizers
         pre_vars = set(
-            self.graph.get_collection("gradient_vars")
-            # certain optimizers add variables to the
-            # global_variables collection
-            # TODO: remove this if we switch completely to keras optimizers
-            + self.graph.get_collection(tf_compat.GraphKeys.GLOBAL_VARIABLES)
-        )
+            self.graph.get_collection(tf_compat.GraphKeys.GLOBAL_VARIABLES))
         for probes, out in outputs.items():
             is_tuple = isinstance(probes, tuple)
             probe_arrays = (
@@ -688,9 +689,8 @@ class TensorGraph:
         # collect any new variables created during build process
         self.signals.user_vars.extend(new_vars)
         new_vars.extend(
-            set(self.graph.get_collection("gradient_vars")
-                + self.graph.get_collection(
-                    tf_compat.GraphKeys.GLOBAL_VARIABLES))
+            set(self.graph.get_collection(
+                tf_compat.GraphKeys.GLOBAL_VARIABLES))
             - pre_vars)
         new_vars_init = (tf_compat.variables_initializer(new_vars)
                          if len(new_vars) > 0 else None)

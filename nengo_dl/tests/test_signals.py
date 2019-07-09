@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl.compat import tf_compat, RefVariable
+from nengo_dl.compat import tf_compat
 from nengo_dl.signals import TensorSignal, SignalDict
 
 
@@ -113,19 +113,25 @@ def test_tensor_signal_load_indices(sess):
 def test_signal_dict_scatter(sess):
     minibatch_size = 1
     var_size = 19
-    signals = SignalDict(tf.float32, minibatch_size)
+    signals = SignalDict(tf.float32, minibatch_size, False)
 
     key = object()
-    val = np.random.randn(var_size, minibatch_size)
+    var_key = object()
+    val = np.random.randn(var_size, minibatch_size).astype(np.float32)
+
     signals.bases = {
-        key: tf_compat.assign(RefVariable(val, dtype=tf.float32),
-                              val)
+        key: tf.constant(val),
+        var_key: tf_compat.assign(tf.Variable(val), val)
     }
 
     x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), True)
-    with pytest.raises(BuildError):
-        # wrong dtype
+    with pytest.raises(BuildError, match="wrong dtype"):
         signals.scatter(x, tf.ones((4,), dtype=tf.float64))
+
+    y = signals.get_tensor_signal([0, 1, 2, 3], var_key, tf.float32, (4,),
+                                  True)
+    with pytest.raises(BuildError, match="should not be a Variable"):
+        signals.scatter(y, tf.ones((4,)))
 
     # update
     signals.scatter(x, tf.ones((4,)))
@@ -157,7 +163,7 @@ def test_signal_dict_scatter(sess):
 def test_signal_dict_gather(sess):
     minibatch_size = 1
     var_size = 19
-    signals = SignalDict(tf.float32, minibatch_size)
+    signals = SignalDict(tf.float32, minibatch_size, False)
 
     key = object()
     val = np.random.randn(var_size, minibatch_size)
@@ -206,7 +212,7 @@ def test_signal_dict_gather(sess):
 
 def test_signal_dict_combine():
     minibatch_size = 1
-    signals = SignalDict(tf.float32, minibatch_size)
+    signals = SignalDict(tf.float32, minibatch_size, False)
 
     key = object()
 
@@ -227,7 +233,7 @@ def test_signal_dict_combine():
 def test_constant(dtype, sess):
     val = np.random.randn(10, 10).astype(np.float64)
 
-    signals = SignalDict(tf.float32, 1)
+    signals = SignalDict(tf.float32, 1, False)
     const0 = signals.constant(val, dtype=dtype)
     const1 = signals.constant(val, dtype=dtype, cutoff=0)
 
@@ -248,7 +254,7 @@ def test_constant_gpu(sess):
     val = np.random.randn(10, 10).astype(np.int32)
 
     with tf.device("/gpu:0"):
-        signals = SignalDict(tf.float32, 1)
+        signals = SignalDict(tf.float32, 1, False)
         const = signals.constant(val, cutoff=0)
 
         assert const.dtype == tf.int32
@@ -266,7 +272,7 @@ def test_op_constant(dtype, diff, sess):
            SimNeurons(LIF(tau_rc=2 if diff else 1), Signal(np.zeros(10)),
                       None))
 
-    signals = SignalDict(tf.float32, 1)
+    signals = SignalDict(tf.float32, 1, False)
     const = signals.op_constant(
         [op.neurons for op in ops], [op.J.shape[0] for op in ops],
         "tau_rc", dtype)
@@ -292,7 +298,7 @@ def test_op_constant(dtype, diff, sess):
 
 
 def test_get_tensor_signal():
-    signals = SignalDict(tf.float32, 3)
+    signals = SignalDict(tf.float32, 3, False)
 
     # check that tensor_signal is created correctly
     key = object()

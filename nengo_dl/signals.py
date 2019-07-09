@@ -263,11 +263,15 @@ class SignalDict(Mapping):
         Floating point precision used in signals
     minibatch_size : int
         Number of items in each minibatch
+    inference_only : bool
+        If True the network should be constructed in "inference only" mode
+        (not including any support for training operations).
     """
 
-    def __init__(self, dtype, minibatch_size):
+    def __init__(self, dtype, minibatch_size, inference_only):
         self.dtype = dtype
         self.minibatch_size = minibatch_size
+        self.inference_only = inference_only
         self.sig_map = {}
         self.bases = OrderedDict()  # will be filled in tensor_graph.build_loop
         self.reads_by_base = defaultdict(list)
@@ -323,7 +327,8 @@ class SignalDict(Mapping):
             var = self.bases[dst.key]
 
             # should never be writing to a variable
-            assert isinstance(var, tf.Tensor)
+            if isinstance(var, tf.Variable):
+                raise BuildError("Scatter target should not be a Variable")
 
             if (dst.tf_slice is not None
                     and var.get_shape().is_compatible_with(val.get_shape())
@@ -411,9 +416,6 @@ class SignalDict(Mapping):
         # one, otherwise keep the shape of the base array
         if result.get_shape() != src.full_shape:
             result = tf.reshape(result, src.tf_shape)
-
-        # for some reason the shape inference doesn't work in some cases
-        result.set_shape(src.full_shape)
 
         # whenever we read from an array we use this to mark it as "read"
         # (so that any future writes to the array will be scheduled after

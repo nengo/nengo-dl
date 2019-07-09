@@ -15,7 +15,7 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import configure_settings, tensor_layer, dists, TensorNode
-from nengo_dl.compat import tf_compat, RefVariable
+from nengo_dl.compat import tf_compat
 from nengo_dl.objectives import mse
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
@@ -658,7 +658,7 @@ def test_tensorboard(Simulator, tmpdir):
 
         class Loss:
             def pre_build(self, *_):
-                self.var = RefVariable(
+                self.var = tf.Variable(
                     tf.constant(1.0, dtype=sim.tensor_graph.dtype),
                     name="one")
                 return self.var
