@@ -67,6 +67,9 @@ setup_cfg:
       nengo/tests/test_transforms.py:test_sparse[False-*:
         nengo-dl doesn't raise a warning for scipy=False, see
         tests/test_nengo_tests.py:test_sparse
+      nengo/tests/test_copy.py:test_pickle_sim[*:
+        nengo-dl does not support pickling a Simulator, see
+        tests/test_simulator.py:test_pickle_error
   pylint:
     known_third_party:
       - PIL
