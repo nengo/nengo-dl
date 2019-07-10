@@ -31,6 +31,8 @@ Release History
 - Added support for TensorFlow 2.0 (pre-release).
 - Added support for sparse transforms
   (see https://github.com/nengo/nengo/pull/1532).
+- Added support for stateful Processes
+  (see https://github.com/nengo/nengo/pull/1387).
 
 **Changed**
 
