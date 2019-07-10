@@ -4,6 +4,7 @@ from collections import OrderedDict
 from distutils.version import LooseVersion
 import logging
 import os
+import pickle
 
 import nengo
 from nengo.dists import Uniform
@@ -1538,3 +1539,8 @@ def test_tf_seed(Simulator, seed):
         sim_reset.reset(seed=seed)
 
         assert np.allclose(sim.data[p], sim_reset.data[p])
+
+
+def test_pickle_error(Simulator):
+    with pytest.raises(NotImplementedError, match="does not support pickling"):
+        pickle.dumps(Simulator(nengo.Network()))

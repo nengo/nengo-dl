@@ -56,6 +56,10 @@ Release History
 - Fixed inspection of ``TensorNode.tensor_func`` arguments for partial
   functions.
 - Simulator seed will now be deterministic for a given top-level Network seed.
+- Raise a more informative error if user attempts to pickle a Simulator
+  (this is not possible to do with TensorFlow sessions; see
+  `the documentation <https://www.nengo.ai/nengo-dl/training.html#saving-and-loading-parameters>`__
+  for other methods of saving/loading a NengoDL model).
 
 **Removed**
 
