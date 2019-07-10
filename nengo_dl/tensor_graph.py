@@ -23,9 +23,10 @@ from nengo.utils.magic import decorator
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl import (builder, graph_optimizer, signals, utils, tensor_node,
-                      config)
-from nengo_dl.compat import tf_compat, SparseMatrix, is_sparse
+from nengo_dl import (
+    builder, graph_optimizer, signals, utils, tensor_node, config)
+from nengo_dl.compat import (
+    tf_compat, SparseMatrix, is_sparse, make_process_state, make_process_step)
 
 logger = logging.getLogger(__name__)
 
@@ -724,10 +725,13 @@ class TensorGraph:
             if isinstance(output, np.ndarray):
                 self.input_funcs[n] = output
             elif isinstance(output, Process):
+                state = make_process_state(
+                    output, (n.size_in,), (n.size_out,), self.dt)
                 self.input_funcs[n] = [
-                    output.make_step(
+                    make_process_step(
+                        output,
                         (n.size_in,), (n.size_out,), self.dt,
-                        output.get_rng(rng))
+                        output.get_rng(rng), state)
                     for _ in range(self.minibatch_size)]
             elif n.size_out > 0:
                 self.input_funcs[n] = [

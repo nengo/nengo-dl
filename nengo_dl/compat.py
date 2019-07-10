@@ -159,6 +159,19 @@ if LooseVersion(nengo.__version__) < "3.0.0":
         else:
             assert General.check(A, B, C, D)
             return General(A, B, C, D)
+
+    # monkey-patch in empty state attribute
+    from nengo.builder.processes import SimProcess
+    SimProcess.state = {}
+
+    def make_process_step(process, shape_in, shape_out, dt, rng, _):
+        """Ignore state argument."""
+        return process.make_step(shape_in, shape_out, dt, rng)
+
+    def make_process_state(process, shape_in, shape_out, dt):
+        """Old processes don't have any state."""
+        return {}
+
 else:
     from nengo.builder.learning_rules import SimPES
     from nengo.builder.transforms import ConvInc, SparseDotInc
@@ -175,5 +188,14 @@ else:
     General = LinearFilter.General
 
     def make_linear_step(synapse, input_shape, output_shape, dt):
-        """Call synapse.make_step to compute everything."""
-        return synapse.make_step(input_shape, output_shape, dt, None)
+        """Call synapse.make_step to compute A/B/C/D."""
+        state = synapse.make_state(input_shape, output_shape, dt)
+        return synapse.make_step(input_shape, output_shape, dt, None, state)
+
+    def make_process_step(process, shape_in, shape_out, dt, rng, state):
+        """Call process.make_step."""
+        return process.make_step(shape_in, shape_out, dt, rng, state)
+
+    def make_process_state(process, shape_in, shape_out, dt):
+        """Call process.make_state."""
+        return process.make_state(shape_in, shape_out, dt)

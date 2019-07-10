@@ -1,7 +1,8 @@
 # pylint: disable=missing-docstring
 
 import nengo
-from nengo.synapses import Alpha, LinearFilter
+from nengo.builder.processes import SimProcess
+from nengo.synapses import Alpha, LinearFilter, Triangle
 from nengo.tests.test_synapses import run_synapse, allclose
 from nengo.utils.filter_design import ss2tf
 import numpy as np
@@ -19,21 +20,38 @@ def test_alpha(Simulator, seed):
     assert allclose(t, y, yhat, delay=dt, atol=5e-5)
 
 
-def test_alpha_merged(Simulator, seed):
+@pytest.mark.parametrize("Synapse", (Alpha, Triangle))
+def test_merged(Simulator, Synapse, seed):
     with nengo.Network() as net:
         u = nengo.Node(output=nengo.processes.WhiteSignal(
             1, high=10, seed=seed))
-        p0 = nengo.Probe(u, synapse=Alpha(0.03))
-        p1 = nengo.Probe(u, synapse=Alpha(0.1))
+        p0 = nengo.Probe(u, synapse=Synapse(0.03))
+        p1 = nengo.Probe(u, synapse=Synapse(0.1))
 
     with nengo.Simulator(net) as sim:
         sim.run(1)
         canonical = (sim.data[p0], sim.data[p1])
 
-    with Simulator(net) as sim:
+    with Simulator(net, minibatch_size=3) as sim:
+        assert len([p for p in sim.tensor_graph.plan
+                    if isinstance(p[0], SimProcess)]) == 1
         sim.run(1)
         assert np.allclose(sim.data[p0], canonical[0], atol=5e-5)
         assert np.allclose(sim.data[p1], canonical[1], atol=5e-5)
+
+
+def test_general_minibatched(Simulator):
+    with nengo.Network() as net:
+        u = nengo.Node([0])
+        p = nengo.Probe(u, synapse=Triangle(0.01))
+
+    with Simulator(net, minibatch_size=3) as sim:
+        data = {u: np.ones((3, 100, 1)) * np.arange(1, 4)[:, None, None]}
+        sim.run_steps(100, data=data)
+
+        for i in range(3):
+            filt = p.synapse.filt(data[u][i], y0=0)
+            assert np.allclose(sim.data[p][i, 1:], filt[:-1])
 
 
 def test_alpha_multidim(Simulator, seed):
