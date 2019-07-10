@@ -1568,6 +1568,13 @@ class Simulator:
                 "are properly freed." % self.model, RuntimeWarning)
             self.close()
 
+    def __getstate__(self):
+        raise NotImplementedError(
+            "TensorFlow does not support pickling; see "
+            "https://www.nengo.ai/nengo-dl/training.html"
+            "#saving-and-loading-parameters "
+            "for information on how to save/load a NengoDL model.")
+
 
 class SimulationData(collections.Mapping):
     """
