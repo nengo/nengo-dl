@@ -90,11 +90,11 @@ def align_func(output_shape, output_dtype):
 
     Parameters
     ----------
-    output_shape : tuple of int
-        Desired shape for function output (must have the same size as actual
+    output_shape : (list of) tuple of int
+        Desired shape for function output(s) (must have the same size as actual
         function output)
-    output_dtype : ``tf.DType`` or `~numpy.dtype`
-        Desired dtype of function output
+    output_dtype : (list of) ``tf.DType`` or `~numpy.dtype`
+        Desired dtype of function output(s)
 
     Raises
     ------
@@ -102,8 +102,15 @@ def align_func(output_shape, output_dtype):
         If the function returns ``None`` or a non-finite value.
     """
 
-    if isinstance(output_dtype, tf.DType):
-        output_dtype = output_dtype.as_numpy_dtype
+    single_output = isinstance(output_shape, tuple)
+
+    if single_output:
+        output_shape = [output_shape]
+        output_dtype = [output_dtype]
+
+    for i, dtype in enumerate(output_dtype):
+        if isinstance(dtype, tf.DType):
+            output_dtype[i] = dtype.as_numpy_dtype
 
     def apply_align(func):
         def aligned_func(*args):
@@ -113,18 +120,28 @@ def align_func(output_shape, output_dtype):
                 raise SimulationError(
                     "Function %r returned None" %
                     function_name(func, sanitize=False))
-            try:
-                if not np.all(np.isfinite(output)):
+
+            if single_output:
+                output = [output]
+
+            for i, o in enumerate(output):
+                try:
+                    if not np.all(np.isfinite(o)):
+                        raise SimulationError(
+                            "Function %r returned invalid value %r" %
+                            (function_name(func, sanitize=False), o))
+                except (TypeError, ValueError):
                     raise SimulationError(
-                        "Function %r returned invalid value %r" %
-                        (function_name(func, sanitize=False), output))
-            except (TypeError, ValueError):
-                raise SimulationError(
-                    "Function %r returned a value %r of invalid type %r" %
-                    (function_name(func, sanitize=False), output,
-                     type(output)))
-            output = np.asarray(output, dtype=output_dtype)
-            output = output.reshape(output_shape)
+                        "Function %r returned a value %r of invalid type %r" %
+                        (function_name(func, sanitize=False), o,
+                         type(o)))
+                o = np.asarray(o, dtype=output_dtype[i])
+                o = o.reshape(output_shape[i])
+                output[i] = o
+
+            if single_output:
+                output = output[0]
+
             return output
 
         return aligned_func
