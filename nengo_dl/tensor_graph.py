@@ -377,8 +377,8 @@ class TensorGraph:
                         else:
                             probe_arrays[i] = tf.cond(
                                 pred=tf.equal(step, stop),
-                                true_fn=lambda p=p: probe_arrays[i].write(0,
-                                                                          p),
+                                true_fn=lambda p=p: probe_arrays[i].write(
+                                    0, p),
                                 false_fn=lambda: probe_arrays[i])
 
                     # need to make sure that any operators that could have side
