@@ -18,10 +18,9 @@
         export PATH="/home/travis-ci/miniconda3/bin:\$PATH"
         HW_STATUS=0
         cd /tmp/nengo-dl-$TRAVIS_JOB_NUMBER
-        conda create -q -y -n travis-ci-$TRAVIS_JOB_NUMBER python=$PYTHON_VERSION $TF_VERSION
+        conda create -y -n travis-ci-$TRAVIS_JOB_NUMBER python=$TRAVIS_PYTHON_VERSION cudatoolkit=10.0 cudnn cupti
         source activate travis-ci-$TRAVIS_JOB_NUMBER
-        pip install "tensorflow-gpu>=2.0.0b1" --pre
-        pip install $NENGO_VERSION $NUMPY_VERSION
+        pip install "$NENGO_VERSION" "$NUMPY_VERSION" "$TF_VERSION"
         pip install git+https://github.com/drasmuss/spaun2.0.git
         pip install -e .[tests]
         echo "Waiting for lock"

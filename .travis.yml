@@ -34,7 +34,7 @@ jobs:
   -
     env:
       NENGO_VERSION="git+https://github.com/nengo/nengo.git"
-      TF_VERSION="tensorflow-gpu"
+      TF_VERSION="tensorflow-gpu>=2.0.0b1"
       SCRIPT="gpu"
       TEST_ARGS="--device /gpu:3 --performance"
   -
