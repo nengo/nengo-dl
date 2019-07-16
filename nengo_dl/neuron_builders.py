@@ -382,7 +382,6 @@ class LIFBuilder(SoftLIFRateBuilder):
             )
 
         signals.scatter(self.output_data, spikes)
-        signals.mark_gather(self.J_data)
         signals.scatter(self.refractory_data, refractory)
         signals.scatter(self.voltage_data, voltage)
 

@@ -17,7 +17,6 @@ import tensorflow as tf
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
 from nengo_dl.compat import (
-    tf_compat,
     make_linear_step,
     NoX,
     OneX,
@@ -111,7 +110,7 @@ class GenericProcessBuilder(OpBuilder):
         # has completed before the next starts, since we don't know that the
         # functions are thread safe
         with tf.control_dependencies(self.prev_result), tf.device("/cpu:0"):
-            result = tf_compat.py_func(
+            result = tf.numpy_function(
                 self.merged_func,
                 [signals.time] + input + state,
                 [self.output_data.dtype] + [s.dtype for s in self.state_data],
@@ -388,8 +387,6 @@ class LinearFilterBuilder(OpBuilder):
 
                 new_state = tf.matmul(self.A, state) + self.B * input
 
-                signals.mark_gather(self.state_data)
-                signals.mark_gather(self.input_data)
                 signals.scatter(self.state_data, new_state)
 
 

@@ -294,8 +294,6 @@ class SignalDict(Mapping):
         self.inference_only = inference_only
         self.sig_map = {}
         self.bases = OrderedDict()  # will be filled in tensor_graph.build_loop
-        self.reads_by_base = defaultdict(list)
-        self.gather_bases = []
         self.base_params = OrderedDict()
         self.base_tensors = OrderedDict()
         self.constant_phs = OrderedDict()
@@ -340,49 +338,34 @@ class SignalDict(Mapping):
         logger.debug("dst %s", dst)
         logger.debug("indices %s", dst.indices)
         logger.debug("dst base %s", self.bases[dst.key])
-        logger.debug("reads_by_base %s", self.reads_by_base[self.bases[dst.key]])
 
-        # make sure that any reads to the target signal happen before this
-        # write (note: this is only any reads that have happened since the
-        # last write, since each write changes the base array object)
-        with tf.control_dependencies(self.reads_by_base[self.bases[dst.key]]):
-            var = self.bases[dst.key]
+        var = self.bases[dst.key]
 
-            # should never be writing to a variable
-            if isinstance(var, tf.Variable):
-                raise BuildError("Scatter target should not be a Variable")
+        # should never be writing to a variable
+        if isinstance(var, tf.Variable):
+            raise BuildError("Scatter target should not be a Variable")
 
-            if (
-                dst.tf_slice is not None
-                and var.get_shape().is_compatible_with(val.get_shape())
-                and dst.indices[0] == 0
-                and dst.indices[-1] == var.get_shape()[0] - 1
-                and len(dst.indices) == var.get_shape()[0]
-            ):
-                if mode == "inc":
-                    result = var + val
-                    self.write_types["assign_add"] += 1
-                else:
-                    result = val
-                    self.write_types["assign"] += 1
-            elif mode == "inc":
-                result = tf.tensor_scatter_nd_add(var, dst.tf_indices_nd, val)
-                self.write_types["scatter_add"] += 1
+        if (
+            dst.tf_slice is not None
+            and var.get_shape().is_compatible_with(val.get_shape())
+            and dst.indices[0] == 0
+            and dst.indices[-1] == var.get_shape()[0] - 1
+            and len(dst.indices) == var.get_shape()[0]
+        ):
+            if mode == "inc":
+                result = var + val
+                self.write_types["assign_add"] += 1
             else:
-                result = tf.tensor_scatter_nd_update(var, dst.tf_indices_nd, val)
-                self.write_types["scatter_update"] += 1
+                result = val
+                self.write_types["assign"] += 1
+        elif mode == "inc":
+            result = tf.tensor_scatter_nd_add(var, dst.tf_indices_nd, val)
+            self.write_types["scatter_add"] += 1
+        else:
+            result = tf.tensor_scatter_nd_update(var, dst.tf_indices_nd, val)
+            self.write_types["scatter_update"] += 1
 
-            self.bases[dst.key] = result
-
-        # update reads_by_base. the general workflow is
-        # gather -> computation -> scatter
-        # so when we get a scatter, we assume that that value indicates that
-        # all the previous gathers are complete. so we block any writes to
-        # those bases on the scatter value, to be sure that the
-        # computation step is complete before the values can be overwritten
-        for b in self.gather_bases:
-            self.reads_by_base[b] += [self.bases[dst.key]]
-        self.gather_bases = []
+        self.bases[dst.key] = result
 
         logger.debug("new dst base %s", self.bases[dst.key])
 
@@ -441,25 +424,7 @@ class SignalDict(Mapping):
         if result.get_shape() != src.full_shape:
             result = tf.reshape(result, src.tf_shape)
 
-        # whenever we read from an array we use this to mark it as "read"
-        # (so that any future writes to the array will be scheduled after
-        # the read)
-        self.mark_gather(src)
-
         return result
-
-    def mark_gather(self, src):
-        """
-        Marks ``src`` as being gathered, but doesn't actually perform a
-        gather.  Used to indicate that some computation relies on ``src``.
-
-        Parameters
-        ----------
-        src : `.TensorSignal`
-            Signal indicating the data being read
-        """
-
-        self.gather_bases += [self.bases[src.key]]
 
     def combine(self, sigs, label="Combine"):
         """
