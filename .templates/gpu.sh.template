@@ -16,20 +16,19 @@
 {% block script %}
     exe ssh abrgpu << EOF
         export PATH="/home/travis-ci/miniconda3/bin:\$PATH"
-        HW_STATUS=0
-        cd /tmp/nengo-dl-$TRAVIS_JOB_NUMBER
-        conda create -q -y -n travis-ci-$TRAVIS_JOB_NUMBER python=$PYTHON_VERSION $TF_VERSION
-        source activate travis-ci-$TRAVIS_JOB_NUMBER
-        pip install $NENGO_VERSION $NUMPY_VERSION
+        cd /tmp/nengo-dl-"$TRAVIS_JOB_NUMBER"
+        conda create -y -n travis-ci-"$TRAVIS_JOB_NUMBER" python="$TRAVIS_PYTHON_VERSION" "$TF_VERSION" "$NUMPY_VERSION"
+        source activate travis-ci-"$TRAVIS_JOB_NUMBER"
+        pip install "$NENGO_VERSION"
         pip install git+https://github.com/drasmuss/spaun2.0.git
         pip install -e .[tests]
         echo "Waiting for lock"
         (
             flock -x -w 1800 200 || exit 1
-            pytest $TEST_ARGS --pyargs nengo -v --durations 20 --color=yes --cov=nengo_dl --cov-report=xml --cov-report=term-missing || HW_STATUS=1
-            pytest $TEST_ARGS nengo_dl -v --durations 20 --color=yes --cov=nengo_dl --cov-report=xml --cov-report=term-missing --cov-append || HW_STATUS=1
+            pytest $TEST_ARGS --pyargs nengo -v --durations 20 --color=yes --cov=nengo_dl --cov-report=xml --cov-report=term-missing || exit 1
+            pytest $TEST_ARGS nengo_dl -v --durations 20 --color=yes --cov=nengo_dl --cov-report=xml --cov-report=term-missing --cov-append || exit 1
         ) 200>/var/lock/.travis-ci.exclusivelock
-        exit \$HW_STATUS
+        exit \$?
 EOF
 {% endblock %}
 
