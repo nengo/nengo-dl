@@ -273,7 +273,7 @@ class SignalDict(Mapping):
         self.minibatch_size = minibatch_size
         self.inference_only = inference_only
         self.sig_map = {}
-        self.bases = OrderedDict()  # will be filled in tensor_graph.build_loop
+        self.bases = OrderedDict()  # will be filled in tensor_graph._build_loop
         self.base_params = OrderedDict()
         self.base_tensors = OrderedDict()
         self.constant_phs = OrderedDict()

@@ -819,12 +819,12 @@ class Simulator:
         if extra_fetches is None:
             extra_fetches = []
 
-        # apply functions (if any) to output probes
-        output_ops, init_ops = self.tensor_graph.build_outputs(outputs)
+        # get tensorflow function implementing these outputs
+        run_func = self.tensor_graph.build_outputs(outputs)
 
         # initialize any new variables
-        if init_ops is not None:
-            self.sess.run(init_ops)
+        # if init_ops is not None:
+        #     self.sess.run(init_ops)
 
         # save the internal state of the simulator
         if isolate_state:
