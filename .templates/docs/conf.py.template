@@ -1,4 +1,4 @@
-{% include "templates/docs_conf.py.template" %}
+{% include "templates/docs/conf.py.template" %}
 
 import errno  # pylint: disable=wrong-import-order
 
