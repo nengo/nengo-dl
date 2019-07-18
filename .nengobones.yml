@@ -86,6 +86,7 @@ docs_conf_py:
   extensions:
     - sphinx_click.ext
   nengo_logo: nengo-dl-full-light.svg
+  nengo_logo_color: "#ff6600"
   sphinx_options:
     suppress_warnings: "['image.nonlocal_uri']"
   analytics_id: UA-41658423-2
