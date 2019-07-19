@@ -132,9 +132,9 @@ class Simulator:
             tf_compat.set_random_seed(self.seed)
 
         # construct graph
-        with ProgressBar("Constructing graph", "Construction",
-                         max_value=None) as progress:
-            self.tensor_graph.build(progress)
+        # with ProgressBar("Constructing graph", "Construction",
+        #                  max_value=None) as progress:
+        #     self.tensor_graph.build(progress)
 
         # output simulation data for viewing via TensorBoard
         if tensorboard is not None:

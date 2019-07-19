@@ -75,7 +75,8 @@ class TensorGraph:
         self.graph = tf.Graph()
         self.inference_only = config.get_setting(model, "inference_only",
                                                  False)
-        self.signals = None
+        self.signals = signals.SignalDict(self.dtype, self.minibatch_size,
+                                          self.inference_only)
         self.outputs = {}
         self.optimizers = {}
 
@@ -161,34 +162,29 @@ class TensorGraph:
 
         # set up build as tf.function (will be called as needed in
         # build_outputs)
-        input_val_spec = [
+        self.input_val_spec = [
             tf.TensorSpec(shape=(None, n.size_out, self.minibatch_size),
                           dtype=self.dtype,
                           name="input_vals/%s" % utils.sanitize_name(n))
             for n in self.invariant_inputs
             if self.model.sig[n]["out"] in self.signals]
-        base_val_spec = []
-        unique_ids = defaultdict(int)
+        self.internal_val_spec = []
         for v, trainable in self.base_arrays_init.values():
-            name = "%s_%s_%s_%d" % (
-                v.dtype, "_".join(str(x) for x in v.shape), trainable,
-                unique_ids[(v.dtype, v.shape, trainable)])
-            unique_ids[(v.dtype, v.shape, trainable)] += 1
-            base_val_spec.append(
-                tf.TensorSpec(shape=v.shape, dtype=v.dtype,
-                              name="base_vals/%s" % name))
+            if not trainable:
+                self.internal_val_spec.append(
+                    tf.TensorSpec(shape=v.shape, dtype=v.dtype))
         self.build_func = tf.function(
             self.build, autograph=False,
             input_signature=[
-                input_val_spec,
-                base_val_spec,
+                self.input_val_spec,
+                self.internal_val_spec,
                 tf.TensorSpec(dtype=tf.int32, shape=(), name="step"),
                 tf.TensorSpec(dtype=tf.int32, shape=(), name="stop"),
                 tf.TensorSpec(dtype=tf.bool, shape=(), name="training")
             ])
 
     @with_self
-    def build(self, input_vals, base_vals, step, stop, training):
+    def build(self, input_vals, internal_vals, step, stop, training):
         """
         Constructs a new graph to simulate the model.
 
@@ -197,9 +193,7 @@ class TensorGraph:
         """
 
         # this function should only be called once
-        assert self.signals is None
-        self.signals = signals.SignalDict(self.dtype, self.minibatch_size,
-                                          self.inference_only)
+        assert len(self.signals.bases) == 0
 
         # create these constants once here for reuse in different operators
         self.signals.dt = tf.constant(self.dt, self.dtype)
@@ -219,23 +213,17 @@ class TensorGraph:
 
         # create base arrays
         # sub = progress.sub("creating base arrays")
-        for (k, (v, trainable), ph) in zip(self.base_arrays_init.items(),
-                                           base_vals):
+        count = 0
+        for k, (v, trainable) in self.base_arrays_init.items():
             if trainable:
-                # we initialize all the variables from placeholders, and then
-                # feed in the initial values when the init op is called. this
-                # prevents TensorFlow from storing large constants in the graph
-                # def, which can cause problems for large models
                 var = tf.Variable(
-                    initial_value=ph,
+                    initial_value=v,
                     trainable=trainable,
-                    name="%s/var" % ph.name,
                 )
-                # TODO: don't need the reference to the ph saved anymore?
-                self.signals.base_params[k] = (var, ph, v)
+                self.signals.base_params[k] = (var, v)
             else:
-                # TODO: don't need the reference to the ph saved anymore?
-                self.signals.base_tensors[k] = (ph, v)
+                self.signals.base_tensors[k] = (internal_vals[count], v)
+                count += 1
 
         logger.debug("created base arrays")
         logger.debug([str(x[0]) for x in self.signals.base_tensors.values()])
@@ -632,14 +620,35 @@ class TensorGraph:
         except KeyError:
             pass
 
-        @tf.function(autograph=False)
-        def output_func(input_vals, base_vals, step, stop, training):
-            # TODO: write this to take `data` as an argument (combining
-            # inputs and targets). also pass in the nodes/probes as a separate
-            # list, which we can then rebuild into the data dictionary
+        # get all the probes in outputs, sorted by model order
+        all_probes = []
+        for probes in outputs:
+            if isinstance(probes, tuple):
+                all_probes.extend(probes)
+            else:
+                all_probes.append(probes)
+        all_probes = sorted(
+            all_probes, key=lambda p: self.model.probes.index(p))
 
-            steps_run, probe_arrays, final_internal_state = self.build(
-                input_vals, base_vals, step, stop, training)
+        @tf.function(autograph=False, input_signature=[
+            [tf.PYTHON_VALUE] * (len(self.input_val_spec) + len(all_probes)),
+            self.input_val_spec + [
+                tf.TensorSpec(dtype=self.dtype,
+                              shape=(self.minibatch_size, None, p.size_in),
+                              name=utils.sanitize_name(p))
+                for p in all_probes],
+            self.base_val_spec,
+            tf.TensorSpec(dtype=tf.int32, shape=()),
+            tf.TensorSpec(dtype=tf.int32, shape=()),
+            tf.TensorSpec(dtype=tf.bool, shape=()),
+        ])
+        def output_func(data_keys, data_vals, base_vals, step, stop, training):
+            data = OrderedDict(zip(data_keys, data_vals))
+
+            steps_run, probe_arrays, final_internal_state = self.build_func(
+                [data[n] for n in self.invariant_inputs
+                 if self.model.sig[n]["out"] in self.signals],
+                base_vals, step, stop, training)
 
             output_vals = {}
             new_vars = []
@@ -681,21 +690,13 @@ class TensorGraph:
                     if nargs == 1:
                         args = [output_probes]
                     elif nargs == 2:
-                        for p in probes if is_tuple else (probes,):
-                            # create a placeholder for the target values if one
-                            # hasn't been created yet
-                            if p not in self.target_phs:
-                                self.target_phs[p] = tf_compat.placeholder(
-                                    self.dtype,
-                                    (self.minibatch_size, None, p.size_in),
-                                    name="%s_ph" % utils.sanitize_name(p))
-                        target_phs = (tuple(self.target_phs[p] for p in probes)
-                                      if is_tuple else self.target_phs[probes])
+                        target_phs = (tuple(data[p] for p in probes)
+                                      if is_tuple else data[probes])
                         args = [output_probes, target_phs]
                     else:
                         raise ValidationError(
-                            "Output functions must accept 1 or 2 arguments; '%s' "
-                            "takes %s arguments" % (
+                            "Output functions must accept 1 or 2 arguments; "
+                            "'%s' takes %s arguments" % (
                                 utils.function_name(out, sanitize=False),
                                 nargs),
                             "outputs")
@@ -730,9 +731,29 @@ class TensorGraph:
 
             return output_vals, new_vars_init
 
-        self.outputs[key] = output_func.get_concrete_function()
+        # make variable initialization function
+        init_func = output_func.get_initialization_function()
 
-        return self.outputs[key]
+        # make a concrete function (so that we know we won't be accidentally
+        # re-tracing with different python objects)
+        # TODO: progress bar here?
+
+        def wrapped_output_func(data, internal_vals, step, stop, training):
+            # need to sort data into a consistent order
+            sorted_data = OrderedDict()
+            for n in self.invariant_inputs:
+                if n in data:
+                    sorted_data[n] = data[n]
+            for p in self.model.probes:
+                if p in data:
+                    sorted_data[p] = data[p]
+
+            return output_func(list(data.keys()), list(data.values()),
+                               internal_vals, step, stop, training)
+
+        self.outputs[key] = wrapped_output_func
+
+        return self.outputs[key], init_func
 
     @with_self
     def build_post(self, sess, rng):
