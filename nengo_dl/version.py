@@ -1,25 +1,33 @@
 """
 We use semantic versioning (see http://semver.org/).
-Additionally, '.dev0' will be added to the version unless the code base
-represents a release version. Commits for which the version doesn't have
-'.dev0' should be git tagged with the version.
+and conform to PEP440 (see https://www.python.org/dev/peps/pep-0440/).
+'.devN' will be added to the version unless the code base represents
+a release version. Release versions are git tagged with the version.
 """
 
 import warnings
 
 name = "nengo-dl"
 version_info = (2, 2, 0)  # (major, minor, patch)
-dev = True
+dev = 0  # set to None for releases
 
-version = "{v}{dev}".format(v='.'.join(str(v) for v in version_info),
-                            dev='.dev0' if dev else '')
+version = "{v}{dev}".format(v=".".join(str(v) for v in version_info),
+                            dev=(".dev%d" % dev) if dev is not None else "")
 
 # check nengo version
 try:
     import nengo.version
-
+except ImportError:
+    # nengo not installed, can't check version
+    pass
+else:
     minimum_nengo_version = (2, 8, 0)
+
+    # for release versions of nengo-dl, this should be the latest released
+    # nengo version. for dev versions of nengo-dl, this should be the current
+    # nengo dev version.
     latest_nengo_version = (3, 0, 0)
+
     if nengo.version.version_info < minimum_nengo_version:  # pragma: no cover
         raise ValueError(
             "`nengo_dl` does not support `nengo` version %s. Upgrade "
@@ -30,6 +38,3 @@ try:
             "This version of `nengo_dl` has not been tested with your `nengo` "
             "version (%s). The latest fully supported version is %d.%d.%d." %
             ((nengo.version.version,) + latest_nengo_version))
-except ImportError:
-    # nengo not installed, can't check version
-    pass
