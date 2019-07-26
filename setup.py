@@ -12,7 +12,8 @@ except ImportError:
     raise ImportError(
         "'setuptools' is required but not installed. To install it, "
         "follow the instructions at "
-        "https://pip.pypa.io/en/stable/installing/#installing-with-get-pip-py")
+        "https://pip.pypa.io/en/stable/installing/#installing-with-get-pip-py"
+    )
 
 
 def read(*filenames, **kwargs):
@@ -26,8 +27,7 @@ def read(*filenames, **kwargs):
 
 
 root = os.path.dirname(os.path.realpath(__file__))
-version = runpy.run_path(os.path.join(
-    root, "nengo_dl", "version.py"))["version"]
+version = runpy.run_path(os.path.join(root, "nengo_dl", "version.py"))["version"]
 
 import pkg_resources
 import sys
@@ -67,8 +67,7 @@ docs_req = [
     "sphinx>=1.8.0",
     "sphinx-click>=1.4.1",
 ]
-optional_req = [
-]
+optional_req = []
 tests_req = [
     "click>=6.7",
     "codespell>=1.12.0",
@@ -101,11 +100,7 @@ setup(
         "tests": tests_req,
     },
     python_requires=">=3.5",
-    entry_points={
-        "nengo.backends": [
-            "dl = nengo_dl:Simulator",
-        ],
-    },
+    entry_points={"nengo.backends": ["dl = nengo_dl:Simulator"]},
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Framework :: Nengo",

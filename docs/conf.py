@@ -43,10 +43,7 @@ nbsphinx_timeout = -1
 
 # -- sphinx
 nitpicky = True
-exclude_patterns = [
-    "_build",
-    "**/.ipynb_checkpoints",
-]
+exclude_patterns = ["_build", "**/.ipynb_checkpoints"]
 linkcheck_timeout = 30
 source_suffix = ".rst"
 source_encoding = "utf-8"
@@ -55,7 +52,7 @@ linkcheck_ignore = [r"http://localhost:\d+"]
 linkcheck_anchors = True
 default_role = "py:obj"
 pygments_style = "sphinx"
-suppress_warnings = ['image.nonlocal_uri']
+suppress_warnings = ["image.nonlocal_uri"]
 
 project = "NengoDL"
 authors = "Applied Brain Research"
@@ -121,24 +118,27 @@ def setup(app):
         if app.builder.name == "html":
             for src, dst in app.config.redirects:
                 srcfile = os.path.join(app.outdir, src)
-                dsturl = "/".join(
-                    [".." for _ in range(src.count("/"))] + [dst])
+                dsturl = "/".join([".." for _ in range(src.count("/"))] + [dst])
                 mkdir_p(os.path.dirname(srcfile))
                 with open(srcfile, "w") as fp:
-                    fp.write("\n".join([
-                        '<!DOCTYPE html>',
-                        '<html>',
-                        ' <head><title>This page has moved</title></head>',
-                        ' <body>',
-                        '  <script type="text/javascript">',
-                        '   window.location.replace("{0}");',
-                        '  </script>',
-                        '  <noscript>',
-                        '   <meta http-equiv="refresh" content="0; url={0}">',
-                        '  </noscript>',
-                        ' </body>',
-                        '</html>',
-                    ]).format(dsturl))
+                    fp.write(
+                        "\n".join(
+                            [
+                                "<!DOCTYPE html>",
+                                "<html>",
+                                " <head><title>This page has moved</title></head>",
+                                " <body>",
+                                '  <script type="text/javascript">',
+                                '   window.location.replace("{0}");',
+                                "  </script>",
+                                "  <noscript>",
+                                '   <meta http-equiv="refresh" content="0; url={0}">',
+                                "  </noscript>",
+                                " </body>",
+                                "</html>",
+                            ]
+                        ).format(dsturl)
+                    )
 
     app.add_config_value("redirects", [], "")
     app.connect("build-finished", redirect_pages)

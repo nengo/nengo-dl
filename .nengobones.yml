@@ -196,3 +196,7 @@ setup_py:
       - "Programming Language :: Python :: 3.7"
       - "Topic :: Scientific/Engineering"
       - "Topic :: Scientific/Engineering :: Artificial Intelligence"
+
+pyproject_toml: {}
+
+pre_commit_config_yaml: {}
