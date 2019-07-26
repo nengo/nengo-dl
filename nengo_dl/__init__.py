@@ -72,4 +72,3 @@ obj = objectives
 from nengo_dl import tensorflow_patch
 
 tensorflow_patch.patch_dynamic_stitch_grad()
-tensorflow_patch.patch_state_grads()

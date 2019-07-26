@@ -349,7 +349,8 @@ class SignalDict(Mapping):
             var = self.bases[dst.key]
 
             # should never be writing to a variable
-            assert isinstance(var, tf.Tensor)
+            if isinstance(var, tf.Variable):
+                raise BuildError("Scatter target should not be a Variable")
 
             if (
                 dst.tf_slice is not None
@@ -439,9 +440,6 @@ class SignalDict(Mapping):
         # one, otherwise keep the shape of the base array
         if result.get_shape() != src.full_shape:
             result = tf.reshape(result, src.tf_shape)
-
-        # for some reason the shape inference doesn't work in some cases
-        result.set_shape(src.full_shape)
 
         # whenever we read from an array we use this to mark it as "read"
         # (so that any future writes to the array will be scheduled after
