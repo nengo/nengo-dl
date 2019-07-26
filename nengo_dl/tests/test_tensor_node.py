@@ -7,7 +7,7 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import TensorNode, configure_settings, reshaped, tensor_layer
-from nengo_dl.compat import tf_compat, RefVariable
+from nengo_dl.compat import tf_compat
 
 
 def test_validation(Simulator):
@@ -107,7 +107,7 @@ def test_node(Simulator):
 def test_pre_build(Simulator):
     class TestFunc:
         def pre_build(self, size_in, size_out):
-            self.weights = RefVariable(tf.ones((size_in[1], size_out[1])))
+            self.weights = tf.Variable(tf.ones((size_in[1], size_out[1])))
             return self.weights
 
         def __call__(self, t, x):
@@ -144,7 +144,7 @@ def test_pre_build(Simulator):
 def test_post_build(Simulator):
     class TestFunc:
         def pre_build(self, size_in, size_out):
-            self.weights = RefVariable(tf.zeros((size_in[1], size_out[1])))
+            self.weights = tf.Variable(tf.zeros((size_in[1], size_out[1])))
             return self.weights
 
         def post_build(self, sess, rng):
@@ -241,7 +241,7 @@ def test_tensor_layer(Simulator):
 def test_reuse_vars(Simulator):
     class MyFunc:
         def pre_build(self, *_):
-            self.w = RefVariable(initial_value=tf.constant(2.0), name="weights")
+            self.w = tf.Variable(initial_value=tf.constant(2.0), name="weights")
             return self.w
 
         def __call__(self, _, x):

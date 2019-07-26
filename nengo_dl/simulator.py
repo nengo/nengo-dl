@@ -1457,12 +1457,6 @@ class Simulator:
 
                 dx, dy = gradient_checker._compute_dx_and_dy(inp, out, out_shape)
 
-                self.sess.run(
-                    tf_compat.variables_initializer(
-                        self.tensor_graph.graph.get_collection("gradient_vars")
-                    )
-                )
-
                 with self.sess.as_default():
                     analytic = gradient_checker._compute_theoretical_jacobian(
                         inp,

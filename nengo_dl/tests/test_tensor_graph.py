@@ -10,7 +10,7 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import tensor_graph, utils, graph_optimizer, config, objectives
-from nengo_dl.compat import tf_compat, RefVariable
+from nengo_dl.compat import tf_compat
 from nengo_dl.tests import dummies
 
 
@@ -125,7 +125,7 @@ def test_build_outputs_variables(Simulator):
                 assert probes_shape == [[5, None, 1], [5, None, 2]]
                 assert targets_shape == probes_shape
 
-                self.var = RefVariable(
+                self.var = tf.Variable(
                     tf.ones((5, 1), dtype=sim.tensor_graph.dtype), name="one"
                 )
 
@@ -138,10 +138,10 @@ def test_build_outputs_variables(Simulator):
             def pre_build(self, probes_shape):
                 assert probes_shape == [5, None, 2]
 
-                self.var0 = RefVariable(
+                self.var0 = tf.Variable(
                     tf.ones((5, 2), dtype=sim.tensor_graph.dtype), name="var0"
                 )
-                self.var1 = RefVariable(
+                self.var1 = tf.Variable(
                     tf.ones((5, 2), dtype=sim.tensor_graph.dtype), name="var1"
                 )
 
@@ -198,7 +198,7 @@ def test_build_optimizer(Simulator):
         # capturing variables from nested loss function
         class Loss:
             def pre_build(self, *_):
-                self.var = RefVariable(
+                self.var = tf.Variable(
                     tf.constant(2.0, dtype=sim.tensor_graph.dtype),
                     name="two",
                     trainable=False,

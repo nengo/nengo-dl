@@ -15,12 +15,6 @@ import tensorflow as tf
 tf_compat = tf.compat.v1
 
 
-def RefVariable(*args, **kwargs):
-    """Always returns RefVariables instead of (maybe) ResourceVariables."""
-
-    return tf.compat.v1.Variable(*args, use_resource=False, collections=[], **kwargs)
-
-
 if LooseVersion(nengo.__version__) < "3.0.0":
     from nengo.utils.testing import allclose as signals_allclose
 
