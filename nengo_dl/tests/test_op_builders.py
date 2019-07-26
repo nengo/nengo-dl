@@ -26,9 +26,10 @@ def test_elementwise_inc(Simulator):
     model.add_op(op)
 
     with Simulator(None, model=model) as sim:
-        sim.sess.run(sim.tensor_graph.steps_run,
-                     feed_dict={sim.tensor_graph.step_var: 0,
-                                sim.tensor_graph.stop_var: 5})
+        sim.sess.run(
+            sim.tensor_graph.steps_run,
+            feed_dict={sim.tensor_graph.step_var: 0, sim.tensor_graph.stop_var: 5},
+        )
 
 
 @pytest.mark.parametrize("device", ("/cpu:0", "/gpu:0", None))
@@ -46,16 +47,15 @@ def test_sparse_matmul(sess, dtype, device):
         with pytest.warns(None) as recwarns:
             Y = sparse_matmul(idxs, A, shape, X)
 
-    if dtype == tf.float64 and (device == "/gpu:0"
-                                or (device is None and tf_gpu_installed)):
-        assert len(
-            [w for w in recwarns if "sparse_matmul" in str(w.message)]) == 1
+    if dtype == tf.float64 and (
+        device == "/gpu:0" or (device is None and tf_gpu_installed)
+    ):
+        assert len([w for w in recwarns if "sparse_matmul" in str(w.message)]) == 1
 
         # need to go back past cast
         assert Y.op.inputs[0].op.inputs[1].dtype == tf.float32
     else:
-        assert len(
-            [w for w in recwarns if "sparse_matmul" in str(w.message)]) == 0
+        assert len([w for w in recwarns if "sparse_matmul" in str(w.message)]) == 0
         assert Y.op.inputs[1].dtype == dtype
 
     assert Y.dtype == dtype

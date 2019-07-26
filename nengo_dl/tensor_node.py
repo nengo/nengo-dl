@@ -33,30 +33,36 @@ def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
     """
 
     if not isinstance(output, tf.Tensor):
-        raise ValidationError("TensorNode function must return a Tensor "
-                              "(got %s)" % type(output), attr="tensor_func")
+        raise ValidationError(
+            "TensorNode function must return a Tensor (got %s)" % type(output),
+            attr="tensor_func",
+        )
 
     shape = output.get_shape()
-    if (shape.ndims != 2
-            or (minibatch_size is not None and shape[0] != minibatch_size)
-            or (output_d is not None and shape[1] != output_d)):
-        raise ValidationError("TensorNode output should have shape (%s, %s) "
-                              "(got shape %s)" % (minibatch_size, output_d,
-                                                  output.get_shape()),
-                              attr="tensor_func")
+    if (
+        shape.ndims != 2
+        or (minibatch_size is not None and shape[0] != minibatch_size)
+        or (output_d is not None and shape[1] != output_d)
+    ):
+        raise ValidationError(
+            "TensorNode output should have shape (%s, %s) "
+            "(got shape %s)" % (minibatch_size, output_d, output.get_shape()),
+            attr="tensor_func",
+        )
 
     if dtype is not None and output.dtype != dtype:
-        raise ValidationError("TensorNode output should have dtype %s "
-                              "(got %s)" % (dtype, output.dtype),
-                              attr="tensor_func")
+        raise ValidationError(
+            "TensorNode output should have dtype %s "
+            "(got %s)" % (dtype, output.dtype),
+            attr="tensor_func",
+        )
 
 
 class TensorFuncParam(Parameter):
     """Parameter for the ``tensor_func`` parameter of a `.TensorNode`."""
 
     def __init__(self, name, readonly=False):
-        super(TensorFuncParam, self).__init__(
-            name, optional=False, readonly=readonly)
+        super(TensorFuncParam, self).__init__(name, optional=False, readonly=readonly)
 
     def coerce(self, node, func):
         """
@@ -80,8 +86,9 @@ class TensorFuncParam(Parameter):
 
         if node.size_out is None:
             if not callable(func):
-                raise ValidationError("TensorNode output must be a function",
-                                      attr=self.name, obj=node)
+                raise ValidationError(
+                    "TensorNode output must be a function", attr=self.name, obj=node
+                )
 
             with tf.Graph().as_default():
                 t, x = tf.constant(0.0), tf.zeros((1, node.size_in))
@@ -92,7 +99,9 @@ class TensorFuncParam(Parameter):
                     raise ValidationError(
                         "Calling TensorNode function with arguments %s "
                         "produced an error:\n%s" % (args, e),
-                        attr=self.name, obj=node)
+                        attr=self.name,
+                        obj=node,
+                    )
 
             validate_output(result)
 
@@ -118,12 +127,11 @@ class TensorNode(Node):
         A name for the node, used for debugging and visualization
     """
 
-    tensor_func = TensorFuncParam('tensor_func')
-    size_in = IntParam('size_in', default=0, low=0, optional=True)
-    size_out = IntParam('size_out', default=None, low=1, optional=True)
+    tensor_func = TensorFuncParam("tensor_func")
+    size_in = IntParam("size_in", default=0, low=0, optional=True)
+    size_out = IntParam("size_out", default=None, low=1, optional=True)
 
-    def __init__(self, tensor_func, size_in=Default, size_out=Default,
-                 label=Default):
+    def __init__(self, tensor_func, size_in=Default, size_out=Default, label=Default):
         # pylint: disable=non-parent-init-called,super-init-not-called
         # note: we bypass the Node constructor, because we don't want to
         # perform validation on `output`
@@ -140,11 +148,13 @@ class TensorNode(Node):
         (indicating that something is trying to simulate this as a regular
         `nengo.Node` rather than a TensorNode.
         """
+
         def output_func(*_):
             raise SimulationError(
                 "Cannot call TensorNode output function (this probably means "
                 "you are trying to use a TensorNode inside a Simulator other "
-                "than NengoDL)")
+                "than NengoDL)"
+            )
 
         return output_func
 
@@ -163,12 +173,11 @@ def build_tensor_node(model, node):
 
     sig_out = builder.Signal(np.zeros(node.size_out), name="%s.out" % node)
 
-    model.sig[node]['in'] = sig_in
-    model.sig[node]['out'] = sig_out
+    model.sig[node]["in"] = sig_in
+    model.sig[node]["out"] = sig_out
     model.params[node] = None
 
-    model.operators.append(SimTensorNode(node.tensor_func, model.time, sig_in,
-                                         sig_out))
+    model.operators.append(SimTensorNode(node.tensor_func, model.time, sig_in, sig_out))
 
 
 class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
@@ -232,9 +241,11 @@ class SimTensorNodeBuilder(OpBuilder):
 
         if hasattr(self.func, "pre_build"):
             self.func.pre_build(
-                None if self.src_data is None else ((signals.minibatch_size,)
-                                                    + self.src_data.shape),
-                (signals.minibatch_size,) + self.dst_data.shape)
+                None
+                if self.src_data is None
+                else ((signals.minibatch_size,) + self.src_data.shape),
+                (signals.minibatch_size,) + self.dst_data.shape,
+            )
 
     def build_step(self, signals):
         if self.src_data is None:
@@ -247,8 +258,12 @@ class SimTensorNodeBuilder(OpBuilder):
 
             output = self.func(signals.time, input)
 
-        validate_output(output, minibatch_size=signals.minibatch_size,
-                        output_d=self.dst_data.shape[0], dtype=signals.dtype)
+        validate_output(
+            output,
+            minibatch_size=signals.minibatch_size,
+            output_d=self.dst_data.shape[0],
+            dtype=signals.dtype,
+        )
 
         # move minibatch dimension back to end
         output = tf.transpose(a=output, perm=(1, 0))
@@ -290,8 +305,15 @@ def reshaped(shape_in):
     return reshape_dec
 
 
-def tensor_layer(input, layer_func, shape_in=None, synapse=None,
-                 transform=1, return_conn=False, **layer_args):
+def tensor_layer(
+    input,
+    layer_func,
+    shape_in=None,
+    synapse=None,
+    transform=1,
+    return_conn=False,
+    **layer_args,
+):
     """A utility function to construct TensorNodes that apply some function
     to their input (analogous to the ``tf.layers`` syntax).
 
@@ -334,8 +356,7 @@ def tensor_layer(input, layer_func, shape_in=None, synapse=None,
         size_in = input.size_out
 
     if isinstance(layer_func, NeuronType):
-        node = Ensemble(size_in, 1, neuron_type=layer_func,
-                        **layer_args).neurons
+        node = Ensemble(size_in, 1, neuron_type=layer_func, **layer_args).neurons
     else:
         # add (ignored) time input and pass kwargs
         def node_func(_, x):

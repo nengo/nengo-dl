@@ -11,8 +11,10 @@ name = "nengo-dl"
 version_info = (2, 2, 1)  # (major, minor, patch)
 dev = 0  # set to None for releases
 
-version = "{v}{dev}".format(v=".".join(str(v) for v in version_info),
-                            dev=(".dev%d" % dev) if dev is not None else "")
+version = "{v}{dev}".format(
+    v=".".join(str(v) for v in version_info),
+    dev=(".dev%d" % dev) if dev is not None else "",
+)
 
 # check nengo version
 try:
@@ -31,10 +33,11 @@ else:
     if nengo.version.version_info < minimum_nengo_version:  # pragma: no cover
         raise ValueError(
             "`nengo_dl` does not support `nengo` version %s. Upgrade "
-            "with 'pip install --upgrade --no-deps nengo'." %
-            (nengo.version.version,))
+            "with 'pip install --upgrade --no-deps nengo'." % (nengo.version.version,)
+        )
     elif nengo.version.version_info > latest_nengo_version:  # pragma: no cover
         warnings.warn(
             "This version of `nengo_dl` has not been tested with your `nengo` "
-            "version (%s). The latest fully supported version is %d.%d.%d." %
-            ((nengo.version.version,) + latest_nengo_version))
+            "version (%s). The latest fully supported version is %d.%d.%d."
+            % ((nengo.version.version,) + latest_nengo_version)
+        )

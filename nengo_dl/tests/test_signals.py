@@ -78,16 +78,12 @@ def test_tensor_signal_broadcast():
     sig_broad = sig.broadcast(-1, 2)
     assert sig_broad.shape == (4, 2)
     assert sig_broad.key == sig.key
-    assert np.all(
-        np.reshape(base[sig_broad.indices], sig_broad.shape)
-        == base[:, None])
+    assert np.all(np.reshape(base[sig_broad.indices], sig_broad.shape) == base[:, None])
 
     sig_broad = sig.broadcast(0, 2)
     assert sig_broad.shape == (2, 4)
     assert sig_broad.key == sig.key
-    assert np.all(
-        np.reshape(base[sig_broad.indices], sig_broad.shape)
-        == base[None, :])
+    assert np.all(np.reshape(base[sig_broad.indices], sig_broad.shape) == base[None, :])
 
 
 def test_tensor_signal_load_indices(sess):
@@ -117,10 +113,7 @@ def test_signal_dict_scatter(sess):
 
     key = object()
     val = np.random.randn(var_size, minibatch_size)
-    signals.bases = {
-        key: tf_compat.assign(RefVariable(val, dtype=tf.float32),
-                              val)
-    }
+    signals.bases = {key: tf_compat.assign(RefVariable(val, dtype=tf.float32), val)}
 
     x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), True)
     with pytest.raises(BuildError):
@@ -140,15 +133,17 @@ def test_signal_dict_scatter(sess):
     assert np.allclose(y[4:], val[4:])
 
     # recognize assignment to full array
-    x = signals.get_tensor_signal(np.arange(var_size), key, tf.float32,
-                                  (var_size,), True)
+    x = signals.get_tensor_signal(
+        np.arange(var_size), key, tf.float32, (var_size,), True
+    )
     y = tf.ones((var_size, 1))
     signals.scatter(x, y)
     assert signals.bases[key].op.type == "Assign"
 
     # recognize assignment to strided full array
-    x = signals.get_tensor_signal(np.arange(0, var_size, 2), key, tf.float32,
-                                  (var_size // 2 + 1,), True)
+    x = signals.get_tensor_signal(
+        np.arange(0, var_size, 2), key, tf.float32, (var_size // 2 + 1,), True
+    )
     y = tf.ones((var_size // 2 + 1, 1))
     signals.scatter(x, y)
     assert signals.bases[key].op.type == "ScatterUpdate"
@@ -170,8 +165,9 @@ def test_signal_dict_gather(sess):
 
     # read with reshape
     x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (2, 2), True)
-    assert np.allclose(sess.run(signals.gather(x)),
-                       val[:4].reshape((2, 2, minibatch_size)))
+    assert np.allclose(
+        sess.run(signals.gather(x)), val[:4].reshape((2, 2, minibatch_size))
+    )
 
     # gather read
     x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), True)
@@ -179,19 +175,20 @@ def test_signal_dict_gather(sess):
     assert "Gather" in y.op.type
 
     x = signals.get_tensor_signal([0, 0, 3, 3], key, tf.float32, (4,), True)
-    assert np.allclose(sess.run(signals.gather(x)),
-                       val[[0, 0, 3, 3]])
+    assert np.allclose(sess.run(signals.gather(x)), val[[0, 0, 3, 3]])
     assert "Gather" in y.op.type
 
     # reading from full array
-    x = signals.get_tensor_signal(np.arange(var_size), key, tf.float32,
-                                  (var_size,), True)
+    x = signals.get_tensor_signal(
+        np.arange(var_size), key, tf.float32, (var_size,), True
+    )
     y = signals.gather(x)
     assert y is signals.bases[key]
 
     # reading from strided full array
-    x = signals.get_tensor_signal(np.arange(0, var_size, 2), key, tf.float32,
-                                  (var_size // 2 + 1,), True)
+    x = signals.get_tensor_signal(
+        np.arange(0, var_size, 2), key, tf.float32, (var_size // 2 + 1,), True
+    )
     y = signals.gather(x)
     assert y.op.type == "StridedSlice"
     assert y.op.inputs[0] is signals.bases[key]
@@ -213,8 +210,11 @@ def test_signal_dict_combine():
     assert signals.combine([]) == []
 
     y = signals.combine(
-        [signals.get_tensor_signal([0, 1, 2], key, None, (3, 2), False),
-         signals.get_tensor_signal([4, 5, 6], key, None, (3, 2), False)])
+        [
+            signals.get_tensor_signal([0, 1, 2], key, None, (3, 2), False),
+            signals.get_tensor_signal([4, 5, 6], key, None, (3, 2), False),
+        ]
+    )
     assert y.key is key
     assert y._tf_indices is None
 
@@ -238,9 +238,9 @@ def test_constant(dtype, sess):
     assert const1.dtype == (dtype if dtype else tf.as_dtype(val.dtype))
 
     sess.run(
-        tf_compat.variables_initializer(tf_compat.get_collection(
-            "constants")),
-        feed_dict=signals.constant_phs)
+        tf_compat.variables_initializer(tf_compat.get_collection("constants")),
+        feed_dict=signals.constant_phs,
+    )
     c0, c1 = sess.run([const0, const1])
 
     assert np.allclose(c0, val)
@@ -259,9 +259,9 @@ def test_constant_gpu(sess):
         assert "GPU" in const.device.upper()
 
     sess.run(
-        tf_compat.variables_initializer(tf_compat.get_collection(
-            "constants")),
-        feed_dict=signals.constant_phs)
+        tf_compat.variables_initializer(tf_compat.get_collection("constants")),
+        feed_dict=signals.constant_phs,
+    )
     c = sess.run(const)
 
     assert np.allclose(val, c)
@@ -270,27 +270,36 @@ def test_constant_gpu(sess):
 @pytest.mark.parametrize("dtype", (np.float32, np.float64))
 @pytest.mark.parametrize("diff", (True, False))
 def test_op_constant(dtype, diff, sess):
-    ops = (SimNeurons(LIF(tau_rc=1), Signal(np.zeros(10)), None),
-           SimNeurons(LIF(tau_rc=2 if diff else 1), Signal(np.zeros(10)),
-                      None))
+    ops = (
+        SimNeurons(LIF(tau_rc=1), Signal(np.zeros(10)), None),
+        SimNeurons(LIF(tau_rc=2 if diff else 1), Signal(np.zeros(10)), None),
+    )
 
     signals = SignalDict(tf.float32, 1)
     const = signals.op_constant(
-        [op.neurons for op in ops], [op.J.shape[0] for op in ops],
-        "tau_rc", dtype)
+        [op.neurons for op in ops], [op.J.shape[0] for op in ops], "tau_rc", dtype
+    )
     const1 = signals.op_constant(
-        [op.neurons for op in ops], [op.J.shape[0] for op in ops],
-        "tau_rc", dtype, ndims=1)
+        [op.neurons for op in ops],
+        [op.J.shape[0] for op in ops],
+        "tau_rc",
+        dtype,
+        ndims=1,
+    )
     const3 = signals.op_constant(
-        [op.neurons for op in ops], [op.J.shape[0] for op in ops],
-        "tau_rc", dtype, ndims=3)
+        [op.neurons for op in ops],
+        [op.J.shape[0] for op in ops],
+        "tau_rc",
+        dtype,
+        ndims=3,
+    )
 
     assert const.dtype.base_dtype == dtype
 
     sess.run(
-        tf_compat.variables_initializer(tf_compat.get_collection(
-            "constants")),
-        feed_dict=signals.constant_phs)
+        tf_compat.variables_initializer(tf_compat.get_collection("constants")),
+        feed_dict=signals.constant_phs,
+    )
     x, x1, x3 = sess.run([const, const1, const3])
 
     if diff:
@@ -308,8 +317,7 @@ def test_get_tensor_signal():
 
     # check that tensor_signal is created correctly
     key = object()
-    tensor_signal = signals.get_tensor_signal(
-        (0,), key, np.float64, (3, 4), True)
+    tensor_signal = signals.get_tensor_signal((0,), key, np.float64, (3, 4), True)
 
     assert isinstance(tensor_signal, TensorSignal)
     assert np.array_equal(tensor_signal.indices, (0,))
@@ -324,7 +332,8 @@ def test_get_tensor_signal():
     sig = Signal(np.zeros(4))
     sig.minibatched = True
     tensor_signal = signals.get_tensor_signal(
-        np.arange(4), key, np.float64, (2, 2), True, signal=sig)
+        np.arange(4), key, np.float64, (2, 2), True, signal=sig
+    )
     assert len(signals) == 1
     assert signals[sig] is tensor_signal
     assert next(iter(signals)) is sig
@@ -335,18 +344,21 @@ def test_get_tensor_signal():
         sig = Signal(np.zeros((2, 2)))
         sig.minibatched = True
         signals.get_tensor_signal(
-            np.arange(4), key, np.float64, (2, 2), True, signal=sig)
+            np.arange(4), key, np.float64, (2, 2), True, signal=sig
+        )
 
     # error if sig size doesn't match given shape
     with pytest.raises(AssertionError):
         sig = Signal(np.zeros(4))
         sig.minibatched = True
         signals.get_tensor_signal(
-            np.arange(4), key, np.float64, (2, 3), True, signal=sig)
+            np.arange(4), key, np.float64, (2, 3), True, signal=sig
+        )
 
     # error if minibatched doesn't match
     with pytest.raises(AssertionError):
         sig = Signal(np.zeros(4))
         sig.minibatched = False
         signals.get_tensor_signal(
-            np.arange(4), key, np.float64, (2, 2), True, signal=sig)
+            np.arange(4), key, np.float64, (2, 2), True, signal=sig
+        )

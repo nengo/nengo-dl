@@ -7,8 +7,7 @@ from distutils.version import LooseVersion
 import logging
 import warnings
 
-from nengo.builder.operator import (
-    Reset, Copy, ElementwiseInc, DotInc, SimPyFunc)
+from nengo.builder.operator import Reset, Copy, ElementwiseInc, DotInc, SimPyFunc
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops import gen_sparse_ops
@@ -24,6 +23,7 @@ class ResetInc(Reset):
     """
     A version of Reset that increments the target value rather than setting it.
     """
+
     @property
     def dst(self):
         """Overridden to return from incs rather than sets."""
@@ -57,13 +57,19 @@ class ResetBuilder(OpBuilder):
         self.scatters = []
         for group in scatters.values():
             value = np.concatenate(
-                [np.resize(np.asarray(x.value).astype(dtype), x.dst.shape)
-                 for x in group], axis=0)
+                [
+                    np.resize(np.asarray(x.value).astype(dtype), x.dst.shape)
+                    for x in group
+                ],
+                axis=0,
+            )
             value = np.tile(
                 value[..., None],
-                tuple(1 for _ in value.shape) + (signals.minibatch_size,))
-            self.scatters += [(signals.combine([x.dst for x in group]),
-                               signals.constant(value))]
+                tuple(1 for _ in value.shape) + (signals.minibatch_size,),
+            )
+            self.scatters += [
+                (signals.combine([x.dst for x in group]), signals.constant(value))
+            ]
 
         logger.debug("scatters")
         logger.debug("\n".join([str(x) for x in self.scatters]))
@@ -87,11 +93,9 @@ class CopyBuilder(OpBuilder):
         super(CopyBuilder, self).__init__(ops, signals, config)
 
         logger.debug("src %s", [op.src for op in ops])
-        logger.debug("src_slice %s", [getattr(op, "src_slice", None)
-                                      for op in ops])
+        logger.debug("src_slice %s", [getattr(op, "src_slice", None) for op in ops])
         logger.debug("dst %s", [op.dst for op in ops])
-        logger.debug("dst_slice %s", [getattr(op, "dst_slice", None)
-                                      for op in ops])
+        logger.debug("dst_slice %s", [getattr(op, "dst_slice", None) for op in ops])
 
         srcs = []
         dsts = []
@@ -110,8 +114,7 @@ class CopyBuilder(OpBuilder):
             self.src_data = self.src_data.broadcast(-1, signals.minibatch_size)
 
     def build_step(self, signals):
-        signals.scatter(self.dst_data, signals.gather(self.src_data),
-                        mode=self.mode)
+        signals.scatter(self.dst_data, signals.gather(self.src_data), mode=self.mode)
 
     @staticmethod
     def mergeable(x, y):
@@ -148,10 +151,8 @@ class ElementwiseIncBuilder(OpBuilder):
 
         # separate data from each op along the first dimension
         if self.A_data.shape[0] != self.X_data.shape[0]:
-            self.A_data = self.A_data.reshape(
-                (len(ops), -1) + self.A_data.shape[1:])
-            self.X_data = self.X_data.reshape(
-                (len(ops), -1) + self.X_data.shape[1:])
+            self.A_data = self.A_data.reshape((len(ops), -1) + self.A_data.shape[1:])
+            self.X_data = self.X_data.reshape((len(ops), -1) + self.X_data.shape[1:])
 
         # add empty trailing dimensions for elementwise broadcasting
         while self.A_data.ndim < self.X_data.ndim:
@@ -207,14 +208,16 @@ def sparse_matmul(A_indices, A_data, A_shape, X):
         Result of matrix multiplication between A and X
     """
 
-    must_downcast = (
-        A_data.dtype.base_dtype != tf.float32
-        and ("gpu" in A_data.device.lower()
-             or (A_data.device == "" and utils.tf_gpu_installed)))
+    must_downcast = A_data.dtype.base_dtype != tf.float32 and (
+        "gpu" in A_data.device.lower()
+        or (A_data.device == "" and utils.tf_gpu_installed)
+    )
     if must_downcast:
         assert A_data.dtype.base_dtype == X.dtype.base_dtype
-        warnings.warn("Downcasting data to float32 in sparse_matmul, since "
-                      "only float32 is supported on the GPU.")
+        warnings.warn(
+            "Downcasting data to float32 in sparse_matmul, since "
+            "only float32 is supported on the GPU."
+        )
         A = tf.cast(A_data, tf.float32)
         X = tf.cast(X, tf.float32)
     else:
@@ -230,6 +233,7 @@ def sparse_matmul(A_indices, A_data, A_shape, X):
         dot = tf.cast(dot, A_data.dtype.base_dtype)
 
     return dot
+
 
 # class DotSet(DotInc):
 #     @property
@@ -306,17 +310,29 @@ class DotIncBuilder(OpBuilder):
             corner = np.zeros(2, dtype=np.int64)
             for op in ops:
                 block_shape = (op.A.shape[0], op.A.shape[1])
-                idxs = np.reshape(np.dstack(np.meshgrid(
-                    np.arange(block_shape[0]), np.arange(block_shape[1]),
-                    indexing="ij")), (-1, 2))
+                idxs = np.reshape(
+                    np.dstack(
+                        np.meshgrid(
+                            np.arange(block_shape[0]),
+                            np.arange(block_shape[1]),
+                            indexing="ij",
+                        )
+                    ),
+                    (-1, 2),
+                )
                 idxs += corner
                 corner += block_shape
                 sparse_indices += [idxs]
 
             sparse_indices = np.concatenate(sparse_indices, axis=0)
-            self.sparse_indices = signals.constant(sparse_indices, dtype=(
-                tf.int32 if np.all(sparse_indices < np.iinfo(np.int32).max)
-                else tf.int64))
+            self.sparse_indices = signals.constant(
+                sparse_indices,
+                dtype=(
+                    tf.int32
+                    if np.all(sparse_indices < np.iinfo(np.int32).max)
+                    else tf.int64
+                ),
+            )
             self.A_shape = tf.constant(corner, dtype=tf.int64)
 
     def build_step(self, signals):
@@ -334,8 +350,7 @@ class DotIncBuilder(OpBuilder):
                 X = tf.transpose(a=X, perm=self.perm)
                 dot = tf.matmul(A, X)
                 dot = tf.transpose(a=dot, perm=self.perm_inv)
-                dot.set_shape(
-                    self.A_data.shape[:2] + (1, signals.minibatch_size))
+                dot.set_shape(self.A_data.shape[:2] + (1, signals.minibatch_size))
             elif not self.A_data.minibatched and self.X_data.minibatched:
                 dot = tf.matmul(A, X)
             else:
@@ -399,10 +414,9 @@ class SimPyFuncBuilder(OpBuilder):
                 if op.output is None:
                     func = op.fn
                 else:
-                    func = utils.align_func(
-                        op.output.shape, self.output_dtype)(op.fn)
+                    func = utils.align_func(op.output.shape, self.output_dtype)(op.fn)
 
-                func_input = inputs[offset:offset + op.x.shape[0]]
+                func_input = inputs[offset : offset + op.x.shape[0]]
                 offset += op.x.shape[0]
 
                 mini_out = []
@@ -422,21 +436,23 @@ class SimPyFuncBuilder(OpBuilder):
             return np.concatenate(outputs, axis=0)
 
         self.merged_func = merged_func
-        self.merged_func.__name__ = "_".join(
-            [utils.function_name(op.fn) for op in ops])
-        self.output_shape = ((len(ops),) if self.output_data is None else
-                             self.output_data.shape)
+        self.merged_func.__name__ = "_".join([utils.function_name(op.fn) for op in ops])
+        self.output_shape = (
+            (len(ops),) if self.output_data is None else self.output_data.shape
+        )
         self.output_shape += (signals.minibatch_size,)
 
     def build_step(self, signals):
         time = signals.time if self.time_input else []
-        inputs = ([] if self.input_data is None
-                  else signals.gather(self.input_data))
+        inputs = [] if self.input_data is None else signals.gather(self.input_data)
 
         with tf.device("/cpu:0"):
             node_outputs = tf_compat.py_func(
-                self.merged_func, [time, inputs], self.output_dtype,
-                name=self.merged_func.__name__)
+                self.merged_func,
+                [time, inputs],
+                self.output_dtype,
+                name=self.merged_func.__name__,
+            )
         node_outputs.set_shape(self.output_shape)
 
         if self.output_data is not None:
@@ -461,6 +477,7 @@ class SparseDotIncBuilder(OpBuilder):
     """
     Build a group of `~nengo.builder.operator.SparseDotInc` operators.
     """
+
     def __init__(self, ops, signals, config):
         super().__init__(ops, signals, config)
 
@@ -492,9 +509,14 @@ class SparseDotIncBuilder(OpBuilder):
             sparse_indices += [idxs]
 
         sparse_indices = np.concatenate(sparse_indices, axis=0)
-        self.sparse_indices = signals.constant(sparse_indices, dtype=(
-            tf.int32 if np.all(sparse_indices < np.iinfo(np.int32).max)
-            else tf.int64))
+        self.sparse_indices = signals.constant(
+            sparse_indices,
+            dtype=(
+                tf.int32
+                if np.all(sparse_indices < np.iinfo(np.int32).max)
+                else tf.int64
+            ),
+        )
         self.A_shape = tf.constant(corner, dtype=tf.int64)
 
     def build_step(self, signals):

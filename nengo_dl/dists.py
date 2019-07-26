@@ -61,13 +61,11 @@ class TruncatedNormal(Distribution):
         if rng is None:
             rng = np.random
         sample_shape = (n,) if d is None else (n, d)
-        samples = rng.normal(loc=self.mean, scale=self.stddev,
-                             size=sample_shape)
+        samples = rng.normal(loc=self.mean, scale=self.stddev, size=sample_shape)
         outliers = np.abs(samples - self.mean) > self.limit
         n_out = np.sum(outliers)
         while n_out > 0:
-            samples[outliers] = rng.normal(self.mean, self.stddev,
-                                           size=n_out)
+            samples[outliers] = rng.normal(self.mean, self.stddev, size=n_out)
             outliers = np.abs(samples - self.mean) > self.limit
             n_out = np.sum(outliers)
 
@@ -167,8 +165,9 @@ class Glorot(VarianceScaling):
     """
 
     def __init__(self, scale=1, distribution="uniform"):
-        super(Glorot, self).__init__(scale=scale, mode="fan_avg",
-                                     distribution=distribution)
+        super(Glorot, self).__init__(
+            scale=scale, mode="fan_avg", distribution=distribution
+        )
 
 
 class He(VarianceScaling):
@@ -190,5 +189,6 @@ class He(VarianceScaling):
     """
 
     def __init__(self, scale=1, distribution="normal"):
-        super(He, self).__init__(scale=scale ** 2, mode="fan_in",
-                                 distribution=distribution)
+        super(He, self).__init__(
+            scale=scale ** 2, mode="fan_in", distribution=distribution
+        )

@@ -40,8 +40,9 @@ class TensorSignal:
         Name for this signal, used to make debugging easier
     """
 
-    def __init__(self, indices, key, dtype, shape, minibatch_size, constant,
-                 label="TensorSignal"):
+    def __init__(
+        self, indices, key, dtype, shape, minibatch_size, constant, label="TensorSignal"
+    ):
         # make indices read-only
         assert isinstance(indices, (tuple, list, np.ndarray))
         self._indices = np.asarray(indices)
@@ -78,7 +79,10 @@ class TensorSignal:
 
     def __repr__(self):
         return "TensorSignal(key=%s, shape=%s, label=%s)" % (
-            self.key, self.shape, self.label)
+            self.key,
+            self.shape,
+            self.label,
+        )
 
     def __getitem__(self, indices):
         """
@@ -101,9 +105,14 @@ class TensorSignal:
 
         new_indices = self.indices[indices]
         return TensorSignal(
-            new_indices, self.key, self.dtype,
-            (len(new_indices),) + self.shape[1:], self.minibatch_size,
-            self.constant, label=self.label + ".slice")
+            new_indices,
+            self.key,
+            self.dtype,
+            (len(new_indices),) + self.shape[1:],
+            self.minibatch_size,
+            self.constant,
+            label=self.label + ".slice",
+        )
 
     def reshape(self, shape):
         """
@@ -138,8 +147,14 @@ class TensorSignal:
                 raise BuildError("Number of elements don't match in reshape")
 
         return TensorSignal(
-            self.indices, self.key, self.dtype, shape, self.minibatch_size,
-            self.constant, label=self.label + ".reshape(%s)" % (shape,))
+            self.indices,
+            self.key,
+            self.dtype,
+            shape,
+            self.minibatch_size,
+            self.constant,
+            label=self.label + ".reshape(%s)" % (shape,),
+        )
 
     def broadcast(self, axis, length):
         """
@@ -175,9 +190,14 @@ class TensorSignal:
             display_shape = (length,) + self.shape
 
         return TensorSignal(
-            indices, self.key, self.dtype, display_shape, self.minibatch_size,
+            indices,
+            self.key,
+            self.dtype,
+            display_shape,
+            self.minibatch_size,
             self.constant,
-            label=self.label + ".broadcast(%d, %d)" % (axis, length))
+            label=self.label + ".broadcast(%d, %d)" % (axis, length),
+        )
 
     @property
     def tf_shape(self):
@@ -211,12 +231,13 @@ class TensorSignal:
         if self._tf_slice == -1:
             start = self.indices[0]
             stop = self.indices[-1] + 1
-            step = (self.indices[1] - self.indices[0] if len(self.indices) > 1
-                    else 1)
-            if step != 0 and np.array_equal(self.indices,
-                                            np.arange(start, stop, step)):
-                self._tf_slice = (tf.constant([start]), tf.constant([stop]),
-                                  tf.constant([step]))
+            step = self.indices[1] - self.indices[0] if len(self.indices) > 1 else 1
+            if step != 0 and np.array_equal(self.indices, np.arange(start, stop, step)):
+                self._tf_slice = (
+                    tf.constant([start]),
+                    tf.constant([stop]),
+                    tf.constant([step]),
+                )
             else:
 
                 self._tf_slice = None
@@ -227,8 +248,7 @@ class TensorSignal:
     def full_shape(self):
         """Shape of the signal including the minibatch dimension."""
 
-        return (self.shape + (self.minibatch_size,) if self.minibatched else
-                self.shape)
+        return self.shape + (self.minibatch_size,) if self.minibatched else self.shape
 
     @property
     def minibatched(self):
@@ -282,14 +302,17 @@ class SignalDict(Mapping):
         """
 
         if val.dtype.is_floating and val.dtype.base_dtype != self.dtype:
-            raise BuildError("Tensor detected with wrong dtype (%s), should "
-                             "be %s." % (val.dtype.base_dtype, self.dtype))
+            raise BuildError(
+                "Tensor detected with wrong dtype (%s), should "
+                "be %s." % (val.dtype.base_dtype, self.dtype)
+            )
 
         # align val shape with dst base shape
         self.bases[dst.key].get_shape().assert_is_fully_defined()
         val.get_shape().assert_is_fully_defined()
-        dst_shape = ((dst.shape[0],)
-                     + tuple(self.bases[dst.key].get_shape().as_list()[1:]))
+        dst_shape = (dst.shape[0],) + tuple(
+            self.bases[dst.key].get_shape().as_list()[1:]
+        )
         if val.get_shape() != dst_shape:
             val = tf.reshape(val, dst.tf_shape)
 
@@ -298,8 +321,7 @@ class SignalDict(Mapping):
         logger.debug("dst %s", dst)
         logger.debug("indices %s", dst.indices)
         logger.debug("dst base %s", self.bases[dst.key])
-        logger.debug("reads_by_base %s",
-                     self.reads_by_base[self.bases[dst.key]])
+        logger.debug("reads_by_base %s", self.reads_by_base[self.bases[dst.key]])
 
         # make sure that any reads to the target signal happen before this
         # write (note: this is only any reads that have happened since the
@@ -307,11 +329,13 @@ class SignalDict(Mapping):
         with tf.control_dependencies(self.reads_by_base[self.bases[dst.key]]):
             var = self.bases[dst.key]
 
-            if (dst.tf_slice is not None
-                    and var.get_shape().is_compatible_with(val.get_shape())
-                    and dst.indices[0] == 0
-                    and dst.indices[-1] == var.get_shape()[0] - 1
-                    and len(dst.indices) == var.get_shape()[0]):
+            if (
+                dst.tf_slice is not None
+                and var.get_shape().is_compatible_with(val.get_shape())
+                and dst.indices[0] == 0
+                and dst.indices[-1] == var.get_shape()[0] - 1
+                and len(dst.indices) == var.get_shape()[0]
+            ):
                 if mode == "inc":
                     result = tf_compat.assign_add(var, val, use_locking=False)
                     self.write_types["assign_add"] += 1
@@ -319,12 +343,14 @@ class SignalDict(Mapping):
                     result = tf_compat.assign(var, val, use_locking=False)
                     self.write_types["assign"] += 1
             elif mode == "inc":
-                result = tf_compat.scatter_add(var, dst.tf_indices, val,
-                                               use_locking=False)
+                result = tf_compat.scatter_add(
+                    var, dst.tf_indices, val, use_locking=False
+                )
                 self.write_types["scatter_add"] += 1
             else:
-                result = tf_compat.scatter_update(var, dst.tf_indices, val,
-                                                  use_locking=False)
+                result = tf_compat.scatter_update(
+                    var, dst.tf_indices, val, use_locking=False
+                )
                 self.write_types["scatter_update"] += 1
 
             self.bases[dst.key] = result
@@ -373,9 +399,11 @@ class SignalDict(Mapping):
         if force_copy or src.tf_slice is None:
             result = tf.gather(var, src.tf_indices)
             self.read_types["gather"] += 1
-        elif (src.indices[0] == 0
-              and src.indices[-1] == var.get_shape()[0] - 1
-              and len(src.indices) == var.get_shape()[0]):
+        elif (
+            src.indices[0] == 0
+            and src.indices[-1] == var.get_shape()[0] - 1
+            and len(src.indices) == var.get_shape()[0]
+        ):
             result = var
             self.read_types["identity"] += 1
         else:
@@ -451,8 +479,9 @@ class SignalDict(Mapping):
 
         indices = np.concatenate([s.indices for s in sigs], axis=0)
 
-        output = self.get_tensor_signal(indices, key, sigs[0].dtype, shape,
-                                        sigs[0].minibatched, label=label)
+        output = self.get_tensor_signal(
+            indices, key, sigs[0].dtype, shape, sigs[0].minibatched, label=label
+        )
 
         return output
 
@@ -478,23 +507,28 @@ class SignalDict(Mapping):
             A TensorSignal representing the newly created variable.
         """
         sig = self.get_tensor_signal(
-            np.arange(shape[0]), object(), self.dtype, shape,
-            minibatched, label=name)
+            np.arange(shape[0]), object(), self.dtype, shape, minibatched, label=name
+        )
 
         with tf_compat.variable_scope(
-                tf_compat.get_default_graph().get_name_scope(),
-                reuse=False):
+            tf_compat.get_default_graph().get_name_scope(), reuse=False
+        ):
             var = tf_compat.get_local_variable(
-                name, shape=sig.full_shape, dtype=sig.dtype, trainable=False,
+                name,
+                shape=sig.full_shape,
+                dtype=sig.dtype,
+                trainable=False,
                 initializer=tf_compat.initializers.zeros(),
-                use_resource=False)
+                use_resource=False,
+            )
 
         self.internal_vars[sig.key] = var
 
         return sig
 
-    def get_tensor_signal(self, indices, key, dtype, shape, minibatched,
-                          signal=None, label="TensorSignal"):
+    def get_tensor_signal(
+        self, indices, key, dtype, shape, minibatched, signal=None, label="TensorSignal"
+    ):
         """
         Creates a new ``TensorSignal`` with the given properties.
 
@@ -529,17 +563,23 @@ class SignalDict(Mapping):
         """
 
         tensor_sig = TensorSignal(
-            indices, key, dtype, shape,
+            indices,
+            key,
+            dtype,
+            shape,
             self.minibatch_size if minibatched else None,
-            self.constant, label=label)
+            self.constant,
+            label=label,
+        )
 
         if signal is not None:
             if is_sparse(signal):
                 assert len(indices) == signal.size
                 assert shape == (signal.size,)
             else:
-                assert len(indices) == (1 if len(signal.shape) == 0 else
-                                        signal.shape[0])
+                assert len(indices) == (
+                    1 if len(signal.shape) == 0 else signal.shape[0]
+                )
                 assert signal.size == np.prod(shape)
             assert signal.minibatched == minibatched
             self[signal] = tensor_sig
@@ -578,6 +618,7 @@ class SignalDict(Mapping):
         dtype = tf.as_dtype(dtype)
 
         if value.nbytes > cutoff:
+
             def make_ph(shape, dtype, **_):
                 ph = tf_compat.placeholder(dtype, shape)
                 self.constant_phs[ph] = value
@@ -593,9 +634,13 @@ class SignalDict(Mapping):
                 with tf.device(None):
                     const_var = tf_compat.get_variable(
                         "constant_%d" % len(self.constant_phs),
-                        initializer=make_ph, shape=value.shape, dtype=dtype,
-                        collections=["constants"], trainable=False,
-                        use_resource=False)
+                        initializer=make_ph,
+                        shape=value.shape,
+                        dtype=dtype,
+                        collections=["constants"],
+                        trainable=False,
+                        use_resource=False,
+                    )
 
                 return tf.identity(const_var)
         else:
@@ -632,11 +677,10 @@ class SignalDict(Mapping):
             return tf.constant(vals[0], dtype=tf.as_dtype(dtype))
 
         assert len(op_sizes) == len(ops)
-        v = np.zeros([sum(op_sizes)] + [1] * (ndims - 1),
-                     dtype=dtype)
+        v = np.zeros([sum(op_sizes)] + [1] * (ndims - 1), dtype=dtype)
         k = 0
         for val, size in zip(vals, op_sizes):
-            v[k:k + size] = val
+            v[k : k + size] = val
             k += size
         return self.constant(v, dtype=dtype)
 

@@ -94,10 +94,11 @@ def test_truncation(truncation):
     duration = 10 if truncation is None else truncation
 
     with pytest.warns(None) as w:
-        for i, (o, d) in enumerate(utils.minibatch_generator(
-                data, 2, shuffle=False, truncation=truncation)):
-            assert np.allclose(d["a"], data["a"][:, o:o + duration])
-            assert np.allclose(d["b"], data["b"][:, o:o + duration])
+        for i, (o, d) in enumerate(
+            utils.minibatch_generator(data, 2, shuffle=False, truncation=truncation)
+        ):
+            assert np.allclose(d["a"], data["a"][:, o : o + duration])
+            assert np.allclose(d["b"], data["b"][:, o : o + duration])
 
     # pylint: disable=undefined-loop-variable
     assert i == 10 // duration - (10 % duration == 0)
@@ -105,8 +106,7 @@ def test_truncation(truncation):
     assert len(w) == (1 if truncation == 3 else 0)
 
     # check truncation with n_steps input
-    for i, (o, d) in enumerate(utils.minibatch_generator(
-            10, None, truncation=3)):
+    for i, (o, d) in enumerate(utils.minibatch_generator(10, None, truncation=3)):
         assert o == i * 3
         if i < 3:
             assert d == 3

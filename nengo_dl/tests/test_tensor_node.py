@@ -88,8 +88,9 @@ def test_validation(Simulator):
 def test_node(Simulator):
     minibatch_size = 3
     with nengo.Network() as net:
-        node0 = TensorNode(lambda t: tf.tile(tf.reshape(t, (1, -1)),
-                                             (minibatch_size, 1)))
+        node0 = TensorNode(
+            lambda t: tf.tile(tf.reshape(t, (1, -1)), (minibatch_size, 1))
+        )
         node1 = TensorNode(lambda t, x: tf.sin(x), size_in=1)
         nengo.Connection(node0, node1, synapse=None)
 
@@ -174,7 +175,8 @@ def test_reshaped(sess):
     @reshaped((4, 3))
     def my_func(_, a):
         with tf.control_dependencies(
-                [tf_compat.assert_equal(tf.shape(input=a), (5, 4, 3))]):
+            [tf_compat.assert_equal(tf.shape(input=a), (5, 4, 3))]
+        ):
             return tf.identity(a)
 
     y = my_func(None, x)
@@ -194,28 +196,31 @@ def test_tensor_layer(Simulator):
 
         # check that arguments are passed to layer function
         layer1 = tensor_layer(
-            layer0, lambda x, axis: tf.reduce_sum(input_tensor=x, axis=axis),
-            axis=1, shape_in=(2, 6))
+            layer0,
+            lambda x, axis: tf.reduce_sum(input_tensor=x, axis=axis),
+            axis=1,
+            shape_in=(2, 6),
+        )
         assert layer1.size_out == 6
         p1 = nengo.Probe(layer1)
 
         # check that ensemble layers work
-        layer2 = tensor_layer(layer1, nengo.RectifiedLinear(), gain=[1] * 6,
-                              bias=[-20] * 6)
+        layer2 = tensor_layer(
+            layer1, nengo.RectifiedLinear(), gain=[1] * 6, bias=[-20] * 6
+        )
         assert isinstance(layer2, nengo.ensemble.Neurons)
         assert np.allclose(layer2.ensemble.gain, 1)
         assert np.allclose(layer2.ensemble.bias, -20)
         p2 = nengo.Probe(layer2)
 
         # check that size_in can be inferred from transform
-        layer3 = tensor_layer(layer2, lambda x: x,
-                              transform=np.ones((1, 6)))
+        layer3 = tensor_layer(layer2, lambda x: x, transform=np.ones((1, 6)))
         assert layer3.size_in == 1
 
         # check that size_in can be inferred from shape_in
         layer4 = tensor_layer(
-            layer3, lambda x: x, transform=nengo.dists.Uniform(-1, 1),
-            shape_in=(2,))
+            layer3, lambda x: x, transform=nengo.dists.Uniform(-1, 1), shape_in=(2,)
+        )
         assert layer4.size_in == 2
 
     with Simulator(net, minibatch_size=2) as sim:
@@ -237,7 +242,8 @@ def test_reuse_vars(Simulator):
         # issue with creating variables inside while loops
         with tf.control_dependencies(None):
             w = tf_compat.get_variable(
-                "weights", initializer=tf.constant(2.0), use_resource=False)
+                "weights", initializer=tf.constant(2.0), use_resource=False
+            )
 
         return x * tf.cast(w, x.dtype)
 
@@ -248,9 +254,14 @@ def test_reuse_vars(Simulator):
         node = TensorNode(my_func, size_in=1)
         node2 = TensorNode(
             lambda _, x: tf_compat.layers.dense(
-                x, units=10, use_bias=False,
-                kernel_initializer=tf_compat.initializers.constant(3)),
-            size_in=1, size_out=10)
+                x,
+                units=10,
+                use_bias=False,
+                kernel_initializer=tf_compat.initializers.constant(3),
+            ),
+            size_in=1,
+            size_out=10,
+        )
         p = nengo.Probe(node)
         p2 = nengo.Probe(node2)
         nengo.Connection(inp, node, synapse=None)

@@ -66,14 +66,13 @@ class Builder:
 
             if type(ops[0]) not in Builder.builders:
                 raise BuildError(
-                    "No registered builder for operators of type %r" %
-                    type(ops[0]))
+                    "No registered builder for operators of type %r" % type(ops[0])
+                )
 
             BuildClass = Builder.builders[type(ops[0])]
 
             with self.name_scope(ops):
-                self.op_builds[ops] = BuildClass(ops, self.signals,
-                                                 self.config)
+                self.op_builds[ops] = BuildClass(ops, self.signals, self.config)
 
             if progress is not None:
                 progress.step()
@@ -141,7 +140,8 @@ class Builder:
         """Returns a new TensorFlow name scope for the given ops."""
 
         return self.graph.name_scope(
-            utils.sanitize_name(Builder.builders[type(ops[0])].__name__))
+            utils.sanitize_name(Builder.builders[type(ops[0])].__name__)
+        )
 
     @classmethod
     def register(cls, nengo_op):
@@ -159,8 +159,9 @@ class Builder:
                 warnings.warn("Build classes should inherit from OpBuilder")
 
             if nengo_op in cls.builders:
-                warnings.warn("Operator '%s' already has a builder. "
-                              "Overwriting." % nengo_op)
+                warnings.warn(
+                    "Operator '%s' already has a builder. Overwriting." % nengo_op
+                )
 
             cls.builders[nengo_op] = build_class
             return build_class
@@ -168,8 +169,9 @@ class Builder:
         return register_builder
 
 
-class BuildConfig(namedtuple("BuildConfig", (
-        "inference_only", "lif_smoothing", "cpu_only"))):
+class BuildConfig(
+    namedtuple("BuildConfig", ("inference_only", "lif_smoothing", "cpu_only"))
+):
     """
     Stores configuration parameters that may be relevant to parts of the
     build process.
@@ -314,11 +316,13 @@ class NengoBuilder(builder.Builder):
             # first try building obj using any custom build functions that have
             # been registered by Nengo DL
             return builder.Builder.build.__func__(
-                NengoBuilder, model, obj, *args, **kwargs)
+                NengoBuilder, model, obj, *args, **kwargs
+            )
         except BuildError:
             # fallback on normal nengo builder
             return builder.Builder.build.__func__(
-                builder.Builder, model, obj, *args, **kwargs)
+                builder.Builder, model, obj, *args, **kwargs
+            )
 
 
 class NengoModel(builder.Model):

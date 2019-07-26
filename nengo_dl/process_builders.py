@@ -17,8 +17,15 @@ import tensorflow as tf
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
 from nengo_dl.compat import (
-    tf_compat, make_linear_step, NoX, OneX, NoD, General, make_process_state,
-    make_process_step)
+    tf_compat,
+    make_linear_step,
+    NoX,
+    OneX,
+    NoD,
+    General,
+    make_process_state,
+    make_process_step,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,30 +46,29 @@ class GenericProcessBuilder(OpBuilder):
     def __init__(self, ops, signals, config):
         super(GenericProcessBuilder, self).__init__(ops, signals, config)
 
-        self.input_data = (None if ops[0].input is None else
-                           signals.combine([op.input for op in ops]))
+        self.input_data = (
+            None if ops[0].input is None else signals.combine([op.input for op in ops])
+        )
         self.output_data = signals.combine([op.output for op in ops])
         self.state_data = [
             signals.combine([list(op.state.values())[i] for op in ops])
-            for i in range(len(ops[0].state))]
+            for i in range(len(ops[0].state))
+        ]
         self.mode = "inc" if ops[0].mode == "inc" else "update"
         self.prev_result = []
 
         # build the step function for each process
-        self.step_fs = [[None for _ in range(signals.minibatch_size)]
-                        for _ in ops]
+        self.step_fs = [[None for _ in range(signals.minibatch_size)] for _ in ops]
 
         # `merged_func` calls the step function for each process and
         # combines the result
         @utils.align_func(
-            [self.output_data.full_shape]
-            + [s.full_shape for s in self.state_data],
-            [self.output_data.dtype]
-            + [s.dtype for s in self.state_data])
+            [self.output_data.full_shape] + [s.full_shape for s in self.state_data],
+            [self.output_data.dtype] + [s.dtype for s in self.state_data],
+        )
         def merged_func(time, *input_state):  # pragma: no cover (runs in TF)
             if any(x is None for a in self.step_fs for x in a):
-                raise SimulationError(
-                    "build_post has not been called for %s" % self)
+                raise SimulationError("build_post has not been called for %s" % self)
 
             if self.input_data is None:
                 input = None
@@ -81,7 +87,7 @@ class GenericProcessBuilder(OpBuilder):
             for i, op in enumerate(ops):
                 if op.input is not None:
                     input_shape = op.input.shape[0]
-                    func_input = input[input_offset:input_offset + input_shape]
+                    func_input = input[input_offset : input_offset + input_shape]
                     input_offset += input_shape
 
                 mini_out = []
@@ -94,11 +100,11 @@ class GenericProcessBuilder(OpBuilder):
 
         self.merged_func = merged_func
         self.merged_func.__name__ = utils.sanitize_name(
-            "_".join([type(op.process).__name__ for op in ops]))
+            "_".join([type(op.process).__name__ for op in ops])
+        )
 
     def build_step(self, signals):
-        input = ([] if self.input_data is None
-                 else [signals.gather(self.input_data)])
+        input = [] if self.input_data is None else [signals.gather(self.input_data)]
         state = [signals.gather(s) for s in self.state_data]
 
         # note: we need to make sure that the previous call to this function
@@ -106,9 +112,11 @@ class GenericProcessBuilder(OpBuilder):
         # functions are thread safe
         with tf.control_dependencies(self.prev_result), tf.device("/cpu:0"):
             result = tf_compat.py_func(
-                self.merged_func, [signals.time] + input + state,
+                self.merged_func,
+                [signals.time] + input + state,
                 [self.output_data.dtype] + [s.dtype for s in self.state_data],
-                name=self.merged_func.__name__)
+                name=self.merged_func.__name__,
+            )
             output = result[0]
             state = result[1:]
         self.prev_result = [output]
@@ -125,30 +133,29 @@ class GenericProcessBuilder(OpBuilder):
             make_process_state(
                 op.process,
                 op.input.shape if op.input is not None else (0,),
-                op.output.shape, signals.dt_val)
-            for op in ops]
+                op.output.shape,
+                signals.dt_val,
+            )
+            for op in ops
+        ]
 
         # build all the states into combined array with shape
         # (n_states, n_ops, state_d, minibatch_size)
-        combined_states = [[None for _ in ops]
-                           for _ in range(len(ops[0].state))]
+        combined_states = [[None for _ in ops] for _ in range(len(ops[0].state))]
         for i, op in enumerate(ops):
             for j, s in enumerate(step_states[i].values()):
                 # duplicate state for each minibatch
                 if signals[list(op.state.values())[j]].minibatched:
-                    s = np.tile(s[..., None],
-                                (1,) * s.ndim + (signals.minibatch_size,))
+                    s = np.tile(s[..., None], (1,) * s.ndim + (signals.minibatch_size,))
                 combined_states[j][i] = s
 
         # combine op states along first dimension, giving shape
         # (n_states, n_ops * state_d, minibatch_size)
         # (keeping track of the offset of where each op's state lies in the
         # combined array)
-        offsets = [[s.shape[0] for s in state]
-                   for state in combined_states]
+        offsets = [[s.shape[0] for s in state] for state in combined_states]
         offsets = np.cumsum(offsets, axis=-1)
-        self.step_states = [np.concatenate(state, axis=0)
-                            for state in combined_states]
+        self.step_states = [np.concatenate(state, axis=0) for state in combined_states]
 
         # build the step functions
         for i, op in enumerate(ops):
@@ -166,8 +173,11 @@ class GenericProcessBuilder(OpBuilder):
                 self.step_fs[i][j] = make_process_step(
                     op.process,
                     op.input.shape if op.input is not None else (0,),
-                    op.output.shape, signals.dt_val, op.process.get_rng(rng),
-                    state)
+                    op.output.shape,
+                    signals.dt_val,
+                    op.process.get_rng(rng),
+                    state,
+                )
 
 
 class LowpassBuilder(OpBuilder):
@@ -192,8 +202,9 @@ class LowpassBuilder(OpBuilder):
                 num = 1
                 den = 0
             else:
-                num, den, _ = cont2discrete((op.process.num, op.process.den),
-                                            signals.dt_val, method="zoh")
+                num, den, _ = cont2discrete(
+                    (op.process.num, op.process.den), signals.dt_val, method="zoh"
+                )
                 num = num.flatten()
 
                 num = num[1:] if num[0] == 0 else num
@@ -233,8 +244,7 @@ class LowpassBuilder(OpBuilder):
         input = signals.gather(self.input_data)
         output = signals.gather(self.output_data)
 
-        signals.scatter(self.output_data,
-                        self.dens * output + self.nums * input)
+        signals.scatter(self.output_data, self.dens * output + self.nums * input)
 
         # method using internal state signal
         # note: this isn't used for efficiency reasons (we can avoid an extra
@@ -271,8 +281,10 @@ class LinearFilterBuilder(OpBuilder):
 
         steps = [
             make_linear_step(
-                op.process, op.input.shape, op.output.shape, signals.dt_val)
-            for op in ops]
+                op.process, op.input.shape, op.output.shape, signals.dt_val
+            )
+            for op in ops
+        ]
         self.step_type = type(steps[0])
         assert all(type(step) == self.step_type for step in steps)
 
@@ -286,19 +298,19 @@ class LinearFilterBuilder(OpBuilder):
             self.C = None
             # combine D scalars for each op, and broadcast along signal_d
             self.D = signals.constant(
-                np.concatenate([step.D[:, None] for step in steps]),
-                dtype=signals.dtype)
+                np.concatenate([step.D[:, None] for step in steps]), dtype=signals.dtype
+            )
 
             assert self.D.get_shape() == (self.n_ops, 1)
         elif self.step_type == OneX:
             # combine A scalars for each op, and broadcast along state_d
             self.A = signals.constant(
-                np.concatenate([step.A for step in steps]),
-                dtype=signals.dtype)
+                np.concatenate([step.A for step in steps]), dtype=signals.dtype
+            )
             # combine B and C scalars for each op, and broadcast along signal_d
             self.B = signals.constant(
-                np.concatenate([step.B * step.C for step in steps]),
-                dtype=signals.dtype)
+                np.concatenate([step.B * step.C for step in steps]), dtype=signals.dtype
+            )
             self.C = None
             self.D = None
 
@@ -306,34 +318,33 @@ class LinearFilterBuilder(OpBuilder):
             assert self.B.get_shape() == (self.n_ops, 1)
         else:
             self.A = signals.constant(
-                np.stack([step.A for step in steps], axis=0),
-                dtype=signals.dtype)
+                np.stack([step.A for step in steps], axis=0), dtype=signals.dtype
+            )
             self.B = signals.constant(
-                np.stack([step.B for step in steps], axis=0),
-                dtype=signals.dtype)
+                np.stack([step.B for step in steps], axis=0), dtype=signals.dtype
+            )
             self.C = signals.constant(
-                np.stack([step.C for step in steps], axis=0),
-                dtype=signals.dtype)
+                np.stack([step.C for step in steps], axis=0), dtype=signals.dtype
+            )
 
             if self.step_type == NoD:
                 self.D = None
             else:
                 self.D = signals.constant(
                     np.concatenate([step.D[:, None, None] for step in steps]),
-                    dtype=signals.dtype)
+                    dtype=signals.dtype,
+                )
                 assert self.D.get_shape() == (self.n_ops, 1, 1)
 
             # create a variable to represent the internal state of the filter
             if LooseVersion(nengo_version) < "3.0.0":
                 self.state_data = signals.make_internal(
-                    "state",
-                    (self.n_ops * self.state_d, self.signal_d))
+                    "state", (self.n_ops * self.state_d, self.signal_d)
+                )
             else:
-                self.state_data = signals.combine(
-                    [op.state["X"] for op in ops])
+                self.state_data = signals.combine([op.state["X"] for op in ops])
 
-            assert self.A.get_shape() == (
-                self.n_ops, self.state_d, self.state_d)
+            assert self.A.get_shape() == (self.n_ops, self.state_d, self.state_d)
             assert self.B.get_shape() == (self.n_ops, self.state_d, 1)
             assert self.C.get_shape() == (self.n_ops, 1, self.state_d)
 
@@ -354,8 +365,10 @@ class LinearFilterBuilder(OpBuilder):
             input = tf.reshape(input, (self.n_ops, 1, -1))
 
             state = signals.gather(self.state_data)
-            state = tf.reshape(state, (self.n_ops, self.state_d,
-                                       self.signal_d * signals.minibatch_size))
+            state = tf.reshape(
+                state,
+                (self.n_ops, self.state_d, self.signal_d * signals.minibatch_size),
+            )
 
             if self.step_type == NoD:
                 # for NoD, we update the state before computing the output
@@ -397,10 +410,9 @@ class SimProcessBuilder(OpBuilder):
     # we use OrderedDict because it is important that Lowpass come before
     # LinearFilter (since we'll be using isinstance to find the right builder,
     # and Lowpass is a subclass of LinearFilter)
-    TF_PROCESS_IMPL = OrderedDict([
-        (Lowpass, LowpassBuilder),
-        (LinearFilter, LinearFilterBuilder),
-    ])
+    TF_PROCESS_IMPL = OrderedDict(
+        [(Lowpass, LowpassBuilder), (LinearFilter, LinearFilterBuilder)]
+    )
 
     def __init__(self, ops, signals, config):
         super(SimProcessBuilder, self).__init__(ops, signals, config)
@@ -442,10 +454,12 @@ class SimProcessBuilder(OpBuilder):
                 # we can only merge linearfilters that have the same state
                 # dimensionality (den), the same step type (num), and the same
                 # input signal dimensionality
-                if (not isinstance(y.process, LinearFilter)
-                        or len(y.process.num) != len(x.process.num)
-                        or len(y.process.den) != len(x.process.den)
-                        or x.input.shape[0] != y.input.shape[0]):
+                if (
+                    not isinstance(y.process, LinearFilter)
+                    or len(y.process.num) != len(x.process.num)
+                    or len(y.process.den) != len(x.process.den)
+                    or x.input.shape[0] != y.input.shape[0]
+                ):
                     return False
             else:
                 raise NotImplementedError()

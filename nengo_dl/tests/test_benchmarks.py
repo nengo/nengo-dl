@@ -11,8 +11,9 @@ from nengo_dl import benchmarks, SoftLIFRate
 
 
 @pytest.mark.parametrize(
-    "benchmark", (benchmarks.cconv, benchmarks.integrator, benchmarks.pes,
-                  benchmarks.basal_ganglia))
+    "benchmark",
+    (benchmarks.cconv, benchmarks.integrator, benchmarks.pes, benchmarks.basal_ganglia),
+)
 def test_networks(benchmark):
     dimensions = 16
     neurons_per_d = 10
@@ -64,24 +65,27 @@ def test_spaun():
 
 @pytest.mark.parametrize(
     "dimensions, neurons_per_d, neuron_type, n_ensembles, n_connections",
-    ((1, 10, nengo.RectifiedLinear(), 5, 3),
-     (2, 4, nengo.LIF(), 10, 2)))
-def test_random_network(dimensions, neurons_per_d, neuron_type, n_ensembles,
-                        n_connections):
-    net = benchmarks.random_network(dimensions, neurons_per_d, neuron_type,
-                                    n_ensembles, n_connections)
-    _test_random(net, dimensions, neurons_per_d, neuron_type, n_ensembles,
-                 n_connections)
+    ((1, 10, nengo.RectifiedLinear(), 5, 3), (2, 4, nengo.LIF(), 10, 2)),
+)
+def test_random_network(
+    dimensions, neurons_per_d, neuron_type, n_ensembles, n_connections
+):
+    net = benchmarks.random_network(
+        dimensions, neurons_per_d, neuron_type, n_ensembles, n_connections
+    )
+    _test_random(
+        net, dimensions, neurons_per_d, neuron_type, n_ensembles, n_connections
+    )
 
 
-def _test_random(net, dimensions, neurons_per_d, neuron_type, n_ensembles,
-                 n_connections):
+def _test_random(
+    net, dimensions, neurons_per_d, neuron_type, n_ensembles, n_connections
+):
     assert net.inp.size_out == dimensions
     assert net.out.size_in == dimensions
     assert len(net.all_ensembles) == n_ensembles
     assert all(ens.neuron_type == neuron_type for ens in net.all_ensembles)
-    assert all(ens.n_neurons == dimensions * neurons_per_d
-               for ens in net.all_ensembles)
+    assert all(ens.n_neurons == dimensions * neurons_per_d for ens in net.all_ensembles)
 
     pre_conns = defaultdict(list)
     post_conns = defaultdict(list)
@@ -102,11 +106,16 @@ def test_run_profile(train, pytestconfig):
     net = benchmarks.integrator(3, 2, nengo.RectifiedLinear())
 
     benchmarks.run_profile(
-        net, train=train, n_steps=10, do_profile=False,
+        net,
+        train=train,
+        n_steps=10,
+        do_profile=False,
         device=pytestconfig.getvalue("--device"),
         unroll_simulation=pytest.config.getvalue("--unroll-simulation"),
-        dtype=(tf.float32 if pytest.config.getvalue("dtype") == "float32" else
-               tf.float64))
+        dtype=(
+            tf.float32 if pytest.config.getvalue("dtype") == "float32" else tf.float64
+        ),
+    )
 
     assert net.config[net].inference_only == (not train)
 
@@ -123,14 +132,16 @@ def test_cli():
         "--neurons_per_d %d --neuron_type SoftLIFRate "
         "--kwarg n_ensembles=%d --kwarg connections_per_ensemble=%d "
         "profile --no-train --n_steps 10 --batch_size 2 --device /cpu:0 "
-        "--unroll 5 --time-only" % (
-            dimensions, neurons_per_d, n_ensembles, n_connections)).split()
+        "--unroll 5 --time-only"
+        % (dimensions, neurons_per_d, n_ensembles, n_connections)
+    ).split()
     obj = {}
     with pytest.raises(SystemExit):
         benchmarks.main(obj=obj)
 
-    _test_random(obj["net"], dimensions, neurons_per_d, SoftLIFRate(),
-                 n_ensembles, n_connections)
+    _test_random(
+        obj["net"], dimensions, neurons_per_d, SoftLIFRate(), n_ensembles, n_connections
+    )
 
     assert 0 < obj["time"] < 1
 
@@ -144,19 +155,27 @@ def test_cli():
 @pytest.mark.performance
 @pytest.mark.parametrize(
     "net, train, minibatch_size, min, max",
-    [(benchmarks.cconv(128, 64, nengo.RectifiedLinear()),
-      False, 64, 0.7, 0.85),
-     (benchmarks.cconv(128, 64, nengo.LIF()),
-      False, 64, 1.6, 1.8),
-     (benchmarks.integrator(128, 32, nengo.RectifiedLinear()),
-      True, 64, 1.7, 2.1),
-     (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 2.5, 3.0),
-     (benchmarks.random_network(
-         64, 32, nengo.RectifiedLinear(), n_ensembles=20,
-         connections_per_ensemble=5, seed=0),
-      False, None, 0.4, 0.6),
-     # (benchmarks.spaun(1), False, None, 8.02, 9.52),
-     ]
+    [
+        (benchmarks.cconv(128, 64, nengo.RectifiedLinear()), False, 64, 0.7, 0.85),
+        (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, 1.6, 1.8),
+        (benchmarks.integrator(128, 32, nengo.RectifiedLinear()), True, 64, 1.7, 2.1),
+        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 2.5, 3.0),
+        (
+            benchmarks.random_network(
+                64,
+                32,
+                nengo.RectifiedLinear(),
+                n_ensembles=20,
+                connections_per_ensemble=5,
+                seed=0,
+            ),
+            False,
+            None,
+            0.4,
+            0.6,
+        ),
+        # (benchmarks.spaun(1), False, None, 8.02, 9.52),
+    ],
 )
 def test_performance(net, train, minibatch_size, min, max):
     # performance is based on ABR GPU server
@@ -168,7 +187,13 @@ def test_performance(net, train, minibatch_size, min, max):
     # NengoDL version: 2.1.2
 
     time = benchmarks.run_profile(
-        net, minibatch_size=minibatch_size, train=train,
-        n_steps=1000, unroll_simulation=25, progress_bar=False,
-        do_profile=False, reps=5)
+        net,
+        minibatch_size=minibatch_size,
+        train=train,
+        n_steps=1000,
+        unroll_simulation=25,
+        progress_bar=False,
+        do_profile=False,
+        reps=5,
+    )
     assert min < time < max

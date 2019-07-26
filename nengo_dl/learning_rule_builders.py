@@ -4,7 +4,12 @@ Build classes for Nengo learning rule operators.
 
 from nengo.builder import Signal
 from nengo.builder.learning_rules import (
-    SimBCM, SimOja, SimVoja, get_post_ens, build_or_passthrough)
+    SimBCM,
+    SimOja,
+    SimVoja,
+    get_post_ens,
+    build_or_passthrough,
+)
 from nengo.builder.operator import Reset, DotInc, Copy
 from nengo.learning_rules import PES
 import numpy as np
@@ -26,14 +31,19 @@ class SimBCMBuilder(OpBuilder):
         self.theta_data = signals.combine([op.theta for op in ops])
 
         self.pre_data = signals.combine(
-            [op.pre_filtered for op in ops
-             for _ in range(op.post_filtered.shape[0])])
-        self.pre_data = self.pre_data.reshape((self.post_data.shape[0],
-                                               ops[0].pre_filtered.shape[0]))
+            [op.pre_filtered for op in ops for _ in range(op.post_filtered.shape[0])]
+        )
+        self.pre_data = self.pre_data.reshape(
+            (self.post_data.shape[0], ops[0].pre_filtered.shape[0])
+        )
 
         self.learning_rate = signals.op_constant(
-            ops, [op.post_filtered.shape[0] for op in ops], "learning_rate",
-            signals.dtype, ndims=3)
+            ops,
+            [op.post_filtered.shape[0] for op in ops],
+            "learning_rate",
+            signals.dtype,
+            ndims=3,
+        )
 
         self.output_data = signals.combine([op.delta for op in ops])
 
@@ -66,21 +76,30 @@ class SimOjaBuilder(OpBuilder):
         self.post_data = signals.combine([op.post_filtered for op in ops])
 
         self.pre_data = signals.combine(
-            [op.pre_filtered for op in ops
-             for _ in range(op.post_filtered.shape[0])])
-        self.pre_data = self.pre_data.reshape((self.post_data.shape[0],
-                                               ops[0].pre_filtered.shape[0]))
+            [op.pre_filtered for op in ops for _ in range(op.post_filtered.shape[0])]
+        )
+        self.pre_data = self.pre_data.reshape(
+            (self.post_data.shape[0], ops[0].pre_filtered.shape[0])
+        )
 
         self.weights_data = signals.combine([op.weights for op in ops])
         self.output_data = signals.combine([op.delta for op in ops])
 
         self.learning_rate = signals.op_constant(
-            ops, [op.post_filtered.shape[0] for op in ops], "learning_rate",
-            signals.dtype, ndims=3)
+            ops,
+            [op.post_filtered.shape[0] for op in ops],
+            "learning_rate",
+            signals.dtype,
+            ndims=3,
+        )
 
         self.beta = signals.op_constant(
-            ops, [op.post_filtered.shape[0] for op in ops], "beta",
-            signals.dtype, ndims=3)
+            ops,
+            [op.post_filtered.shape[0] for op in ops],
+            "beta",
+            signals.dtype,
+            ndims=3,
+        )
 
     def build_step(self, signals):
         pre = signals.gather(self.pre_data)
@@ -115,24 +134,29 @@ class SimVojaBuilder(OpBuilder):
         self.post_data = signals.combine([op.post_filtered for op in ops])
 
         self.pre_data = signals.combine(
-            [op.pre_decoded for op in ops
-             for _ in range(op.post_filtered.shape[0])])
-        self.pre_data = self.pre_data.reshape((self.post_data.shape[0],
-                                               ops[0].pre_decoded.shape[0]))
+            [op.pre_decoded for op in ops for _ in range(op.post_filtered.shape[0])]
+        )
+        self.pre_data = self.pre_data.reshape(
+            (self.post_data.shape[0], ops[0].pre_decoded.shape[0])
+        )
 
         self.learning_data = signals.combine(
-            [op.learning_signal for op in ops
-             for _ in range(op.post_filtered.shape[0])])
+            [op.learning_signal for op in ops for _ in range(op.post_filtered.shape[0])]
+        )
         self.encoder_data = signals.combine([op.scaled_encoders for op in ops])
         self.output_data = signals.combine([op.delta for op in ops])
 
         self.scale = signals.constant(
             np.concatenate([op.scale[:, None, None] for op in ops], axis=0),
-            dtype=signals.dtype)
+            dtype=signals.dtype,
+        )
 
         self.learning_rate = signals.op_constant(
-            ops, [op.post_filtered.shape[0] for op in ops], "learning_rate",
-            signals.dtype)
+            ops,
+            [op.post_filtered.shape[0] for op in ops],
+            "learning_rate",
+            signals.dtype,
+        )
 
     def build_step(self, signals):
         pre = signals.gather(self.pre_data)
@@ -140,8 +164,7 @@ class SimVojaBuilder(OpBuilder):
         learning_signal = signals.gather(self.learning_data)
         scaled_encoders = signals.gather(self.encoder_data)
 
-        alpha = tf.expand_dims(
-            self.learning_rate * signals.dt * learning_signal, 1)
+        alpha = tf.expand_dims(self.learning_rate * signals.dt * learning_signal, 1)
         post = tf.expand_dims(post, 1)
 
         update = alpha * (self.scale * post * pre - post * scaled_encoders)
@@ -180,10 +203,9 @@ def build_pes(model, pes, rule):
     # Create input error signal
     error = Signal(np.zeros(rule.size_in), name="PES:error")
     model.add_op(Reset(error))
-    model.sig[rule]['in'] = error  # error connection will attach here
+    model.sig[rule]["in"] = error  # error connection will attach here
 
-    acts = build_or_passthrough(
-        model, pes.pre_synapse, model.sig[conn.pre_obj]["out"])
+    acts = build_or_passthrough(model, pes.pre_synapse, model.sig[conn.pre_obj]["out"])
 
     if not conn.is_decoded:
         # multiply error by post encoders to get a per-neuron error
@@ -196,21 +218,20 @@ def build_pes(model, pes, rule):
             # `error` out to the full base dimensionality and then do the
             # dotinc with the full encoder matrix
             padded_error = Signal(np.zeros(encoders.shape[1]))
-            model.add_op(Copy(error, padded_error,
-                              dst_slice=conn.post_slice))
+            model.add_op(Copy(error, padded_error, dst_slice=conn.post_slice))
         else:
             padded_error = error
 
         # error = dot(encoders, error)
         local_error = Signal(np.zeros(post.n_neurons), name="PES:encoded")
         model.add_op(Reset(local_error))
-        model.add_op(DotInc(encoders, padded_error, local_error,
-                            tag="PES:encode"))
+        model.add_op(DotInc(encoders, padded_error, local_error, tag="PES:encode"))
     else:
         local_error = error
 
-    model.operators.append(SimPES(acts, local_error, model.sig[rule]["delta"],
-                                  pes.learning_rate))
+    model.operators.append(
+        SimPES(acts, local_error, model.sig[rule]["delta"], pes.learning_rate)
+    )
 
     # expose these for probes
     model.sig[rule]["error"] = error
@@ -225,16 +246,16 @@ class SimPESBuilder(OpBuilder):
         super(SimPESBuilder, self).__init__(ops, signals, config)
 
         self.error_data = signals.combine([op.error for op in ops])
-        self.error_data = self.error_data.reshape(
-            (len(ops), ops[0].error.shape[0], 1))
+        self.error_data = self.error_data.reshape((len(ops), ops[0].error.shape[0], 1))
 
         self.pre_data = signals.combine([op.pre_filtered for op in ops])
         self.pre_data = self.pre_data.reshape(
-            (len(ops), 1, ops[0].pre_filtered.shape[0]))
+            (len(ops), 1, ops[0].pre_filtered.shape[0])
+        )
 
         self.alpha = signals.op_constant(
-            ops, [1 for _ in ops], "learning_rate", signals.dtype, ndims=4) * (
-                -signals.dt_val / ops[0].pre_filtered.shape[0])
+            ops, [1 for _ in ops], "learning_rate", signals.dtype, ndims=4
+        ) * (-signals.dt_val / ops[0].pre_filtered.shape[0])
 
         assert all(op.encoders is None for op in ops)
 
@@ -254,5 +275,7 @@ class SimPESBuilder(OpBuilder):
         # pre inputs must have the same dimensionality so that we can broadcast
         # them when computing the outer product.
         # the error signals also have to have the same shape.
-        return (x.pre_filtered.shape[0] == y.pre_filtered.shape[0]
-                and x.error.shape[0] == y.error.shape[0])
+        return (
+            x.pre_filtered.shape[0] == y.pre_filtered.shape[0]
+            and x.error.shape[0] == y.error.shape[0]
+        )

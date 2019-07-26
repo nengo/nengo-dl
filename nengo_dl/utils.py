@@ -25,10 +25,14 @@ logger = logging.getLogger(__name__)
 # a Session, which will fix certain process-level TensorFlow configuration
 # options the first time it is called
 tf_gpu_installed = subprocess.call(
-    ["python", "-c",
-     "import sys; "
-     "import tensorflow as tf; "
-     "sys.exit(tf.test.is_gpu_available())"])
+    [
+        "python",
+        "-c",
+        "import sys; "
+        "import tensorflow as tf; "
+        "sys.exit(tf.test.is_gpu_available())",
+    ]
+)
 
 
 def sanitize_name(name):
@@ -118,8 +122,8 @@ def align_func(output_shape, output_dtype):
 
             if output is None:
                 raise SimulationError(
-                    "Function %r returned None" %
-                    function_name(func, sanitize=False))
+                    "Function %r returned None" % function_name(func, sanitize=False)
+                )
 
             if single_output:
                 output = [output]
@@ -128,13 +132,14 @@ def align_func(output_shape, output_dtype):
                 try:
                     if not np.all(np.isfinite(o)):
                         raise SimulationError(
-                            "Function %r returned invalid value %r" %
-                            (function_name(func, sanitize=False), o))
+                            "Function %r returned invalid value %r"
+                            % (function_name(func, sanitize=False), o)
+                        )
                 except (TypeError, ValueError):
                     raise SimulationError(
-                        "Function %r returned a value %r of invalid type %r" %
-                        (function_name(func, sanitize=False), o,
-                         type(o)))
+                        "Function %r returned a value %r of invalid type %r"
+                        % (function_name(func, sanitize=False), o, type(o))
+                    )
                 o = np.asarray(o, dtype=output_dtype[i])
                 o = o.reshape(output_shape[i])
                 output[i] = o
@@ -214,8 +219,8 @@ def find_non_differentiable(inputs, outputs):
                 find_non_differentiable(inputs, o.op.inputs)
             except LookupError:
                 raise SimulationError(
-                    "Graph contains non-differentiable "
-                    "elements: %s" % o.op)
+                    "Graph contains non-differentiable elements: %s" % o.op
+                )
 
 
 class MessageBar(progressbar.BouncingBar):
@@ -252,7 +257,7 @@ class MessageBar(progressbar.BouncingBar):
 
         offset = width // 2 - len(msg) // 2
 
-        return line[:offset] + msg + line[offset + len(msg):]
+        return line[:offset] + msg + line[offset + len(msg) :]
 
 
 class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestors
@@ -276,8 +281,7 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
     Launches a separate thread to handle the progress bar display updates.
     """
 
-    def __init__(self, present="", past=None, max_value=1, vars=None,
-                 **kwargs):
+    def __init__(self, present="", past=None, max_value=1, vars=None, **kwargs):
 
         self.present = present
         self.sub_bar = None
@@ -286,21 +290,21 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
         if past is None:
             past = present
 
-        self.msg_bar = MessageBar(
-            msg=present, finish_msg="%s finished in" % past)
+        self.msg_bar = MessageBar(msg=present, finish_msg="%s finished in" % past)
         widgets = [self.msg_bar, " "]
 
         if max_value is None:
             widgets.append(progressbar.Timer(format="%(elapsed)s"))
         else:
-            widgets.append(progressbar.ETA(
-                format="ETA: %(eta)s",
-                format_finished="%(elapsed)s"))
+            widgets.append(
+                progressbar.ETA(format="ETA: %(eta)s", format_finished="%(elapsed)s")
+            )
 
         if vars is not None:
             self.var_vals = progressbar.FormatCustomText(
                 " (" + ", ".join("%s: %%(%s)s" % (v, v) for v in vars) + ")",
-                {v: "---" for v in vars})
+                {v: "---" for v in vars},
+            )
             widgets.append(self.var_vals)
         else:
             self.var_vals = None
@@ -318,8 +322,12 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
             max_value = progressbar.UnknownLength
 
         super(ProgressBar, self).__init__(
-            poll_interval=0.1, widgets=widgets, fd=sys.stdout,
-            max_value=max_value, **kwargs)
+            poll_interval=0.1,
+            widgets=widgets,
+            fd=sys.stdout,
+            max_value=max_value,
+            **kwargs,
+        )
 
     def start(self, **kwargs):
         """Start tracking process, initialize display."""
@@ -371,8 +379,8 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
             self.sub_bar.finish()
 
         self.sub_bar = SubProgressBar(
-            present="%s: %s" % (self.present, msg) if msg else self.present,
-            **kwargs)
+            present="%s: %s" % (self.present, msg) if msg else self.present, **kwargs
+        )
 
         return self.sub_bar
 
@@ -425,8 +433,7 @@ class NullProgressBar(progressbar.NullBar):  # pylint: disable=too-many-ancestor
     Used to replace ProgressBar when we want to disable output.
     """
 
-    def __init__(self, present="", past=None, max_value=1, vars=None,
-                 **kwargs):
+    def __init__(self, present="", past=None, max_value=1, vars=None, **kwargs):
         super(NullProgressBar, self).__init__(max_value=max_value, **kwargs)
 
     def sub(self, *args, **kwargs):
@@ -441,8 +448,7 @@ class NullProgressBar(progressbar.NullBar):  # pylint: disable=too-many-ancestor
         """
 
 
-def minibatch_generator(data, minibatch_size, shuffle=True,
-                        truncation=None, rng=None):
+def minibatch_generator(data, minibatch_size, shuffle=True, truncation=None, rng=None):
     """
     Generator to yield ``minibatch_sized`` subsets from ``inputs`` and
     ``targets``.
@@ -488,10 +494,13 @@ def minibatch_generator(data, minibatch_size, shuffle=True,
         truncation = n_steps
 
     if n_steps % truncation != 0:
-        warnings.warn(UserWarning(
-            "Length of training data (%d) is not an even multiple of "
-            "truncation length (%d); this may result in poor "
-            "training results" % (n_steps, truncation)))
+        warnings.warn(
+            UserWarning(
+                "Length of training data (%d) is not an even multiple of "
+                "truncation length (%d); this may result in poor "
+                "training results" % (n_steps, truncation)
+            )
+        )
 
     if n_inputs is None:
         # no input to divide up, so we just return the
@@ -505,17 +514,17 @@ def minibatch_generator(data, minibatch_size, shuffle=True,
             perm = np.arange(n_inputs)
 
         if n_inputs % minibatch_size != 0:
-            warnings.warn(UserWarning(
-                "Number of data elements (%d) is not an even multiple of "
-                "minibatch size (%d); inputs will be truncated" %
-                (n_inputs, minibatch_size)))
-            perm = perm[:-(n_inputs % minibatch_size)]
+            warnings.warn(
+                UserWarning(
+                    "Number of data elements (%d) is not an even multiple of "
+                    "minibatch size (%d); inputs will be truncated"
+                    % (n_inputs, minibatch_size)
+                )
+            )
+            perm = perm[: -(n_inputs % minibatch_size)]
 
-        for i in range(0, n_inputs - n_inputs % minibatch_size,
-                       minibatch_size):
-            mini_data = {k: v[perm[i:i + minibatch_size]]
-                         for k, v in data.items()}
+        for i in range(0, n_inputs - n_inputs % minibatch_size, minibatch_size):
+            mini_data = {k: v[perm[i : i + minibatch_size]] for k, v in data.items()}
 
             for j in range(0, n_steps, truncation):
-                yield (j, {k: v[:, j:j + truncation]
-                           for k, v in mini_data.items()})
+                yield (j, {k: v[:, j : j + truncation] for k, v in mini_data.items()})

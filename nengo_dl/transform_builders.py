@@ -31,7 +31,9 @@ class ConvIncBuilder(OpBuilder):
             warnings.warn(
                 "TensorFlow does not support convolution with "
                 "channels_last=False on the CPU; inputs will be transformed "
-                "to channels_last=True", UserWarning)
+                "to channels_last=True",
+                UserWarning,
+            )
             force_last = True
         else:
             force_last = False
@@ -41,11 +43,13 @@ class ConvIncBuilder(OpBuilder):
 
         if self.conv.dimensions > len(fmts):
             raise NotImplementedError(
-                "Convolutions > %d dimensions are not supported" % len(fmts))
+                "Convolutions > %d dimensions are not supported" % len(fmts)
+            )
 
         fmt = fmts[self.conv.dimensions - 1]
-        self.fmt = ("N" + fmt + "C" if self.conv.channels_last or force_last
-                    else "NC" + fmt)
+        self.fmt = (
+            "N" + fmt + "C" if self.conv.channels_last or force_last else "NC" + fmt
+        )
 
         self.W_data = signals.combine([op.W for op in ops])
         # all the ops have the same input, so we just use one
@@ -56,7 +60,8 @@ class ConvIncBuilder(OpBuilder):
         assert self.X_data.minibatched
         if self.W_data.minibatched:
             raise NotImplementedError(
-                "Minibatched convolutional weights are not supported")
+                "Minibatched convolutional weights are not supported"
+            )
 
         # set up X transformations
         # move batch to front
@@ -74,7 +79,8 @@ class ConvIncBuilder(OpBuilder):
                 reshape_y = (
                     (signals.minibatch_size,)
                     + self.conv.output_shape.spatial_shape
-                    + (-1, len(ops)))
+                    + (-1, len(ops))
+                )
 
                 # move ops to front and batch to end
                 perm_y = np.arange(self.conv.dimensions + 3)
@@ -86,12 +92,12 @@ class ConvIncBuilder(OpBuilder):
                     perm_y[1] = len(perm_y) - 2
             else:
                 reshape_y = (
-                    (signals.minibatch_size, -1, len(ops))
-                    + self.conv.output_shape.spatial_shape)
+                    signals.minibatch_size,
+                    -1,
+                    len(ops),
+                ) + self.conv.output_shape.spatial_shape
 
-                perm_y = ((2, 1)
-                          + tuple(range(3, self.conv.dimensions + 3))
-                          + (0,))
+                perm_y = (2, 1) + tuple(range(3, self.conv.dimensions + 3)) + (0,)
 
             self.reshape_y = signals.constant(reshape_y)
             self.perm_y = signals.constant(perm_y)
@@ -109,14 +115,15 @@ class ConvIncBuilder(OpBuilder):
         # set up W transformations
         if len(ops) > 1:
             # move ops to end
-            self.W_data = self.W_data.reshape(
-                (len(ops),) + self.conv.kernel_shape)
+            self.W_data = self.W_data.reshape((len(ops),) + self.conv.kernel_shape)
             self.perm_w = signals.constant(
-                np.roll(np.arange(self.conv.dimensions + 3), -1))
+                np.roll(np.arange(self.conv.dimensions + 3), -1)
+            )
 
             # concatenate weights for each op along output channel dimension
             self.reshape_w = signals.constant(
-                self.conv.kernel_size + (self.conv.input_shape.n_channels, -1))
+                self.conv.kernel_size + (self.conv.input_shape.n_channels, -1)
+            )
         else:
             self.perm_w = None
             self.reshape_w = None
@@ -134,8 +141,12 @@ class ConvIncBuilder(OpBuilder):
             W = tf.reshape(W, self.reshape_w)
 
         Y = tf_convolution(
-            input=X, filters=W, strides=self.conv.strides,
-            data_format=self.fmt, padding=self.conv.padding.upper())
+            input=X,
+            filters=W,
+            strides=self.conv.strides,
+            data_format=self.fmt,
+            padding=self.conv.padding.upper(),
+        )
 
         # move batch back to end, ops to front
         if self.reshape_y is not None:
@@ -149,8 +160,10 @@ class ConvIncBuilder(OpBuilder):
         # we allow convolutions to merge if they have the same input signal
         # (as then we can efficiently apply several kernels to the same input).
         # padding/strides/channels/shape also have to match.
-        return (x.X is y.X
-                and x.conv.input_shape.shape == y.conv.input_shape.shape
-                and x.conv.strides == y.conv.strides
-                and x.conv.padding == y.conv.padding
-                and x.conv.channels_last == y.conv.channels_last)
+        return (
+            x.X is y.X
+            and x.conv.input_shape.shape == y.conv.input_shape.shape
+            and x.conv.strides == y.conv.strides
+            and x.conv.padding == y.conv.padding
+            and x.conv.channels_last == y.conv.channels_last
+        )

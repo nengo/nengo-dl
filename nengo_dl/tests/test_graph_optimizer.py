@@ -7,8 +7,7 @@ from nengo.neurons import LIF, LIFRate, Izhikevich, AdaptiveLIF
 from nengo.synapses import Lowpass, Triangle, Alpha, LinearFilter
 from nengo.builder.learning_rules import SimBCM
 from nengo.builder.neurons import SimNeurons
-from nengo.builder.operator import (SimPyFunc, DotInc, Copy, Reset,
-                                    ElementwiseInc)
+from nengo.builder.operator import SimPyFunc, DotInc, Copy, Reset, ElementwiseInc
 from nengo.builder.processes import SimProcess
 from nengo.builder.signal import Signal
 from nengo.version import version as nengo_version
@@ -18,10 +17,18 @@ import pytest
 from nengo_dl import op_builders
 from nengo_dl.compat import SparseDotInc
 from nengo_dl.graph_optimizer import (
-    mergeable, greedy_planner, tree_planner, transitive_planner, noop_planner,
-    order_signals, noop_order_signals,
-    remove_unmodified_resets, remove_zero_incs, remove_constant_copies,
-    remove_identity_muls)
+    mergeable,
+    greedy_planner,
+    tree_planner,
+    transitive_planner,
+    noop_planner,
+    order_signals,
+    noop_order_signals,
+    remove_unmodified_resets,
+    remove_zero_incs,
+    remove_constant_copies,
+    remove_identity_muls,
+)
 from nengo_dl.tensor_node import SimTensorNode
 from nengo_dl.tests import dummies
 
@@ -40,172 +47,269 @@ def test_mergeable():
     assert not mergeable(dummies.Op(sets=[dummies.Signal()]), [dummies.Op()])
     assert not mergeable(dummies.Op(incs=[dummies.Signal()]), [dummies.Op()])
     assert not mergeable(dummies.Op(reads=[dummies.Signal()]), [dummies.Op()])
-    assert not mergeable(dummies.Op(updates=[dummies.Signal()]),
-                         [dummies.Op()])
-    assert mergeable(dummies.Op(sets=[dummies.Signal()]),
-                     [dummies.Op(sets=[dummies.Signal()])])
+    assert not mergeable(dummies.Op(updates=[dummies.Signal()]), [dummies.Op()])
+    assert mergeable(
+        dummies.Op(sets=[dummies.Signal()]), [dummies.Op(sets=[dummies.Signal()])]
+    )
 
     # check matching dtypes
-    assert not mergeable(dummies.Op(sets=[dummies.Signal(dtype=np.float32)]),
-                         [dummies.Op(sets=[dummies.Signal(dtype=np.float64)])])
+    assert not mergeable(
+        dummies.Op(sets=[dummies.Signal(dtype=np.float32)]),
+        [dummies.Op(sets=[dummies.Signal(dtype=np.float64)])],
+    )
 
     # shape mismatch
-    assert not mergeable(dummies.Op(sets=[dummies.Signal(shape=(1, 2))]),
-                         [dummies.Op(sets=[dummies.Signal(shape=(1, 3))])])
+    assert not mergeable(
+        dummies.Op(sets=[dummies.Signal(shape=(1, 2))]),
+        [dummies.Op(sets=[dummies.Signal(shape=(1, 3))])],
+    )
 
     # display shape mismatch
     assert not mergeable(
         dummies.Op(sets=[dummies.Signal(base_shape=(2, 2), shape=(4, 1))]),
-        [dummies.Op(sets=[dummies.Signal(base_shape=(2, 2), shape=(1, 4))])])
+        [dummies.Op(sets=[dummies.Signal(base_shape=(2, 2), shape=(1, 4))])],
+    )
 
     # first dimension mismatch
-    assert mergeable(dummies.Op(sets=[dummies.Signal(shape=(3, 2))]),
-                     [dummies.Op(sets=[dummies.Signal(shape=(4, 2))])])
+    assert mergeable(
+        dummies.Op(sets=[dummies.Signal(shape=(3, 2))]),
+        [dummies.Op(sets=[dummies.Signal(shape=(4, 2))])],
+    )
 
     # sparsity mismatch
-    assert not mergeable(dummies.Op(sets=[dummies.Signal(sparse=False)]),
-                         [dummies.Op(sets=[dummies.Signal(sparse=True)])])
+    assert not mergeable(
+        dummies.Op(sets=[dummies.Signal(sparse=False)]),
+        [dummies.Op(sets=[dummies.Signal(sparse=True)])],
+    )
 
     # sparse matrices are allowed to have mismatched shapes
     assert mergeable(
         dummies.Op(sets=[dummies.Signal(shape=(1, 2), sparse=True)]),
-        [dummies.Op(sets=[dummies.Signal(shape=(1, 3), sparse=True)])])
+        [dummies.Op(sets=[dummies.Signal(shape=(1, 3), sparse=True)])],
+    )
     assert mergeable(
-        dummies.Op(sets=[dummies.Signal(base_shape=(2, 2), shape=(4, 1),
-                                        sparse=True)]),
-        [dummies.Op(sets=[dummies.Signal(base_shape=(2, 2), shape=(1, 4),
-                                         sparse=True)])])
+        dummies.Op(sets=[dummies.Signal(base_shape=(2, 2), shape=(4, 1), sparse=True)]),
+        [
+            dummies.Op(
+                sets=[dummies.Signal(base_shape=(2, 2), shape=(1, 4), sparse=True)]
+            )
+        ],
+    )
 
     # Copy (inc must match)
-    assert mergeable(Copy(dummies.Signal(), dummies.Signal(), inc=True),
-                     [Copy(dummies.Signal(), dummies.Signal(), inc=True)])
-    assert not mergeable(Copy(dummies.Signal(), dummies.Signal(), inc=True),
-                         [Copy(dummies.Signal(), dummies.Signal(), inc=False)])
+    assert mergeable(
+        Copy(dummies.Signal(), dummies.Signal(), inc=True),
+        [Copy(dummies.Signal(), dummies.Signal(), inc=True)],
+    )
+    assert not mergeable(
+        Copy(dummies.Signal(), dummies.Signal(), inc=True),
+        [Copy(dummies.Signal(), dummies.Signal(), inc=False)],
+    )
 
     # elementwise (first dimension must match)
     assert mergeable(
         ElementwiseInc(dummies.Signal(), dummies.Signal(), dummies.Signal()),
-        [ElementwiseInc(dummies.Signal(), dummies.Signal(), dummies.Signal())])
+        [ElementwiseInc(dummies.Signal(), dummies.Signal(), dummies.Signal())],
+    )
     assert mergeable(
-        ElementwiseInc(dummies.Signal(shape=(1,)), dummies.Signal(),
-                       dummies.Signal()),
-        [ElementwiseInc(dummies.Signal(shape=()), dummies.Signal(),
-                        dummies.Signal())])
+        ElementwiseInc(dummies.Signal(shape=(1,)), dummies.Signal(), dummies.Signal()),
+        [ElementwiseInc(dummies.Signal(shape=()), dummies.Signal(), dummies.Signal())],
+    )
     assert not mergeable(
-        ElementwiseInc(dummies.Signal(shape=(3,)), dummies.Signal(),
-                       dummies.Signal()),
-        [ElementwiseInc(dummies.Signal(shape=(2,)), dummies.Signal(),
-                        dummies.Signal())])
+        ElementwiseInc(dummies.Signal(shape=(3,)), dummies.Signal(), dummies.Signal()),
+        [
+            ElementwiseInc(
+                dummies.Signal(shape=(2,)), dummies.Signal(), dummies.Signal()
+            )
+        ],
+    )
 
     # simpyfunc (t input must match)
     time = dummies.Signal()
-    assert mergeable(SimPyFunc(None, None, time, None),
-                     [SimPyFunc(None, None, time, None)])
-    assert mergeable(SimPyFunc(None, None, None, dummies.Signal()),
-                     [SimPyFunc(None, None, None, dummies.Signal())])
-    assert not mergeable(SimPyFunc(None, None, dummies.Signal(), None),
-                         [SimPyFunc(None, None, None, dummies.Signal())])
+    assert mergeable(
+        SimPyFunc(None, None, time, None), [SimPyFunc(None, None, time, None)]
+    )
+    assert mergeable(
+        SimPyFunc(None, None, None, dummies.Signal()),
+        [SimPyFunc(None, None, None, dummies.Signal())],
+    )
+    assert not mergeable(
+        SimPyFunc(None, None, dummies.Signal(), None),
+        [SimPyFunc(None, None, None, dummies.Signal())],
+    )
 
     # simneurons
     # check matching TF_NEURON_IMPL
-    assert mergeable(SimNeurons(LIF(), dummies.Signal(), dummies.Signal()),
-                     [SimNeurons(LIF(), dummies.Signal(), dummies.Signal())])
-    assert not mergeable(SimNeurons(LIF(), dummies.Signal(), dummies.Signal()),
-                         [SimNeurons(LIFRate(), dummies.Signal(),
-                                     dummies.Signal())])
+    assert mergeable(
+        SimNeurons(LIF(), dummies.Signal(), dummies.Signal()),
+        [SimNeurons(LIF(), dummies.Signal(), dummies.Signal())],
+    )
+    assert not mergeable(
+        SimNeurons(LIF(), dummies.Signal(), dummies.Signal()),
+        [SimNeurons(LIFRate(), dummies.Signal(), dummies.Signal())],
+    )
 
     # check custom with non-custom implementation
-    assert not mergeable(SimNeurons(LIF(), dummies.Signal(), dummies.Signal()),
-                         [SimNeurons(Izhikevich(), dummies.Signal(),
-                                     dummies.Signal())])
+    assert not mergeable(
+        SimNeurons(LIF(), dummies.Signal(), dummies.Signal()),
+        [SimNeurons(Izhikevich(), dummies.Signal(), dummies.Signal())],
+    )
 
     # check non-custom matching
     assert not mergeable(
         SimNeurons(Izhikevich(), dummies.Signal(), dummies.Signal()),
-        [SimNeurons(AdaptiveLIF(), dummies.Signal(), dummies.Signal())])
+        [SimNeurons(AdaptiveLIF(), dummies.Signal(), dummies.Signal())],
+    )
     assert not mergeable(
-        SimNeurons(Izhikevich(), dummies.Signal(), dummies.Signal(),
-                   states=[dummies.Signal(dtype=np.float32)]),
-        [SimNeurons(Izhikevich(), dummies.Signal(), dummies.Signal(),
-                    states=[dummies.Signal(dtype=np.int32)])])
+        SimNeurons(
+            Izhikevich(),
+            dummies.Signal(),
+            dummies.Signal(),
+            states=[dummies.Signal(dtype=np.float32)],
+        ),
+        [
+            SimNeurons(
+                Izhikevich(),
+                dummies.Signal(),
+                dummies.Signal(),
+                states=[dummies.Signal(dtype=np.int32)],
+            )
+        ],
+    )
     assert mergeable(
-        SimNeurons(Izhikevich(), dummies.Signal(), dummies.Signal(),
-                   states=[dummies.Signal(shape=(3,))]),
-        [SimNeurons(Izhikevich(), dummies.Signal(), dummies.Signal(),
-                    states=[dummies.Signal(shape=(2,))])])
+        SimNeurons(
+            Izhikevich(),
+            dummies.Signal(),
+            dummies.Signal(),
+            states=[dummies.Signal(shape=(3,))],
+        ),
+        [
+            SimNeurons(
+                Izhikevich(),
+                dummies.Signal(),
+                dummies.Signal(),
+                states=[dummies.Signal(shape=(2,))],
+            )
+        ],
+    )
     assert not mergeable(
-        SimNeurons(Izhikevich(), dummies.Signal(), dummies.Signal(),
-                   states=[dummies.Signal(shape=(2, 1))]),
-        [SimNeurons(Izhikevich(), dummies.Signal(), dummies.Signal(),
-                    states=[dummies.Signal(shape=(2, 2))])])
+        SimNeurons(
+            Izhikevich(),
+            dummies.Signal(),
+            dummies.Signal(),
+            states=[dummies.Signal(shape=(2, 1))],
+        ),
+        [
+            SimNeurons(
+                Izhikevich(),
+                dummies.Signal(),
+                dummies.Signal(),
+                states=[dummies.Signal(shape=(2, 2))],
+            )
+        ],
+    )
 
     # simprocess
     # mode must match
     assert not mergeable(
-        SimProcess(Lowpass(0), None, dummies.Signal(), dummies.Signal(),
-                   mode="inc"),
-        [SimProcess(Lowpass(0), None, dummies.Signal(), dummies.Signal(),
-                    mode="set")])
+        SimProcess(Lowpass(0), None, dummies.Signal(), dummies.Signal(), mode="inc"),
+        [SimProcess(Lowpass(0), None, dummies.Signal(), dummies.Signal(), mode="set")],
+    )
 
     # check that lowpass match
     assert mergeable(
         SimProcess(Lowpass(0), None, dummies.Signal(), dummies.Signal()),
-        [SimProcess(Lowpass(0), None, dummies.Signal(), dummies.Signal())])
+        [SimProcess(Lowpass(0), None, dummies.Signal(), dummies.Signal())],
+    )
 
     # check that lowpass and linear don't match
     assert not mergeable(
         SimProcess(Lowpass(1), None, dummies.Signal(), dummies.Signal()),
-        [SimProcess(LinearFilter([1], [1, 1]), None,
-                    dummies.Signal(), dummies.Signal())])
+        [
+            SimProcess(
+                LinearFilter([1], [1, 1]), None, dummies.Signal(), dummies.Signal()
+            )
+        ],
+    )
     assert not mergeable(
-        SimProcess(LinearFilter([1], [1, 1]), None,
-                   dummies.Signal(), dummies.Signal()),
-        [SimProcess(Lowpass(1), None, dummies.Signal(), dummies.Signal())])
+        SimProcess(LinearFilter([1], [1, 1]), None, dummies.Signal(), dummies.Signal()),
+        [SimProcess(Lowpass(1), None, dummies.Signal(), dummies.Signal())],
+    )
 
     # check that two linear do match
     assert mergeable(
-        SimProcess(Alpha(0.1), dummies.Signal(),
-                   dummies.Signal(), dummies.Signal()),
-        [SimProcess(LinearFilter([1], [1, 1, 1]), dummies.Signal(),
-                    dummies.Signal(), dummies.Signal())])
+        SimProcess(Alpha(0.1), dummies.Signal(), dummies.Signal(), dummies.Signal()),
+        [
+            SimProcess(
+                LinearFilter([1], [1, 1, 1]),
+                dummies.Signal(),
+                dummies.Signal(),
+                dummies.Signal(),
+            )
+        ],
+    )
 
     # check that linear with different types don't match
     assert not mergeable(
-        SimProcess(LinearFilter([1], [1, 1, 1]), dummies.Signal(),
-                   dummies.Signal(), dummies.Signal()),
-        [SimProcess(LinearFilter([1, 1, 1], [1, 1, 1]), dummies.Signal(),
-                    dummies.Signal(), dummies.Signal())])
+        SimProcess(
+            LinearFilter([1], [1, 1, 1]),
+            dummies.Signal(),
+            dummies.Signal(),
+            dummies.Signal(),
+        ),
+        [
+            SimProcess(
+                LinearFilter([1, 1, 1], [1, 1, 1]),
+                dummies.Signal(),
+                dummies.Signal(),
+                dummies.Signal(),
+            )
+        ],
+    )
 
     # check custom and non-custom don't match
     assert not mergeable(
         SimProcess(Triangle(0), None, dummies.Signal(), dummies.Signal()),
-        [SimProcess(Alpha(0), None, dummies.Signal(), dummies.Signal())])
+        [SimProcess(Alpha(0), None, dummies.Signal(), dummies.Signal())],
+    )
 
     # check non-custom matching
     assert mergeable(
         SimProcess(Triangle(0), None, dummies.Signal(), dummies.Signal()),
-        [SimProcess(Triangle(0), None, dummies.Signal(), dummies.Signal())])
+        [SimProcess(Triangle(0), None, dummies.Signal(), dummies.Signal())],
+    )
 
     # simtensornode
     a = SimTensorNode(None, dummies.Signal(), None, dummies.Signal())
     assert not mergeable(a, [a])
 
     # learning rules
-    a = SimBCM(dummies.Signal((4,)), dummies.Signal(), dummies.Signal(),
-               dummies.Signal(), dummies.Signal())
-    b = SimBCM(dummies.Signal((5,)), dummies.Signal(), dummies.Signal(),
-               dummies.Signal(), dummies.Signal())
+    a = SimBCM(
+        dummies.Signal((4,)),
+        dummies.Signal(),
+        dummies.Signal(),
+        dummies.Signal(),
+        dummies.Signal(),
+    )
+    b = SimBCM(
+        dummies.Signal((5,)),
+        dummies.Signal(),
+        dummies.Signal(),
+        dummies.Signal(),
+        dummies.Signal(),
+    )
     assert not mergeable(a, [b])
 
 
-@pytest.mark.skipif(LooseVersion(nengo_version) <= "2.8.0",
-                    reason="Nengo Sparse transforms not implemented")
+@pytest.mark.skipif(
+    LooseVersion(nengo_version) <= "2.8.0",
+    reason="Nengo Sparse transforms not implemented",
+)
 def test_sparsedotinc_mergeable():
     assert mergeable(
-        SparseDotInc(dummies.Signal(sparse=True), dummies.Signal(),
-                     dummies.Signal()),
-        [SparseDotInc(dummies.Signal(sparse=True), dummies.Signal(),
-                      dummies.Signal())])
+        SparseDotInc(dummies.Signal(sparse=True), dummies.Signal(), dummies.Signal()),
+        [SparseDotInc(dummies.Signal(sparse=True), dummies.Signal(), dummies.Signal())],
+    )
 
 
 def test_planner_mergeable(planner):
@@ -214,8 +318,7 @@ def test_planner_mergeable(planner):
     input1 = dummies.Signal()
     output0 = dummies.Signal()
     output1 = dummies.Signal()
-    operators = [Copy(input0, output0, inc=True),
-                 Copy(input1, output1, inc=True)]
+    operators = [Copy(input0, output0, inc=True), Copy(input1, output1, inc=True)]
     plan = planner(operators)
     assert len(plan) == 1
     assert type(plan[0][0]) == Copy
@@ -225,8 +328,10 @@ def test_planner_mergeable(planner):
 def test_planner_unmergeable(planner):
     # check that non-mergeable operators aren't merged
     input0 = dummies.Signal()
-    operators = [Copy(input0, dummies.Signal(dtype=np.float32)),
-                 Copy(input0, dummies.Signal(dtype=np.int32))]
+    operators = [
+        Copy(input0, dummies.Signal(dtype=np.float32)),
+        Copy(input0, dummies.Signal(dtype=np.int32)),
+    ]
     plan = planner(operators)
     assert len(plan) == 2
     assert type(plan[0][0]) == Copy
@@ -253,8 +358,11 @@ def test_planner_chain(planner):
 
 def test_planner_cycle(planner):
     inputs = [dummies.Signal() for _ in range(3)]
-    operators = [Copy(inputs[0], inputs[1]), Copy(inputs[1], inputs[2]),
-                 Copy(inputs[2], inputs[0])]
+    operators = [
+        Copy(inputs[0], inputs[1]),
+        Copy(inputs[1], inputs[2]),
+        Copy(inputs[2], inputs[0]),
+    ]
 
     with pytest.raises(BuildError):
         planner(operators)
@@ -263,11 +371,9 @@ def test_planner_cycle(planner):
 def test_planner_size():
     # check that operators are selected according to number of available ops
     input0 = dummies.Signal()
-    operators = [Copy(input0, dummies.Signal(), inc=True)
-                 for _ in range(2)]
+    operators = [Copy(input0, dummies.Signal(), inc=True) for _ in range(2)]
     operators += [Copy(input0, dummies.Signal())]
-    operators += [DotInc(input0, dummies.Signal(), dummies.Signal())
-                  for _ in range(3)]
+    operators += [DotInc(input0, dummies.Signal(), dummies.Signal()) for _ in range(3)]
     plan = greedy_planner(operators)
     assert len(plan) == 3
     assert len(plan[0]) == 3
@@ -301,13 +407,20 @@ def ordered(ops, all_signals, block=None):
 
     if block is None:
         read_indices = [
-            [all_signals.index(reads[op][i].base) * 10000
-             + reads[op][i].elemoffset for op in ops]
-            for i in range(len(ops[0].reads))]
+            [
+                all_signals.index(reads[op][i].base) * 10000 + reads[op][i].elemoffset
+                for op in ops
+            ]
+            for i in range(len(ops[0].reads))
+        ]
     else:
         read_indices = [
-            [all_signals.index(reads[op][block].base) * 10000
-             + reads[op][block].elemoffset for op in ops]]
+            [
+                all_signals.index(reads[op][block].base) * 10000
+                + reads[op][block].elemoffset
+                for op in ops
+            ]
+        ]
 
     return np.all(np.diff(read_indices, axis=1) > 0)
 
@@ -318,7 +431,8 @@ def test_order_signals_disjoint():
 
     plan = [
         tuple(dummies.Op(reads=[inputs[i]]) for i in range(5)),
-        tuple(dummies.Op(reads=[inputs[5 + i]]) for i in range(5))]
+        tuple(dummies.Op(reads=[inputs[5 + i]]) for i in range(5)),
+    ]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:5], sigs)
     assert contiguous(inputs[5:], sigs)
@@ -333,7 +447,8 @@ def test_order_signals_partial():
     inputs = [dummies.Signal(label=str(i)) for i in range(10)]
     plan = [
         tuple(dummies.Op(reads=[inputs[i]]) for i in range(4)),
-        tuple(dummies.Op(reads=[inputs[2 + i]]) for i in range(4))]
+        tuple(dummies.Op(reads=[inputs[2 + i]]) for i in range(4)),
+    ]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:4], sigs)
     assert contiguous(inputs[2:6], sigs)
@@ -364,7 +479,8 @@ def test_order_signals_partial3():
     plan = [
         tuple(dummies.Op(reads=[inputs[i]]) for i in [0, 1, 2, 3]),
         tuple(dummies.Op(reads=[inputs[i]]) for i in [0, 4, 7]),
-        tuple(dummies.Op(reads=[inputs[i]]) for i in [5, 6, 7])]
+        tuple(dummies.Op(reads=[inputs[i]]) for i in [5, 6, 7]),
+    ]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:4], sigs)
     assert contiguous([inputs[0], inputs[4], inputs[7]], sigs)
@@ -457,10 +573,8 @@ def test_order_signals_multiread_complex2():
     # TODO: technically it is always possible to order both blocks properly,
     # but it requires you to know which of the two equally sized blocks should
     # have priority, and I'm not sure there's a way to determine that.
-    assert (contiguous(inputs[:4], sigs)
-            or contiguous(inputs[2:6], sigs))
-    assert (ordered(new_plan[0], sigs, block=0)
-            or ordered(new_plan[0], sigs, block=1))
+    assert contiguous(inputs[:4], sigs) or contiguous(inputs[2:6], sigs)
+    assert ordered(new_plan[0], sigs, block=0) or ordered(new_plan[0], sigs, block=1)
 
 
 def test_order_signals_multiread_unsatisfiable():
@@ -470,8 +584,7 @@ def test_order_signals_multiread_unsatisfiable():
     inputs = [dummies.Signal(label=str(i)) for i in range(10)]
     plan = [
         tuple(dummies.Op(reads=[inputs[i], inputs[5 + i]]) for i in range(5)),
-        tuple(dummies.Op(reads=[inputs[1 - i], inputs[5 + i]])
-              for i in range(2)),
+        tuple(dummies.Op(reads=[inputs[1 - i], inputs[5 + i]]) for i in range(2)),
     ]
     sigs, new_plan = order_signals(plan)
     assert contiguous(inputs[:5], sigs)
@@ -479,8 +592,7 @@ def test_order_signals_multiread_unsatisfiable():
     assert contiguous(inputs[:2], sigs)
     assert contiguous(inputs[5:7], sigs)
     assert ordered(new_plan[0], sigs)
-    assert (ordered(new_plan[1], sigs, block=0)
-            or ordered(new_plan[1], sigs, block=1))
+    assert ordered(new_plan[1], sigs, block=0) or ordered(new_plan[1], sigs, block=1)
     assert not ordered(new_plan[1], sigs)
 
 
@@ -488,17 +600,23 @@ def test_order_signals_views():
     base = dummies.Signal(shape=(6,), label="base")
     sig = dummies.Signal(shape=(7,), label="sig")
     sig2 = dummies.Signal(shape=(7,), label="sig2")
-    views = [dummies.Signal(shape=(1,), base_shape=(5,), offset=1 + i,
-                            label="view_%d" % i)
-             for i in range(5)]
+    views = [
+        dummies.Signal(shape=(1,), base_shape=(5,), offset=1 + i, label="view_%d" % i)
+        for i in range(5)
+    ]
     for v in views:
         v.base = base
     plan = [
-        (dummies.Op(reads=[base]), dummies.Op(reads=[views[1]]),
-         dummies.Op(reads=[views[0]]), dummies.Op(reads=[sig2])),
+        (
+            dummies.Op(reads=[base]),
+            dummies.Op(reads=[views[1]]),
+            dummies.Op(reads=[views[0]]),
+            dummies.Op(reads=[sig2]),
+        ),
         (dummies.Op(reads=[base]), dummies.Op(reads=[sig])),
         tuple(dummies.Op(reads=[views[i]]) for i in range(4, 2, -1)),
-        (dummies.Op(reads=[views[4]]), dummies.Op(reads=[sig]))]
+        (dummies.Op(reads=[views[4]]), dummies.Op(reads=[sig])),
+    ]
     sigs, new_plan = order_signals(plan)
     assert contiguous([base, sig, sig2], sigs)
     assert ordered(new_plan[0], sigs)
@@ -514,7 +632,7 @@ def test_order_signals_duplicates():
         tuple(dummies.Op(reads=[inputs[0]]) for _ in range(2))
         + (dummies.Op(reads=[inputs[2]]),),
         tuple(dummies.Op(reads=[inputs[1]]) for _ in range(2))
-        + (dummies.Op(reads=[inputs[3]]),)
+        + (dummies.Op(reads=[inputs[3]]),),
     ]
     sigs, new_plan = order_signals(plan)
     assert contiguous([inputs[0], inputs[2]], sigs)
@@ -543,10 +661,9 @@ def test_order_signals_neuron_states():
 
     inputs = [dummies.Signal(label=str(i)) for i in range(10)]
     plan = [
-        tuple(SimNeurons(None, inputs[0], inputs[1], states=[x])
-              for x in inputs[2::2]),
-        tuple(SimNeurons(None, inputs[0], inputs[1], states=[x])
-              for x in inputs[3::2])]
+        tuple(SimNeurons(None, inputs[0], inputs[1], states=[x]) for x in inputs[2::2]),
+        tuple(SimNeurons(None, inputs[0], inputs[1], states=[x]) for x in inputs[3::2]),
+    ]
     sigs, new_plan = order_signals(plan)
 
     assert contiguous(inputs[2::2], sigs)
@@ -562,10 +679,15 @@ def test_order_signals_lowpass():
     inputs = [dummies.Signal(label=str(i)) for i in range(10)]
     time = dummies.Signal()
     plan = [
-        tuple(SimProcess(Lowpass(0.1), inputs[i], inputs[i + 1], time,
-                         mode="update") for i in range(0, 4, 2)),
-        tuple(SimProcess(Lowpass(0.1), inputs[i], inputs[i + 1], time,
-                         mode="update") for i in range(5, 9, 2))]
+        tuple(
+            SimProcess(Lowpass(0.1), inputs[i], inputs[i + 1], time, mode="update")
+            for i in range(0, 4, 2)
+        ),
+        tuple(
+            SimProcess(Lowpass(0.1), inputs[i], inputs[i + 1], time, mode="update")
+            for i in range(5, 9, 2)
+        ),
+    ]
     sigs, new_plan = order_signals(plan)
 
     assert contiguous(inputs[1:5:2], sigs)
@@ -584,20 +706,22 @@ def test_order_signals_duplicate_read_blocks():
     plan = [
         tuple(dummies.Op(reads=[inputs[i], inputs[5 + i]]) for i in range(3)),
         tuple(dummies.Op(reads=[inputs[i], inputs[5 + i]]) for i in range(3)),
-        tuple(dummies.Op(reads=[inputs[5 + i], inputs[4 - i]])
-              for i in range(5))]
+        tuple(dummies.Op(reads=[inputs[5 + i], inputs[4 - i]]) for i in range(5)),
+    ]
 
     sigs, new_plan = order_signals(plan)
     assert ordered(new_plan[0], sigs)
     assert ordered(new_plan[1], sigs)
-    assert (ordered(new_plan[2], sigs, block=0)
-            or ordered(new_plan[2], sigs, block=1))
+    assert ordered(new_plan[2], sigs, block=0) or ordered(new_plan[2], sigs, block=1)
     assert not ordered(new_plan[2], sigs)
 
 
 def test_noop_order_signals():
-    inputs = [dummies.Signal(label="a"), dummies.Signal(label="b"),
-              dummies.Signal(label="c", base_shape=(2,))]
+    inputs = [
+        dummies.Signal(label="a"),
+        dummies.Signal(label="b"),
+        dummies.Signal(label="c", base_shape=(2,)),
+    ]
     plan = [(dummies.Op(reads=[x]),) for x in inputs]
 
     sigs, new_plan = noop_order_signals(plan)
@@ -638,19 +762,20 @@ def test_remove_unmodified_resets():
 
 def test_remove_zero_incs():
     # check that zero inputs get removed (for A or X)
-    operators = [DotInc(dummies.Signal(), dummies.Signal(initial_value=1),
-                        dummies.Signal())]
+    operators = [
+        DotInc(dummies.Signal(), dummies.Signal(initial_value=1), dummies.Signal())
+    ]
     new_operators = remove_zero_incs(operators)
     assert new_operators == []
 
-    operators = [DotInc(dummies.Signal(initial_value=1), dummies.Signal(),
-                        dummies.Signal())]
+    operators = [
+        DotInc(dummies.Signal(initial_value=1), dummies.Signal(), dummies.Signal())
+    ]
     new_operators = remove_zero_incs(operators)
     assert new_operators == []
 
     # check that zero inputs (copy) get removed
-    operators = [
-        Copy(dummies.Signal(), dummies.Signal(), dummies.Signal(), inc=True)]
+    operators = [Copy(dummies.Signal(), dummies.Signal(), dummies.Signal(), inc=True)]
     new_operators = remove_zero_incs(operators)
     assert new_operators == []
 
@@ -669,36 +794,43 @@ def test_remove_zero_incs():
 
     # check that updated input doesn't get removed
     x = dummies.Signal()
-    operators = [DotInc(dummies.Signal(initial_value=1), x, dummies.Signal()),
-                 dummies.Op(updates=[x])]
+    operators = [
+        DotInc(dummies.Signal(initial_value=1), x, dummies.Signal()),
+        dummies.Op(updates=[x]),
+    ]
     new_operators = remove_zero_incs(operators)
     assert new_operators == operators
 
     # check that inc'd input doesn't get removed
     x = dummies.Signal()
-    operators = [DotInc(dummies.Signal(initial_value=1), x, dummies.Signal()),
-                 dummies.Op(incs=[x])]
+    operators = [
+        DotInc(dummies.Signal(initial_value=1), x, dummies.Signal()),
+        dummies.Op(incs=[x]),
+    ]
     new_operators = remove_zero_incs(operators)
     assert new_operators == operators
 
     # check that set'd input doesn't get removed
     x = dummies.Signal()
-    operators = [DotInc(dummies.Signal(initial_value=1), x, dummies.Signal()),
-                 dummies.Op(sets=[x])]
+    operators = [
+        DotInc(dummies.Signal(initial_value=1), x, dummies.Signal()),
+        dummies.Op(sets=[x]),
+    ]
     new_operators = remove_zero_incs(operators)
     assert new_operators == operators
 
     # check that Reset(0) input does get removed
     x = dummies.Signal()
-    operators = [DotInc(dummies.Signal(initial_value=1), x, dummies.Signal()),
-                 Reset(x)]
+    operators = [DotInc(dummies.Signal(initial_value=1), x, dummies.Signal()), Reset(x)]
     new_operators = remove_zero_incs(operators)
     assert new_operators == operators[1:]
 
     # check that Reset(1) input does not get removed
     x = dummies.Signal()
-    operators = [DotInc(dummies.Signal(initial_value=1), x, dummies.Signal()),
-                 Reset(x, 1)]
+    operators = [
+        DotInc(dummies.Signal(initial_value=1), x, dummies.Signal()),
+        Reset(x, 1),
+    ]
     new_operators = remove_zero_incs(operators)
     assert new_operators == operators
 
@@ -756,8 +888,7 @@ def test_remove_constant_copies():
     # check Copy with read input/output does get changed
     x = dummies.Signal()
     y = dummies.Signal()
-    operators = [Copy(x, y), dummies.Op(reads=[x]),
-                 dummies.Op(reads=[y])]
+    operators = [Copy(x, y), dummies.Op(reads=[x]), dummies.Op(reads=[y])]
     new_operators = remove_constant_copies(operators)
     assert len(new_operators) == 3
     assert new_operators[1:] == operators[1:]
@@ -853,8 +984,7 @@ def test_remove_identity_muls(Op):
     # check that non-identity inputs don't get removed
     a = Signal(np.ones((3, 3)))
     a.trainable = False
-    operators = [Op(a, dummies.Signal(shape=(3,)),
-                    dummies.Signal(shape=(3,)))]
+    operators = [Op(a, dummies.Signal(shape=(3,)), dummies.Signal(shape=(3,)))]
     new_operators = remove_identity_muls(operators)
     assert new_operators == operators
 
@@ -873,21 +1003,18 @@ def test_remove_identity_muls(Op):
 
     # check that updated input doesn't get removed
     x = dummies.Signal()
-    operators = [Op(x, dummies.Signal(), dummies.Signal()),
-                 dummies.Op(updates=[x])]
+    operators = [Op(x, dummies.Signal(), dummies.Signal()), dummies.Op(updates=[x])]
     new_operators = remove_identity_muls(operators)
     assert new_operators == operators
 
     # check that inc'd input doesn't get removed
     x = dummies.Signal()
-    operators = [Op(x, dummies.Signal(), dummies.Signal()),
-                 dummies.Op(incs=[x])]
+    operators = [Op(x, dummies.Signal(), dummies.Signal()), dummies.Op(incs=[x])]
     new_operators = remove_identity_muls(operators)
     assert new_operators == operators
 
     # check that set'd input doesn't get removed
     x = dummies.Signal()
-    operators = [Op(x, dummies.Signal(), dummies.Signal()),
-                 dummies.Op(sets=[x])]
+    operators = [Op(x, dummies.Signal(), dummies.Signal()), dummies.Op(sets=[x])]
     new_operators = remove_identity_muls(operators)
     assert new_operators == operators

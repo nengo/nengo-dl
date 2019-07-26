@@ -23,10 +23,14 @@ from nengo.utils.magic import decorator
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl import (
-    builder, graph_optimizer, signals, utils, tensor_node, config)
+from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node, config
 from nengo_dl.compat import (
-    tf_compat, SparseMatrix, is_sparse, make_process_state, make_process_step)
+    tf_compat,
+    SparseMatrix,
+    is_sparse,
+    make_process_state,
+    make_process_step,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,8 +69,9 @@ class TensorGraph:
         Progress bar for optimization stage
     """
 
-    def __init__(self, model, dt, unroll_simulation, dtype, minibatch_size,
-                 device, progress):
+    def __init__(
+        self, model, dt, unroll_simulation, dtype, minibatch_size, device, progress
+    ):
         self.model = model
         self.dt = dt
         self.unroll = unroll_simulation
@@ -75,8 +80,7 @@ class TensorGraph:
         self.device = device
         self.graph = tf.Graph()
         self.signals = signals.SignalDict(self.dtype, self.minibatch_size)
-        self.inference_only = config.get_setting(model, "inference_only",
-                                                 False)
+        self.inference_only = config.get_setting(model, "inference_only", False)
 
         # find invariant inputs (nodes that don't receive any input other
         # than the simulation time). we'll compute these outside the simulation
@@ -85,22 +89,31 @@ class TensorGraph:
             self.invariant_inputs = OrderedDict()
         else:
             self.invariant_inputs = OrderedDict(
-                (n, n.output) for n in self.model.toplevel.all_nodes
-                if n.size_in == 0
-                and not isinstance(n, tensor_node.TensorNode))
+                (n, n.output)
+                for n in self.model.toplevel.all_nodes
+                if n.size_in == 0 and not isinstance(n, tensor_node.TensorNode)
+            )
 
         # filter unused operators
         # remove TimeUpdate because it is executed as part of the simulation
         # loop, not part of the step plan. remove input nodes because they
         # are executed outside the simulation.
-        node_processes = [n.output for n in self.invariant_inputs
-                          if isinstance(n.output, Process)]
+        node_processes = [
+            n.output for n in self.invariant_inputs if isinstance(n.output, Process)
+        ]
         operators = [
-            op for op in self.model.operators if not (
+            op
+            for op in self.model.operators
+            if not (
                 isinstance(op, TimeUpdate)
                 or (isinstance(op, SimPyFunc) and op.x is None)
-                or (isinstance(op, SimProcess) and op.input is None
-                    and op.process in node_processes))]
+                or (
+                    isinstance(op, SimProcess)
+                    and op.input is None
+                    and op.process in node_processes
+                )
+            )
+        ]
 
         # mark trainable signals
         self.mark_signals()
@@ -108,24 +121,28 @@ class TensorGraph:
         logger.info("Initial plan length: %d", len(operators))
 
         # apply graph simplification functions
-        simplifications = config.get_setting(model, "simplifications", [
-            graph_optimizer.remove_constant_copies,
-            graph_optimizer.remove_unmodified_resets,
-            graph_optimizer.remove_zero_incs,
-            graph_optimizer.remove_identity_muls,
-        ])
+        simplifications = config.get_setting(
+            model,
+            "simplifications",
+            [
+                graph_optimizer.remove_constant_copies,
+                graph_optimizer.remove_unmodified_resets,
+                graph_optimizer.remove_zero_incs,
+                graph_optimizer.remove_identity_muls,
+            ],
+        )
 
         with progress.sub("operator simplificaton", max_value=None):
             old_operators = []
             while len(old_operators) != len(operators) or any(
-                    x is not y for x, y in zip(operators, old_operators)):
+                x is not y for x, y in zip(operators, old_operators)
+            ):
                 old_operators = operators
                 for simp in simplifications:
                     operators = simp(operators)
 
         # group mergeable operators
-        planner = config.get_setting(
-            model, "planner", graph_optimizer.tree_planner)
+        planner = config.get_setting(model, "planner", graph_optimizer.tree_planner)
 
         with progress.sub("merging operators", max_value=None):
             plan = planner(operators)
@@ -135,8 +152,7 @@ class TensorGraph:
         # is only written to by one op and read by one op
 
         # order signals/operators to promote contiguous reads
-        sorter = config.get_setting(
-            model, "sorter", graph_optimizer.order_signals)
+        sorter = config.get_setting(model, "sorter", graph_optimizer.order_signals)
 
         with progress.sub("ordering signals", max_value=None):
             sigs, self.plan = sorter(plan, n_passes=10)
@@ -155,8 +171,9 @@ class TensorGraph:
             lif_smoothing=config.get_setting(self.model, "lif_smoothing"),
             cpu_only=self.device == "/cpu:0" or not utils.tf_gpu_installed,
         )
-        self.op_builder = builder.Builder(self.plan, self.graph, self.signals,
-                                          build_config)
+        self.op_builder = builder.Builder(
+            self.plan, self.graph, self.signals, build_config
+        )
 
     @with_self
     def build(self, progress):
@@ -180,8 +197,9 @@ class TensorGraph:
         if not self.inference_only:
             # this variable controls behaviour in the simulation that is
             # conditional on whether we are doing training or inference
-            self.signals.training = tf_compat.placeholder(tf.bool, shape=(),
-                                                          name="training")
+            self.signals.training = tf_compat.placeholder(
+                tf.bool, shape=(), name="training"
+            )
 
             # variable to track training step
             self.training_step = tf_compat.train.get_or_create_global_step()
@@ -194,8 +212,11 @@ class TensorGraph:
         unique_ids = defaultdict(int)
         for k, (v, trainable) in sub(self.base_arrays_init.items()):
             name = "%s_%s_%s_%d" % (
-                v.dtype, "_".join(str(x) for x in v.shape), trainable,
-                unique_ids[(v.dtype, v.shape, trainable)])
+                v.dtype,
+                "_".join(str(x) for x in v.shape),
+                trainable,
+                unique_ids[(v.dtype, v.shape, trainable)],
+            )
             unique_ids[(v.dtype, v.shape, trainable)] += 1
 
             # we initialize all the variables from placeholders, and then
@@ -207,13 +228,13 @@ class TensorGraph:
             if trainable:
                 with tf_compat.variable_scope("trainable_vars", reuse=False):
                     var = tf_compat.get_variable(
-                        name, initializer=ph, trainable=True,
-                        use_resource=False)
+                        name, initializer=ph, trainable=True, use_resource=False
+                    )
             else:
                 with tf_compat.variable_scope("local_vars", reuse=False):
                     var = tf_compat.get_local_variable(
-                        name, initializer=ph, trainable=False,
-                        use_resource=False)
+                        name, initializer=ph, trainable=False, use_resource=False
+                    )
 
             self.base_vars[k] = (var, ph, v)
 
@@ -229,30 +250,31 @@ class TensorGraph:
             self.op_builder.pre_build(sub)
 
         # build stage
-        with progress.sub(
-                "build stage", max_value=len(self.plan) * self.unroll) as sub:
+        with progress.sub("build stage", max_value=len(self.plan) * self.unroll) as sub:
             self.build_loop(sub)
 
         # ops for initializing variables (will be called by simulator)
         trainable_vars = tf_compat.trainable_variables()
         if not self.inference_only:
             trainable_vars.append(self.training_step)
-        self.trainable_init_op = tf_compat.variables_initializer(
-            trainable_vars)
+        self.trainable_init_op = tf_compat.variables_initializer(trainable_vars)
         self.local_init_op = tf_compat.local_variables_initializer()
         self.global_init_op = tf_compat.variables_initializer(
-            [v for v in tf_compat.global_variables()
-             if v not in trainable_vars])
+            [v for v in tf_compat.global_variables() if v not in trainable_vars]
+        )
         self.constant_init_op = tf_compat.variables_initializer(
-            tf_compat.get_collection("constants"))
+            tf_compat.get_collection("constants")
+        )
 
         # logging
-        logger.info("Number of reads: %d", sum(
-            x for x in self.signals.read_types.values()))
+        logger.info(
+            "Number of reads: %d", sum(x for x in self.signals.read_types.values())
+        )
         for x in self.signals.read_types.items():
             logger.info("    %s: %d", *x)
-        logger.info("Number of writes: %d", sum(
-            x for x in self.signals.write_types.values()))
+        logger.info(
+            "Number of writes: %d", sum(x for x in self.signals.write_types.values())
+        )
         for x in self.signals.write_types.items():
             logger.info("    %s: %d", *x)
 
@@ -282,8 +304,7 @@ class TensorGraph:
         # because loop variables (`step`) are (semi?) pinned to the CPU, which
         # causes the whole variable to get pinned to the CPU if we include
         # `step` as part of the normal planning process.
-        self.signals.time = tf.cast(self.signals.step,
-                                    self.dtype) * self.signals.dt
+        self.signals.time = tf.cast(self.signals.step, self.dtype) * self.signals.dt
 
         # build operators
         side_effects = self.op_builder.build(progress)
@@ -306,16 +327,18 @@ class TensorGraph:
                 # so by adding the copy here and then blocking on the copy, we
                 # make sure that the probe value is read before it can be
                 # overwritten.
-                probe_tensors.append(self.signals.gather(
-                    self.signals[probe_sig], force_copy=True))
+                probe_tensors.append(
+                    self.signals.gather(self.signals[probe_sig], force_copy=True)
+                )
             else:
                 # if a probe signal isn't in sig_map, that means that it isn't
                 # involved in any simulator ops.  so we know its value never
                 # changes, and we'll just return a constant containing the
                 # initial value.
                 if probe_sig.minibatched:
-                    init_val = np.tile(probe_sig.initial_value[..., None],
-                                       (1, self.minibatch_size))
+                    init_val = np.tile(
+                        probe_sig.initial_value[..., None], (1, self.minibatch_size)
+                    )
                 else:
                     init_val = probe_sig.initial_value
                 probe_tensors.append(tf.constant(init_val, dtype=self.dtype))
@@ -345,8 +368,11 @@ class TensorGraph:
             # need to use the versions of the base vars from inside the
             # loop, not the static variables in self.base_vars)
             assert len(self.signals.bases) == 0
-            for i, key in enumerate(itertools.chain(
-                    self.base_vars.keys(), self.signals.internal_vars.keys())):
+            for i, key in enumerate(
+                itertools.chain(
+                    self.base_vars.keys(), self.signals.internal_vars.keys()
+                )
+            ):
                 self.signals.bases[key] = base_vars[i]
 
             for iter in range(self.unroll):
@@ -361,7 +387,8 @@ class TensorGraph:
                     for n in self.input_ph:
                         self.signals.scatter(
                             self.signals[self.model.sig[n]["out"]],
-                            self.input_ph[n][loop_i])
+                            self.input_ph[n][loop_i],
+                        )
 
                     # build the operators for a single step
                     # note: we tie things to the `loop_i` variable so that we
@@ -374,31 +401,33 @@ class TensorGraph:
                     # unrolled iterations (this is really only a concern
                     # with TensorNodes)
                     scope = tf_compat.variable_scope(
-                        tf_compat.get_variable_scope(),
-                        reuse=iter > 0)
+                        tf_compat.get_variable_scope(), reuse=iter > 0
+                    )
                     with self.graph.control_dependencies([loop_i]), scope:
                         probe_tensors, side_effects = self.build_step(progress)
 
                     # copy probe data to array
                     for i, p in enumerate(probe_tensors):
                         if config.get_setting(
-                                self.model, "keep_history",
-                                default=True, obj=self.model.probes[i]):
+                            self.model,
+                            "keep_history",
+                            default=True,
+                            obj=self.model.probes[i],
+                        ):
                             probe_arrays[i] = probe_arrays[i].write(loop_i, p)
                         else:
                             probe_arrays[i] = tf.cond(
                                 pred=tf.equal(step, stop),
-                                true_fn=lambda p=p: probe_arrays[i].write(0,
-                                                                          p),
-                                false_fn=lambda: probe_arrays[i])
+                                true_fn=lambda p=p: probe_arrays[i].write(0, p),
+                                false_fn=lambda: probe_arrays[i],
+                            )
 
                     # need to make sure that any operators that could have side
                     # effects run each timestep, so we tie them to the loop
                     # increment. we also need to make sure that all the probe
                     # reads happen before those values get overwritten on the
                     # next timestep
-                    with self.graph.control_dependencies(side_effects
-                                                         + probe_tensors):
+                    with self.graph.control_dependencies(side_effects + probe_tensors):
                         loop_i += 1
 
             base_vars = tuple(self.signals.bases.values())
@@ -410,21 +439,30 @@ class TensorGraph:
         loop_i = tf.constant(0)
 
         probe_arrays = [
-            tf.TensorArray(
-                self.dtype, clear_after_read=True, size=0,
-                dynamic_size=True)
-            for _ in self.model.probes]
+            tf.TensorArray(self.dtype, clear_after_read=True, size=0, dynamic_size=True)
+            for _ in self.model.probes
+        ]
 
         # build simulation loop
         loop_vars = (
-            self.step_var, self.stop_var, loop_i, probe_arrays,
-            tuple(x[0]._ref() if isinstance(x[0], tf.Variable) else x[0]
-                  for x in self.base_vars.values())
-            + tuple(x._ref() for x in self.signals.internal_vars.values()))
+            self.step_var,
+            self.stop_var,
+            loop_i,
+            probe_arrays,
+            tuple(
+                x[0]._ref() if isinstance(x[0], tf.Variable) else x[0]
+                for x in self.base_vars.values()
+            )
+            + tuple(x._ref() for x in self.signals.internal_vars.values()),
+        )
 
         loop_vars = tf.while_loop(
-            cond=loop_condition, body=loop_body, loop_vars=loop_vars,
-            parallel_iterations=1, back_prop=not self.inference_only)
+            cond=loop_condition,
+            body=loop_body,
+            loop_vars=loop_vars,
+            parallel_iterations=1,
+            back_prop=not self.inference_only,
+        )
 
         self.steps_run = loop_vars[2]
         self.probe_arrays = OrderedDict()
@@ -432,9 +470,7 @@ class TensorGraph:
             x = a.stack()
 
             if self.model.sig[p]["in"].minibatched:
-                x = tf.transpose(
-                    a=x,
-                    perm=np.roll(np.arange(x.get_shape().ndims), 1))
+                x = tf.transpose(a=x, perm=np.roll(np.arange(x.get_shape().ndims), 1))
             else:
                 x = tf.expand_dims(x, 0)
 
@@ -456,8 +492,10 @@ class TensorGraph:
             if self.model.sig[n]["out"] in self.signals:
                 # set up a placeholder input for this node
                 self.input_ph[n] = tf_compat.placeholder(
-                    self.dtype, (None, n.size_out, self.minibatch_size),
-                    name="%s_ph" % utils.sanitize_name(n))
+                    self.dtype,
+                    (None, n.size_out, self.minibatch_size),
+                    name="%s_ph" % utils.sanitize_name(n),
+                )
 
     def build_optimizer_func(self, optimizer, objective):
         """
@@ -543,40 +581,47 @@ class TensorGraph:
             # returning the probe value, which is the standard behaviour for
             # build_outputs)
             loss, _ = self.build_outputs(
-                {k: v for k, v in objective.items() if v is not None})
+                {k: v for k, v in objective.items() if v is not None}
+            )
 
             # compute gradients wrt loss
             if len(loss) > 0:
                 # reduce loss to a scalar
                 loss = tf.reduce_sum(
-                    input_tensor=[tf.reduce_sum(input_tensor=v)
-                                  for v in loss.values()])
+                    input_tensor=[tf.reduce_sum(input_tensor=v) for v in loss.values()]
+                )
 
-                grads.append(tf.gradients(
-                    ys=loss, xs=vars, aggregation_method=agg_method))
+                grads.append(
+                    tf.gradients(ys=loss, xs=vars, aggregation_method=agg_method)
+                )
 
             # add in any gradients where the user directly specified the output
             # error grad
             for p, g in objective.items():
                 if g is None:
-                    grads.append(tf.gradients(
-                        ys=self.probe_arrays[p], xs=vars,
-                        grad_ys=self.target_phs[p],
-                        aggregation_method=agg_method))
+                    grads.append(
+                        tf.gradients(
+                            ys=self.probe_arrays[p],
+                            xs=vars,
+                            grad_ys=self.target_phs[p],
+                            aggregation_method=agg_method,
+                        )
+                    )
 
             # combine gradients for each variable
             if len(grads) == 1:
                 grads = grads[0]
             else:
-                grads = [tf.reduce_sum(input_tensor=gs, axis=0)
-                         for gs in zip(*grads)]
+                grads = [tf.reduce_sum(input_tensor=gs, axis=0) for gs in zip(*grads)]
 
             opt_op = optimizer.apply_gradients(
-                zip(grads, tf_compat.trainable_variables()))
+                zip(grads, tf_compat.trainable_variables())
+            )
 
             with tf.control_dependencies([opt_op]):
                 new_step = tf_compat.assign_add(
-                    self.training_step, tf.constant(1, dtype=tf.int64))
+                    self.training_step, tf.constant(1, dtype=tf.int64)
+                )
 
             return new_step, loss
 
@@ -635,8 +680,10 @@ class TensorGraph:
         for probes, out in outputs.items():
             is_tuple = isinstance(probes, tuple)
             probe_arrays = (
-                tuple(self.probe_arrays[p] for p in probes) if is_tuple else
-                self.probe_arrays[probes])
+                tuple(self.probe_arrays[p] for p in probes)
+                if is_tuple
+                else self.probe_arrays[probes]
+            )
 
             if out is None:
                 # return probe output value
@@ -651,10 +698,8 @@ class TensorGraph:
                     nargs -= len(spec.defaults)
 
                 # don't count self argument for methods or callable classes
-                out_func = (out.func if isinstance(out, functools.partial)
-                            else out)
-                if inspect.ismethod(out_func) or not inspect.isroutine(
-                        out_func):
+                out_func = out.func if isinstance(out, functools.partial) else out
+                if inspect.ismethod(out_func) or not inspect.isroutine(out_func):
                     nargs -= 1
 
                 # build function arguments
@@ -668,33 +713,39 @@ class TensorGraph:
                             self.target_phs[p] = tf_compat.placeholder(
                                 self.dtype,
                                 (self.minibatch_size, None, p.size_in),
-                                name="%s_ph" % utils.sanitize_name(p))
-                    target_phs = (tuple(self.target_phs[p] for p in probes)
-                                  if is_tuple else self.target_phs[probes])
+                                name="%s_ph" % utils.sanitize_name(p),
+                            )
+                    target_phs = (
+                        tuple(self.target_phs[p] for p in probes)
+                        if is_tuple
+                        else self.target_phs[probes]
+                    )
                     args = [probe_arrays, target_phs]
                 else:
                     raise ValidationError(
                         "Output functions must accept 1 or 2 arguments; '%s' "
-                        "takes %s arguments" % (
-                            utils.function_name(out, sanitize=False), nargs),
-                        "outputs")
+                        "takes %s arguments"
+                        % (utils.function_name(out, sanitize=False), nargs),
+                        "outputs",
+                    )
 
                 # apply output function
-                with tf_compat.variable_scope(
-                        utils.function_name(out)) as scope:
+                with tf_compat.variable_scope(utils.function_name(out)) as scope:
                     output_vals[probes] = out(*args)
 
                 # collect any new variables from building the outputs
-                for collection in [tf_compat.GraphKeys.GLOBAL_VARIABLES,
-                                   tf_compat.GraphKeys.LOCAL_VARIABLES,
-                                   "gradient_vars"]:
+                for collection in [
+                    tf_compat.GraphKeys.GLOBAL_VARIABLES,
+                    tf_compat.GraphKeys.LOCAL_VARIABLES,
+                    "gradient_vars",
+                ]:
                     new_vars.extend(scope.get_collection(collection))
             else:
-                raise ValidationError("Outputs must be callable or None)",
-                                      "outputs")
+                raise ValidationError("Outputs must be callable or None)", "outputs")
 
-        new_vars_init = (tf_compat.variables_initializer(new_vars)
-                         if len(new_vars) > 0 else None)
+        new_vars_init = (
+            tf_compat.variables_initializer(new_vars) if len(new_vars) > 0 else None
+        )
 
         self.outputs[key] = output_vals
 
@@ -725,17 +776,22 @@ class TensorGraph:
             if isinstance(output, np.ndarray):
                 self.input_funcs[n] = output
             elif isinstance(output, Process):
-                state = make_process_state(
-                    output, (n.size_in,), (n.size_out,), self.dt)
+                state = make_process_state(output, (n.size_in,), (n.size_out,), self.dt)
                 self.input_funcs[n] = [
                     make_process_step(
                         output,
-                        (n.size_in,), (n.size_out,), self.dt,
-                        output.get_rng(rng), state)
-                    for _ in range(self.minibatch_size)]
+                        (n.size_in,),
+                        (n.size_out,),
+                        self.dt,
+                        output.get_rng(rng),
+                        state,
+                    )
+                    for _ in range(self.minibatch_size)
+                ]
             elif n.size_out > 0:
                 self.input_funcs[n] = [
-                    utils.align_func((n.size_out,), self.dtype)(output)]
+                    utils.align_func((n.size_out,), self.dtype)(output)
+                ]
             else:
                 # a node with no inputs and no outputs, but it can still
                 # have side effects
@@ -777,18 +833,28 @@ class TensorGraph:
                     loss, init = self.build_outputs(obj)
                     if init is not None:
                         inits.append(init)
-                    summary_ops.append(tf_compat.summary.scalar(
-                        "loss", tf.reduce_sum(
-                            input_tensor=[tf.reduce_sum(input_tensor=v)
-                                          for v in loss.values()]),
-                        family="loss"))
+                    summary_ops.append(
+                        tf_compat.summary.scalar(
+                            "loss",
+                            tf.reduce_sum(
+                                input_tensor=[
+                                    tf.reduce_sum(input_tensor=v) for v in loss.values()
+                                ]
+                            ),
+                            family="loss",
+                        )
+                    )
 
                     if len(obj) > 1:
                         # get loss for each probe
                         for p, t in loss.items():
-                            summary_ops.append(tf_compat.summary.scalar(
-                                utils.sanitize_name("Probe_%s_loss" % p.label),
-                                tf.reduce_sum(input_tensor=t), family="loss"))
+                            summary_ops.append(
+                                tf_compat.summary.scalar(
+                                    utils.sanitize_name("Probe_%s_loss" % p.label),
+                                    tf.reduce_sum(input_tensor=t),
+                                    family="loss",
+                                )
+                            )
                 elif isinstance(obj, (Ensemble, Neurons, Connection)):
                     if isinstance(obj, Ensemble):
                         param = "encoders"
@@ -800,18 +866,22 @@ class TensorGraph:
                         param = "weights"
                         name = "Connection_%s" % obj.label
 
-                    summary_ops.append(tf_compat.summary.histogram(
-                        utils.sanitize_name("%s_%s" % (name, param)),
-                        self.get_tensor(self.model.sig[obj][param])))
+                    summary_ops.append(
+                        tf_compat.summary.histogram(
+                            utils.sanitize_name("%s_%s" % (name, param)),
+                            self.get_tensor(self.model.sig[obj][param]),
+                        )
+                    )
                 elif isinstance(obj, tf.Tensor):
                     # we assume that obj is a summary op
                     summary_ops.append(obj)
                 else:
-                    raise SimulationError(
-                        "Unknown summary object: %s" % obj)
+                    raise SimulationError("Unknown summary object: %s" % obj)
 
-            return tf_compat.summary.merge(summary_ops), (
-                None if len(inits) == 0 else inits)
+            return (
+                tf_compat.summary.merge(summary_ops),
+                (None if len(inits) == 0 else inits),
+            )
 
     @with_self
     def get_tensor(self, sig):
@@ -885,26 +955,27 @@ class TensorGraph:
             subnetwork."""
 
             for subnet in net.networks:
-                mark_network(net_config, subnet,
-                             get_trainable(net_config, subnet,
-                                           network_trainable))
+                mark_network(
+                    net_config,
+                    subnet,
+                    get_trainable(net_config, subnet, network_trainable),
+                )
 
             # encoders and biases are trainable
             for ens in net.ensembles:
-                ens_trainable = get_trainable(net_config, ens,
-                                              network_trainable)
+                ens_trainable = get_trainable(net_config, ens, network_trainable)
 
                 self.model.sig[ens]["encoders"].trainable = ens_trainable
                 self.model.sig[ens]["encoders"].minibatched = False
 
                 if not isinstance(ens.neuron_type, Direct):
-                    neurons_trainable = get_trainable(net_config, ens.neurons,
-                                                      network_trainable)
+                    neurons_trainable = get_trainable(
+                        net_config, ens.neurons, network_trainable
+                    )
                     if neurons_trainable is 1:  # noqa: F632
                         neurons_trainable = ens_trainable
 
-                    self.model.sig[ens.neurons]["bias"].trainable = (
-                        neurons_trainable)
+                    self.model.sig[ens.neurons]["bias"].trainable = neurons_trainable
                     self.model.sig[ens.neurons]["bias"].minibatched = False
 
             # connection weights are trainable
@@ -912,7 +983,8 @@ class TensorGraph:
                 # note: this doesn't include probe connections, since they
                 # aren't added to the network
                 self.model.sig[conn]["weights"].trainable = get_trainable(
-                    net_config, conn, network_trainable)
+                    net_config, conn, network_trainable
+                )
                 self.model.sig[conn]["weights"].minibatched = False
 
             # parameters can't be modified by an online Nengo learning rule
@@ -943,8 +1015,8 @@ class TensorGraph:
                             warnings.warn(
                                 "%s has a learning rule and is also set "
                                 "to be trainable; this is likely to "
-                                "produce strange training behaviour." %
-                                obj)
+                                "produce strange training behaviour." % obj
+                            )
                         else:
                             self.model.sig[obj][attr].trainable = False
 
@@ -952,12 +1024,16 @@ class TensorGraph:
 
         if self.model.toplevel is None:
             warnings.warn(
-                "No top-level network in model; assuming no trainable "
-                "parameters", UserWarning)
+                "No top-level network in model; assuming no trainable parameters",
+                UserWarning,
+            )
         else:
             net_config = self.model.toplevel.config
-            mark_network(net_config, self.model.toplevel,
-                         get_trainable(net_config, self.model.toplevel, 1))
+            mark_network(
+                net_config,
+                self.model.toplevel,
+                get_trainable(net_config, self.model.toplevel, 1),
+            )
 
             # the connections to connection probes are not trainable, but
             # also not minibatched
@@ -1024,8 +1100,9 @@ class TensorGraph:
                 breaks += [i + 1]
 
         logging.debug("partitions")
-        logging.debug("\n%s", "".join("|" if i in breaks else " "
-                                      for i in range(len(sigs))))
+        logging.debug(
+            "\n%s", "".join("|" if i in breaks else " " for i in range(len(sigs)))
+        )
 
         # create all the base signals
         for i, sig in enumerate(sigs):
@@ -1080,7 +1157,8 @@ class TensorGraph:
                 # duplicate along minibatch dimension
                 initial_value = np.tile(
                     initial_value[..., None],
-                    tuple(1 for _ in shape) + (self.minibatch_size,))
+                    tuple(1 for _ in shape) + (self.minibatch_size,),
+                )
 
             if key in base_arrays:
                 base_arrays[key][0].append(initial_value)
@@ -1092,8 +1170,8 @@ class TensorGraph:
             indices = np.arange(n - shape[0], n)
 
             tensor_sig = self.signals.get_tensor_signal(
-                indices, key, dtype, shape, sig.minibatched, label=sig.name,
-                signal=sig)
+                indices, key, dtype, shape, sig.minibatched, label=sig.name, signal=sig
+            )
 
             logger.debug("created base signal")
             logger.debug(sig)
@@ -1104,8 +1182,13 @@ class TensorGraph:
             base_arrays[key] = (np.concatenate(arrs, axis=0), t)
 
         # add any signal views to the sig_map
-        all_views = [sig for ops in self.plan for op in ops for sig in
-                     op.all_signals if sig.is_view]
+        all_views = [
+            sig
+            for ops in self.plan
+            for op in ops
+            for sig in op.all_signals
+            if sig.is_view
+        ]
         for sig in all_views:
             if sig.size == sig.base.size:
                 # reshape view
@@ -1113,8 +1196,7 @@ class TensorGraph:
             else:
                 if sig.shape[1:] != sig.base.shape[1:]:
                     # TODO: support this?
-                    raise NotImplementedError(
-                        "Slicing on axes > 0 is not supported")
+                    raise NotImplementedError("Slicing on axes > 0 is not supported")
 
                 # slice view
                 assert np.all([x == 1 for x in sig.elemstrides[1:]])
@@ -1125,14 +1207,16 @@ class TensorGraph:
                 if stop < 0:
                     stop = None
 
-                self.signals[sig] = self.signals[sig.base][slice(start, stop,
-                                                                 stride)]
+                self.signals[sig] = self.signals[sig.base][slice(start, stop, stride)]
 
         # error checking
         for sig, tensor_sig in self.signals.items():
             # tensorsignal shapes should match signal shapes
-            assert tensor_sig.shape == (sig.size,) if is_sparse(sig) else (
-                sig.shape if sig.shape != () else (1,))
+            assert (
+                tensor_sig.shape == (sig.size,)
+                if is_sparse(sig)
+                else (sig.shape if sig.shape != () else (1,))
+            )
 
             # tensorsignal values should match signal values
             initial_value = sig.initial_value
@@ -1145,10 +1229,17 @@ class TensorGraph:
                 initial_value = initial_value[..., None]
             assert np.allclose(
                 base_arrays[tensor_sig.key][0][tensor_sig.indices],
-                initial_value.astype(dtype))
+                initial_value.astype(dtype),
+            )
 
         logger.debug("base arrays")
-        logger.debug("\n".join([str((k, v.dtype, v.shape, trainable))
-                                for k, (v, trainable) in base_arrays.items()]))
+        logger.debug(
+            "\n".join(
+                [
+                    str((k, v.dtype, v.shape, trainable))
+                    for k, (v, trainable) in base_arrays.items()
+                ]
+            )
+        )
 
         self.base_arrays_init = base_arrays

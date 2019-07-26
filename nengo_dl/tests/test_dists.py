@@ -25,8 +25,7 @@ def tnorm_var(scale, limit):
     pdf_b = norm_pdf(b)
     z = norm_cdf(b) - norm_cdf(a)
 
-    return scale ** 2 * (1 + (a * pdf_a - b * pdf_b) / z
-                         - ((pdf_a - pdf_b) / z) ** 2)
+    return scale ** 2 * (1 + (a * pdf_a - b * pdf_b) / z - ((pdf_a - pdf_b) / z) ** 2)
 
 
 def _test_variance_scaling(dist, scale, mode, seed):
@@ -53,8 +52,7 @@ def _test_variance_scaling(dist, scale, mode, seed):
         var = 4 * std ** 2 / 12
         assert np.allclose(np.var(samples), var, rtol=5e-3)
     else:
-        assert np.allclose(np.var(samples), tnorm_var(std, 2 * std),
-                           rtol=5e-3)
+        assert np.allclose(np.var(samples), tnorm_var(std, 2 * std), rtol=5e-3)
 
     # test with default rng
     samples = dist.sample(shape[0], shape[1])
@@ -65,8 +63,7 @@ def _test_variance_scaling(dist, scale, mode, seed):
 @pytest.mark.parametrize("mode", ["fan_in", "fan_out", "fan_avg"])
 @pytest.mark.parametrize("distribution", ["uniform", "normal"])
 def test_variance_scaling(scale, mode, distribution, seed):
-    dist = dists.VarianceScaling(scale=scale, mode=mode,
-                                 distribution=distribution)
+    dist = dists.VarianceScaling(scale=scale, mode=mode, distribution=distribution)
     _test_variance_scaling(dist, scale, mode, seed)
 
 
@@ -103,9 +100,12 @@ def test_truncated_normal(limit, stddev, seed):
     assert samples.shape == (1000, 2000)
 
 
-@pytest.mark.parametrize("dist", [
-    dists.TruncatedNormal(), dists.VarianceScaling(), dists.Glorot(),
-    dists.He()])
+@pytest.mark.parametrize(
+    "dist",
+    [dists.TruncatedNormal(), dists.VarianceScaling(), dists.Glorot(), dists.He()],
+)
 def test_seeding(dist, seed):
-    assert np.allclose(dist.sample(100, rng=np.random.RandomState(seed)),
-                       dist.sample(100, rng=np.random.RandomState(seed)))
+    assert np.allclose(
+        dist.sample(100, rng=np.random.RandomState(seed)),
+        dist.sample(100, rng=np.random.RandomState(seed)),
+    )

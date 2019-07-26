@@ -5,8 +5,7 @@ Build classes for Nengo neuron operators.
 import logging
 
 from nengo.builder.neurons import SimNeurons
-from nengo.neurons import (RectifiedLinear, SpikingRectifiedLinear, Sigmoid,
-                           LIF, LIFRate)
+from nengo.neurons import RectifiedLinear, SpikingRectifiedLinear, Sigmoid, LIF, LIFRate
 import numpy as np
 import tensorflow as tf
 
@@ -36,8 +35,10 @@ class GenericNeuronBuilder(OpBuilder):
 
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
-        self.state_data = [signals.combine([op.states[i] for op in ops])
-                           for i in range(len(ops[0].states))]
+        self.state_data = [
+            signals.combine([op.states[i] for op in ops])
+            for i in range(len(ops[0].states))
+        ]
 
         self.prev_result = []
 
@@ -48,13 +49,14 @@ class GenericNeuronBuilder(OpBuilder):
             for op in ops:
                 # slice out the individual state vectors from the overall
                 # array
-                op_J = J[J_offset:J_offset + op.J.shape[0]]
+                op_J = J[J_offset : J_offset + op.J.shape[0]]
                 J_offset += op.J.shape[0]
 
                 op_states = []
                 for j, s in enumerate(op.states):
-                    op_states += [states[j][state_offset[j]:
-                                            state_offset[j] + s.shape[0]]]
+                    op_states += [
+                        states[j][state_offset[j] : state_offset[j] + s.shape[0]]
+                    ]
                     state_offset[j] += s.shape[0]
 
                 # call step_math function
@@ -63,10 +65,10 @@ class GenericNeuronBuilder(OpBuilder):
                 mini_out = []
                 for j in range(signals.minibatch_size):
                     # blank output variable
-                    neuron_output = np.zeros(
-                        op.output.shape, self.output_data.dtype)
-                    op.neurons.step_math(dt, op_J[..., j], neuron_output,
-                                         *[s[..., j] for s in op_states])
+                    neuron_output = np.zeros(op.output.shape, self.output_data.dtype)
+                    op.neurons.step_math(
+                        dt, op_J[..., j], neuron_output, *[s[..., j] for s in op_states]
+                    )
                     mini_out += [neuron_output]
                 neuron_output = np.stack(mini_out, axis=-1)
 
@@ -74,14 +76,14 @@ class GenericNeuronBuilder(OpBuilder):
                 if output is None:
                     output = neuron_output
                 else:
-                    output = np.concatenate((output, neuron_output),
-                                            axis=0)
+                    output = np.concatenate((output, neuron_output), axis=0)
 
             return (output,) + states
 
         self.neuron_step_math = neuron_step_math
         self.neuron_step_math.__name__ = utils.sanitize_name(
-            "_".join([repr(op.neurons) for op in ops]))
+            "_".join([repr(op.neurons) for op in ops])
+        )
 
     def build_step(self, signals):
         J = signals.gather(self.J_data)
@@ -93,14 +95,15 @@ class GenericNeuronBuilder(OpBuilder):
         # functions are thread safe
         with tf.control_dependencies(self.prev_result), tf.device("/cpu:0"):
             ret = tf_compat.py_func(
-                self.neuron_step_math, [signals.dt, J] + states,
+                self.neuron_step_math,
+                [signals.dt, J] + states,
                 [self.output_data.dtype] + states_dtype,
-                name=self.neuron_step_math.__name__)
+                name=self.neuron_step_math.__name__,
+            )
             neuron_out, state_out = ret[0], ret[1:]
         self.prev_result = [neuron_out]
 
-        neuron_out.set_shape(
-            self.output_data.shape + (signals.minibatch_size,))
+        neuron_out.set_shape(self.output_data.shape + (signals.minibatch_size,))
         signals.scatter(self.output_data, neuron_out)
 
         for i, s in enumerate(self.state_data):
@@ -122,8 +125,11 @@ class RectifiedLinearBuilder(OpBuilder):
             self.amplitude = None
         else:
             self.amplitude = signals.op_constant(
-                [op.neurons for op in ops], [op.J.shape[0] for op in ops],
-                "amplitude", signals.dtype)
+                [op.neurons for op in ops],
+                [op.J.shape[0] for op in ops],
+                "amplitude",
+                signals.dtype,
+            )
 
     def _step(self, J):
         out = tf.nn.relu(J)
@@ -142,8 +148,7 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
        operators."""
 
     def __init__(self, ops, signals, config):
-        super(SpikingRectifiedLinearBuilder, self).__init__(
-            ops, signals, config)
+        super(SpikingRectifiedLinearBuilder, self).__init__(ops, signals, config)
 
         self.voltage_data = signals.combine([op.states[0] for op in ops])
 
@@ -175,7 +180,8 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
             out, voltage = tf.cond(
                 pred=signals.training,
                 true_fn=lambda: (rate_out, voltage),
-                false_fn=lambda: (spike_out, spike_voltage))
+                false_fn=lambda: (spike_out, spike_voltage),
+            )
 
         signals.scatter(self.output_data, out)
         signals.scatter(self.voltage_data, voltage)
@@ -191,8 +197,11 @@ class SigmoidBuilder(OpBuilder):
         self.output_data = signals.combine([op.output for op in ops])
 
         self.tau_ref = signals.op_constant(
-            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
-            "tau_ref", signals.dtype)
+            [op.neurons for op in ops],
+            [op.J.shape[0] for op in ops],
+            "tau_ref",
+            signals.dtype,
+        )
 
     def build_step(self, signals):
         J = signals.gather(self.J_data)
@@ -206,19 +215,29 @@ class LIFRateBuilder(OpBuilder):
         super(LIFRateBuilder, self).__init__(ops, signals, config)
 
         self.tau_ref = signals.op_constant(
-            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
-            "tau_ref", signals.dtype)
+            [op.neurons for op in ops],
+            [op.J.shape[0] for op in ops],
+            "tau_ref",
+            signals.dtype,
+        )
         self.tau_rc = signals.op_constant(
-            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
-            "tau_rc", signals.dtype)
+            [op.neurons for op in ops],
+            [op.J.shape[0] for op in ops],
+            "tau_rc",
+            signals.dtype,
+        )
         self.amplitude = signals.op_constant(
-            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
-            "amplitude", signals.dtype)
+            [op.neurons for op in ops],
+            [op.J.shape[0] for op in ops],
+            "amplitude",
+            signals.dtype,
+        )
 
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
-        self.zeros = tf.zeros(self.J_data.shape + (signals.minibatch_size,),
-                              signals.dtype)
+        self.zeros = tf.zeros(
+            self.J_data.shape + (signals.minibatch_size,), signals.dtype
+        )
 
         self.epsilon = tf.constant(1e-15, dtype=signals.dtype)
 
@@ -233,8 +252,10 @@ class LIFRateBuilder(OpBuilder):
         # (even though we'll only use the values that are already positive),
         # otherwise we can end up with nans in the gradient
         rates = self.amplitude / (
-            self.tau_ref + self.tau_rc * tf_math.log1p(tf_math.reciprocal(
-                tf.maximum(j, self.epsilon))))
+            self.tau_ref
+            + self.tau_rc
+            * tf_math.log1p(tf_math.reciprocal(tf.maximum(j, self.epsilon)))
+        )
 
         return tf.where(j > self.zero, rates, self.zeros)
 
@@ -251,8 +272,11 @@ class SoftLIFRateBuilder(LIFRateBuilder):
         super(SoftLIFRateBuilder, self).__init__(ops, signals, config)
 
         self.sigma = signals.op_constant(
-            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
-            "sigma", signals.dtype)
+            [op.neurons for op in ops],
+            [op.J.shape[0] for op in ops],
+            "sigma",
+            signals.dtype,
+        )
 
     def _step(self, J):
         J -= self.one
@@ -267,9 +291,9 @@ class SoftLIFRateBuilder(LIFRateBuilder):
         # as z->0
         #   z = s*log(1 + e^js) = s*e^js
         #   log(1 + 1/z) = log(1/z) = -log(s*e^js) = -js - log(s)
-        q = tf.where(j_valid,
-                     tf_math.log1p(tf_math.reciprocal(z)),
-                     -js - tf_math.log(self.sigma))
+        q = tf.where(
+            j_valid, tf_math.log1p(tf_math.reciprocal(z)), -js - tf_math.log(self.sigma)
+        )
 
         rates = self.amplitude / (self.tau_ref + self.tau_rc * q)
 
@@ -292,16 +316,18 @@ class LIFBuilder(SoftLIFRateBuilder):
         super(SoftLIFRateBuilder, self).__init__(ops, signals, config)
 
         self.min_voltage = signals.op_constant(
-            [op.neurons for op in ops], [op.J.shape[0] for op in ops],
-            "min_voltage", signals.dtype)
+            [op.neurons for op in ops],
+            [op.J.shape[0] for op in ops],
+            "min_voltage",
+            signals.dtype,
+        )
         self.alpha = self.amplitude / signals.dt
 
         self.voltage_data = signals.combine([op.states[0] for op in ops])
         self.refractory_data = signals.combine([op.states[1] for op in ops])
 
         if self.config.lif_smoothing:
-            self.sigma = tf.constant(self.config.lif_smoothing,
-                                     dtype=signals.dtype)
+            self.sigma = tf.constant(self.config.lif_smoothing, dtype=signals.dtype)
 
     def _step(self, J, voltage, refractory, dt):
         delta_t = tf.clip_by_value(dt - refractory, self.zero, dt)
@@ -312,23 +338,25 @@ class LIFBuilder(SoftLIFRateBuilder):
         spiked = voltage > self.one
         spikes = tf.cast(spiked, J.dtype) * self.alpha
 
-        partial_ref = -self.tau_rc * tf_math.log1p((self.one - voltage)
-                                                   / (J - self.one))
+        partial_ref = -self.tau_rc * tf_math.log1p(
+            (self.one - voltage) / (J - self.one)
+        )
         # FastLIF version (linearly approximate spike time when calculating
         # remaining refractory period)
         # partial_ref = signals.dt * (voltage - self.one) / dV
 
-        refractory = tf.where(spiked, self.tau_ref - partial_ref,
-                              refractory - dt)
+        refractory = tf.where(spiked, self.tau_ref - partial_ref, refractory - dt)
 
-        voltage = tf.where(spiked, self.zeros,
-                           tf.maximum(voltage, self.min_voltage))
+        voltage = tf.where(spiked, self.zeros, tf.maximum(voltage, self.min_voltage))
 
         # we use stop_gradient to avoid propagating any nans (those get
         # propagated through the cond even if the spiking version isn't
         # being used at all)
-        return (tf.stop_gradient(spikes), tf.stop_gradient(voltage),
-                tf.stop_gradient(refractory))
+        return (
+            tf.stop_gradient(spikes),
+            tf.stop_gradient(voltage),
+            tf.stop_gradient(refractory),
+        )
 
     def build_step(self, signals):
         J = signals.gather(self.J_data)
@@ -336,19 +364,22 @@ class LIFBuilder(SoftLIFRateBuilder):
         refractory = signals.gather(self.refractory_data)
 
         spike_out, spike_voltage, spike_ref = self._step(
-            J, voltage, refractory, signals.dt)
+            J, voltage, refractory, signals.dt
+        )
 
         if self.config.inference_only:
             spikes, voltage, refractory = spike_out, spike_voltage, spike_ref
         else:
-            rate_out = (LIFRateBuilder._step(self, J)
-                        if self.config.lif_smoothing is None else
-                        SoftLIFRateBuilder._step(self, J))
+            rate_out = (
+                LIFRateBuilder._step(self, J)
+                if self.config.lif_smoothing is None
+                else SoftLIFRateBuilder._step(self, J)
+            )
 
             spikes, voltage, refractory = tf.cond(
                 pred=signals.training,
                 true_fn=lambda: (rate_out, voltage, refractory),
-                false_fn=lambda: (spike_out, spike_voltage, spike_ref)
+                false_fn=lambda: (spike_out, spike_voltage, spike_ref),
             )
 
         signals.scatter(self.output_data, spikes)
@@ -392,8 +423,7 @@ class SimNeuronsBuilder(OpBuilder):
         # then we build that. otherwise we'll just execute the neuron step
         # function externally (using `tf.py_func`).
         if neuron_type in self.TF_NEURON_IMPL:
-            self.built_neurons = self.TF_NEURON_IMPL[neuron_type](
-                ops, signals, config)
+            self.built_neurons = self.TF_NEURON_IMPL[neuron_type](ops, signals, config)
         else:
             self.built_neurons = GenericNeuronBuilder(ops, signals, config)
 

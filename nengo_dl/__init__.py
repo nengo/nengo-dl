@@ -6,8 +6,10 @@ from nengo_dl.version import version as __version__
 
 # check python version
 import sys
+
 if sys.version_info < (3, 5):
-    raise ImportError("""
+    raise ImportError(
+        """
 You are running Python version %s with NengoDL version %s. NengoDL requires
 at least Python 3.5.
 
@@ -23,7 +25,9 @@ There are two options for getting NengoDL working:
 - Install an older version of NengoDL:
 
  $ pip install 'nengo-dl<2.0'
-""" % (sys.version, __version__))
+"""
+        % (sys.version, __version__)
+    )
 del sys
 
 # filter out "INFO" level log messages
@@ -44,8 +48,12 @@ del tf_compat
 
 # need to explicitly import these to trigger the builder registration
 from nengo_dl import (
-    op_builders, neuron_builders, process_builders, learning_rule_builders,
-    transform_builders)
+    op_builders,
+    neuron_builders,
+    process_builders,
+    learning_rule_builders,
+    transform_builders,
+)
 
 # import into top-level namespace
 from nengo_dl import dists, objectives

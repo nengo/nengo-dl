@@ -13,8 +13,14 @@ from nengo.utils.graphs import toposort, BidirectionalDAG
 from nengo.utils.simulator import operator_dependency_graph
 import numpy as np
 
-from nengo_dl import (process_builders, builder, tensor_node,
-                      op_builders, learning_rule_builders, neuron_builders)
+from nengo_dl import (
+    process_builders,
+    builder,
+    tensor_node,
+    op_builders,
+    learning_rule_builders,
+    neuron_builders,
+)
 from nengo_dl.compat import is_sparse, SparseMatrix
 
 logger = logging.getLogger(__name__)
@@ -49,10 +55,12 @@ def mergeable(op, chosen_ops):
         return False
 
     # sets/incs/reads/updates must all match
-    if (len(op.sets) != len(c.sets)
-            or len(op.incs) != len(c.incs)
-            or len(op.reads) != len(c.reads)
-            or len(op.updates) != len(c.updates)):
+    if (
+        len(op.sets) != len(c.sets)
+        or len(op.incs) != len(c.incs)
+        or len(op.reads) != len(c.reads)
+        or len(op.updates) != len(c.updates)
+    ):
         return False
 
     # signals must be mergeable into the same base array
@@ -190,8 +198,9 @@ def tree_planner(op_list, max_depth=3):
         Operators combined into mergeable groups and in execution order
     """
 
-    def shortest_plan(selected, successors_of, predecessors_of, cache,
-                      max_depth, available):
+    def shortest_plan(
+        selected, successors_of, predecessors_of, cache, max_depth, available
+    ):
         """Recursively check what the shortest plan is after selecting each
         available group."""
 
@@ -228,8 +237,13 @@ def tree_planner(op_list, max_depth=3):
                     # recursively find the best plan on the remaining
                     # operators
                     _, remaining_length = shortest_plan(
-                        new_selected, successors_of, predecessors_of, cache,
-                        max_depth - 1, available)
+                        new_selected,
+                        successors_of,
+                        predecessors_of,
+                        cache,
+                        max_depth - 1,
+                        available,
+                    )
 
                     # return the available list to its original state for
                     # the next group (note: this is faster than copying
@@ -258,8 +272,9 @@ def tree_planner(op_list, max_depth=3):
     # convert operators to integer indices (to save memory and make
     # lookup faster)
     op_codes = {op: np.uint32(i) for i, op in enumerate(op_list)}
-    successors_of = {op_codes[k]: set(op_codes[x] for x in v)
-                     for k, v in successors_of.items()}
+    successors_of = {
+        op_codes[k]: set(op_codes[x] for x in v) for k, v in successors_of.items()
+    }
 
     # track the number of incoming edges to each operator
     predecessors_of = {}
@@ -286,15 +301,19 @@ def tree_planner(op_list, max_depth=3):
     groups = [[op_codes[x] for x in g] for g in groups]
 
     # find the ops that could be scheduled next in each merge group
-    available = [set(op for op in g if predecessors_of[op] == 0)
-                 for g in groups]
+    available = [set(op for op in g if predecessors_of[op] == 0) for g in groups]
 
     plan = []
     while len(successors_of) > 0:
         # find the best plan of the given depth
         selected, _ = shortest_plan(
-            frozenset(), successors_of, predecessors_of,
-            [{} for _ in range(max_depth + 1)], max_depth, available)
+            frozenset(),
+            successors_of,
+            predecessors_of,
+            [{} for _ in range(max_depth + 1)],
+            max_depth,
+            available,
+        )
 
         # select the first item in that plan (i.e., the best group to select
         # after looking ahead for max_depth steps)
@@ -363,12 +382,18 @@ def transitive_planner(op_list):
     # have higher priority, meaning that we will choose to merge those ops
     # and potentially break lower-priority groups)
     order = [
-        op_builders.DotIncBuilder, op_builders.ElementwiseIncBuilder,
-        neuron_builders.SimNeuronsBuilder, process_builders.SimProcessBuilder,
-        op_builders.SimPyFuncBuilder, learning_rule_builders.SimOjaBuilder,
+        op_builders.DotIncBuilder,
+        op_builders.ElementwiseIncBuilder,
+        neuron_builders.SimNeuronsBuilder,
+        process_builders.SimProcessBuilder,
+        op_builders.SimPyFuncBuilder,
+        learning_rule_builders.SimOjaBuilder,
         learning_rule_builders.SimVojaBuilder,
-        learning_rule_builders.SimBCMBuilder, op_builders.CopyBuilder,
-        op_builders.ResetBuilder, tensor_node.SimTensorNodeBuilder]
+        learning_rule_builders.SimBCMBuilder,
+        op_builders.CopyBuilder,
+        op_builders.ResetBuilder,
+        tensor_node.SimTensorNodeBuilder,
+    ]
 
     for builder_type in order:
         if builder_type not in ops_by_type:
@@ -379,12 +404,13 @@ def transitive_planner(op_list):
 
         # compute transitive closure
         trans = [None for _ in range(n_ele)]
-        transitive_closure_recurse(dg.forward, ops, trans, builder_type,
-                                   builder_types, {})
+        transitive_closure_recurse(
+            dg.forward, ops, trans, builder_type, builder_types, {}
+        )
 
         # reduce it to the elements we care about (ops of the current
         # builder type)
-        trans = {i: v for i, v in enumerate(trans[:len(op_list)]) if i in ops}
+        trans = {i: v for i, v in enumerate(trans[: len(op_list)]) if i in ops}
 
         while len(trans) > 0:
             # find all the ops that have no downstream dependents
@@ -455,8 +481,7 @@ def transitive_planner(op_list):
     return plan
 
 
-def transitive_closure_recurse(dg, ops, trans, builder_type, builder_types,
-                               cache):
+def transitive_closure_recurse(dg, ops, trans, builder_type, builder_types, cache):
     """
     Computes the transitive closure for the given graph, restricted to the
     operators with the given builder type.
@@ -494,12 +519,13 @@ def transitive_closure_recurse(dg, ops, trans, builder_type, builder_types,
             continue
 
         todo = [x for x in dg[op] if trans[x] is None]
-        transitive_closure_recurse(dg, todo, trans, builder_type,
-                                   builder_types, cache)
+        transitive_closure_recurse(dg, todo, trans, builder_type, builder_types, cache)
 
         merged = set(
-            x for x in dg[op] if x < len(builder_types)
-            and builder_types[x] == builder_type)
+            x
+            for x in dg[op]
+            if x < len(builder_types) and builder_types[x] == builder_type
+        )
 
         unique_posts = {id(trans[x]): trans[x] for x in dg[op]}
 
@@ -567,9 +593,11 @@ def order_signals(plan, n_passes=10):
     # get all the unique base signals (we use OrderedDict to drop the duplicate
     # bases without changing their order, so that signal order will be
     # deterministic for a given model)
-    all_signals = list(OrderedDict(
-        [(s.base, None) for ops in plan for op in ops
-         for s in op.all_signals]).keys())
+    all_signals = list(
+        OrderedDict(
+            [(s.base, None) for ops in plan for op in ops for s in op.all_signals]
+        ).keys()
+    )
 
     # figure out all the read/write blocks in the plan (in theory we would like
     # each block to become a contiguous chunk in the base array)
@@ -595,21 +623,21 @@ def order_signals(plan, n_passes=10):
         return all_signals, plan
 
     # get rid of duplicate io blocks
-    duplicates = [
-        [y for y in io_blocks.values() if x == y]
-        for x in io_blocks.values()]
+    duplicates = [[y for y in io_blocks.values() if x == y] for x in io_blocks.values()]
     sorted_blocks = [
-        (x, len(duplicates[i])) for i, x in enumerate(io_blocks.values())
-        if duplicates[i][0] is x]
+        (x, len(duplicates[i]))
+        for i, x in enumerate(io_blocks.values())
+        if duplicates[i][0] is x
+    ]
 
     # sort by the size of the block (descending order)
     # note: we multiply by the number of duplicates, since blocks that
     # are accessed by multiple op groups will have a proportionally larger
     # impact on performance
     sorted_blocks = sorted(
-        sorted_blocks, key=lambda b: np.sum([s.size for s in b[0]]) * b[1])
-    sorted_blocks = [sorted_blocks[i][0] for i in
-                     range(len(sorted_blocks) - 1, -1, -1)]
+        sorted_blocks, key=lambda b: np.sum([s.size for s in b[0]]) * b[1]
+    )
+    sorted_blocks = [sorted_blocks[i][0] for i in range(len(sorted_blocks) - 1, -1, -1)]
 
     # figure out which io blocks each signal participates in
     signal_blocks = defaultdict(list)
@@ -627,8 +655,8 @@ def order_signals(plan, n_passes=10):
 
     # list of the ops in each io block, sorted by the size of that io block
     sorted_io = sorted(
-        io_blocks.keys(),
-        key=lambda p: -sorted_blocks.index(io_blocks[p]))
+        io_blocks.keys(), key=lambda p: -sorted_blocks.index(io_blocks[p])
+    )
 
     logger.debug("sorted io")
     logger.debug("\n".join(str(x) for x in sorted_io))
@@ -677,7 +705,8 @@ def order_signals(plan, n_passes=10):
         # reorder ops by signal order. this leaves the overall
         # hamming sort block order unchanged.
         new_plan, sig_idxs = sort_ops_by_signals(
-            sorted_io, all_signals, sig_idxs, new_plan, signal_blocks, op_sigs)
+            sorted_io, all_signals, sig_idxs, new_plan, signal_blocks, op_sigs
+        )
 
         logger.debug("resorted ops")
         logger.debug("\n%s" * len(new_plan), *new_plan.values())
@@ -685,10 +714,9 @@ def order_signals(plan, n_passes=10):
         logger.debug("reordered signal indices")
         logger.debug(sig_idxs)
 
-        if (all([x == y for ops in plan
-                 for x, y in zip(new_plan[ops], prev_plan[ops])])
-                and all([sig_idxs[s] == prev_sig_idxs[s]
-                         for s in all_signals])):
+        if all(
+            [x == y for ops in plan for x, y in zip(new_plan[ops], prev_plan[ops])]
+        ) and all([sig_idxs[s] == prev_sig_idxs[s] for s in all_signals]):
             # if the plan didn't change and the signals didn't change, then
             # there is no point in continuing (they're not going to change
             # in the future)
@@ -793,8 +821,9 @@ def hamming_sort(blocks):
         # hamming distance
         next_dists = [len(curr_blocks ^ b) for b in next_blocks]
         min_dist = min(next_dists)
-        next_blocks = [b for i, b in enumerate(next_blocks)
-                       if next_dists[i] == min_dist]
+        next_blocks = [
+            b for i, b in enumerate(next_blocks) if next_dists[i] == min_dist
+        ]
 
         # within all the blocks that have the same hamming distance, pick the
         # next block that matches along the largest blocks
@@ -817,8 +846,7 @@ def hamming_sort(blocks):
     # signals within each block). signals that aren't part of any io block
     # get a default value of -1.
     block_idxs = {b: i for i, b in enumerate(sorted_blocks)}
-    sort_idxs = defaultdict(
-        lambda: -1, [(s, block_idxs[b]) for s, b in blocks.items()])
+    sort_idxs = defaultdict(lambda: -1, [(s, block_idxs[b]) for s, b in blocks.items()])
 
     return sort_idxs
 
@@ -868,8 +896,11 @@ def sort_ops_by_signals(sorted_io, sigs, sig_idxs, new_plan, blocks, op_sigs):
     for old_ops, io_block in sorted_io:
         logger.log(logging.DEBUG - 1, "-" * 30)
         logger.log(logging.DEBUG - 1, "sorting ops %s", new_plan[old_ops])
-        logger.log(logging.DEBUG - 1, "by %s",
-                   [op_sigs[op][io_block] for op in new_plan[old_ops]])
+        logger.log(
+            logging.DEBUG - 1,
+            "by %s",
+            [op_sigs[op][io_block] for op in new_plan[old_ops]],
+        )
 
         if len(old_ops) == 1:
             # then we have nothing to sort
@@ -881,9 +912,12 @@ def sort_ops_by_signals(sorted_io, sigs, sig_idxs, new_plan, blocks, op_sigs):
         # sorted first by the order of the signals in the list, then by
         # the order of the views within each signal
         sorted_ops = sorted(
-            ops, key=lambda op, io_block=io_block: (
+            ops,
+            key=lambda op, io_block=io_block: (
                 sig_idxs[op_sigs[op][io_block].base],
-                op_sigs[op][io_block].elemoffset))
+                op_sigs[op][io_block].elemoffset,
+            ),
+        )
 
         new_plan[old_ops] = tuple(sorted_ops)
 
@@ -902,7 +936,12 @@ def sort_ops_by_signals(sorted_io, sigs, sig_idxs, new_plan, blocks, op_sigs):
         # to make them adjacent)
         sig_idxs = sort_signals_by_ops(
             [x for x in sorted_io if x[0] == old_ops],
-            sigs, sig_idxs, new_plan, blocks, op_sigs)
+            sigs,
+            sig_idxs,
+            new_plan,
+            blocks,
+            op_sigs,
+        )
 
     return new_plan, sig_idxs
 
@@ -943,14 +982,18 @@ def sort_signals_by_ops(sorted_io, sigs, sig_idxs, new_plan, blocks, op_sigs):
     logger.log(logging.DEBUG - 1, "sort signals by ops")
 
     for old_ops, io_block in sorted_io:
-        logger.log(logging.DEBUG - 1, "sorting signals %s",
-                   [op_sigs[op][io_block] for op in new_plan[old_ops]])
+        logger.log(
+            logging.DEBUG - 1,
+            "sorting signals %s",
+            [op_sigs[op][io_block] for op in new_plan[old_ops]],
+        )
         logger.log(logging.DEBUG - 1, "%d %s", io_block, new_plan[old_ops])
 
         ops = new_plan[old_ops]
 
-        sort_vals = {s: i for i, s in
-                     enumerate(op_sigs[op][io_block].base for op in ops)}
+        sort_vals = {
+            s: i for i, s in enumerate(op_sigs[op][io_block].base for op in ops)
+        }
 
         if len(sort_vals) == 1:
             # only one accessed signal, so nothing to sort
@@ -969,7 +1012,7 @@ def sort_signals_by_ops(sorted_io, sigs, sig_idxs, new_plan, blocks, op_sigs):
         # the middle (ordered to match op_sigs)
         curr_block = None
         curr_max = -1
-        for i, s in enumerate(sigs[min_index:max_index + 1]):
+        for i, s in enumerate(sigs[min_index : max_index + 1]):
             if blocks[s] != curr_block:
                 prev_max = curr_max
                 curr_max = -1
@@ -986,8 +1029,8 @@ def sort_signals_by_ops(sorted_io, sigs, sig_idxs, new_plan, blocks, op_sigs):
             curr_max = max(curr_max, idx)
         else:
             for i, s in enumerate(
-                    sorted(sort_vals,
-                           key=lambda x, sort_vals=sort_vals: sort_vals[x])):
+                sorted(sort_vals, key=lambda x, sort_vals=sort_vals: sort_vals[x])
+            ):
                 sig_idxs[s] = min_index + i
 
             logger.log(logging.DEBUG - 1, "sorted indices %s", sig_idxs)
@@ -999,8 +1042,7 @@ def noop_order_signals(plan, **_):
     """A version of `.graph_optimizer.order_signals` that doesn't do any
     reordering, for debugging."""
 
-    all_signals = list({s.base for ops in plan for op in ops
-                        for s in op.all_signals})
+    all_signals = list({s.base for ops in plan for op in ops for s in op.all_signals})
     return all_signals, plan
 
 
@@ -1095,10 +1137,16 @@ def remove_zero_incs(operators):
                 # input is a Reset(0) op, or the only input is a constant
                 # signal (not set/inc/updated) that is all zero
                 zero_input = (
-                    (len(pred) == 1 and type(pred[0]) == Reset
-                     and np.all(pred[0].value == 0))
-                    or (len(pred) == 0 and all_zero(src)
-                        and len(updates[src.base]) == 0) and not src.trainable)
+                    (
+                        len(pred) == 1
+                        and type(pred[0]) == Reset
+                        and np.all(pred[0].value == 0)
+                    )
+                    or (
+                        len(pred) == 0 and all_zero(src) and len(updates[src.base]) == 0
+                    )
+                    and not src.trainable
+                )
                 if zero_input:
                     if len(op.sets) > 0:
                         new_operators.append(Reset(op.sets[0]))
@@ -1192,8 +1240,7 @@ def remove_constant_copies(operators):
                 continue
 
             pred = sets[src.base] + incs[src.base]
-            if (len(pred) == 0 and not op.src.trainable
-                    and len(updates[src.base]) == 0):
+            if len(pred) == 0 and not op.src.trainable and len(updates[src.base]) == 0:
                 # no predecessors means that the src is constant. but we also
                 # need to keep the bias signal if it is trainable (since
                 # changing it to a reset op would make it not trainable).
@@ -1212,8 +1259,7 @@ def remove_constant_copies(operators):
                 new_operators.append(op)
                 continue
 
-            new_op = Reset(op.dst if op.dst_slice is None else
-                           op.dst[op.dst_slice])
+            new_op = Reset(op.dst if op.dst_slice is None else op.dst[op.dst_slice])
             # note: we need to set the value separately to bypass the float()
             # casting in Reset
             new_op.value = val
@@ -1282,15 +1328,22 @@ def remove_identity_muls(operators):
                 # the only input is a constant signal (not set/inc/updated)
                 # that is an identity value
                 identity_input = (
-                    (len(pred) == 1 and type(pred[0]) == Reset
-                     and is_identity(pred[0].value, src))
-                    or (len(pred) == 0 and is_identity(src.initial_value, src)
-                        and len(updates[src.base]) == 0) and not src.trainable)
+                    (
+                        len(pred) == 1
+                        and type(pred[0]) == Reset
+                        and is_identity(pred[0].value, src)
+                    )
+                    or (
+                        len(pred) == 0
+                        and is_identity(src.initial_value, src)
+                        and len(updates[src.base]) == 0
+                    )
+                    and not src.trainable
+                )
 
                 if identity_input:
                     other_src = [x for x in op.reads if x is not src][0]
-                    new_operators.append(Copy(other_src, op.Y,
-                                              inc=len(op.incs) > 0))
+                    new_operators.append(Copy(other_src, op.Y, inc=len(op.incs) > 0))
                     break
             else:
                 new_operators.append(op)

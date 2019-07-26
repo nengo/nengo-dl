@@ -56,16 +56,17 @@ def test_signal_init_values(Simulator):
     array = Signal([1.0, 2.0, 3.0])
 
     m = nengo.builder.Model(dt=0)
-    m.operators += [ElementwiseInc(zero, zero, five),
-                    DotInc(zeroarray, one, array)]
+    m.operators += [ElementwiseInc(zero, zero, five), DotInc(zeroarray, one, array)]
 
-    probes = [dummies.Probe(zero, add_to_container=False),
-              dummies.Probe(one, add_to_container=False),
-              dummies.Probe(five, add_to_container=False),
-              dummies.Probe(array, add_to_container=False)]
+    probes = [
+        dummies.Probe(zero, add_to_container=False),
+        dummies.Probe(one, add_to_container=False),
+        dummies.Probe(five, add_to_container=False),
+        dummies.Probe(array, add_to_container=False),
+    ]
     m.probes += probes
     for p in probes:
-        m.sig[p]['in'] = p.target
+        m.sig[p]["in"] = p.target
 
     with Simulator(None, model=m) as sim:
         sim.run_steps(3)
@@ -79,8 +80,10 @@ def test_entry_point():
     if LooseVersion(tf.__version__) == "1.11.0":
         pytest.xfail("TensorFlow 1.11.0 has conflicting dependencies")
 
-    sims = [ep.load(require=False) for ep in
-            pkg_resources.iter_entry_points(group='nengo.backends')]
+    sims = [
+        ep.load(require=False)
+        for ep in pkg_resources.iter_entry_points(group="nengo.backends")
+    ]
     assert nengo_dl.Simulator in sims
 
 
@@ -102,9 +105,11 @@ def test_unconnected_node(Simulator):
         assert hits == 2
 
 
-@pytest.mark.skipif(LooseVersion(nengo.__version__) <= "2.8.0",
-                    reason="Nengo precision option not implemented")
-@pytest.mark.parametrize('bits', ["16", "32", "64"])
+@pytest.mark.skipif(
+    LooseVersion(nengo.__version__) <= "2.8.0",
+    reason="Nengo precision option not implemented",
+)
+@pytest.mark.parametrize("bits", ["16", "32", "64"])
 def test_dtype(Simulator, request, seed, bits):
     # Ensure dtype is set back to default after the test, even if it fails
     default = nengo.rc.get("precision", "bits")
@@ -126,16 +131,19 @@ def test_dtype(Simulator, request, seed, bits):
         # check that the builder has created signals of the correct dtype
         # (note that we may not necessarily use that dtype during simulation)
         for sig in sim.tensor_graph.signals:
-            assert sig.dtype in (
-                float_dtype, int_dtype), "Signal '%s' wrong dtype" % sig
+            assert sig.dtype in (float_dtype, int_dtype), (
+                "Signal '%s' wrong dtype" % sig
+            )
 
         # note: we do not check the dtypes of `sim.data` arrays in this
         # version of the test, because those depend on the simulator dtype
         # (which is not controlled by precision.bits)
 
 
-@pytest.mark.skipif(LooseVersion(nengo.__version__) <= "2.8.0",
-                    reason="Nengo Sparse transforms not implemented")
+@pytest.mark.skipif(
+    LooseVersion(nengo.__version__) <= "2.8.0",
+    reason="Nengo Sparse transforms not implemented",
+)
 @pytest.mark.parametrize("use_dist", (False, True))
 def test_sparse(use_dist, Simulator, rng, seed, monkeypatch):
     # modified version of nengo test_sparse for scipy=False, where we
@@ -147,11 +155,7 @@ def test_sparse(use_dist, Simulator, rng, seed, monkeypatch):
     output_d = 2
     shape = (output_d, input_d)
 
-    inds = np.asarray(
-        [[0, 0],
-         [1, 1],
-         [0, 2],
-         [1, 3]])
+    inds = np.asarray([[0, 0], [1, 1], [0, 2], [1, 3]])
     weights = rng.uniform(0.25, 0.75, size=4)
     if use_dist:
         init = nengo.dists.Uniform(0.25, 0.75)
@@ -160,13 +164,11 @@ def test_sparse(use_dist, Simulator, rng, seed, monkeypatch):
         init = scipy_sparse.csr_matrix((weights, inds.T), shape=shape)
         indices = None
 
-    transform = nengo.transforms.Sparse(
-        shape, indices=indices, init=init)
+    transform = nengo.transforms.Sparse(shape, indices=indices, init=init)
 
-    sim_time = 1.
+    sim_time = 1.0
     with nengo.Network(seed=seed) as net:
-        x = nengo.processes.WhiteSignal(period=sim_time, high=10,
-                                        seed=seed + 1)
+        x = nengo.processes.WhiteSignal(period=sim_time, high=10, seed=seed + 1)
         u = nengo.Node(x, size_out=4)
         a = nengo.Ensemble(100, 2)
         conn = nengo.Connection(u, a, synapse=None, transform=transform)

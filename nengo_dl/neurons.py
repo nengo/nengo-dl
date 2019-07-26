@@ -42,7 +42,7 @@ class SoftLIFRate(LIFRate):
     https://github.com/nengo/nengo-extras/blob/master/nengo_extras/neurons.py
     """
 
-    sigma = NumberParam('sigma', low=0, low_open=True)
+    sigma = NumberParam("sigma", low=0, low_open=True)
 
     def __init__(self, sigma=1.0, **lif_args):
         super(SoftLIFRate, self).__init__(**lif_args)

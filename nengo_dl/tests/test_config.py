@@ -52,9 +52,12 @@ def test_configure_trainable():
 @pytest.mark.parametrize("as_model", (True, False))
 def test_session_config(Simulator, as_model):
     with Network() as net:
-        config.configure_settings(session_config={
-            "graph_options.optimizer_options.opt_level": 21,
-            "gpu_options.allow_growth": True})
+        config.configure_settings(
+            session_config={
+                "graph_options.optimizer_options.opt_level": 21,
+                "gpu_options.allow_growth": True,
+            }
+        )
 
     if as_model:
         # checking that config settings work when we pass in a model instead of

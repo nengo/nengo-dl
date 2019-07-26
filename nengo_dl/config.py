@@ -69,7 +69,8 @@ def configure_settings(**kwargs):
     else:
         raise NetworkContextError(
             "`configure_settings` must be called within a Network context "
-            "(`with nengo.Network(): ...`)")
+            "(`with nengo.Network(): ...`)"
+        )
 
     try:
         params = config[Network]
@@ -86,14 +87,20 @@ def configure_settings(**kwargs):
                     config.configures(obj)
                     obj_params = config[obj]
 
-                obj_params.set_param("trainable", BoolParam("trainable", val,
-                                                            optional=True))
+                obj_params.set_param(
+                    "trainable", BoolParam("trainable", val, optional=True)
+                )
         elif attr == "keep_history":
-            config[Probe].set_param("keep_history",
-                                    BoolParam("keep_history", val))
-        elif attr in ("planner", "sorter", "simplifications",
-                      "session_config", "inference_only", "lif_smoothing",
-                      "dtype"):
+            config[Probe].set_param("keep_history", BoolParam("keep_history", val))
+        elif attr in (
+            "planner",
+            "sorter",
+            "simplifications",
+            "session_config",
+            "inference_only",
+            "lif_smoothing",
+            "dtype",
+        ):
             params.set_param(attr, Parameter(attr, val))
         else:
             raise ConfigError("%s is not a valid config parameter" % attr)

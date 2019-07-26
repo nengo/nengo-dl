@@ -51,11 +51,13 @@ else:
 
 
 if LooseVersion(nengo.__version__) < "3.0.0":
+
     class SimPES(nengo.builder.Operator):  # pylint: disable=abstract-method
         """Future `nengo.builder.operator.SimPES` class."""
 
-        def __init__(self, pre_filtered, error, delta, learning_rate,
-                     encoders=None, tag=None):
+        def __init__(
+            self, pre_filtered, error, delta, learning_rate, encoders=None, tag=None
+        ):
             super(SimPES, self).__init__(tag=tag)
 
             self.pre_filtered = pre_filtered
@@ -74,8 +76,11 @@ if LooseVersion(nengo.__version__) < "3.0.0":
             self.updates = []
 
         def _descstr(self):
-            return 'pre=%s, error=%s -> %s' % (
-                self.pre_filtered, self.error, self.delta)
+            return "pre=%s, error=%s -> %s" % (
+                self.pre_filtered,
+                self.error,
+                self.delta,
+            )
 
     # remove 'correction' from probeable attributes
     nengo.PES.probeable = ("error", "activities", "delta")
@@ -162,6 +167,7 @@ if LooseVersion(nengo.__version__) < "3.0.0":
 
     # monkey-patch in empty state attribute
     from nengo.builder.processes import SimProcess
+
     SimProcess.state = {}
 
     def make_process_step(process, shape_in, shape_out, dt, rng, _):
@@ -171,6 +177,7 @@ if LooseVersion(nengo.__version__) < "3.0.0":
     def make_process_state(process, shape_in, shape_out, dt):
         """Old processes don't have any state."""
         return {}
+
 
 else:
     from nengo.builder.learning_rules import SimPES
@@ -190,8 +197,7 @@ else:
     def make_linear_step(synapse, input_shape, output_shape, dt):
         """Call synapse.make_step to compute A/B/C/D."""
         state = synapse.make_state(input_shape, output_shape, dt)
-        return synapse.make_step(
-            input_shape, output_shape, dt, rng=None, state=state)
+        return synapse.make_step(input_shape, output_shape, dt, rng=None, state=state)
 
     def make_process_step(process, shape_in, shape_out, dt, rng, state):
         """Call process.make_step."""

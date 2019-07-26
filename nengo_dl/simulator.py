@@ -16,8 +16,12 @@ from nengo.builder.connection import BuiltConnection
 from nengo.builder.ensemble import BuiltEnsemble
 from nengo.ensemble import Neurons
 from nengo.exceptions import (
-    ReadonlyError, SimulatorClosed, NengoWarning, SimulationError,
-    ValidationError)
+    ReadonlyError,
+    SimulatorClosed,
+    NengoWarning,
+    SimulationError,
+    ValidationError,
+)
 from nengo.solvers import NoSolver
 import numpy as np
 import tensorflow as tf
@@ -67,9 +71,19 @@ class Simulator:
         If True (default), display progress information when building a model
     """
 
-    def __init__(self, network, dt=0.001, seed=None, model=None,
-                 dtype=None, device=None, unroll_simulation=1,
-                 minibatch_size=None, tensorboard=None, progress_bar=True):
+    def __init__(
+        self,
+        network,
+        dt=0.001,
+        seed=None,
+        model=None,
+        dtype=None,
+        device=None,
+        unroll_simulation=1,
+        minibatch_size=None,
+        tensorboard=None,
+        progress_bar=True,
+    ):
         self.closed = None
         self.unroll = unroll_simulation
         self.minibatch_size = 1 if minibatch_size is None else minibatch_size
@@ -86,24 +100,32 @@ class Simulator:
         if device is None and not utils.tf_gpu_installed:
             warnings.warn(
                 "No GPU support detected. It is recommended that you "
-                "install tensorflow-gpu (`pip install tensorflow-gpu`).")
+                "install tensorflow-gpu (`pip install tensorflow-gpu`)."
+            )
             logger.info("Running on CPU")
         else:
-            logger.info("Running on %s", "CPU/GPU" if device is None else (
-                "CPU" if "cpu" in device else "GPU"))
+            logger.info(
+                "Running on %s",
+                "CPU/GPU" if device is None else ("CPU" if "cpu" in device else "GPU"),
+            )
 
-        ProgressBar = (utils.ProgressBar if progress_bar else
-                       utils.NullProgressBar)
+        ProgressBar = utils.ProgressBar if progress_bar else utils.NullProgressBar
 
         # build model (uses default nengo builder)
         if model is None:
             self.model = NengoModel(
-                dt=float(dt), label="%s, dt=%f" % (network, dt),
-                builder=NengoBuilder(), fail_fast=False)
+                dt=float(dt),
+                label="%s, dt=%f" % (network, dt),
+                builder=NengoBuilder(),
+                fail_fast=False,
+            )
         else:
             if dt != model.dt:
-                warnings.warn("Model dt (%g) does not match Simulator "
-                              "dt (%g)" % (model.dt, dt), NengoWarning)
+                warnings.warn(
+                    "Model dt (%g) does not match Simulator "
+                    "dt (%g)" % (model.dt, dt),
+                    NengoWarning,
+                )
             self.model = model
 
         if network is not None:
@@ -114,24 +136,33 @@ class Simulator:
             warnings.warn(
                 "dtype parameter is deprecated; use "
                 "nengo_dl.configure_settings(dtype=...) instead",
-                DeprecationWarning)
+                DeprecationWarning,
+            )
         else:
             dtype = config.get_setting(self.model, "dtype", tf.float32)
 
         # set up tensorflow graph plan
-        with ProgressBar("Optimizing graph", "Optimization",
-                         max_value=None) as progress:
+        with ProgressBar(
+            "Optimizing graph", "Optimization", max_value=None
+        ) as progress:
             self.tensor_graph = TensorGraph(
-                self.model, self.dt, unroll_simulation, dtype,
-                self.minibatch_size, device, progress)
+                self.model,
+                self.dt,
+                unroll_simulation,
+                dtype,
+                self.minibatch_size,
+                device,
+                progress,
+            )
 
         # set TensorFlow graph seed
         with self.tensor_graph.graph.as_default():
             tf_compat.set_random_seed(self.seed)
 
         # construct graph
-        with ProgressBar("Constructing graph", "Construction",
-                         max_value=None) as progress:
+        with ProgressBar(
+            "Constructing graph", "Construction", max_value=None
+        ) as progress:
             self.tensor_graph.build(progress)
 
         # output simulation data for viewing via TensorBoard
@@ -139,20 +170,24 @@ class Simulator:
             if not os.path.exists(tensorboard):
                 os.makedirs(tensorboard)
 
-            run_number = max(
-                [int(x[4:]) for x in os.listdir(tensorboard)
-                 if x.startswith("run")] or [-1]) + 1
+            run_number = (
+                max(
+                    [int(x[4:]) for x in os.listdir(tensorboard) if x.startswith("run")]
+                    or [-1]
+                )
+                + 1
+            )
             self.summary = tf_compat.summary.FileWriter(
                 os.path.join(tensorboard, "run_%d" % run_number),
-                graph=self.tensor_graph.graph)
+                graph=self.tensor_graph.graph,
+            )
         else:
             self.summary = None
 
         # start session
 
         session_config = tf_compat.ConfigProto(
-            allow_soft_placement=False,
-            log_device_placement=False,
+            allow_soft_placement=False, log_device_placement=False
         )
 
         # TODO: XLA compiling doesn't seem to provide any benefit at the
@@ -169,8 +204,9 @@ class Simulator:
                 x = getattr(x, a)
             setattr(x, attrs[-1], v)
 
-        self.sess = tf_compat.Session(graph=self.tensor_graph.graph,
-                                      config=session_config)
+        self.sess = tf_compat.Session(
+            graph=self.tensor_graph.graph, config=session_config
+        )
 
         self.reset(seed=seed)
 
@@ -194,8 +230,10 @@ class Simulator:
         self.time = 0.0
 
         # initialize variables
-        self.sess.run(self.tensor_graph.constant_init_op,
-                      feed_dict=self.tensor_graph.signals.constant_phs)
+        self.sess.run(
+            self.tensor_graph.constant_init_op,
+            feed_dict=self.tensor_graph.signals.constant_phs,
+        )
         self.soft_reset(include_trainable=True, include_probes=True)
 
         # execute post-build processes (we do this here because
@@ -223,12 +261,13 @@ class Simulator:
             If True, also clear probe data
         """
 
-        init_ops = [self.tensor_graph.local_init_op,
-                    self.tensor_graph.global_init_op]
+        init_ops = [self.tensor_graph.local_init_op, self.tensor_graph.global_init_op]
         if include_trainable:
             init_ops.append(self.tensor_graph.trainable_init_op)
-        self.sess.run(init_ops, feed_dict={
-            ph: v for _, ph, v in self.tensor_graph.base_vars.values()})
+        self.sess.run(
+            init_ops,
+            feed_dict={ph: v for _, ph, v in self.tensor_graph.base_vars.values()},
+        )
 
         if include_probes:
             for p in self.model.probes:
@@ -267,19 +306,28 @@ class Simulator:
 
         if time_in_seconds < 0:
             raise ValidationError(
-                "Must be positive (got %g)" % (time_in_seconds,),
-                attr="time_in_seconds")
+                "Must be positive (got %g)" % (time_in_seconds,), attr="time_in_seconds"
+            )
 
         steps = int(np.round(float(time_in_seconds) / self.dt))
 
         if steps == 0:
-            warnings.warn("%g results in running for 0 timesteps. Simulator "
-                          "still at time %g." % (time_in_seconds, self.time))
+            warnings.warn(
+                "%g results in running for 0 timesteps. Simulator "
+                "still at time %g." % (time_in_seconds, self.time)
+            )
         else:
             self.run_steps(steps, **kwargs)
 
-    def run_steps(self, n_steps, data=None, input_feeds=None, profile=False,
-                  progress_bar=True, extra_feeds=None):
+    def run_steps(
+        self,
+        n_steps,
+        data=None,
+        input_feeds=None,
+        profile=False,
+        progress_bar=True,
+        extra_feeds=None,
+    ):
         """
         Simulate for the given number of steps.
 
@@ -317,15 +365,19 @@ class Simulator:
             warnings.warn(
                 "Number of steps (%d) is not an even multiple of "
                 "`unroll_simulation` (%d).  Simulation will run for %d steps, "
-                "which may have unintended side effects." %
-                (n_steps, self.unroll, actual_steps), RuntimeWarning)
+                "which may have unintended side effects."
+                % (n_steps, self.unroll, actual_steps),
+                RuntimeWarning,
+            )
 
         if input_feeds is not None:
             # TODO: remove this in 3.0.0
             warnings.warn(
                 "The `input_feeds` argument has been renamed; please use "
                 "`data` instead, as `input_feeds` will not be supported in a "
-                "future version.", DeprecationWarning)
+                "future version.",
+                DeprecationWarning,
+            )
             assert data is None
             data = input_feeds
 
@@ -340,30 +392,38 @@ class Simulator:
                 raise ValidationError(
                     "Input data must have batch size == sim.minibatch_size "
                     "(%d != %d)" % (batch_size, self.minibatch_size),
-                    "data")
+                    "data",
+                )
             if input_steps != actual_steps:
                 raise ValidationError(
                     "Number of timesteps in input data (%d) does not "
-                    "match requested number of steps (%d)" %
-                    (input_steps, n_steps), "data")
+                    "match requested number of steps (%d)" % (input_steps, n_steps),
+                    "data",
+                )
 
         def callback(_, extra_vals):
             assert extra_vals == actual_steps
 
         progress = (
             utils.ProgressBar("Simulating", "Simulation", max_value=None)
-            if progress_bar else utils.NullProgressBar())
+            if progress_bar
+            else utils.NullProgressBar()
+        )
 
         with progress:
             # note: we request steps_run from extra_fetches so that the
             # simulation will always run for the given number of steps, even
             # if there are no output probes
             probe_data = self.run_batch(
-                data, {p: None for p in self.model.probes},
+                data,
+                {p: None for p in self.model.probes},
                 extra_feeds=extra_feeds,
                 extra_fetches=self.tensor_graph.steps_run,
-                combine=lambda x: x[0], isolate_state=False,
-                callback=callback, profile=profile)
+                combine=lambda x: x[0],
+                isolate_state=False,
+                callback=callback,
+                profile=profile,
+            )
 
         # update stored probe data
         for probe, val in probe_data.items():
@@ -385,9 +445,19 @@ class Simulator:
         self.n_steps += n_steps
         self.time = self.n_steps * self.dt
 
-    def train(self, data, optimizer, n_epochs=1, objective=None,
-              shuffle=True, truncation=None, summaries=None, profile=False,
-              extra_feeds=None, progress_bar=True):
+    def train(
+        self,
+        data,
+        optimizer,
+        n_epochs=1,
+        objective=None,
+        shuffle=True,
+        truncation=None,
+        summaries=None,
+        profile=False,
+        extra_feeds=None,
+        progress_bar=True,
+    ):
         """
         Optimize the trainable parameters of the network using the given
         optimization method, minimizing the objective value over the given
@@ -477,16 +547,23 @@ class Simulator:
             batch_size, n_steps = next(iter(data.values())).shape[:2]
 
         # error checking
-        synapses = [x.synapse is not None for x in
-                    (self.model.toplevel.all_connections
-                     + (list(p for p in data if isinstance(p, Probe))
-                        if isinstance(data, dict) else []))]
-        if (n_steps == 1 and self.model.toplevel is not None
-                and any(synapses)):
+        synapses = [
+            x.synapse is not None
+            for x in (
+                self.model.toplevel.all_connections
+                + (
+                    list(p for p in data if isinstance(p, Probe))
+                    if isinstance(data, dict)
+                    else []
+                )
+            )
+        ]
+        if n_steps == 1 and self.model.toplevel is not None and any(synapses):
             warnings.warn(
                 "Training for one timestep, but the network contains "
                 "synaptic filters (which will introduce at least a "
-                "one-timestep delay); did you mean to set synapse=None?")
+                "one-timestep delay); did you mean to set synapse=None?"
+            )
         if isinstance(optimizer, dict):
             raise ValidationError(
                 "The second argument to `sim.train` should be a "
@@ -494,20 +571,23 @@ class Simulator:
                 "code was written for NengoDL 1.x and needs to be updated for "
                 "NengoDL 2.x; see "
                 "https://www.nengo.ai/nengo-dl/project.html#release-history",
-                "optimizer")
+                "optimizer",
+            )
 
         # fill in default objective
         if objective is None:
             if isinstance(data, int):
                 raise ValidationError(
-                    "Must specify an explicit objective if no input data "
-                    "given", "objective")
-            objective = {
-                p: objectives.mse for p in data if isinstance(p, Probe)}
+                    "Must specify an explicit objective if no input data given",
+                    "objective",
+                )
+            objective = {p: objectives.mse for p in data if isinstance(p, Probe)}
 
         if not isinstance(objective, dict):
-            raise ValidationError("Must be a dictionary mapping Probes to "
-                                  "objective functions", "objective")
+            raise ValidationError(
+                "Must be a dictionary mapping Probes to objective functions",
+                "objective",
+            )
 
         # fill in mse function
         for p, o in objective.items():
@@ -517,21 +597,23 @@ class Simulator:
                     "Using the string 'mse' for the objective is deprecated, "
                     "and will no longer be supported in the future; please "
                     "use the function `nengo_dl.objectives.mse` in the future",
-                    DeprecationWarning)
+                    DeprecationWarning,
+                )
 
                 objective[p] = objectives.mse
 
         # build the output function
-        apply_optimizer = self.tensor_graph.build_optimizer_func(
-            optimizer, objective)
+        apply_optimizer = self.tensor_graph.build_optimizer_func(optimizer, objective)
 
         extra_fetches = dict()
 
         # add summaries
         if summaries is not None:
             if self.summary is None:
-                warnings.warn("Simulator was created with tensorboard=False; "
-                              "ignoring requested summaries")
+                warnings.warn(
+                    "Simulator was created with tensorboard=False; "
+                    "ignoring requested summaries"
+                )
             else:
                 for i, v in enumerate(summaries):
                     if isinstance(v, str) and v == "loss":
@@ -544,10 +626,17 @@ class Simulator:
 
         progress = (
             utils.ProgressBar(
-                "Training", max_value=(
-                    n_epochs * (batch_size // self.minibatch_size)
-                    * (1 if truncation is None else n_steps // truncation)),
-                vars=["loss"]) if progress_bar else utils.NullProgressBar())
+                "Training",
+                max_value=(
+                    n_epochs
+                    * (batch_size // self.minibatch_size)
+                    * (1 if truncation is None else n_steps // truncation)
+                ),
+                vars=["loss"],
+            )
+            if progress_bar
+            else utils.NullProgressBar()
+        )
 
         objective_probes = tuple(objective.keys())
 
@@ -563,20 +652,35 @@ class Simulator:
             if "summaries" in extra_vals:
                 # note: the first output value is the new value of the
                 # global training_step
-                self.summary.add_summary(extra_vals["summaries"],
-                                         out_vals[objective_probes][0])
+                self.summary.add_summary(
+                    extra_vals["summaries"], out_vals[objective_probes][0]
+                )
 
         # run training
         with progress:
             self.run_batch(
-                data, {objective_probes: apply_optimizer},
-                n_epochs=n_epochs, combine=lambda x: None,
-                extra_feeds=extra_feeds, extra_fetches=extra_fetches,
-                truncation=truncation, profile=profile, shuffle=shuffle,
-                training=True, callback=callback)
+                data,
+                {objective_probes: apply_optimizer},
+                n_epochs=n_epochs,
+                combine=lambda x: None,
+                extra_feeds=extra_feeds,
+                extra_fetches=extra_fetches,
+                truncation=truncation,
+                profile=profile,
+                shuffle=shuffle,
+                training=True,
+                callback=callback,
+            )
 
-    def loss(self, data, objective=None, combine=np.mean, extra_feeds=None,
-             progress_bar=True, training=False):
+    def loss(
+        self,
+        data,
+        objective=None,
+        combine=np.mean,
+        extra_feeds=None,
+        progress_bar=True,
+        training=False,
+    ):
         """
         Compute the loss value for the given objective and inputs/targets.
 
@@ -625,21 +729,26 @@ class Simulator:
             Sum of computed error values for each function in ``objective``.
         """
 
-        batch_size = (self.minibatch_size if isinstance(data, int) else
-                      next(iter(data.values())).shape[0])
+        batch_size = (
+            self.minibatch_size
+            if isinstance(data, int)
+            else next(iter(data.values())).shape[0]
+        )
 
         # fill in default objective
         if objective is None:
             if isinstance(data, int):
                 raise ValidationError(
-                    "Must specify an explicit objective if no input data "
-                    "given", "objective")
-            objective = {
-                p: objectives.mse for p in data if isinstance(p, Probe)}
+                    "Must specify an explicit objective if no input data given",
+                    "objective",
+                )
+            objective = {p: objectives.mse for p in data if isinstance(p, Probe)}
 
         if not isinstance(objective, dict):
-            raise ValidationError("Must be a dictionary mapping Probes to "
-                                  "objective functions", "objective")
+            raise ValidationError(
+                "Must be a dictionary mapping Probes to objective functions",
+                "objective",
+            )
 
         # fill in mse function
         for p, o in objective.items():
@@ -649,28 +758,50 @@ class Simulator:
                     "Using the string 'mse' for the objective is deprecated, "
                     "and will no longer be supported in the future; please "
                     "use the function `nengo_dl.objectives.mse` in the future",
-                    DeprecationWarning)
+                    DeprecationWarning,
+                )
 
                 objective[p] = objectives.mse
 
         progress = (
-            utils.ProgressBar("Calculating loss", "Calculation",
-                              max_value=batch_size // self.minibatch_size)
-            if progress_bar else utils.NullProgressBar())
+            utils.ProgressBar(
+                "Calculating loss",
+                "Calculation",
+                max_value=batch_size // self.minibatch_size,
+            )
+            if progress_bar
+            else utils.NullProgressBar()
+        )
         with progress:
-            loss = self.run_batch(data, objective, extra_feeds=extra_feeds,
-                                  callback=lambda *_: progress.step(),
-                                  combine=combine, training=training)
+            loss = self.run_batch(
+                data,
+                objective,
+                extra_feeds=extra_feeds,
+                callback=lambda *_: progress.step(),
+                combine=combine,
+                training=training,
+            )
 
         # sum across objectives
         loss = np.sum(list(loss.values()))
 
         return loss
 
-    def run_batch(self, data, outputs, extra_feeds=None, extra_fetches=None,
-                  n_epochs=1, truncation=None, shuffle=False, profile=False,
-                  training=False, callback=None, combine=np.stack,
-                  isolate_state=True):
+    def run_batch(
+        self,
+        data,
+        outputs,
+        extra_feeds=None,
+        extra_fetches=None,
+        n_epochs=1,
+        truncation=None,
+        shuffle=False,
+        profile=False,
+        training=False,
+        callback=None,
+        combine=np.stack,
+        isolate_state=True,
+    ):
         """
         Run the simulation on a batch of input data, computing the given
         output functions.
@@ -775,8 +906,7 @@ class Simulator:
         directly to run the simulation in a customized way.
         """
 
-        n_steps = (data if isinstance(data, int) else
-                   next(iter(data.values())).shape[1])
+        n_steps = data if isinstance(data, int) else next(iter(data.values())).shape[1]
 
         # error checking
         if self.closed:
@@ -786,15 +916,20 @@ class Simulator:
         if n_steps % self.unroll != 0:
             raise ValidationError(
                 "The number of timesteps in batch data must be evenly "
-                "divisible by unroll_simulation", "data")
+                "divisible by unroll_simulation",
+                "data",
+            )
         if truncation is not None and truncation % self.unroll != 0:
             raise ValidationError(
-                "Truncation length must be evenly divisible by "
-                "unroll_simulation", "truncation")
+                "Truncation length must be evenly divisible by unroll_simulation",
+                "truncation",
+            )
         if training and self.tensor_graph.inference_only:
             raise ValidationError(
                 "Network was created with inference_only=True, cannot "
-                "be run in training mode", "inference_only")
+                "be run in training mode",
+                "inference_only",
+            )
 
         if extra_fetches is None:
             extra_fetches = []
@@ -809,13 +944,17 @@ class Simulator:
         # save the internal state of the simulator
         if isolate_state:
             tmpdir = tempfile.TemporaryDirectory()
-            self.save_params(os.path.join(tmpdir.name, "tmp"),
-                             include_local=True, include_global=False)
+            self.save_params(
+                os.path.join(tmpdir.name, "tmp"),
+                include_local=True,
+                include_global=False,
+            )
 
         # set up profiling
         if profile:
             run_options = tf_compat.RunOptions(
-                trace_level=tf_compat.RunOptions.FULL_TRACE)
+                trace_level=tf_compat.RunOptions.FULL_TRACE
+            )
             run_metadata = tf_compat.RunMetadata()
         else:
             run_options = None
@@ -825,8 +964,12 @@ class Simulator:
         output_vals = collections.defaultdict(list)
         for _ in range(n_epochs):
             for offset, mini_data in utils.minibatch_generator(
-                    data, self.minibatch_size, truncation=truncation,
-                    shuffle=shuffle, rng=self.rng):
+                data,
+                self.minibatch_size,
+                truncation=truncation,
+                shuffle=shuffle,
+                rng=self.rng,
+            ):
                 if offset == 0 and isolate_state:
                     self.soft_reset()
 
@@ -837,21 +980,28 @@ class Simulator:
                 else:
                     steps = next(iter(mini_data.values())).shape[1]
                 feed = self._fill_feed(
-                    steps, data=mini_data, training=training,
-                    start=offset + (0 if isolate_state else self.n_steps))
+                    steps,
+                    data=mini_data,
+                    training=training,
+                    start=offset + (0 if isolate_state else self.n_steps),
+                )
                 if extra_feeds is not None:
                     feed.update(extra_feeds)
 
                 # run the simulation
                 try:
                     out_vals, extra_vals = self.sess.run(
-                        (output_ops, extra_fetches), feed_dict=feed,
-                        options=run_options, run_metadata=run_metadata)
+                        (output_ops, extra_fetches),
+                        feed_dict=feed,
+                        options=run_options,
+                        run_metadata=run_metadata,
+                    )
                 except (tf.errors.InternalError, tf.errors.UnknownError) as e:
                     if e.op is not None and e.op.type == "PyFunc":
                         raise SimulationError(
                             "Function '%s' caused an error (see error log "
-                            "above)" % e.op.name)
+                            "above)" % e.op.name
+                        )
                     else:
                         raise e  # pragma: no cover (unknown errors)
 
@@ -863,8 +1013,11 @@ class Simulator:
 
         # restore internal state of simulator
         if isolate_state:
-            self.load_params(os.path.join(tmpdir.name, "tmp"),
-                             include_local=True, include_global=False)
+            self.load_params(
+                os.path.join(tmpdir.name, "tmp"),
+                include_local=True,
+                include_global=False,
+            )
             tmpdir.cleanup()
 
         # combine outputs from each minibatch
@@ -905,8 +1058,7 @@ class Simulator:
         `.get_nengo_params`.
         """
         if self.closed:
-            raise SimulatorClosed("Simulation has been closed, cannot save "
-                                  "parameters")
+            raise SimulatorClosed("Simulation has been closed, cannot save parameters")
 
         with self.tensor_graph.graph.as_default():
             vars = []
@@ -941,8 +1093,7 @@ class Simulator:
         `.get_nengo_params`.
         """
         if self.closed:
-            raise SimulatorClosed("Simulation has been closed, cannot load "
-                                  "parameters")
+            raise SimulatorClosed("Simulation has been closed, cannot load parameters")
 
         with self.tensor_graph.graph.as_default():
             vars = []
@@ -996,21 +1147,24 @@ class Simulator:
         """
 
         if self.closed:
-            raise SimulatorClosed("Simulation has been closed, cannot freeze "
-                                  "parameters")
+            raise SimulatorClosed(
+                "Simulation has been closed, cannot freeze parameters"
+            )
 
         if not isinstance(objs, (list, tuple)):
             objs = [objs]
 
         for obj in objs:
-            if obj not in ([self.model.toplevel]
-                           + self.model.toplevel.all_objects):
-                raise ValueError("%s is not a member of the Network used to "
-                                 "initialize the Simulator")
+            if obj not in [self.model.toplevel] + self.model.toplevel.all_objects:
+                raise ValueError(
+                    "%s is not a member of the Network used to "
+                    "initialize the Simulator"
+                )
 
             if not isinstance(obj, (Network, Ensemble, Connection)):
-                raise TypeError("Objects of type %s do not have parameters "
-                                "to store" % type(obj))
+                raise TypeError(
+                    "Objects of type %s do not have parameters to store" % type(obj)
+                )
 
             if isinstance(obj, Network):
                 todo = obj.all_ensembles + obj.all_connections
@@ -1076,8 +1230,9 @@ class Simulator:
             nengo_objs = [nengo_objs]
 
         # convert neurons to the parent ensemble
-        nengo_objs = [obj.ensemble if isinstance(obj, Neurons) else obj
-                      for obj in nengo_objs]
+        nengo_objs = [
+            obj.ensemble if isinstance(obj, Neurons) else obj for obj in nengo_objs
+        ]
 
         # find all the data we need to fetch
         fetches = []
@@ -1092,13 +1247,14 @@ class Simulator:
                     raise ValueError(
                         "get_nengo_params will not work correctly for "
                         "Direct neuron ensembles. Try manually translating "
-                        "your network using `sim.data` instead.")
+                        "your network using `sim.data` instead."
+                    )
 
                 fetches.extend([(obj, "scaled_encoders"), (obj, "bias")])
             else:
                 raise ValueError(
-                    "Can only get Nengo parameters for Ensembles or "
-                    "Connections")
+                    "Can only get Nengo parameters for Ensembles or Connections"
+                )
 
         # get parameter values from simulation
         data = self.data.get_params(*fetches)
@@ -1111,11 +1267,15 @@ class Simulator:
                 weights = data[idx]
                 idx += 1
                 if isinstance(obj.pre_obj, Ensemble):
-                    params.append({
-                        "solver": NoSolver(weights.T, weights=False),
-                        "function": lambda x, weights=weights: np.zeros(
-                            weights.shape[0]),
-                        "transform": 1})
+                    params.append(
+                        {
+                            "solver": NoSolver(weights.T, weights=False),
+                            "function": lambda x, weights=weights: np.zeros(
+                                weights.shape[0]
+                            ),
+                            "transform": 1,
+                        }
+                    )
                 elif isinstance(obj.transform, Convolution):
                     transform = copy.copy(obj.transform)
                     # manually bypass the read-only check (we are sure that
@@ -1142,10 +1302,15 @@ class Simulator:
                 encoders = data[idx] * obj.radius / gain[:, None]
 
                 params.append(
-                    {"encoders": encoders, "normalize_encoders": False,
-                     "gain": gain, "bias": data[idx + 1],
-                     "max_rates": Ensemble.max_rates.default,
-                     "intercepts": Ensemble.intercepts.default})
+                    {
+                        "encoders": encoders,
+                        "normalize_encoders": False,
+                        "gain": gain,
+                        "bias": data[idx + 1],
+                        "max_rates": Ensemble.max_rates.default,
+                        "intercepts": Ensemble.intercepts.default,
+                    }
+                )
                 idx += 2
 
         # return params in appropriate format
@@ -1158,7 +1323,8 @@ class Simulator:
                 if obj.label in param_dict:
                     raise ValueError(
                         "Duplicate label ('%s') detected; cannot return "
-                        "parameters with as_dict=True" % obj.label)
+                        "parameters with as_dict=True" % obj.label
+                    )
                 else:
                     param_dict[obj.label] = p
             params = param_dict
@@ -1194,15 +1360,23 @@ class Simulator:
         if self.tensor_graph.inference_only:
             raise ValidationError(
                 "Network was created with inference_only=True, cannot "
-                "compute gradients", "inference_only")
+                "compute gradients",
+                "inference_only",
+            )
 
         delta = 1e-3
         n_steps = self.unroll * 2
 
-        data = {n: np.zeros((self.minibatch_size, n_steps, n.size_out))
-                for n in self.tensor_graph.invariant_inputs}
-        data.update({p: np.zeros((self.minibatch_size, n_steps, p.size_in))
-                     for p in self.tensor_graph.target_phs})
+        data = {
+            n: np.zeros((self.minibatch_size, n_steps, n.size_out))
+            for n in self.tensor_graph.invariant_inputs
+        }
+        data.update(
+            {
+                p: np.zeros((self.minibatch_size, n_steps, p.size_in))
+                for p in self.tensor_graph.target_phs
+            }
+        )
         feed = self._fill_feed(n_steps, data=data, training=True)
 
         if outputs is None:
@@ -1229,8 +1403,12 @@ class Simulator:
                 # correctly handle variables (tensorflow doesn't expect
                 # state ops in `compute_gradient`, because it doesn't define
                 # gradients for them)
-                numeric = np.zeros((np.prod(inp_shape, dtype=np.int32),
-                                    np.prod(out_shape, dtype=np.int32)))
+                numeric = np.zeros(
+                    (
+                        np.prod(inp_shape, dtype=np.int32),
+                        np.prod(out_shape, dtype=np.int32),
+                    )
+                )
 
                 for i in range(numeric.shape[0]):
                     self.soft_reset()
@@ -1247,18 +1425,25 @@ class Simulator:
 
                 self.soft_reset()
 
-                with tf_compat.variable_scope(
-                        tf_compat.get_variable_scope()) as scope:
-                    dx, dy = gradient_checker._compute_dx_and_dy(
-                        inp, out, out_shape)
+                with tf_compat.variable_scope(tf_compat.get_variable_scope()) as scope:
+                    dx, dy = gradient_checker._compute_dx_and_dy(inp, out, out_shape)
 
-                    self.sess.run(tf_compat.variables_initializer(
-                        scope.get_collection("gradient_vars")))
+                    self.sess.run(
+                        tf_compat.variables_initializer(
+                            scope.get_collection("gradient_vars")
+                        )
+                    )
 
                 with self.sess.as_default():
                     analytic = gradient_checker._compute_theoretical_jacobian(
-                        inp, inp_shape, np.zeros(inp_shape), dy, out_shape, dx,
-                        extra_feed_dict=feed)
+                        inp,
+                        inp_shape,
+                        np.zeros(inp_shape),
+                        dy,
+                        out_shape,
+                        dx,
+                        extra_feed_dict=feed,
+                    )
 
                 if np.any(np.isnan(analytic)) or np.any(np.isnan(numeric)):
                     raise SimulationError("NaNs detected in gradient")
@@ -1267,8 +1452,9 @@ class Simulator:
                     raise SimulationError(
                         "Gradient check failed for input %s and output %s\n"
                         "numeric values:\n%s\n"
-                        "analytic values:\n%s\n" % (node, out, numeric[fail],
-                                                    analytic[fail]))
+                        "analytic values:\n%s\n"
+                        % (node, out, numeric[fail], analytic[fail])
+                    )
 
         self.soft_reset()
 
@@ -1292,7 +1478,10 @@ class Simulator:
             if sample_every is not None:
                 raise ValidationError(
                     "Cannot specify both `dt` and `sample_every`. "
-                    "Use `sample_every` only.", attr="dt", obj=self)
+                    "Use `sample_every` only.",
+                    attr="dt",
+                    obj=self,
+                )
             warnings.warn("`dt` is deprecated. Use `sample_every` instead.")
             sample_every = dt
 
@@ -1376,7 +1565,8 @@ class Simulator:
                 raise ValidationError(
                     "%s is not a valid target; this is probably because "
                     "it is not used in the objective function" % p,
-                    "targets")
+                    "targets",
+                )
 
             feed_dict[self.tensor_graph.target_phs[p]] = t
 
@@ -1408,22 +1598,24 @@ class Simulator:
                 feed_val = np.moveaxis(data[n], 0, -1)
             elif isinstance(output, np.ndarray):
                 # tile to n_steps/minibatch size
-                feed_val = np.tile(output[None, :, None],
-                                   (n_steps, 1, self.minibatch_size))
+                feed_val = np.tile(
+                    output[None, :, None], (n_steps, 1, self.minibatch_size)
+                )
             else:
                 # call output function to determine value
                 feed_val = np.zeros(
                     (n_steps, n.size_out, self.minibatch_size),
-                    dtype=self.tensor_graph.dtype.as_numpy_dtype)
+                    dtype=self.tensor_graph.dtype.as_numpy_dtype,
+                )
 
                 for i in range(n_steps):
                     # note: need to copy the output of func, as func
                     # may mutate its outputs in-place on subsequent calls.
                     # this assignment will broadcast the output along the
                     # minibatch dimension if required.
-                    feed_val[i] = np.transpose([
-                        func((i + self.n_steps + 1) * self.dt)
-                        for func in output])
+                    feed_val[i] = np.transpose(
+                        [func((i + self.n_steps + 1) * self.dt) for func in output]
+                    )
 
             # note: we still call the function (above) even if the output
             # is not being used, because it may have side-effects
@@ -1453,21 +1645,24 @@ class Simulator:
             if x.ndim != 3:
                 raise ValidationError(
                     "should have rank 3 (batch_size, n_steps, dimensions), "
-                    "found rank %d" % x.ndim, "data")
+                    "found rank %d" % x.ndim,
+                    "data",
+                )
 
             if isinstance(d, Node):
                 if d not in self.tensor_graph.invariant_inputs:
                     raise ValidationError(
                         "%s is not an input Node (a nengo.Node with "
                         "size_in==0), or is from a different network." % d,
-                        "data")
+                        "data",
+                    )
             elif isinstance(d, Probe):
                 if d not in self.model.probes:
-                    raise ValidationError(
-                        "%s is from a different network" % d, "data")
+                    raise ValidationError("%s is from a different network" % d, "data")
             else:
                 raise ValidationError(
-                    "Data objects must be Nodes or Probes, not %s" % d, "data")
+                    "Data objects must be Nodes or Probes, not %s" % d, "data"
+                )
 
         args = [n_batch, n_steps]
         labels = ["batch size", "number of timesteps"]
@@ -1478,31 +1673,34 @@ class Simulator:
                 for n, x in data.items():
                     if x.shape[i] != val:
                         raise ValidationError(
-                            "Elements have different %s: %s vs %s" %
-                            (labels[i], val, x.shape[0]), "data")
+                            "Elements have different %s: %s vs %s"
+                            % (labels[i], val, x.shape[0]),
+                            "data",
+                        )
             else:
                 for n, x in data.items():
                     if x.shape[i] != args[i]:
                         raise ValidationError(
                             "Data for %s has %s=%s, which does not match "
-                            "expected size (%s)" % (n, labels[i], x.shape[i],
-                                                    args[i]),
-                            "data")
+                            "expected size (%s)" % (n, labels[i], x.shape[i], args[i]),
+                            "data",
+                        )
 
         for n, x in data.items():
             if x.shape[0] < self.minibatch_size:
                 raise ValidationError(
                     "Size of minibatch (%d) for %s data less than Simulation "
-                    "`minibatch_size` (%d)" % (x.shape[0], n,
-                                               self.minibatch_size),
-                    "data")
+                    "`minibatch_size` (%d)" % (x.shape[0], n, self.minibatch_size),
+                    "data",
+                )
 
             d = n.size_out if isinstance(n, Node) else n.size_in
             if x.shape[2] != d:
                 raise ValidationError(
                     "Dimensionality of data (%s) does not match "
                     "dimensionality of %s (%s)" % (x.shape[2], n, d),
-                    "data")
+                    "data",
+                )
 
     def _profile_output(self, profile, run_metadata):
         """
@@ -1534,7 +1732,7 @@ class Simulator:
 
     @dt.setter
     def dt(self, _):
-        raise ReadonlyError(attr='dt', obj=self)
+        raise ReadonlyError(attr="dt", obj=self)
 
     @property
     def training_step(self):
@@ -1543,8 +1741,7 @@ class Simulator:
 
     def __enter__(self):
         self._graph_context = self.tensor_graph.graph.as_default()
-        self._device_context = self.tensor_graph.graph.device(
-            self.tensor_graph.device)
+        self._device_context = self.tensor_graph.graph.device(self.tensor_graph.device)
         self._graph_context.__enter__()
         self._device_context.__enter__()
         self.sess.__enter__()
@@ -1565,7 +1762,9 @@ class Simulator:
             warnings.warn(
                 "Simulator with model=%s was deallocated while open. "
                 "Simulators should be closed manually to ensure resources "
-                "are properly freed." % self.model, RuntimeWarning)
+                "are properly freed." % self.model,
+                RuntimeWarning,
+            )
             self.close()
 
     def __getstate__(self):
@@ -1573,7 +1772,8 @@ class Simulator:
             "TensorFlow does not support pickling; see "
             "https://www.nengo.ai/nengo-dl/training.html"
             "#saving-and-loading-parameters "
-            "for information on how to save/load a NengoDL model.")
+            "for information on how to save/load a NengoDL model."
+        )
 
 
 class SimulationData(collections.Mapping):
@@ -1623,8 +1823,9 @@ class SimulationData(collections.Mapping):
         """
 
         if obj not in self.sim.model.params:
-            raise ValidationError("Object is not in parameters of model %s" %
-                                  self.sim.model, str(obj))
+            raise ValidationError(
+                "Object is not in parameters of model %s" % self.sim.model, str(obj)
+            )
 
         data = self.sim.model.params[obj]
 
@@ -1640,24 +1841,35 @@ class SimulationData(collections.Mapping):
             if isinstance(obj.neuron_type, Direct):
                 # direct mode ensemble
                 gain = bias = None
-                scaled_encoders = encoders = self.get_params(
-                    (obj, "scaled_encoders"))[0]
+                scaled_encoders = encoders = self.get_params((obj, "scaled_encoders"))[
+                    0
+                ]
             else:
                 # get the live simulation values
                 scaled_encoders, bias = self.get_params(
-                    (obj, "scaled_encoders"), (obj, "bias"))
+                    (obj, "scaled_encoders"), (obj, "bias")
+                )
 
                 # infer the related values (rolled into scaled_encoders)
-                gain = (obj.radius * np.linalg.norm(scaled_encoders, axis=-1)
-                        / np.linalg.norm(data.encoders, axis=-1))
+                gain = (
+                    obj.radius
+                    * np.linalg.norm(scaled_encoders, axis=-1)
+                    / np.linalg.norm(data.encoders, axis=-1)
+                )
                 encoders = obj.radius * scaled_encoders / gain[:, None]
 
             # figure out max_rates/intercepts from neuron model
-            max_rates, intercepts = (
-                obj.neuron_type.max_rates_intercepts(gain, bias))
+            max_rates, intercepts = obj.neuron_type.max_rates_intercepts(gain, bias)
 
-            data = BuiltEnsemble(data.eval_points, encoders, intercepts,
-                                 max_rates, scaled_encoders, gain, bias)
+            data = BuiltEnsemble(
+                data.eval_points,
+                encoders,
+                intercepts,
+                max_rates,
+                scaled_encoders,
+                gain,
+                bias,
+            )
         elif isinstance(obj, Connection):
             # get the live simulation values
             weights = self.get_params((obj, "weights"))[0]
@@ -1665,8 +1877,9 @@ class SimulationData(collections.Mapping):
             # impossible to recover transform
             transform = None
 
-            data = BuiltConnection(data.eval_points, data.solver_info, weights,
-                                   transform)
+            data = BuiltConnection(
+                data.eval_points, data.solver_info, weights, transform
+            )
 
         return data
 
@@ -1694,12 +1907,15 @@ class SimulationData(collections.Mapping):
         """
 
         if self.sim.closed:
-            warnings.warn("Checking parameters after simulator is closed; "
-                          "cannot fetch live values, so the initial values "
-                          "will be returned.")
+            warnings.warn(
+                "Checking parameters after simulator is closed; "
+                "cannot fetch live values, so the initial values "
+                "will be returned."
+            )
 
-            return [getattr(self.sim.model.params[obj], attr)
-                    for obj, attr in obj_attrs]
+            return [
+                getattr(self.sim.model.params[obj], attr) for obj, attr in obj_attrs
+            ]
 
         params = []
         sigs = []

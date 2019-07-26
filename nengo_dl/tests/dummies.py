@@ -12,13 +12,25 @@ class Signal:
     """
     Mock-up for `nengo.builder.Signal`.
     """
-    def __init__(self, shape=None, dtype=None, base_shape=None, offset=0,
-                 trainable=False, label="", initial_value=0, sparse=False):
+
+    def __init__(
+        self,
+        shape=None,
+        dtype=None,
+        base_shape=None,
+        offset=0,
+        trainable=False,
+        label="",
+        initial_value=0,
+        sparse=False,
+    ):
         self.shape = (1,) if shape is None else shape
         self.dtype = np.float32 if dtype is None else dtype
-        self.base = (self if base_shape is None else
-                     Signal(shape=base_shape, dtype=self.dtype,
-                            label="%s.base" % label))
+        self.base = (
+            self
+            if base_shape is None
+            else Signal(shape=base_shape, dtype=self.dtype, label="%s.base" % label)
+        )
         self.elemoffset = offset
         self.name = label
         self.ndim = len(self.shape)
@@ -48,6 +60,7 @@ class Op:
     """
     Mock-up for `nengo.builder.Operator`.
     """
+
     def __init__(self, sets=None, incs=None, reads=None, updates=None):
         self.sets = [] if sets is None else sets
         self.incs = [] if incs is None else incs
@@ -105,6 +118,7 @@ class Simulator:
     """
     Mock-up for `nengo.Simulator`.
     """
+
     model = nengo.builder.Model()
     model.sig = defaultdict(lambda: defaultdict(Signal))
 
@@ -113,6 +127,7 @@ class TensorGraph(tensor_graph.TensorGraph):
     """
     Mock-up for `.tensor_graph.TensorGraph`.
     """
+
     def __init__(self, plan=None, dtype=None, minibatch_size=None):
         # pylint: disable=super-init-not-called
         self.plan = plan
@@ -133,8 +148,13 @@ def linear_net():
         # note: in theory this would be nengo.Node(size_in=1), but due to
         # https://github.com/tensorflow/tensorflow/issues/23383
         # TensorFlow will hang
-        b = nengo.Ensemble(1, 1, neuron_type=nengo.RectifiedLinear(),
-                           gain=np.ones(1), bias=np.ones(1) * 1e-6)
+        b = nengo.Ensemble(
+            1,
+            1,
+            neuron_type=nengo.RectifiedLinear(),
+            gain=np.ones(1),
+            bias=np.ones(1) * 1e-6,
+        )
         configure_settings(trainable=None)
         net.config[b.neurons].trainable = False
         nengo.Connection(a, b.neurons, synapse=None)
