@@ -120,7 +120,7 @@ class Builder:
         ----------
         sess : ``tf.Session``
             The initialized simulation session
-        rng : `~numpy.random.RandomState`
+        rng : `~numpy.random.mtrand.RandomState`
             Seeded random number generator
         progress : `.utils.ProgressBar`
             Progress bar for ops in plan
@@ -255,7 +255,7 @@ class OpBuilder:
             ``tf.Tensor`` (updated by operations)
         sess : ``tf.Session``
             The initialized simulation session
-        rng : `~numpy.random.RandomState`
+        rng : `~numpy.random.mtrand.RandomState`
             Seeded random number generator
         """
 

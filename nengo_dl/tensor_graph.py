@@ -764,7 +764,7 @@ class TensorGraph:
         ----------
         sess : ``tf.Session``
             The TensorFlow session for the simulator
-        rng : `~numpy.random.RandomState`
+        rng : `~numpy.random.mtrand.RandomState`
             Seeded random number generator
         """
 

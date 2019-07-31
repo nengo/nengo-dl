@@ -465,7 +465,7 @@ def minibatch_generator(data, minibatch_size, shuffle=True, truncation=None, rng
     truncation : int
         If not None, divide the data up into sequences of ``truncation``
         timesteps.
-    rng : `~numpy.random.RandomState`
+    rng : `~numpy.random.mtrand.RandomState`
         Seeded random number generator
 
     Yields
