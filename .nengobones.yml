@@ -29,7 +29,7 @@ setup_cfg:
     nengo_simloader: nengo_dl.tests.make_test_sim
     nengo_test_unsupported:
       tests/test_simulator.py::test_warn_on_opensim_del:
-        nengo_dl raises a different (more visible) warning, see
+        nengo-dl raises a different (more visible) warning, see
         tests/test_nengo_tests.py::test_warn_on_opensim_del
       tests/test_simulator.py::test_signal_init_values:
         different method required to manually step simulator, see
@@ -38,11 +38,20 @@ setup_cfg:
         overridden so we can pass custom test simulators, see
         tests/test_nengo_tests.py::test_entry_point
       tests/test_simulator.py::test_simulator_progress_bars:
-        nengo_dl uses a different progress bar system, see
+        nengo-dl uses a different progress bar system, see
         tests/test_utils.py::test_progress_bar
       tests/test_simulator.py::test_dtype[*:
-        nengo_dl uses a different system for signals/dtype, see
+        nengo-dl uses a different system for signals/dtype, see
         tests/test_nengo_tests.py::test_dtype
+      tests/test_simulator.py::test_time_absolute:
+        simulation times may not line up exactly if unroll_simulation != 1, see
+        tests/test_nengo_tests.py::test_time_absolute
+      tests/test_simulator.py::test_invalid_run_time:
+        simulation times may not line up exactly if unroll_simulation != 1, see
+        tests/test_nengo_tests.py::test_invalid_run_time
+      tests/test_simulator.py::test_steps:
+        simulation times may not line up exactly if unroll_simulation != 1, see
+        tests/test_nengo_tests.py::test_steps
       tests/test_node.py::test_args:
         time is passed as np.float32, not a float, see
         tests/test_nengo_tests.py::test_args
@@ -59,6 +68,9 @@ setup_cfg:
       tests/test_copy.py::test_pickle_sim[*:
         nengo-dl does not support pickling a Simulator, see
         tests/test_simulator.py::test_pickle_error
+      tests/test_probe.py::test_multirun:
+        simulation times may not line up exactly if unroll_simulation != 1, see
+        tests/test_nengo_tests.py::test_multirun
     allclose_tolerances:
       - tests/test_synapses.py::test_lowpass atol=5e-7
       - tests/test_synapses.py::test_triangle atol=5e-7

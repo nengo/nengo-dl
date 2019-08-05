@@ -47,18 +47,23 @@ class TensorSignal:
         assert isinstance(indices, (tuple, list, np.ndarray))
         self._indices = np.asarray(indices)
         self._indices.flags.writeable = False
-        self._tf_shape = None
-        self._tf_indices = None
-        self._tf_indices_nd = None
-        self._tf_slice = -1
-
         self.key = key
         self.dtype = dtype
         self.shape = shape
         self.minibatch_size = minibatch_size
         self.constant = constant
-
         self.label = label
+
+        self.reset()
+
+    def reset(self):
+        """
+        Reset cached Tensors.
+        """
+        self._tf_shape = None
+        self._tf_indices = None
+        self._tf_indices_nd = None
+        self._tf_slice = -1
 
     @property
     def indices(self):
@@ -298,8 +303,8 @@ class SignalDict(Mapping):
 
     Parameters
     ----------
-    dtype : ``tf.DType``
-        Floating point precision used in signals
+    dtype : str
+        Floating point precision used in signals (e.g. "float32")
     minibatch_size : int
         Number of items in each minibatch
     inference_only : bool
@@ -308,15 +313,31 @@ class SignalDict(Mapping):
     """
 
     def __init__(self, dtype, minibatch_size, inference_only):
-        self.dtype = dtype
+        self.dtype = tf.as_dtype(dtype)
         self.minibatch_size = minibatch_size
         self.inference_only = inference_only
         self.sig_map = {}
-        self.bases = OrderedDict()  # will be filled in tensor_graph.build_loop
         self.base_params = OrderedDict()
-        self.base_tensors = OrderedDict()
-        self.constant_phs = OrderedDict()
+        self.saved_state = OrderedDict()
+
+        self.reset()
+
+    def reset(self):
+        """
+        Reset build-specific data structures.
+
+        These are data structures that are filled out during the TensorGraph build
+        process (and therefore need to be re-initialized if we build the model again in
+        the same graph), as opposed to data that is constant for a given Nengo model.
+        """
+        # these values will be re-generated whenever the model is rebuilt
+        # self.constant_phs = OrderedDict()
         self.user_vars = []
+        self.bases = OrderedDict()
+
+        # reset TensorSignals
+        for sig in self.sig_map.values():
+            sig.reset()
 
         # logging
         self.read_types = defaultdict(int)
@@ -491,7 +512,7 @@ class SignalDict(Mapping):
 
         return output
 
-    def make_internal(self, name, shape, minibatched=True):
+    def make_internal(self, name, shape, add_weight, minibatched=True):
         """
         Creates a new `.TensorSignal` to represent an internal
         simulation signal.
@@ -505,6 +526,10 @@ class SignalDict(Mapping):
             Name for the signal/tensor.
         shape : tuple of int
             Shape of the signal/tensor.
+        add_weight : callable
+            ``tf.keras.Model.add_weight`` function for creating new Variables (use
+            this rather than directly creating Variable so that it is tracked correctly
+            by Keras).
         minibatched : bool
             Whether or not this signal contains a minibatch dimension.
 
@@ -517,15 +542,12 @@ class SignalDict(Mapping):
             np.arange(shape[0]), object(), self.dtype, shape, minibatched, label=name
         )
 
-        ph = tf_compat.placeholder(
-            sig.dtype,
-            sig.full_shape,
+        self.saved_state[sig.key] = add_weight(
+            initializer=tf.initializers.zeros(),
+            shape=sig.full_shape,
+            dtype=sig.dtype,
             name="%s/%s" % (tf_compat.get_default_graph().get_name_scope(), name),
-        )
-
-        self.base_tensors[sig.key] = (
-            ph,
-            np.zeros(sig.full_shape, dtype=sig.dtype.as_numpy_dtype()),
+            trainable=False,
         )
 
         return sig
@@ -624,14 +646,15 @@ class SignalDict(Mapping):
         if not isinstance(dtype, tf.DType):
             dtype = tf.as_dtype(dtype)
 
-        if value.nbytes > cutoff:
-            ph = tf_compat.placeholder(
-                dtype, value.shape, name="constant_phs/%d" % len(self.constant_phs)
-            )
-            self.constant_phs[ph] = value
-            return ph
-        else:
-            return tf.constant(value, dtype=dtype)
+        # TODO: is there a way to do this in keras w/ TF 2.0?
+        # if value.nbytes > cutoff:
+        #     ph = tf_compat.placeholder(
+        #         dtype, value.shape, name="constant_phs/%d" % len(self.constant_phs)
+        #     )
+        #     self.constant_phs[ph] = value
+        #     return ph
+        # else:
+        return tf.constant(value, dtype=dtype)
 
     def op_constant(self, ops, op_sizes, attr, dtype, shape=(1, -1)):
         """
@@ -705,4 +728,5 @@ class SignalDict(Mapping):
         only the variables associated with the NengoDL simulation.
         """
 
-        return [v[0] for v in self.base_params.values()] + self.user_vars
+        # TODO: remove this and use keras variable tracking instead
+        return list(self.base_params.values()) + self.user_vars

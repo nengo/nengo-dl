@@ -17,6 +17,7 @@ from nengo.exceptions import (
 import numpy as np
 import pytest
 import tensorflow as tf
+from tensorflow import keras
 
 from nengo_dl import configure_settings, tensor_layer, dists, TensorNode
 from nengo_dl.compat import tf_compat
@@ -140,14 +141,8 @@ def test_input_feeds(Simulator):
         with pytest.raises(ValidationError):
             sim.run_steps(10, data={inp: np.zeros((minibatch_size, 11, 3))})
 
-        # check that deprecated input_feeds argument also works
-        sim.soft_reset(include_probes=True)
-        with pytest.warns(DeprecationWarning):
-            sim.run_steps(50, input_feeds={inp: val, inp2: val})
-        assert np.allclose(sim.data[p], val)
-        assert np.allclose(sim.data[p2], val[..., :2])
 
-
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.parametrize("neurons", (True, False))
 @pytest.mark.training
 def test_train_ff(Simulator, neurons, seed):
@@ -197,6 +192,7 @@ def test_train_ff(Simulator, neurons, seed):
         assert np.allclose(sim.data[p], y, atol=2e-3)
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.parametrize("truncation", (None, 5))
 @pytest.mark.training
 def test_train_recurrent(Simulator, truncation, seed):
@@ -247,6 +243,7 @@ def test_train_recurrent(Simulator, truncation, seed):
     )
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.parametrize("unroll", (1, 2))
 @pytest.mark.training
 def test_train_objective(Simulator, unroll, seed):
@@ -292,6 +289,7 @@ def test_train_objective(Simulator, unroll, seed):
         assert np.allclose(sim.data[p2][:, -1], z[:, -1] + 0.5, atol=1e-3)
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.training
 def test_train_sparse(Simulator, seed):
     minibatch_size = 4
@@ -330,6 +328,7 @@ def test_train_sparse(Simulator, seed):
         assert np.allclose(sim.data[p], y, atol=1e-3)
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.training
 def test_train_errors(Simulator):
     net, a, p = dummies.linear_net()
@@ -370,14 +369,6 @@ def test_train_errors(Simulator):
                 {a: np.ones((1, n_steps, 1))}, {p: np.ones((1, n_steps, 1))}, None
             )
 
-        # deprecation warning when using "mse" string
-        with pytest.warns(DeprecationWarning):
-            sim.train(
-                {p: np.ones((1, n_steps, 1))},
-                tf_compat.train.GradientDescentOptimizer(0),
-                objective={p: "mse"},
-            )
-
         # must specify objective if no data
         with pytest.raises(ValidationError):
             sim.train(5, tf_compat.train.GradientDescentOptimizer(0.1))
@@ -398,6 +389,7 @@ def test_train_errors(Simulator):
             )
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.training
 def test_train_no_data(Simulator):
     net, _, p = dummies.linear_net()
@@ -413,6 +405,7 @@ def test_train_no_data(Simulator):
         assert np.allclose(sim.data[p], 2)
 
 
+@pytest.mark.xfail(reason="TODO: support loss")
 def test_loss(Simulator):
     with nengo.Network() as net:
         inp = nengo.Node([1])
@@ -479,6 +472,9 @@ def test_loss(Simulator):
 
 
 def test_generate_inputs(Simulator, seed):
+    n_steps = 3
+    minibatch_size = 2
+
     with nengo.Network() as net:
         proc = nengo.processes.WhiteNoise(seed=seed)
         inp = [
@@ -491,31 +487,39 @@ def test_generate_inputs(Simulator, seed):
 
         p = [nengo.Probe(x) for x in inp]
 
-    with Simulator(net, minibatch_size=2, unroll_simulation=3) as sim:
-        feed = sim._generate_inputs({inp[0]: np.zeros((2, 3, 1))}, 3)
-
-        ph = [sim.tensor_graph.input_ph[x] for x in inp]
+    with Simulator(
+        net, minibatch_size=minibatch_size, unroll_simulation=n_steps
+    ) as sim:
+        feed = sim._generate_inputs(
+            data={inp[0]: np.zeros((minibatch_size, n_steps, 1))}, n_steps=n_steps
+        )
 
         assert len(sim.tensor_graph.invariant_inputs) == len(inp)
-        assert len(feed) == len(inp)
+        assert len(feed) == len(inp) + 1
 
         sim.reset()
-        sim.run_steps(3, data={inp[0]: np.zeros((2, 3, 1))})
+        sim.run_steps(n_steps, data={inp[0]: np.zeros((minibatch_size, n_steps, 1))})
 
         vals = [
-            np.zeros((2, 3, 1)),
-            np.tile(np.sin(sim.trange())[None, :, None], (2, 1, 1)),
-            np.tile(proc.run_steps(3)[None, :, :], (2, 1, 1)),
-            np.ones((2, 3, 1)) * 2,
+            np.zeros((minibatch_size, n_steps, 1)),
+            np.tile(np.sin(sim.trange())[None, :, None], (minibatch_size, 1, 1)),
+            np.tile(proc.run_steps(3)[None, :, :], (minibatch_size, 1, 1)),
+            np.ones((minibatch_size, n_steps, 1)) * 2,
         ]
         for i, x in enumerate(vals):
-            assert np.allclose(feed[ph[i]], x)
+            assert np.allclose(feed["node_%d" % i], x)
             assert np.allclose(sim.data[p[i]], x)
 
         # check that unseeded process was different in each minibatch item
-        assert not np.allclose(feed[ph[-1]][0], feed[ph[-1]][1])
+        assert not np.allclose(
+            feed["node_%d" % (len(inp) - 1)][0], feed["node_%d" % (len(inp) - 1)][1]
+        )
+
+        with pytest.raises(SimulationError, match="automatically add n_steps"):
+            sim._generate_inputs(data=range(5), n_steps=1)
 
 
+@pytest.mark.xfail(reason="TODO: support save/load")
 @pytest.mark.training
 def test_save_load_params(Simulator, tmpdir):
     with nengo.Network(seed=0) as net:
@@ -530,16 +534,14 @@ def test_save_load_params(Simulator, tmpdir):
 
     with Simulator(net) as sim:
         weights_var = [
-            x[0]
+            x
             for x in sim.tensor_graph.signals.base_params.values()
-            if x[0].get_shape() == (1, 10)
+            if x.get_shape() == (1, 10)
         ][0]
-        enc_var = sim.tensor_graph.signals.base_tensors[
+        enc_var = sim.tensor_graph.signals.saved_state[
             sim.tensor_graph.signals[sim.model.sig[ens]["encoders"]].key
         ][0]
-        weights0, enc0 = sim.sess.run(
-            [weights_var, enc_var], feed_dict=sim._internal_state
-        )
+        weights0, enc0 = sim.sess.run([weights_var, enc_var])
         sim.save_params(os.path.join(str(tmpdir), "train"))
         sim.save_params(os.path.join(str(tmpdir), "local"), include_internal=True)
 
@@ -560,32 +562,26 @@ def test_save_load_params(Simulator, tmpdir):
 
     with Simulator(net2) as sim:
         weights_var = [
-            x[0]
+            x
             for x in sim.tensor_graph.signals.base_params.values()
-            if x[0].get_shape() == (1, 10)
+            if x.get_shape() == (1, 10)
         ][0]
-        enc_var = sim.tensor_graph.signals.base_tensors[
+        enc_var = sim.tensor_graph.signals.saved_state[
             sim.tensor_graph.signals[sim.model.sig[ens]["encoders"]].key
         ][0]
-        weights1, enc1 = sim.sess.run(
-            [weights_var, enc_var], feed_dict=sim._internal_state
-        )
+        weights1, enc1 = sim.sess.run([weights_var, enc_var])
         assert not np.allclose(weights0, weights1)
         assert not np.allclose(enc0, enc1)
 
         sim.load_params(os.path.join(str(tmpdir), "train"))
 
-        weights2, enc2 = sim.sess.run(
-            [weights_var, enc_var], feed_dict=sim._internal_state
-        )
+        weights2, enc2 = sim.sess.run([weights_var, enc_var])
         assert np.allclose(weights0, weights2)
         assert not np.allclose(enc0, enc2)
 
         sim.load_params(os.path.join(str(tmpdir), "local"), include_internal=True)
 
-        weights3, enc3 = sim.sess.run(
-            [weights_var, enc_var], feed_dict=sim._internal_state
-        )
+        weights3, enc3 = sim.sess.run([weights_var, enc_var])
         assert np.allclose(weights0, weights3)
         assert np.allclose(enc0, enc3)
 
@@ -682,6 +678,7 @@ def test_side_effects(Simulator):
     assert func.x == 11
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.training
 def test_tensorboard(Simulator, tmpdir):
     with nengo.Network() as net:
@@ -771,6 +768,7 @@ def test_tensorboard(Simulator, tmpdir):
         assert os.path.exists(str(tmpdir.join("new")))
 
 
+@pytest.mark.xfail(reason="TODO: support profile")
 @pytest.mark.parametrize("mode", ("run", "train"))
 @pytest.mark.parametrize("outfile", (None, "tmp.txt"))
 @pytest.mark.training
@@ -859,6 +857,7 @@ def test_node_output_change(Simulator, pre_val, post_val, seed):
         assert np.allclose(sim.data[p], 1.0)
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.training
 def test_check_gradients_error(Simulator):
     # check_gradients detects nans in gradient
@@ -884,78 +883,95 @@ def test_check_gradients_error(Simulator):
 
 def test_check_data(Simulator):
     with nengo.Network() as net:
-        inpa = nengo.Node([0, 0])
-        inpb = nengo.Node([0])
-        n = nengo.Node(size_in=2)
-        pa = nengo.Probe(inpa)
-        pb = nengo.Probe(inpb)
-        e = nengo.Ensemble(10, 1)
+        nengo.Node([0, 0], label="inpa")
+        nengo.Node([0], label="inpb")
+        nengo.Node(size_in=2, label="n")
+        # pa = nengo.Probe(inpa)
+        # pb = nengo.Probe(inpb)
+        nengo.Ensemble(10, 1)
 
     with nengo.Network():
-        inp2 = nengo.Node([0, 0])
-        p2 = nengo.Probe(inp2)
+        nengo.Node([0, 0], label="inp2")
+        # p2 = nengo.Probe(inp2)
 
     with Simulator(net, minibatch_size=3) as sim:
         zeros1 = np.zeros((3, 1, 1))
         zeros2 = np.zeros((3, 1, 2))
+        n_steps = np.ones((3, 1))
 
         # make sure that valid inputs pass
-        sim._check_data({inpa: zeros2, inpb: zeros1})
-        sim._check_data({pa: zeros2, pb: zeros1})
+        sim._check_data({"inpa": zeros2, "inpb": zeros1, "n_steps": n_steps})
+        # sim._check_data({pa: zeros2, pb: zeros1})
 
         # invalid input objects
-        with pytest.raises(ValidationError):
-            sim._check_data({inp2: zeros2})
-        with pytest.raises(ValidationError):
-            sim._check_data({n: zeros2})
+        with pytest.raises(ValidationError, match="not a valid input name"):
+            sim._check_data({"inp2": zeros2, "n_steps": n_steps})
+        with pytest.raises(ValidationError, match="not a valid input name"):
+            sim._check_data({"n": zeros2, "n_steps": n_steps})
 
         # invalid target object
-        with pytest.raises(ValidationError):
-            sim._check_data({p2: zeros2})
+        # with pytest.raises(ValidationError):
+        #     sim._check_data({p2: zeros2})
 
         # mismatched input data
-        with pytest.raises(ValidationError):
-            sim._check_data({inpa: zeros2, inpb: np.zeros((2, 1, 1))})
-        with pytest.raises(ValidationError):
-            sim._check_data({inpa: zeros2, inpb: np.zeros((1, 2, 1))})
+        with pytest.raises(ValidationError, match="different batch size"):
+            sim._check_data(
+                {"inpa": zeros2, "inpb": np.zeros((4, 1, 1)), "n_steps": n_steps}
+            )
+        with pytest.raises(ValidationError, match="different number of timesteps"):
+            sim._check_data(
+                {"inpa": zeros2, "inpb": np.zeros((3, 2, 1)), "n_steps": n_steps}
+            )
 
         # mismatched target data
-        with pytest.raises(ValidationError):
-            sim._check_data({pa: zeros2, pb: np.zeros((2, 1, 1))})
-        with pytest.raises(ValidationError):
-            sim._check_data({pa: zeros2, pb: np.zeros((1, 2, 1))})
+        # with pytest.raises(ValidationError):
+        #     sim._check_data({pa: zeros2, pb: np.zeros((2, 1, 1))})
+        # with pytest.raises(ValidationError):
+        #     sim._check_data({pa: zeros2, pb: np.zeros((1, 2, 1))})
 
         # data that doesn't match explicit target
-        with pytest.raises(ValidationError):
-            sim._check_data({inpa: zeros2}, n_batch=2)
-        with pytest.raises(ValidationError):
-            sim._check_data({inpa: zeros2}, n_steps=2)
-        with pytest.raises(ValidationError):
-            sim._check_data({pa: zeros2}, n_batch=2)
-        with pytest.raises(ValidationError):
-            sim._check_data({pa: zeros2}, n_steps=2)
+        with pytest.raises(ValidationError, match="does not match expected size"):
+            sim._check_data({"inpa": zeros2, "n_steps": np.ones((2, 1))}, batch_size=2)
+        with pytest.raises(ValidationError, match="does not match expected size"):
+            sim._check_data({"inpa": zeros2, "n_steps": n_steps}, n_steps=2)
+        # with pytest.raises(ValidationError):
+        #     sim._check_data({pa: zeros2}, batch_size=2)
+        # with pytest.raises(ValidationError):
+        #     sim._check_data({pa: zeros2}, n_steps=2)
 
         # data with wrong object dimensionality
-        with pytest.raises(ValidationError):
-            sim._check_data({inpa: zeros1})
-        with pytest.raises(ValidationError):
-            sim._check_data({pa: zeros1})
+        with pytest.raises(ValidationError, match="Dimensionality of data"):
+            sim._check_data({"inpa": zeros1, "n_steps": n_steps})
+        # with pytest.raises(ValidationError):
+        #     sim._check_data({pa: zeros1})
 
         # data with batch size < minibatch_size
-        with pytest.raises(ValidationError):
-            sim._check_data({inpa: zeros2[[0]]})
-        with pytest.raises(ValidationError):
-            sim._check_data({pa: zeros2[[0]]})
+        with pytest.raises(ValidationError, match="Size of minibatch"):
+            sim._check_data({"inpa": zeros2[[0]], "n_steps": n_steps})
+        # with pytest.raises(ValidationError):
+        #     sim._check_data({pa: zeros2[[0]]})
 
         # data with incorrect rank
-        with pytest.raises(ValidationError):
-            sim._check_data({inpa: zeros2[0]})
-        with pytest.raises(ValidationError):
-            sim._check_data({pa: zeros2[0]})
+        with pytest.raises(ValidationError, match="should have rank 3"):
+            sim._check_data({"inpa": zeros2[0], "n_steps": n_steps})
+        # with pytest.raises(ValidationError):
+        #     sim._check_data({pa: zeros2[0]})
 
-        # invalid object type in data
-        with pytest.raises(ValidationError):
-            sim._check_data({inpa: zeros2, e: zeros1})
+        # no n_steps
+        with pytest.raises(ValidationError, match="Must specify 'n_steps'"):
+            sim._check_data({})
+
+        # n_steps wrong shape
+        with pytest.raises(ValidationError, match="wrong shape"):
+            sim._check_data({"n_steps": np.asarray(10)})
+
+        # non-constant n_steps
+        with pytest.raises(ValidationError, match="have the same value"):
+            sim._check_data({"n_steps": np.asarray([[0], [1], [2]])})
+
+        # n_steps mismatch
+        with pytest.raises(ValidationError, match="does not match"):
+            sim._check_data({"n_steps": np.asarray([[10], [10], [10]])}, n_steps=5)
 
 
 def test_matching_node_out(Simulator):
@@ -991,6 +1007,7 @@ def test_probe_no_data(Simulator):
     assert sim.data[p] == []
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.training
 def test_train_state_save(Simulator):
     with nengo.Network() as net:
@@ -1099,12 +1116,12 @@ def test_simulation_data(Simulator, seed):
         sig = sim.model.sig[a]["encoders"]
         tensor_sig = sim.tensor_graph.signals[sig]
         if sim.tensor_graph.inference_only:
-            base = sim.tensor_graph.signals.base_tensors[tensor_sig.key][0]
-            sim._internal_state[base][...] = 1
+            base = sim.tensor_graph.signals.saved_state[tensor_sig.key]
         else:
-            base = sim.tensor_graph.signals.base_params[tensor_sig.key][0]
-            op = tf_compat.assign(base, tf.ones_like(base))
-            sim.sess.run(op)
+            base = sim.tensor_graph.signals.base_params[tensor_sig.key]
+        keras.backend.set_value(
+            base, np.ones(base.shape, dtype=base.dtype.as_numpy_dtype())
+        )
 
         assert np.allclose(sim.data[a].scaled_encoders, 1)
         assert np.allclose(sim.data[a].gain, np.sqrt(2) * a.radius)
@@ -1127,6 +1144,7 @@ def test_simulation_data(Simulator, seed):
         _ = sim.data[nengo.Ensemble(10, 1, add_to_container=False)]
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.training
 def test_learning_rate_schedule(Simulator):
     with nengo.Network() as net:
@@ -1152,6 +1170,7 @@ def test_learning_rate_schedule(Simulator):
             )
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.training
 def test_multiple_objective(Simulator, seed):
     with nengo.Network(seed=seed) as net:
@@ -1267,6 +1286,7 @@ def test_get_nengo_params(Simulator, seed):
         assert np.allclose(sim.data[p], sim2.data[p2])
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.parametrize("progress", (True, False))
 def test_progress_bar(Simulator, progress):
     net, _, p = dummies.linear_net()
@@ -1288,6 +1308,7 @@ def test_progress_bar(Simulator, progress):
             )
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.training
 def test_extra_feeds(Simulator):
     # set up a tensornode that will fail unless a value is fed in for the
@@ -1328,6 +1349,7 @@ def test_extra_feeds(Simulator):
         sim.loss(data, extra_feeds={b.tensor_func.ph: True})
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.parametrize("mixed", (False, True))
 @pytest.mark.training
 def test_direct_grads(Simulator, mixed):
@@ -1370,6 +1392,7 @@ def test_direct_grads(Simulator, mixed):
             assert np.allclose(sim.data[p2], 2)
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.training
 def test_non_differentiable(Simulator):
     with nengo.Network() as net:
@@ -1447,6 +1470,7 @@ def test_freeze_obj(Simulator, seed):
         sim.freeze_params(net)
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.training
 def test_freeze_train(Simulator):
     with nengo.Network() as net:
@@ -1475,25 +1499,7 @@ def test_freeze_train(Simulator):
         assert np.allclose(sim.data[p], 2)
 
 
-def test_fill_feed(Simulator):
-    with nengo.Network() as net:
-        a = nengo.Node([0])
-        p0 = nengo.Probe(a)
-        p1 = nengo.Probe(a)
-
-    with Simulator(net) as sim:
-        # build an objective with p0 in it, so that it will be added to the
-        # graph
-        sim.tensor_graph.build_outputs({p0: mse})
-
-        # filling p0 will work fine
-        sim._fill_feed(1, data={p0: np.zeros((1, 1, 1))})
-
-        # validation error if filling p1
-        with pytest.raises(ValidationError):
-            sim._fill_feed(1, data={p1: np.zeros((1, 1, 1))})
-
-
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.parametrize("neuron_type", (nengo.SpikingRectifiedLinear(), nengo.LIF()))
 def test_inference_only(Simulator, neuron_type, seed):
     with nengo.Network(seed=seed) as net:
@@ -1532,12 +1538,7 @@ def test_inference_only(Simulator, neuron_type, seed):
             sim2.check_gradients()
 
 
-def test_dtype(Simulator):
-    with pytest.warns(DeprecationWarning):
-        with Simulator(None, dtype=tf.float32) as sim:
-            assert sim.tensor_graph.dtype == tf.float32
-
-
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.training
 def test_synapse_warning(Simulator):
     with nengo.Network() as net:
@@ -1584,6 +1585,7 @@ def test_synapse_warning(Simulator):
     assert does_warn(as_dict=True)
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.training
 def test_concat_hang(Simulator, pytestconfig):
     if (
@@ -1608,6 +1610,7 @@ def test_concat_hang(Simulator, pytestconfig):
         )
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 def test_run_batch(Simulator, rng):
     counter = 0
 
@@ -1641,22 +1644,36 @@ def test_tf_seed(Simulator, seed):
         a = TensorNode(lambda t: tf.random.uniform((1, 1), dtype=t.dtype))
         p = nengo.Probe(a)
 
+    with Simulator(net, seed=seed) as sim0:
+        sim0.step()
+
+    with Simulator(net, seed=seed) as sim1:
+        sim1.step()
+
+    assert np.allclose(sim0.data[p], sim1.data[p])
+
+
+@pytest.mark.xfail(reason="TensorFlow does not support resetting RNG")
+def test_tf_rng_reset(Simulator, seed):
+    # TODO: support this using tf.random.experimental; see
+    #  https://github.com/nengo/nengo-dl/issues/98
+
+    with nengo.Network() as net:
+        a = TensorNode(lambda t: tf.random.uniform((1, 1), dtype=t.dtype))
+        p = nengo.Probe(a)
+
     with Simulator(net, seed=seed) as sim:
         sim.step()
 
-    with Simulator(net, seed=seed) as sim_seed:
-        sim_seed.step()
+        data = sim.data[p]
 
-    assert np.allclose(sim.data[p], sim_seed.data[p])
+        sim.reset(seed=seed + 1)
+        sim.step()
+        assert not np.allclose(sim.data[p], data)
 
-    with Simulator(net, seed=seed + 1) as sim_reset:
-        sim_reset.step()
-
-        assert not np.allclose(sim.data[p], sim_reset.data[p])
-
-        sim_reset.reset(seed=seed)
-
-        assert np.allclose(sim.data[p], sim_reset.data[p])
+        sim.reset(seed=seed)
+        sim.step()
+        assert np.allclose(sim.data[p], data)
 
 
 def test_pickle_error(Simulator):

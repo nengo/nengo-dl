@@ -119,6 +119,7 @@ def patch_nengo_tests():
         # monkey patch the nengo Simulator fixture, so that we can also use the pytest
         # arguments to control nengo tests
         conftest.Simulator = Simulator
+        conftest.RefSimulator = Simulator
 
         # set looser tolerances on synapse tests (since allclose fixture doesn't work
         # in these versions)

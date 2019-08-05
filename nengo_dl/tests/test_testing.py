@@ -19,7 +19,7 @@ def test_simulator_fixture(Simulator, pytestconfig):
 
     # check that manually specified values aren't overridden
     with nengo.Network() as net:
-        config.configure_settings(dtype=tf.float64, inference_only=True)
+        config.configure_settings(dtype="float64", inference_only=True)
 
     with Simulator(net, unroll_simulation=5, device="/cpu:0") as sim:
         assert sim.tensor_graph.dtype == tf.float64

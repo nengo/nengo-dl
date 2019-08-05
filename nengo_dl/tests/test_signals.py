@@ -244,6 +244,7 @@ def test_signal_dict_combine():
     assert np.all(y.indices == [0, 1, 2, 4, 5, 6])
 
 
+@pytest.mark.xfail(reason="TODO: support constant phs")
 @pytest.mark.parametrize("dtype", (None, tf.float32))
 def test_constant(dtype, sess):
     val = np.random.randn(10, 10).astype(np.float64)
@@ -264,6 +265,7 @@ def test_constant(dtype, sess):
     assert np.allclose(c1, val)
 
 
+@pytest.mark.xfail(reason="TODO: support constant phs")
 @pytest.mark.gpu
 def test_constant_gpu(sess):
     val = np.random.randn(10, 10).astype(np.int32)

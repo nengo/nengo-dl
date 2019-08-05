@@ -368,7 +368,9 @@ def random_network(
     return net
 
 
-def run_profile(net, train=False, n_steps=150, do_profile=True, reps=1, **kwargs):
+def run_profile(
+    net, train=False, n_steps=150, do_profile=True, reps=1, dtype="float32", **kwargs
+):
     """
     Run profiler on a benchmark network.
 
@@ -386,6 +388,8 @@ def run_profile(net, train=False, n_steps=150, do_profile=True, reps=1, **kwargs
     reps : int
         Repeat the run this many times (only profile data from the last
         run will be kept).
+    dtype : str
+        Simulation dtype (e.g. "float32")
 
     Returns
     -------
@@ -401,7 +405,7 @@ def run_profile(net, train=False, n_steps=150, do_profile=True, reps=1, **kwargs
     exec_time = 1e10
 
     with net:
-        nengo_dl.configure_settings(inference_only=not train)
+        nengo_dl.configure_settings(inference_only=not train, dtype=dtype)
 
     with nengo_dl.Simulator(net, **kwargs) as sim:
         if train:

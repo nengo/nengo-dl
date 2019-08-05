@@ -213,3 +213,62 @@ def test_gain_bias(Simulator):
     with Simulator(model) as sim:
         assert np.allclose(gain, sim.data[a].gain)
         assert np.allclose(bias, sim.data[a].bias)
+
+
+def test_multirun(Simulator, rng):
+    model = nengo.Network(label="Multi-run")
+
+    with Simulator(model) as sim:
+        t_stops = sim.dt * rng.randint(low=100, high=2000, size=10)
+
+        # round times to be multiples of 10*dt, so that simulation times will still
+        # fall on the right time with unroll_simulation != 1
+        t_stops = np.around(t_stops, decimals=2)
+
+        t_sum = 0
+        for ti in t_stops:
+            sim.run(ti)
+            sim_t = sim.trange()
+            t = sim.dt * np.arange(1, len(sim_t) + 1)
+            assert np.allclose(sim_t, t)
+
+            t_sum += ti
+            assert np.allclose(sim_t[-1], t_sum)
+
+
+def test_time_absolute(Simulator):
+    m = nengo.Network()
+    with Simulator(m) as sim:
+        # modify runtime so that it is a multiple of unroll_simulations
+        sim.run(0.01)
+    assert np.allclose(sim.trange(), np.arange(sim.dt, 0.01 + sim.dt, sim.dt))
+
+
+def test_invalid_run_time(Simulator):
+    net = nengo.Network()
+    with Simulator(net) as sim:
+        with pytest.raises(nengo.exceptions.ValidationError):
+            sim.run(-0.0001)
+        with pytest.warns(UserWarning):
+            sim.run(0)
+        sim.run(0.0006)  # Rounds up to 0.001
+
+        # may run for more than 1 steps if unroll_simulation != 1
+        assert sim.n_steps == sim.unroll
+
+
+def test_steps(Simulator):
+    dt = 0.001
+    m = nengo.Network(label="test_steps")
+    with Simulator(m, dt=dt) as sim:
+        assert sim.n_steps == 0 * sim.unroll
+        assert np.allclose(sim.time, 0 * dt * sim.unroll)
+        sim.step()
+        assert sim.n_steps == 1 * sim.unroll
+        assert np.allclose(sim.time, 1 * dt * sim.unroll)
+        sim.step()
+        assert sim.n_steps == 2 * sim.unroll
+        assert np.allclose(sim.time, 2 * dt * sim.unroll)
+
+        assert np.isscalar(sim.n_steps)
+        assert np.isscalar(sim.time)

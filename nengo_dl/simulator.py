@@ -7,7 +7,6 @@ a model.
 import collections
 import copy
 import logging
-import os
 import warnings
 
 from nengo import Ensemble, Connection, Probe, Network, Direct, Node
@@ -22,8 +21,11 @@ from nengo.exceptions import (
     ValidationError,
 )
 from nengo.solvers import NoSolver
+from nengo.utils.magic import decorator
+from nengo.version import version_info as nengo_version
 import numpy as np
 import tensorflow as tf
+from tensorflow import keras
 from tensorflow.python.client.timeline import Timeline
 from tensorflow.python.ops import gradient_checker
 
@@ -36,7 +38,23 @@ from nengo_dl.tensor_graph import TensorGraph
 logger = logging.getLogger(__name__)
 
 
-class Simulator:
+@decorator
+def with_self(wrapped, instance, args, kwargs):
+    """A decorator that can be used to ensure that any TensorFlow operations happening
+    within a method will use the settings associated with this Simulator."""
+
+    keras_dtype = tf.keras.backend.floatx()
+    tf.keras.backend.set_floatx(instance.tensor_graph.dtype)
+    with instance.graph.as_default(), instance.graph.device(
+        instance.tensor_graph.device
+    ):
+        output = wrapped(*args, **kwargs)
+    tf.keras.backend.set_floatx(keras_dtype)
+
+    return output
+
+
+class Simulator:  # pylint: disable=too-many-public-methods
     """
     Simulate network using the ``nengo_dl`` backend.
 
@@ -51,8 +69,6 @@ class Simulator:
         Seed for all stochastic operators used in this simulator
     model : `~nengo.builder.Model`
         Pre-built model object
-    dtype : ``tf.DType``
-        Deprecated, use ``nengo_dl.configure_settings(dtype=...)`` instead.
     device : None or ``"/cpu:0"`` or ``"/gpu:[0-n]"``
         Device on which to execute computations (if None then uses the
         default device as determined by TensorFlow)
@@ -76,7 +92,6 @@ class Simulator:
         dt=0.001,
         seed=None,
         model=None,
-        dtype=None,
         device=None,
         unroll_simulation=1,
         minibatch_size=None,
@@ -87,13 +102,14 @@ class Simulator:
         self.unroll = unroll_simulation
         self.minibatch_size = 1 if minibatch_size is None else minibatch_size
         self.data = SimulationData(self, minibatch_size is not None)
+
         if seed is None:
             if network is not None and network.seed is not None:
                 seed = network.seed + 1
             else:
                 seed = np.random.randint(np.iinfo(np.int32).max)
         self.seed = seed
-        self._internal_state = None
+        self.rng = np.random.RandomState(self.seed)
 
         # TODO: multi-GPU support
 
@@ -126,22 +142,15 @@ class Simulator:
                     "dt (%g)" % (model.dt, dt),
                     NengoWarning,
                 )
+            if nengo_version <= (2, 8, 0):
+                # 2.8 has a bug where unpickling a model results in step having the
+                # wrong dtype, which we fix here
+                model.step._initial_value = model.step._initial_value.astype(np.int64)
             self.model = model
 
         if network is not None:
             p = ProgressBar("Building network", "Build")
             self.model.build(network, progress=p)
-
-        if dtype is not None:
-            warnings.warn(
-                "dtype parameter is deprecated; use "
-                "nengo_dl.configure_settings(dtype=...) instead",
-                DeprecationWarning,
-            )
-        else:
-            dtype = config.get_setting(self.model, "dtype", tf.float32)
-        self._keras_dtype = tf.keras.backend.floatx()
-        tf.keras.backend.set_floatx(dtype.name)
 
         # set up tensorflow graph plan
         with ProgressBar(
@@ -151,69 +160,58 @@ class Simulator:
                 self.model,
                 self.dt,
                 unroll_simulation,
-                dtype,
+                config.get_setting(self.model, "dtype", "float32"),
                 self.minibatch_size,
                 device,
                 progress,
+                self.rng,
             )
 
-        # set TensorFlow graph seed
-        with self.tensor_graph.graph.as_default():
-            tf_compat.set_random_seed(self.seed)
+        # build keras models
+        self.graph = tf.Graph()
+        self._build_keras()
 
-        # construct graph
-        with ProgressBar(
-            "Constructing graph", "Construction", max_value=None
-        ) as progress:
-            self.tensor_graph.build(progress)
-
-        # output simulation data for viewing via TensorBoard
-        if tensorboard is not None:
-            if not os.path.exists(tensorboard):
-                os.makedirs(tensorboard)
-
-            run_number = (
-                max(
-                    [int(x[4:]) for x in os.listdir(tensorboard) if x.startswith("run")]
-                    or [-1]
-                )
-                + 1
-            )
-            self.summary = tf_compat.summary.FileWriter(
-                os.path.join(tensorboard, "run_%d" % run_number),
-                graph=self.tensor_graph.graph,
-            )
-        else:
-            self.summary = None
-
-        # start session
-
-        session_config = tf_compat.ConfigProto(
-            allow_soft_placement=False, log_device_placement=False
-        )
-
-        # TODO: XLA compiling doesn't seem to provide any benefit at the
-        # moment, revisit later after tensorflow has developed it further
-        # config.graph_options.optimizer_options.global_jit_level = (
-        #     tf.OptimizerOptions.ON_1)
-
-        # set any config options specified by user
-        config_settings = config.get_setting(self.model, "session_config", {})
-        for c, v in config_settings.items():
-            attrs = c.split(".")
-            x = session_config
-            for a in attrs[:-1]:
-                x = getattr(x, a)
-            setattr(x, attrs[-1], v)
-
-        self.sess = tf_compat.Session(
-            graph=self.tensor_graph.graph, config=session_config
-        )
-
-        self.reset(seed=seed)
+        self.reset()
 
         self.closed = False
 
+    @with_self
+    def _build_keras(self):
+        tf.random.set_seed(self.seed)
+        tf.config.set_soft_device_placement(False)
+
+        # output simulation data for viewing via TensorBoard
+        # if tensorboard is not None:
+        #     if not os.path.exists(tensorboard):
+        #         os.makedirs(tensorboard)
+        #
+        #     run_number = (
+        #         max(
+        #             [
+        #                 int(x[4:])
+        #                 for x in os.listdir(tensorboard)
+        #                 if x.startswith("run")
+        #             ]
+        #             or [-1]
+        #         )
+        #         + 1
+        #     )
+        #     self.summary = tf_compat.summary.FileWriter(
+        #         os.path.join(tensorboard, "run_%d" % run_number),
+        #         graph=tf_compat.get_default_graph(),
+        #     )
+        # else:
+        #     self.summary = None
+
+        n_steps, self.node_inputs = self.tensor_graph.build_inputs()
+        inputs = [n_steps] + list(self.node_inputs.values())
+        outputs = self.tensor_graph(inputs)
+        self.keras_model = keras.Model(inputs=inputs, outputs=outputs)
+        self.keras_model_save = keras.Model(
+            inputs=inputs, outputs=[self.tensor_graph.steps_run_and_save] + outputs[1:]
+        )
+
+    @with_self
     def reset(self, seed=None):
         """
         Resets the simulator to initial conditions.
@@ -223,36 +221,36 @@ class Simulator:
         seed : int
             If not None, overwrite the default simulator seed with this value
             (note: this becomes the new default simulator seed)
+
+        Notes
+        -----
+        Changing the TensorFlow seed only affects ops created from then on; it has
+        no impact on existing ops (either changing their seed or resetting their random
+        state). So calling `.reset` will likely have no impact on any TensorFlow
+        randomness (it will still affect numpy randomness, such as in
+        `~nengo:nengo.Processes`, as normal).
         """
 
         if self.closed is not None and self.closed:
             raise SimulatorClosed("Cannot reset closed Simulator.")
 
-        self.n_steps = 0
-        self.time = 0.0
-
         # initialize variables and internal simulation state
-        with self.tensor_graph.graph.as_default():
-            # user_init_op cannot be pre-built like the others,
-            # because new user variables may be added after
-            # the initial build process
-            user_init_op = tf_compat.variables_initializer(
-                self.tensor_graph.signals.user_vars
-            )
-        self.sess.run(user_init_op)
         self.soft_reset(include_params=True, include_probes=True)
 
-        # execute post-build processes (we do this here because
-        # seed can change each call to reset)
+        # update rng
         if seed is not None:
+            warnings.warn(
+                "Changing the seed will not affect any TensorFlow operations "
+                "created before the seed was updated"
+            )
             self.seed = seed
-        self.rng = np.random.RandomState(self.seed)
-        with self.tensor_graph.graph.as_default():
-            tf_compat.set_random_seed(self.seed)
+        self.rng.seed(self.seed)
+        tf.random.set_seed(self.seed)
 
-        with self.sess.as_default():
-            self.tensor_graph.build_post(self.sess, self.rng)
+        # execute post-build processes
+        self.tensor_graph.build_post()
 
+    @with_self
     def soft_reset(self, include_params=False, include_probes=False):
         """
         Resets the internal state of the simulation, but doesn't
@@ -267,27 +265,252 @@ class Simulator:
             If True, also clear probe data
         """
 
-        if self._internal_state is None:
-            self._internal_state = {
-                ph: val.copy()
-                for ph, val in self.tensor_graph.signals.base_tensors.values()
-            }
-        else:
-            for ph, val in self.tensor_graph.signals.base_tensors.values():
-                self._internal_state[ph][...] = val
+        # reset saved state
+        var_vals = []
+        for key, var in self.tensor_graph.signals.saved_state.items():
+            try:
+                val = self.tensor_graph.base_arrays_init[False][key]
+            except KeyError:
+                # this is state created by `signals.make_internal`
+                val = np.zeros(var.shape, dtype=var.dtype.as_numpy_dtype())
+            var_vals.append((var, val))
+        keras.backend.batch_set_value(var_vals)
 
         if include_params:
-            self.sess.run(
-                self.tensor_graph.variable_init_op,
-                feed_dict={
-                    ph: v for _, ph, v in self.tensor_graph.signals.base_params.values()
-                },
+            # reset base params
+            keras.backend.batch_set_value(
+                list(
+                    zip(
+                        self.tensor_graph.signals.base_params.values(),
+                        self.tensor_graph.base_arrays_init[True].values(),
+                    )
+                )
             )
 
         if include_probes:
             for p in self.model.probes:
                 self.model.params[p] = []
-            self.n_steps = 0
+
+        self._update_steps()
+
+    def predict(self, inputs=None, n_steps=None, update_state=False, **kwargs):
+        """
+        Generate output predictions for the input samples.
+
+        Computation is (optionally) done in batches.
+
+        This function implements the `tf.keras.Model.predict
+        <https://www.tensorflow.org/api_docs/python/tf/keras/Model#predict>`_ API.
+
+        Parameters
+        ----------
+        inputs
+            Inputs can be specified as:
+            - A dictionary of {`nengo:nengo.Node` or str: `~numpy:numpy.ndarray`}
+              indicating the input values for the given nodes. Nodes can be referred
+              to by the Node object itself or by a string name, which will be
+              ``Node.label`` if one was specified, or ``"node_i"`` where ``i``
+              indexes the nodes according to the order they were added to the model
+              (this corresponds to the order found in `nengo:nengo.Network.all_nodes`).
+            - A list of `~numpy:numpy.ndarray` indicating the input values for each
+              input Node, ordered according to the order in which the Nodes were
+              added to the model (this corresponds to the order found in
+              `nengo:nengo.Network.all_nodes`).
+            - An `~numpy:numpy.ndarray` indicating the input value for a single input
+              Node.
+            - A generator or ``tf.data.Dataset`` that produces one of the above. These
+              input types must also explicitly pass a value for the ``n_steps`` input,
+              which should have shape ``(batch_size, 1)``. This input should come first
+              in the input list or use the string name "n_steps" (if passing a dict).
+
+            All inputs should have shape ``(batch_size, n_steps, node.size_out)``.
+
+            If an input value is not specified for one of the Nodes in the model then
+            data will be filled in according to the Node definition (e.g., by calling
+            the output function associated with that Node).  However, generator input
+            types must explicitly specify values for all the input nodes.
+        n_steps : int
+            Number of simulation timesteps
+        update_state : bool
+            If True, update the saved simulation state at the end of the run, so that
+            future operations will resume from the terminal state of this run.
+        kwargs: dict
+            Will be passed on to `tf.keras.Model.predict
+            <https://www.tensorflow.org/api_docs/python/tf/keras/Model#predict>`_.
+
+        Returns
+        -------
+        probe_values : dict of {`~nengo:nengo.Probe`: `~numpy:numpy.ndarray`}
+            Output values from all the Probes in the network.
+        """
+
+        if "batch_size" in kwargs:
+            # note: the keras "batch size" parameter refers to minibatch size
+            # (i.e., the number of elements passed to the network in each iteration,
+            # rather than the total number of elements in the data)
+            warnings.warn(
+                "Batch size is determined statically via Simulator.minibatch_size; "
+                "ignoring value passed to `predict`"
+            )
+        kwargs["batch_size"] = None
+
+        return self._predict(
+            "predict",
+            inputs=inputs,
+            n_steps=n_steps,
+            update_state=update_state,
+            **kwargs,
+        )
+
+    def predict_on_batch(self, inputs=None, n_steps=None, update_state=False, **kwargs):
+        """
+        Generate output predictions for the input samples.
+
+        Computation is done on a single minibatch of inputs (i.e., inputs must have
+        shape ``(sim.minibatch_size, n_steps, node.size_in)``.
+
+        This function implements the `tf.keras.Model.predict_on_batch
+        <https://www.tensorflow.org/api_docs/python/tf/keras/Model#predict_on_batch>`_
+        API.
+
+        Parameters
+        ----------
+        inputs
+            Inputs can be specified as:
+            - A dictionary of {`nengo:nengo.Node` or str: `~numpy:numpy.ndarray`}
+              indicating the input values for the given nodes. Nodes can be referred
+              to by the Node object itself or by a string name, which will be
+              ``Node.label`` if one was specified, or ``"node_i"`` where ``i``
+              indexes the nodes according to the order they were added to the model
+              (this corresponds to the order found in `nengo:nengo.Network.all_nodes`).
+            - A list of `~numpy:numpy.ndarray` indicating the input values for each
+              input Node, ordered according to the order in which the Nodes were
+              added to the model (this corresponds to the order found in
+              `nengo:nengo.Network.all_nodes`).
+            - An `~numpy:numpy.ndarray` indicating the input value for a single input
+              Node.
+            - A generator or ``tf.data.Dataset`` that produces one of the above. These
+              input types must also explicitly pass a value for the ``n_steps`` input,
+              which should have shape ``(batch_size, 1)``. This input should come first
+              in the input list or use the string name "n_steps" (if passing a dict).
+
+            All inputs should have shape
+            ``(sim.minibatch_size, n_steps, node.size_out)``.
+
+            If an input value is not specified for one of the Nodes in the model then
+            data will be filled in according to the Node definition (e.g., by calling
+            the output function associated with that Node).  However, generator input
+            types must explicitly specify values for all the input nodes.
+        n_steps : int
+            Number of simulation timesteps
+        update_state : bool
+            If True, update the saved simulation state at the end of the run, so that
+            future operations will resume from the terminal state of this run.
+        kwargs: dict
+            Will be passed on to `tf.keras.Model.predict_on_batch
+            <https://www.tensorflow.org/api_docs/python/tf/keras/Model#predict_on_batch>`_.
+
+        Returns
+        -------
+        probe_values : dict of {`~nengo:nengo.Probe`: `~numpy:numpy.ndarray`}
+            Output values from all the Probes in the network.
+        """
+        return self._predict(
+            "predict_on_batch",
+            inputs=inputs,
+            n_steps=n_steps,
+            update_state=update_state,
+            **kwargs,
+        )
+
+    def predict_generator(self, inputs=None, update_state=False, **kwargs):
+        """
+        Generate output predictions for the input samples.
+
+        Uses a generator or ``tf.data.Dataset`` as input. Generator must produce inputs
+        as expected by `.predict_on_batch` (i.e., with shape
+        ``(sim.minibatch_size, n_steps, node.size_in)``).
+
+        This function implements the `tf.keras.Model.predict_generator
+        <https://www.tensorflow.org/api_docs/python/tf/keras/Model#predict_generator>`_
+        API.
+
+        Parameters
+        ----------
+        inputs
+            A generator or ``tf.data.Dataset`` that produces inputs in one of the forms
+            supported by `.predict_on_batch`.
+
+            These generators must also explicitly pass a value for the ``n_steps``
+            input, which should have shape ``(batch_size, 1)``. This input should come
+            first in the input list or use the string name "n_steps"
+            (if generating a dict).
+
+            All generated inputs should have shape
+            ``(sim.minibatch_size, n_steps, node.size_out)``.
+
+            Inputs must be explicitly specified for all input Nodes in the network.
+        update_state : bool
+            If True, update the saved simulation state at the end of the run, so that
+            future operations will resume from the terminal state of this run.
+        kwargs: dict
+            Will be passed on to `tf.keras.Model.predict_generator
+            <https://www.tensorflow.org/api_docs/python/tf/keras/Model#predict_generator>`_.
+
+        Returns
+        -------
+        probe_values : dict of {`~nengo:nengo.Probe`: `~numpy:numpy.ndarray`}
+            Output values from all the Probes in the network.
+        """
+        return self._predict(
+            "predict_generator", inputs=inputs, update_state=update_state, **kwargs
+        )
+
+    @with_self
+    def _predict(
+        self, predict_type, inputs=None, n_steps=None, update_state=False, **kwargs
+    ):
+        """
+        Internal base function for all the predict functions.
+
+        Parameters
+        ----------
+        predict_type : "predict" or "predict_on_batch" or "predict_generator"
+            The underlying function to call on the Keras model.
+        inputs
+            See description in documentation of ``<predict_type>`` function.
+        n_steps
+            See description in documentation of ``<predict_type>`` function.
+        update_state
+            See description in documentation of ``<predict_type>`` function.
+        kwargs
+            See description in documentation of ``<predict_type>`` function.
+
+        Returns
+        -------
+            See description in documentation of ``<predict_type>`` function.
+        """
+        # TODO: double check this doesn't rebuild the graph each time it is called
+        #  (e.g. with different values for n_steps)
+
+        # batch size is determined from data in `predict`; others are single batch so
+        # we know the size should be minibatch_size
+        batch_size = None if predict_type == "predict" else self.minibatch_size
+        inputs = self._generate_inputs(
+            data=inputs, n_steps=n_steps, batch_size=batch_size
+        )
+        self._check_data(inputs, n_steps=n_steps, batch_size=batch_size)
+
+        # call predict function
+        model = self.keras_model_save if update_state else self.keras_model
+        outputs = getattr(model, predict_type)(inputs, **kwargs)
+
+        # reorganize results (will be flattened) back into dict
+        if not isinstance(outputs, list):
+            outputs = [outputs]
+        output_dict = {p: outputs[1 + i] for i, p in enumerate(self.model.probes)}
+
+        return output_dict
 
     def step(self, **kwargs):
         """
@@ -334,15 +557,7 @@ class Simulator:
         else:
             self.run_steps(steps, **kwargs)
 
-    def run_steps(
-        self,
-        n_steps,
-        data=None,
-        input_feeds=None,
-        profile=False,
-        progress_bar=True,
-        extra_feeds=None,
-    ):
+    def run_steps(self, n_steps, data=None, progress_bar=True, extra_feeds=None):
         """
         Simulate for the given number of steps.
 
@@ -353,13 +568,6 @@ class Simulator:
         data : dict of {`~nengo.Node`: `~numpy.ndarray`}
             Override the values of input Nodes with the given data.  Arrays
             should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
-        input_feeds : dict of {`~nengo.Node`: `~numpy.ndarray`}
-            Deprecated, use ``data`` instead.
-        profile : bool
-            If True, collect TensorFlow profiling information while the
-            simulation is running (this will slow down the simulation).
-            Can also pass a string specifying a non-default filename for the
-            saved profile data.
         progress_bar : bool
             If True, print information about the simulation status to standard
             output.
@@ -376,6 +584,9 @@ class Simulator:
 
         actual_steps = self.unroll * int(np.ceil(n_steps / self.unroll))
 
+        # error checking
+        if self.closed:
+            raise SimulatorClosed("Simulator cannot run because it is closed.")
         if actual_steps != n_steps:
             warnings.warn(
                 "Number of steps (%d) is not an even multiple of "
@@ -384,23 +595,9 @@ class Simulator:
                 % (n_steps, self.unroll, actual_steps),
                 RuntimeWarning,
             )
-
-        if input_feeds is not None:
-            # TODO: remove this in 3.0.0
-            warnings.warn(
-                "The `input_feeds` argument has been renamed; please use "
-                "`data` instead, as `input_feeds` will not be supported in a "
-                "future version.",
-                DeprecationWarning,
-            )
-            assert data is None
-            data = input_feeds
-
-        if data is None:
-            data = actual_steps
-        else:
+        if data is not None:
             # note: we only need to check the shape of the first item, because
-            # check_data (inside run_batch) will ensure that all the items
+            # check_data (inside predict) will ensure that all the items
             # have the same shape
             batch_size, input_steps = next(iter(data.values())).shape[:2]
             if batch_size != self.minibatch_size:
@@ -412,12 +609,10 @@ class Simulator:
             if input_steps != actual_steps:
                 raise ValidationError(
                     "Number of timesteps in input data (%d) does not "
-                    "match requested number of steps (%d)" % (input_steps, n_steps),
+                    "match requested number of steps (%d)"
+                    % (input_steps, actual_steps),
                     "data",
                 )
-
-        def callback(_, extra_vals):
-            assert extra_vals == actual_steps
 
         progress = (
             utils.ProgressBar("Simulating", "Simulation", max_value=None)
@@ -426,39 +621,36 @@ class Simulator:
         )
 
         with progress:
-            # note: we request steps_run from extra_fetches so that the
-            # simulation will always run for the given number of steps, even
-            # if there are no output probes
-            probe_data = self.run_batch(
-                data,
-                {p: None for p in self.model.probes},
-                extra_feeds=extra_feeds,
-                extra_fetches=self.tensor_graph.steps_run,
-                combine=lambda x: x[0],
-                isolate_state=False,
-                callback=callback,
-                profile=profile,
-            )
+            # run the simulation
+            try:
+                output = self.predict_on_batch(
+                    data, n_steps=actual_steps, update_state=True
+                )
+            except (tf.errors.InternalError, tf.errors.UnknownError) as e:
+                if "nengo.exceptions.SimulationError" in e.message:
+                    raise SimulationError(
+                        "SimulationError detected; this most likely means that a "
+                        "Python function (e.g. in a Node or Direct ensemble) caused "
+                        "an error. See the full error log above."
+                    )
+                else:
+                    raise e  # pragma: no cover (unknown errors)
+
+        # update n_steps/time
+        # note: we only need to do this here, because only run_steps updates the state
+        self._update_steps()
 
         # update stored probe data
-        for probe, val in probe_data.items():
-            # drop any extra steps (due to uneven unroll_simulation)
-            val = val[:, :n_steps]
-
+        for probe, val in output.items():
             if probe.sample_every is not None:
                 # downsample probe according to `sample_every`
                 period = probe.sample_every / self.dt
-                steps = np.arange(self.n_steps, self.n_steps + n_steps)
+                steps = np.arange(
+                    self.n_steps - actual_steps, self.n_steps
+                )  # TODO: off by 1?
                 val = val[:, (steps + 1) % period < 1]
 
             self.model.params[probe].append(val)
-
-        # update n_steps
-        # note: we update n_steps according to the number of steps that the
-        # user asked for, not the number of steps that were actually run
-        # (in the case of uneven unroll_simulation)
-        self.n_steps += n_steps
-        self.time = self.n_steps * self.dt
 
     def train(
         self,
@@ -603,19 +795,6 @@ class Simulator:
                 "Must be a dictionary mapping Probes to objective functions",
                 "objective",
             )
-
-        # fill in mse function
-        for p, o in objective.items():
-            if o == "mse":
-                # TODO: remove in 3.0.0
-                warnings.warn(
-                    "Using the string 'mse' for the objective is deprecated, "
-                    "and will no longer be supported in the future; please "
-                    "use the function `nengo_dl.objectives.mse`",
-                    DeprecationWarning,
-                )
-
-                objective[p] = objectives.mse
 
         # build the objective
         loss, init_ops = self.tensor_graph.build_outputs(
@@ -773,19 +952,6 @@ class Simulator:
                 "Must be a dictionary mapping Probes to objective functions",
                 "objective",
             )
-
-        # fill in mse function
-        for p, o in objective.items():
-            if o == "mse":
-                # TODO: remove in 3.0.0
-                warnings.warn(
-                    "Using the string 'mse' for the objective is deprecated, "
-                    "and will no longer be supported in the future; please "
-                    "use the function `nengo_dl.objectives.mse` in the future",
-                    DeprecationWarning,
-                )
-
-                objective[p] = objectives.mse
 
         progress = (
             utils.ProgressBar(
@@ -967,7 +1133,7 @@ class Simulator:
 
         # save the internal state of the simulator
         if isolate_state:
-            saved_state = {ph: val.copy() for ph, val in self._internal_state.items()}
+            saved_state = self.sess.run(self.tensor_graph.signals.saved_state)
 
         # set up profiling
         if profile:
@@ -1034,15 +1200,25 @@ class Simulator:
                 for k, v in out_vals.items():
                     output_vals[k].append(v)
 
-                # update internal state (so next sess.run call resumes
-                # from the terminal state of this past run)
-                for base, val in state.items():
-                    ph = self.tensor_graph.signals.base_tensors[base][0]
-                    self._internal_state[ph][...] = val
+                # update saved state
+                self.sess.run(
+                    [
+                        var.assign(val)
+                        for var, val in zip(self.signals.saved_state.values(), state)
+                    ]
+                )
 
         if isolate_state:
             # restore internal state of simulator
-            self._internal_state = saved_state
+            self.sess.run(
+                [
+                    var.assign(val)
+                    for var, val in zip(
+                        self.tensor_graph.signals.saved_state.values(),
+                        saved_state.values(),
+                    )
+                ]
+            )
 
         # combine outputs from each minibatch
         for probe, vals in output_vals.items():
@@ -1082,20 +1258,13 @@ class Simulator:
         if self.closed:
             raise SimulatorClosed("Simulation has been closed, cannot save parameters")
 
-        with self.tensor_graph.graph.as_default():
-            vars = self.tensor_graph.signals.all_variables
-
-            with tf.device("/cpu:0"):
-                path = tf_compat.train.Saver(vars).save(self.sess, path)
+        vars = self.tensor_graph.signals.all_variables
 
         if include_internal:
-            np.savez_compressed(
-                path + ".internal.npz",
-                *[
-                    self._internal_state[ph]
-                    for ph, _ in self.tensor_graph.signals.base_tensors.values()
-                ],
-            )
+            vars.extend(self.tensor_graph.signals.saved_state.values())
+
+        with tf.device("/cpu:0"):
+            path = tf_compat.train.Saver(vars).save(self.sess, path)
 
         logger.info("Model parameters saved to %s", path)
 
@@ -1120,20 +1289,13 @@ class Simulator:
         if self.closed:
             raise SimulatorClosed("Simulation has been closed, cannot load parameters")
 
-        with self.tensor_graph.graph.as_default():
-            vars = self.tensor_graph.signals.all_variables
-
-            with tf.device("/cpu:0"):
-                tf_compat.train.Saver(vars).restore(self.sess, path)
+        vars = self.tensor_graph.signals.all_variables
 
         if include_internal:
-            with np.load(path + ".internal.npz") as data:
-                self._internal_state = {
-                    ph: data["arr_%d" % i]
-                    for i, (ph, _) in enumerate(
-                        self.tensor_graph.signals.base_tensors.values()
-                    )
-                }
+            vars.extend(self.tensor_graph.signals.saved_state.values())
+
+        with tf.device("/cpu:0"):
+            tf_compat.train.Saver(vars).restore(self.sess, path)
 
         logger.info("Model parameters loaded from %s", path)
 
@@ -1419,10 +1581,10 @@ class Simulator:
             outputs = [self.tensor_graph.probe_arrays[p] + 0 for p in outputs]
 
         # check gradient wrt inp
-        for node, inp in self.tensor_graph.input_ph.items():
+        for node, inp in self.tensor_graph.input_phs.items():
             inp_shape = inp.get_shape().as_list()
             inp_shape = [n_steps if x is None else x for x in inp_shape]
-            inp_tens = self.tensor_graph.input_ph[node]
+            inp_tens = self.tensor_graph.input_phs[node]
             feed[inp_tens] = np.ascontiguousarray(feed[inp_tens])
             inp_val = np.ravel(feed[inp_tens])
             for out in outputs:
@@ -1524,95 +1686,21 @@ class Simulator:
         """
 
         if not self.closed:
-            # note: we use getattr in case it crashes before the object is
-            # created
-            if getattr(self, "sess", None) is not None:
-                self.sess.close()
-            self.sess = None
-
             if getattr(self, "summary", None) is not None:
                 self.summary.close()
 
-            tf.keras.backend.set_floatx(self._keras_dtype)
-
-            # free up memory
-            self._internal_state = None
-            # TODO: clear up tensor_graph.signals as well?
+            # TODO: delete some data structures to free up memory?
 
             self.closed = True
 
-    def _fill_feed(self, n_steps, data=None, start=0, training=False):
-        """
-        Create a feed dictionary containing values for all the placeholder
-        inputs in the network, which will be passed to ``tf.Session.run``.
-
-        Parameters
-        ----------
-        n_steps : int
-            The number of execution steps
-        data : dict of {`~nengo.Node` or `~nengo.Probe` : `~numpy.ndarray`}
-            Input values for Nodes and target values for Probes.  Arrays
-            should have shape ``(sim.minibatch_size, n_steps,
-            node.size_out/probe.size_in)``.
-        start : int
-            Initial value of simulator timestep
-        training : bool
-            Whether we are running in training or inference mode
-
-        Returns
-        -------
-        feed_dict : dict of {``tf.Tensor``: `~numpy.ndarray`}
-            Feed values for placeholder tensors in the network
-        """
-
-        # fill in constants
-        feed_dict = {
-            self.tensor_graph.step_var: start,
-            self.tensor_graph.stop_var: start + n_steps,
-        }
-        if not self.tensor_graph.inference_only:
-            feed_dict[self.tensor_graph.signals.training] = training
-
-        # fill in base tensors
-        feed_dict.update(self._internal_state)
-
-        # fill in input/target values
-        inputs = {}
-        targets = {}
-        if data is not None:
-            for k, v in data.items():
-                if isinstance(k, Node):
-                    inputs[k] = v
-                elif isinstance(k, Probe):
-                    targets[k] = v
-                else:
-                    # this should be caught in check_data
-                    raise NotImplementedError()
-
-        # inputs
-        feed_dict.update(self._generate_inputs(inputs, n_steps))
-
-        # targets
-        for p, t in targets.items():
-            if p not in self.tensor_graph.target_phs:
-                raise ValidationError(
-                    "%s is not a valid target; this is probably because "
-                    "it is not used in the objective function" % p,
-                    "targets",
-                )
-
-            feed_dict[self.tensor_graph.target_phs[p]] = t
-
-        return feed_dict
-
-    def _generate_inputs(self, data, n_steps):
+    def _generate_inputs(self, data=None, n_steps=None, batch_size=None):
         """
         Generate inputs for the network (the output values of each Node with
         no incoming connections).
 
         Parameters
         ----------
-        data : dict of {`~nengo.Node`: `~numpy.ndarray`}
+        data : list or dict of {`~nengo.Node` or str: `~numpy.ndarray`}
             Override the values of input Nodes with the given data.  Arrays
             should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
         n_steps : int
@@ -1620,25 +1708,89 @@ class Simulator:
 
         Returns
         -------
-        feed_vals : dict of {`~nengo.Node`: `~numpy.ndarray}
+        node_vals : dict of {str: `~numpy.ndarray}
             Simulation values for all the input Nodes in the network.
         """
 
-        feed_vals = {}
-        for n, output in self.tensor_graph.input_funcs.items():
-            if n in data:
-                # move minibatch dimension to the end
-                feed_val = data[n]
+        if data is None:
+            data = {}
+
+        if not isinstance(data, (list, tuple, dict, np.ndarray)):
+            # data is some kind of generator, so we don't try to modify it (too many
+            # different types of generators this could be)
+            # TODO: basically what we'd like to do is map _generate_inputs to each
+            #  item returned from the generator. is there a general way to do that?
+
+            if n_steps is not None:
+                raise SimulationError(
+                    "Cannot automatically add n_steps to generator with type %s; "
+                    "please specify n_steps manually as the first element in the "
+                    "values yielded from generator, remembering that it needs to "
+                    "be repeated to have shape (batch_size, 1)" % type(data)
+                )
+
+            return data
+
+        if isinstance(data, np.ndarray):
+            # convert unary inputs to length-1 lists
+            data = [data]
+        if isinstance(data, (list, tuple)):
+            # convert list to named dict
+            data = collections.OrderedDict(
+                (input.op.name, val)
+                for input, val in zip(self.keras_model.inputs[1:], data)
+            )
+        elif isinstance(data, dict):
+            # convert nodes to string names
+            new_data = collections.OrderedDict()
+            for node, val in data.items():
+                if isinstance(node, Node):
+                    if node not in self.node_inputs:
+                        raise ValidationError(
+                            "%s is not an input Node (a nengo.Node with "
+                            "size_in==0), or is from a different network." % node,
+                            "data",
+                        )
+
+                    name = self.node_inputs[node].op.name
+                else:
+                    name = node
+                new_data[name] = val
+            data = new_data
+
+        if len(data) == 0:
+            data_batch = data_steps = None
+        else:
+            data_batch, data_steps = next(iter(data.values())).shape[:2]
+
+        if batch_size is None:
+            batch_size = self.minibatch_size if data_batch is None else data_batch
+        if n_steps is None:
+            if data_steps is None:
+                raise ValidationError(
+                    "Must specify either input data or n_steps", "data"
+                )
+            n_steps = data_steps
+
+        input_vals = collections.OrderedDict()
+
+        # fill in n_steps
+        input_vals["n_steps"] = np.resize(n_steps, (batch_size, 1))
+
+        # fill in data for input nodes
+        for node, output in self.tensor_graph.input_funcs.items():
+            name = self.node_inputs[node].op.name
+
+            if name in data:
+                node_val = data[name]
             elif isinstance(output, np.ndarray):
                 # tile to n_steps/minibatch size
-                feed_val = np.tile(
-                    output[None, None, :], (self.minibatch_size, n_steps, 1)
-                )
+                node_val = np.tile(output[None, None, :], (batch_size, n_steps, 1))
             else:
                 # call output function to determine value
-                feed_val = np.zeros(
-                    (self.minibatch_size, n_steps, n.size_out),
-                    dtype=self.tensor_graph.dtype.as_numpy_dtype,
+                node_val = np.zeros(
+                    (batch_size, n_steps, node.size_out),
+                    dtype=np.dtype(self.tensor_graph.dtype),
                 )
 
                 for i in range(n_steps):
@@ -1646,27 +1798,26 @@ class Simulator:
                     # may mutate its outputs in-place on subsequent calls.
                     # this assignment will broadcast the output along the
                     # minibatch dimension if required.
-                    feed_val[:, i] = [
+                    # note: we still call the function even if the output
+                    # is not being used in the graph, because it may have side-effects
+                    node_val[:, i] = [
                         func((i + self.n_steps + 1) * self.dt) for func in output
                     ]
 
-            # note: we still call the function (above) even if the output
-            # is not being used, because it may have side-effects
-            if n in self.tensor_graph.input_ph:
-                feed_vals[self.tensor_graph.input_ph[n]] = feed_val
+            input_vals[name] = node_val
 
-        return feed_vals
+        return input_vals
 
-    def _check_data(self, data, n_batch=None, n_steps=None):
+    def _check_data(self, data, batch_size=None, n_steps=None):
         """
         Performs error checking on simulation data.
 
         Parameters
         ----------
-        data : dict of {`~nengo.Node` or `~nengo.Probe`: `~numpy.ndarray`}
+        data : dict of {str: `~numpy.ndarray` or ``tf.Tensor``}
             Array of data associated with given objects in model (Nodes or
             Probes)
-        n_batch : int
+        batch_size : int
             Number of elements in batch (if None, will just verify that all
             data items have same batch size)
         n_steps : int
@@ -1674,30 +1825,57 @@ class Simulator:
             data items have same number of steps)
         """
 
-        for d, x in data.items():
-            if x.ndim != 3:
+        if not isinstance(data, dict):
+            # data is a generator, so don't perform validation
+            # TODO: could map this into the generator process as well?
+            return
+
+        if "n_steps" not in data:
+            raise ValidationError("Must specify 'n_steps' in input data", "data")
+        if (
+            batch_size is None
+            and (data["n_steps"].ndim != 2 or data["n_steps"].shape[1] != 1)
+        ) or (batch_size is not None and data["n_steps"].shape != (batch_size, 1)):
+            raise ValidationError(
+                "'n_steps' has wrong shape; should be %s (note that this is just the "
+                "integer n_steps value repeated)" % ((batch_size, 1),),
+                "data",
+            )
+        if not np.all(data["n_steps"] == data["n_steps"][0, 0]):
+            raise ValidationError("'n_steps' should all have the same value", "data")
+
+        # exclude n_steps from further data checking
+        data = {k: val for k, val in data.items() if k != "n_steps"}
+
+        for name, x in data.items():
+            if name not in [n.op.name for n in self.node_inputs.values()]:
                 raise ValidationError(
-                    "should have rank 3 (batch_size, n_steps, dimensions), "
-                    "found rank %d" % x.ndim,
+                    "'%s' is not a valid input name; perhaps the name is wrong (it "
+                    "should match the `label` on the Node), or this is not an input "
+                    "Node (a Node with size_in==0) in this network." % name,
                     "data",
                 )
 
-            if isinstance(d, Node):
-                if d not in self.tensor_graph.invariant_inputs:
-                    raise ValidationError(
-                        "%s is not an input Node (a nengo.Node with "
-                        "size_in==0), or is from a different network." % d,
-                        "data",
-                    )
-            elif isinstance(d, Probe):
-                if d not in self.model.probes:
-                    raise ValidationError("%s is from a different network" % d, "data")
-            else:
+            if len(x.shape) != 3:
                 raise ValidationError(
-                    "Data objects must be Nodes or Probes, not %s" % d, "data"
+                    "should have rank 3 (batch_size, n_steps, dimensions), "
+                    "found rank %d" % len(x.shape),
+                    "%s data" % name,
                 )
 
-        args = [n_batch, n_steps]
+            # elif isinstance(d, Probe):
+            #     if d not in self.model.probes:
+            #         raise ValidationError("%s is from a different network" % d,
+            #                               "data")
+
+            if x.shape[0] < self.minibatch_size:
+                raise ValidationError(
+                    "Size of minibatch (%d) less than Simulation `minibatch_size` (%d)"
+                    % (x.shape[0], self.minibatch_size),
+                    "%s data" % name,
+                )
+
+        args = [batch_size, n_steps]
         labels = ["batch size", "number of timesteps"]
 
         for i in range(2):
@@ -1719,19 +1897,11 @@ class Simulator:
                             "data",
                         )
 
-        for n, x in data.items():
-            if x.shape[0] < self.minibatch_size:
-                raise ValidationError(
-                    "Size of minibatch (%d) for %s data less than Simulation "
-                    "`minibatch_size` (%d)" % (x.shape[0], n, self.minibatch_size),
-                    "data",
-                )
-
-            d = n.size_out if isinstance(n, Node) else n.size_in
-            if x.shape[2] != d:
+        for node, input in self.node_inputs.items():
+            if data[input.op.name].shape[2] != node.size_out:
                 raise ValidationError(
                     "Dimensionality of data (%s) does not match "
-                    "dimensionality of %s (%s)" % (x.shape[2], n, d),
+                    "dimensionality of %s (%s)" % (x.shape[2], node, node.size_out),
                     "data",
                 )
 
@@ -1758,6 +1928,19 @@ class Simulator:
         with open(filename, "w") as f:
             f.write(trace.generate_chrome_trace_format())
 
+    @with_self
+    def _update_steps(self):
+        if not hasattr(self, "_step_tensors"):
+            # cache these so we aren't adding new ops every time we call this function
+            self._step_tensors = [
+                self.tensor_graph.get_tensor(self.model.step),
+                self.tensor_graph.get_tensor(self.model.time),
+            ]
+
+        self._n_steps, self._time = [
+            x.item() for x in keras.backend.batch_get_value(self._step_tensors)
+        ]
+
     @property
     def dt(self):
         """The time (in seconds) represented by one simulation timestep."""
@@ -1768,22 +1951,28 @@ class Simulator:
         raise ReadonlyError(attr="dt", obj=self)
 
     @property
-    def training_step(self):
-        """The number of training iterations that have been executed."""
-        return self.tensor_graph.training_step
+    def n_steps(self):
+        """The current simulation timestep."""
+        return self._n_steps
+
+    @property
+    def time(self):
+        """The current simulation time."""
+        return self._time
 
     def __enter__(self):
-        self._graph_context = self.tensor_graph.graph.as_default()
-        self._device_context = self.tensor_graph.graph.device(self.tensor_graph.device)
+        self._graph_context = self.graph.as_default()
+        self._device_context = self.graph.device(self.tensor_graph.device)
+
         self._graph_context.__enter__()
         self._device_context.__enter__()
-        self.sess.__enter__()
+
         return self
 
     def __exit__(self, *args):
-        self.sess.__exit__(*args)
         self._device_context.__exit__(*args)
         self._graph_context.__exit__(*args)
+
         self.close()
 
     def __del__(self):
@@ -1973,7 +2162,9 @@ class SimulationData(collections.Mapping):
                 params.append(placeholder)
 
         # get the live parameter values
-        fetched = self.sim.sess.run(fetches, feed_dict=self.sim._internal_state)
+        fetched = dict(
+            zip(fetches.keys(), keras.backend.batch_get_value(list(fetches.values())))
+        )
 
         # final updating of parameters
         for i, sig in enumerate(sigs):
@@ -2020,3 +2211,6 @@ class SimulationData(collections.Mapping):
 
     def __iter__(self):
         return iter(self.sim.model.params)
+
+    # def __contains__(self, x):
+    #     return any(type(x) == type(y) and x == y for y in self)

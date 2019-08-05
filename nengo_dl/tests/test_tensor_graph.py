@@ -8,12 +8,14 @@ from nengo.exceptions import ValidationError
 import numpy as np
 import pytest
 import tensorflow as tf
+from tensorflow import keras
 
 from nengo_dl import tensor_graph, utils, graph_optimizer, config, objectives
 from nengo_dl.compat import tf_compat
 from nengo_dl.tests import dummies
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.parametrize("unroll", (1, 2))
 @pytest.mark.training
 def test_gradients(Simulator, unroll, seed):
@@ -56,6 +58,7 @@ def test_gradients(Simulator, unroll, seed):
         sim.check_gradients(atol=1e-4)
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 def test_build_outputs(Simulator):
     with nengo.Network() as net:
         inp = nengo.Node([0])
@@ -65,7 +68,7 @@ def test_build_outputs(Simulator):
         # check that the output caching works
         assert (
             sim.tensor_graph.build_outputs({p: objectives.mse})[0]
-            is sim.tensor_graph.build_outputs({p: objectives.mse})[0]
+            is sim.tensor_graph.build_outputs({p: objectives.mse})[0].__wrapped__
         )
 
         def loss(x):
@@ -73,7 +76,7 @@ def test_build_outputs(Simulator):
 
         assert (
             sim.tensor_graph.build_outputs({p: loss})[0]
-            is sim.tensor_graph.build_outputs({p: loss})[0]
+            is sim.tensor_graph.build_outputs({p: loss})[0].__wrapped__
         )
 
         # check function argument counting
@@ -111,6 +114,7 @@ def test_build_outputs(Simulator):
             sim.tensor_graph.build_outputs({p: 1})
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 def test_build_outputs_variables(Simulator):
     with nengo.Network() as net:
         a = nengo.Node([0])
@@ -162,6 +166,7 @@ def test_build_outputs_variables(Simulator):
         assert np.allclose(var1, 1)
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.training
 def test_build_optimizer(Simulator):
     with nengo.Network() as net:
@@ -232,7 +237,7 @@ def test_mark_signals():
     model.build(net)
 
     tg = tensor_graph.TensorGraph(
-        model, None, None, tf.float32, 1, None, utils.NullProgressBar()
+        model, None, None, tf.float32, 1, None, utils.NullProgressBar(), None
     )
     tg.mark_signals()
 
@@ -295,7 +300,9 @@ def test_mark_signals_config():
 
     progress = utils.NullProgressBar()
 
-    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None, progress)
+    tg = tensor_graph.TensorGraph(
+        model, None, None, tf.float32, 1, None, progress, None
+    )
     tg.mark_signals()
 
     assert not model.sig[ens0]["encoders"].trainable
@@ -319,7 +326,9 @@ def test_mark_signals_config():
     model = nengo.builder.Model()
     model.build(net)
 
-    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None, progress)
+    tg = tensor_graph.TensorGraph(
+        model, None, None, tf.float32, 1, None, progress, None
+    )
     with pytest.warns(UserWarning):
         tg.mark_signals()
 
@@ -336,7 +345,9 @@ def test_mark_signals_config():
     model = nengo.builder.Model()
     model.build(net)
 
-    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None, progress)
+    tg = tensor_graph.TensorGraph(
+        model, None, None, tf.float32, 1, None, progress, None
+    )
     with pytest.warns(UserWarning):
         tg.mark_signals()
 
@@ -348,7 +359,9 @@ def test_mark_signals_config():
     model = nengo.builder.Model()
     model.add_op(op)
 
-    tg = tensor_graph.TensorGraph(model, None, None, tf.float32, 1, None, progress)
+    tg = tensor_graph.TensorGraph(
+        model, None, None, tf.float32, 1, None, progress, None
+    )
     with pytest.warns(UserWarning):
         tg.mark_signals()
 
@@ -375,10 +388,10 @@ def test_planner_config(config_planner):
     model.add_op(nengo.builder.operator.DotInc(sig, sig2, sig3))
 
     tg = tensor_graph.TensorGraph(
-        model, None, None, tf.float32, 1, None, utils.NullProgressBar()
+        model, None, None, tf.float32, 1, None, utils.NullProgressBar(), None
     )
 
-    assert len(tg.plan) == (2 if config_planner else 1)
+    assert len(tg.plan) == (3 if config_planner else 2)
 
 
 def test_signal_order_deterministic(Simulator, seed):
@@ -393,11 +406,12 @@ def test_signal_order_deterministic(Simulator, seed):
         pass
 
     with Simulator(net, seed=seed) as sim2:
-        for v, v2 in zip(
-            sim1.tensor_graph.base_arrays_init.values(),
-            sim2.tensor_graph.base_arrays_init.values(),
-        ):
-            assert np.allclose(v[0], v2[0])
+        for trainable in (True, False):
+            for v, v2 in zip(
+                sim1.tensor_graph.base_arrays_init[trainable].values(),
+                sim2.tensor_graph.base_arrays_init[trainable].values(),
+            ):
+                assert np.allclose(v[0], v2[0])
 
 
 def test_create_signals():
@@ -457,8 +471,12 @@ def test_create_signals():
     plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
-    assert graph.base_arrays_init[graph.signals[sigs[0]].key][0].shape == (10, 15)
-    assert graph.base_arrays_init[graph.signals[sigs[2]].key][0].shape == (10, 15, 1)
+    assert graph.base_arrays_init[False][graph.signals[sigs[0]].key].shape == (10, 15)
+    assert graph.base_arrays_init[False][graph.signals[sigs[2]].key].shape == (
+        10,
+        15,
+        1,
+    )
     assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
     assert graph.signals[sigs[1]].key != graph.signals[sigs[2]].key
     assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
@@ -473,8 +491,8 @@ def test_create_signals():
     plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
-    assert graph.base_arrays_init[graph.signals[sigs[0]].key][0].shape == (2,)
-    assert graph.base_arrays_init[graph.signals[sigs[2]].key][0].shape == (10, 2)
+    assert graph.base_arrays_init[True][graph.signals[sigs[0]].key].shape == (2,)
+    assert graph.base_arrays_init[False][graph.signals[sigs[2]].key].shape == (10, 2)
     assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
     assert graph.signals[sigs[1]].key != graph.signals[sigs[2]].key
     assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
@@ -484,14 +502,14 @@ def test_create_signals():
     plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
-    assert list(graph.base_arrays_init.values())[0][0].shape == (10, 5)
+    assert list(graph.base_arrays_init[False].values())[0].shape == (10, 5)
 
     # check that boolean signals are handled correctly
     sigs = [dummies.Signal(dtype=np.bool, shape=())]
     plan = [(dummies.Op(reads=sigs),)]
     graph = dummies.TensorGraph(plan, tf.float32, 1)
     graph.create_signals(sigs)
-    assert list(graph.base_arrays_init.values())[0][0].dtype == np.bool
+    assert list(graph.base_arrays_init[False].values())[0].dtype == np.bool
 
 
 def test_create_signals_views():
@@ -503,7 +521,7 @@ def test_create_signals_views():
     plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs[2:])
-    assert list(graph.base_arrays_init.values())[0][0].shape == (10, 8)
+    assert list(graph.base_arrays_init[False].values())[0].shape == (10, 8)
     assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
     assert graph.signals[sigs[1]].key == graph.signals[sigs[2]].key
     assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
@@ -547,7 +565,7 @@ def test_create_signals_partition():
     plan = [tuple(Reset(x) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
-    assert len(graph.base_arrays_init) == 4
+    assert len(graph.base_arrays_init[False]) == 4
 
 
 def test_get_tensor(Simulator):
@@ -566,9 +584,7 @@ def test_get_tensor(Simulator):
     with Simulator(net) as sim:
         tensor = sim.tensor_graph.get_tensor(sim.model.sig[c]["weights"])
 
-        assert np.allclose(
-            sim.sess.run(tensor, feed_dict=sim._internal_state), np.arange(10)[:, None]
-        )
+        assert np.allclose(keras.backend.get_value(tensor), np.arange(10)[:, None])
 
         sim.run_steps(10)
         assert np.allclose(sim.data[p], np.arange(10)[None, :])

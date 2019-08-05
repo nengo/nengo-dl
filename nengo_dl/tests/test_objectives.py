@@ -39,6 +39,7 @@ def test_regularize(axis, weight, order, rng, sess):
     assert np.allclose(reg_val, truth)
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.training
 @pytest.mark.parametrize("mode", ("activity", "weights"))
 def test_regularize_train(Simulator, mode, seed):

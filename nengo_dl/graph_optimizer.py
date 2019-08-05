@@ -618,10 +618,6 @@ def order_signals(plan, n_passes=10):
         for i in range(len(op_sigs[ops[0]])):
             io_blocks[(ops, i)] = set(op_sigs[op][i].base for op in ops)
 
-    if len(io_blocks) == 0:
-        # no io blocks, so nothing to reorder
-        return all_signals, plan
-
     # get rid of duplicate io blocks
     duplicates = [[y for y in io_blocks.values() if x == y] for x in io_blocks.values()]
     sorted_blocks = [

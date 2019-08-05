@@ -209,6 +209,7 @@ class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
         super(SimTensorNode, self).__init__(tag=tag)
 
         self.func = func
+        self.time = time
         self.input = input
         self.output = output
 
@@ -230,6 +231,8 @@ class SimTensorNodeBuilder(OpBuilder):
         assert len(ops) == 1
         op = ops[0]
 
+        self.time_data = signals[op.time].reshape(())
+
         if op.input is None:
             self.src_data = None
         else:
@@ -242,10 +245,13 @@ class SimTensorNodeBuilder(OpBuilder):
 
         if hasattr(self.func, "pre_build"):
             vars = self.func.pre_build(
-                None
-                if self.src_data is None
-                else ((signals.minibatch_size,) + self.src_data.shape),
-                (signals.minibatch_size,) + self.dst_data.shape,
+                shape_in=(
+                    None
+                    if self.src_data is None
+                    else ((signals.minibatch_size,) + self.src_data.shape)
+                ),
+                shape_out=(signals.minibatch_size,) + self.dst_data.shape,
+                config=config,
             )
 
             if isinstance(vars, (list, tuple)):
@@ -254,11 +260,12 @@ class SimTensorNodeBuilder(OpBuilder):
                 signals.user_vars.append(vars)
 
     def build_step(self, signals):
+        time = signals.gather(self.time_data)
         if self.src_data is None:
-            output = self.func(signals.time)
+            output = self.func(time)
         else:
             input = signals.gather(self.src_data)
-            output = self.func(signals.time, input)
+            output = self.func(time, input)
 
         validate_output(
             output,
@@ -269,9 +276,9 @@ class SimTensorNodeBuilder(OpBuilder):
 
         signals.scatter(self.dst_data, output)
 
-    def build_post(self, ops, signals, sess, rng):
+    def build_post(self, ops, signals, config):
         if hasattr(self.func, "post_build"):
-            self.func.post_build(sess, rng)
+            self.func.post_build()
 
 
 def reshaped(shape_in):
@@ -370,14 +377,12 @@ def tensor_layer(
             class WrappedLayer:
                 """Wraps a Keras Layer in a TensorNode function."""
 
-                def pre_build(self, pre_shape_in, _):
+                def pre_build(self, shape_in, shape_out, config):
                     """Build the layer and return the weights."""
 
                     self.layer = layer_func(**layer_args)
                     self.layer.build(
-                        pre_shape_in
-                        if shape_in is None
-                        else (pre_shape_in[0],) + shape_in
+                        shape_in if shape_in is None else (shape_in[0],) + shape_in
                     )
                     return self.layer.weights
 

@@ -405,10 +405,8 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
         """Wraps an iterable using this progress bar."""
 
         try:
-            if self.start_time is None:
-                self.start()
-            else:
-                self.step()
+            assert self.start_time is not None
+            self.step()
             value = next(self._iterable)
             return value
         except StopIteration:

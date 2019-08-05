@@ -104,6 +104,7 @@ def test_conv_error(Simulator, d):
         assert d == 3
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.skipif(
     LooseVersion(nengo.__version__) <= "2.8.0",
     reason="Nengo Sparse transforms not implemented",

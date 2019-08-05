@@ -32,6 +32,15 @@ Release History
   The input to the ``pre_build`` function will be the shapes of the inputs to
   the main function, mirroring the structure of those arguments.
 - Keras ``Layer`` classes can now be used with ``nengo_dl.tensor_layer``.
+- ``TensorGraph`` can now be used as a Keras ``Layer``.
+- Added ``Simulator.predict/predict_on_batch/predict_generator`` functions, which
+  implement the Keras ``Model.predict`` API (see
+  https://www.tensorflow.org/api_docs/python/tf/keras/Model).
+- Added a warning that changing the TensorFlow seed (e.g. on ``Simulator.reset``) will
+  not affect any existing TensorFlow operations (this was always true in TensorFlow,
+  the warning is just to help avoid confusion).
+- Added ``TensorGraph.build_inputs`` which will return a set of Keras Input layers
+  that can be used as input to the TensorGraph layer itself.
 
 **Changed**
 
@@ -40,21 +49,49 @@ Release History
   ``include_internal=True/False`` (equivalent to the previous
   ``include_local``). Trainable parameters will always be saved, so the
   ``include_global`` argument is removed.
-- Any Variables created by a TensorNode should be returned from the
-  ``pre_build`` function, so that they can be properly initialized
-  (TensorFlow no longer uses global Variable collections).
-- NengoDL will now change the default Keras float type to match the
-  default NengoDL float type when a model is built (this is a global setting
-  in Keras, so will affect any Keras operations in the same process until
-  the Simulator is closed).
+- TensorNode ``pre_build`` functions will now be passed a ``config`` argument, which
+  is an instance of ``nengo_dl.builder.BuildConfig``.  Arguments will also be
+  passed by name, rather than position, so they must be named exactly ``shape_in``,
+  ``shape_out``, and ``config``.
+- Any Variables required by a TensorNode should be created through the
+  ``config.add_weight`` function (which is the same as the Keras `Layer.add_weight
+  <https://www.tensorflow.org/api_docs/python/tf/keras/layers/Layer#add_weight>`_
+  function).
+- TensorNode ``post_build`` functions will no longer be passed the ``sess`` or ``rng``
+  arguments.  Sessions are no longer used in TensorFlow 2.0, and ``rng`` can be
+  obtained through the ``config.rng`` attribute in ``pre_build``.
 - ``Simulator.soft_reset`` ``include_trainable`` parameter renamed to
   ``include_params``, which now resets all Variables in the model (not just
   those marked as trainable).  In most cases this won't make a difference,
   as non-trainable Variables won't have changed from their initial value.
-- ``Simulator.save_params`` now saves internal state as a separate
-  ``<filepath>.internal.npz`` file (if ``include_internal=True``), rather than
-  including it in the TensorFlow checkpoint file.
 - Standardized all signals/operations in a simulation to be batch-first.
+- ``nengo_dl.configure_settings(dtype=...)`` is now specified as a string (e.g.
+  ``"float32"`` rather than ``tf.float32``).
+- If the requested number of simulation steps is not evenly divisible by
+  ``Simulator.unroll_simulation`` then probe values and ``sim.time/n_steps`` will be
+  updated based on the number of steps actually run (rather than the requested
+  number of steps).
+- Renamed ``TensorGraph.input_ph`` to ``TensorGraph.input_phs``.
+- ``Simulator.time/n_steps`` are now read-only.
+- The TensorFlow Graph is now stored in ``sim.graph`` (rather than
+  ``sim.tensor_graph.graph``).
+- ``Simulator.n_steps/time`` are now managed as part of the op graph, rather than
+  manually in the Simulator.
+
+**Removed**
+
+- Removed the ``nengo_dl.configure_settings(session_config=...)`` option. Use the
+  `updated TensorFlow config system
+  <https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/config>`_ instead.
+- Removed the deprecated ``nengo_dl.Simulator(..., dtype=...)`` argument. Use
+  ``nengo_dl.configure_settings(dtype=...)`` instead.
+- Removed the deprecated ``Simulator.run(..., input_feeds=...)`` argument. Use
+  ``Simulator.run(..., data=...)`` instead.
+- Removed the deprecated ``Simulator.train/loss(..., objective={p: "mse"}) option. Use
+  ``objective={p: nengo_dl.obj.mse}`` instead.
+- Removed the ``Simulator.sess`` attribute (Sessions are no longer used in
+  TensorFlow 2.0).  The underlying Keras model (``Simulator.keras_model``) should be
+  used as the entrypoint into the engine underlying a Simulator instead.
 
 2.2.2 (unreleased)
 ==================

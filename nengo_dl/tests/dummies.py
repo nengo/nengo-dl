@@ -113,6 +113,16 @@ class Probe(nengo.Probe):
             # bypass target validation
             nengo.Probe.target.data[self] = target
 
+    @property
+    def size_in(self):
+        """Modified version of size_in that supports Signal targets."""
+
+        return (
+            self.target.size
+            if isinstance(self.target, (Signal, nengo.builder.signal.Signal))
+            else self.target.size_out
+        )
+
 
 class Simulator:
     """
@@ -129,9 +139,10 @@ class TensorGraph(tensor_graph.TensorGraph):
     """
 
     def __init__(self, plan=None, dtype=None, minibatch_size=None):
-        # pylint: disable=super-init-not-called
+        # pylint: disable=bad-super-call
+        super(tensor_graph.TensorGraph, self).__init__(dtype=dtype)
+
         self.plan = plan
-        self.dtype = dtype
         self.minibatch_size = minibatch_size
 
         self.signals = signals.SignalDict(self.dtype, self.minibatch_size, False)

@@ -82,7 +82,7 @@ def test_soft_lif(Simulator, sigma, seed):
         sim.run_steps(30)
 
     with net:
-        config.configure_settings(dtype=tf.float64)
+        config.configure_settings(dtype="float64")
 
     with Simulator(net) as sim2:
         _, nengo_dl_curves = nengo.utils.ensemble.tuning_curves(ens, sim2)
@@ -92,6 +92,7 @@ def test_soft_lif(Simulator, sigma, seed):
     assert np.allclose(sim.data[p], sim2.data[p])
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.parametrize(
     "neuron_type", (nengo.LIFRate, nengo.RectifiedLinear, SoftLIFRate)
 )
@@ -106,7 +107,7 @@ def test_neuron_gradients(Simulator, neuron_type, seed, rng):
     kwargs = {"sigma": 0.1} if neuron_type == SoftLIFRate else {}
 
     with nengo.Network(seed=seed) as net:
-        config.configure_settings(dtype=tf.float64)
+        config.configure_settings(dtype="float64")
         net.config[nengo.Ensemble].intercepts = intercepts
         a = nengo.Node(output=[0, 0])
         b = nengo.Ensemble(50, 2, neuron_type=neuron_type(**kwargs))
@@ -119,6 +120,7 @@ def test_neuron_gradients(Simulator, neuron_type, seed, rng):
         sim.check_gradients()
 
 
+@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.parametrize(
     "rate, spiking",
     [
@@ -131,7 +133,7 @@ def test_spiking_swap(Simulator, rate, spiking, seed):
     grads = []
     for neuron_type in [rate, spiking]:
         with nengo.Network(seed=seed) as net:
-            config.configure_settings(dtype=tf.float64)
+            config.configure_settings(dtype="float64")
 
             if rate == SoftLIFRate and neuron_type == spiking:
                 config.configure_settings(lif_smoothing=1.0)
