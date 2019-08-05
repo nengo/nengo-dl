@@ -27,8 +27,6 @@ class Builder:
     ----------
     plan : list of tuple of `~nengo.builder.Operator`
         The groups of operators that will be built
-    graph : ``tf.Graph``
-        The simulation build graph
     signals : `.signals.SignalDict`
         Mapping from `~nengo.builder.Signal` to
         ``tf.Tensor`` (updated by operations)
@@ -38,14 +36,13 @@ class Builder:
 
     builders = {}
 
-    def __init__(self, plan, graph, signals, config):
+    def __init__(self, plan, signals, config):
         self.plan = plan
-        self.graph = graph
         self.signals = signals
         self.config = config
         self.op_builds = {}
 
-    def pre_build(self, progress=None):
+    def build_pre(self, progress=None):
         """
         Setup step for build classes, in which they compute any of the
         values that are constant across simulation timesteps.
@@ -112,16 +109,12 @@ class Builder:
 
         return side_effects
 
-    def post_build(self, sess, rng, progress=None):
+    def build_post(self, progress=None):
         """
         Calls post build functions for all ops in plan.
 
         Parameters
         ----------
-        sess : ``tf.Session``
-            The initialized simulation session
-        rng : `~numpy.random.mtrand.RandomState`
-            Seeded random number generator
         progress : `.utils.ProgressBar`
             Progress bar for ops in plan
         """
@@ -131,7 +124,7 @@ class Builder:
             logger.debug("POST BUILD %s", ops)
 
             with self.name_scope(ops):
-                self.op_builds[ops].build_post(ops, self.signals, sess, rng)
+                self.op_builds[ops].build_post(ops, self.signals, self.config)
 
             if progress is not None:
                 progress.step()
@@ -139,7 +132,7 @@ class Builder:
     def name_scope(self, ops):
         """Returns a new TensorFlow name scope for the given ops."""
 
-        return self.graph.name_scope(
+        return tf.name_scope(
             utils.sanitize_name(Builder.builders[type(ops[0])].__name__)
         )
 
@@ -170,7 +163,10 @@ class Builder:
 
 
 class BuildConfig(
-    namedtuple("BuildConfig", ("inference_only", "lif_smoothing", "cpu_only"))
+    namedtuple(
+        "BuildConfig",
+        ("inference_only", "lif_smoothing", "cpu_only", "rng", "add_weight"),
+    )
 ):
     """
     Stores configuration parameters that may be relevant to parts of the
@@ -186,6 +182,11 @@ class BuildConfig(
     cpu_only : bool
         True if TensorFlow is only running on the CPU (because that was
         specified by the user or because tensorflow-gpu is not installed).
+    rng : `~numpy.random.mtrand.RandomState`
+        Seeded random number generator
+    add_weight : callable
+        Function that can be used to add weights to the model (see
+        https://www.tensorflow.org/api_docs/python/tf/keras/layers/Layer#add_weight)
     """
 
     __slots__ = ()
@@ -236,15 +237,13 @@ class OpBuilder:
         """
         raise BuildError("OpBuilders must implement a `build_step` function")
 
-    def build_post(self, ops, signals, sess, rng):
+    def build_post(self, ops, signals, config):
         """
         This function will be called after the graph has been built and
-        session/variables initialized.
-
-        This should be used to build any random aspects of the operator.
+        each time the Simulator is reset.
 
         Note that this function may be called multiple times per session, so
-        it should modify the graph in-place.
+        it should do any required operations in-place.
 
         Parameters
         ----------
@@ -253,10 +252,10 @@ class OpBuilder:
         signals : `.signals.SignalDict`
             Mapping from `~nengo.builder.Signal` to
             ``tf.Tensor`` (updated by operations)
-        sess : ``tf.Session``
-            The initialized simulation session
-        rng : `~numpy.random.mtrand.RandomState`
-            Seeded random number generator
+        config : `~.builder.BuildConfig`
+            General repository for config information builders might want
+            (conglomerated into this object so that we can add/remove config data
+            without having to change the function signature all the time).
         """
 
     @staticmethod
@@ -266,9 +265,9 @@ class OpBuilder:
 
         Parameters
         ----------
-        x : :class:`~nengo:nengo.builder.Operator`
+        x : `nengo.builder.Operator`
             The operator being tested
-        y : :class:`~nengo:nengo.builder.Operator`
+        y : `nengo.builder.Operator`
             The operator being merged into (this is representative of a group
             of operators that have already been merged)
 

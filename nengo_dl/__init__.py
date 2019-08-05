@@ -32,18 +32,16 @@ del sys
 
 # filter out "INFO" level log messages
 import os
-from nengo_dl.compat import tf_compat
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
+
+from nengo_dl.compat import tf_compat
+
 tf_compat.logging.set_verbosity(tf_compat.logging.WARN)
 
 
 # disable v2 behaviour (for now, pending full TF 2.0 compatibility)
-try:
-    tf_compat.disable_v2_behavior()
-except AttributeError:
-    # on a version of TensorFlow that doesn't have v2 behaviour anyway, so no problem
-    pass
+tf_compat.disable_control_flow_v2()
 
 
 del os
@@ -59,14 +57,11 @@ from nengo_dl import (
 )
 
 # import into top-level namespace
-from nengo_dl import dists, objectives
+from nengo_dl import dists, callbacks
 from nengo_dl.simulator import Simulator
 from nengo_dl.tensor_node import TensorNode, tensor_layer, reshaped
 from nengo_dl.config import configure_settings
 from nengo_dl.neurons import SoftLIFRate
-
-# shortcut for objective namespace
-obj = objectives
 
 # apply tensorflow monkey patches
 from nengo_dl import tensorflow_patch

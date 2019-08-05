@@ -5,7 +5,6 @@ import sys
 
 import pytest
 import nengo
-import tensorflow as tf
 
 from nengo_dl import benchmarks, SoftLIFRate
 
@@ -112,9 +111,7 @@ def test_run_profile(train, pytestconfig):
         do_profile=False,
         device=pytestconfig.getvalue("--device"),
         unroll_simulation=pytest.config.getvalue("--unroll-simulation"),
-        dtype=(
-            tf.float32 if pytest.config.getvalue("dtype") == "float32" else tf.float64
-        ),
+        dtype=pytest.config.getvalue("dtype"),
     )
 
     assert net.config[net].inference_only == (not train)
@@ -158,8 +155,8 @@ def test_cli():
     [
         (benchmarks.cconv(128, 64, nengo.RectifiedLinear()), False, 64, 0.7, 0.85),
         (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, 1.5, 1.7),
-        (benchmarks.integrator(128, 32, nengo.RectifiedLinear()), True, 64, 1.7, 2.1),
-        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 2.5, 3.0),
+        (benchmarks.integrator(128, 32, nengo.RectifiedLinear()), True, 64, 0.65, 0.9),
+        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 1.05, 1.25),
         (
             benchmarks.random_network(
                 64,
@@ -182,9 +179,9 @@ def test_performance(net, train, minibatch_size, min, max):
     # CPU: Intel Xeon E5-1650 v3 @ 3.50GHz
     # GPU: GeForce GTX Titan X
     # Python version: 3.6.8
-    # TensorFlow GPU version: 1.13.1
+    # TensorFlow GPU version: 2.0.0
     # Nengo version: 2.8.0
-    # NengoDL version: 2.1.2
+    # NengoDL version: 3.0.0
 
     time = benchmarks.run_profile(
         net,

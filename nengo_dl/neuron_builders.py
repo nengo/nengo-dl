@@ -8,6 +8,7 @@ from nengo.builder.neurons import SimNeurons
 from nengo.neurons import RectifiedLinear, SpikingRectifiedLinear, Sigmoid, LIF, LIFRate
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.keras.utils import tf_utils
 
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
@@ -176,8 +177,8 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
         else:
             rate_out = super(SpikingRectifiedLinearBuilder, self)._step(J)
 
-            out, voltage = tf.cond(
-                pred=signals.training,
+            out, voltage = tf_utils.smart_cond(
+                signals.training,
                 true_fn=lambda: (rate_out, voltage),
                 false_fn=lambda: (spike_out, spike_voltage),
             )
@@ -375,8 +376,8 @@ class LIFBuilder(SoftLIFRateBuilder):
                 else SoftLIFRateBuilder._step(self, J)
             )
 
-            spikes, voltage, refractory = tf.cond(
-                pred=signals.training,
+            spikes, voltage, refractory = tf_utils.smart_cond(
+                signals.training,
                 true_fn=lambda: (rate_out, voltage, refractory),
                 false_fn=lambda: (spike_out, spike_voltage, spike_ref),
             )

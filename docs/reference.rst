@@ -68,6 +68,11 @@ Objectives
 
 .. automodule:: nengo_dl.objectives
 
+Callbacks
+^^^^^^^^^
+
+.. automodule:: nengo_dl.callbacks
+
 .. _developer-api:
 
 Developers

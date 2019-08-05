@@ -106,17 +106,20 @@ def test_node(Simulator):
 
 def test_pre_build(Simulator):
     class TestFunc:
-        def pre_build(self, size_in, size_out):
-            self.weights = tf.Variable(tf.ones((size_in[1], size_out[1])))
-            return self.weights
+        def pre_build(self, shape_in, shape_out, config):
+            self.weights = config.add_weight(
+                initializer=tf.initializers.ones(),
+                shape=(shape_in[1], shape_out[1]),
+                name="weights",
+            )
 
         def __call__(self, t, x):
             return tf.matmul(x, tf.cast(self.weights, x.dtype))
 
     class TestFunc2:
-        def pre_build(self, size_in, size_out):
-            assert size_in is None
-            assert size_out == (1, 1)
+        def pre_build(self, shape_in, shape_out, config):
+            assert shape_in is None
+            assert shape_out == (1, 1)
 
         def __call__(self, t):
             return tf.reshape(t, (1, 1))
@@ -133,25 +136,21 @@ def test_pre_build(Simulator):
     with Simulator(net) as sim:
         sim.step()
         assert np.allclose(sim.data[p], [[2, 2, 2]])
-        assert np.allclose(sim.data[p2], [[0.001]])
+        assert np.allclose(sim.data[p2], sim.trange()[:, None])
 
         sim.reset()
         sim.step()
         assert np.allclose(sim.data[p], [[2, 2, 2]])
-        assert np.allclose(sim.data[p2], [[0.001]])
+        assert np.allclose(sim.data[p2], sim.trange()[:, None])
 
 
 def test_post_build(Simulator):
     class TestFunc:
-        def pre_build(self, size_in, size_out):
-            self.weights = tf.Variable(tf.zeros((size_in[1], size_out[1])))
-            return self.weights
+        def pre_build(self, shape_in, shape_out, config):
+            self.weights = tf.Variable(tf.zeros((shape_in[1], shape_out[1])))
 
-        def post_build(self, sess, rng):
-            assert sess is tf_compat.get_default_session()
-            assert isinstance(rng, np.random.RandomState)
-            init_op = tf_compat.assign(self.weights, tf.ones((2, 3)))
-            sess.run(init_op)
+        def post_build(self):
+            tf.keras.backend.set_value(self.weights, np.ones((2, 3)))
 
         def __call__(self, t, x):
             return tf.matmul(x, tf.cast(self.weights, x.dtype))
@@ -240,9 +239,10 @@ def test_tensor_layer(Simulator):
 
 def test_reuse_vars(Simulator):
     class MyFunc:
-        def pre_build(self, *_):
-            self.w = tf.Variable(initial_value=tf.constant(2.0), name="weights")
-            return self.w
+        def pre_build(self, config, **_):
+            self.w = config.add_weight(
+                initializer=tf.initializers.constant(2.0), name="weights"
+            )
 
         def __call__(self, _, x):
             return x * tf.cast(self.w, x.dtype)
@@ -270,11 +270,18 @@ def test_reuse_vars(Simulator):
         assert np.allclose(sim.data[p], 2)
         assert np.allclose(sim.data[p2], 3)
 
-        with sim.tensor_graph.graph.as_default():
-            vars = sim.tensor_graph.signals.all_variables
+        # note: when inference-only=True the weights will be marked as non-trainable
+        if sim.tensor_graph.inference_only:
+            assert len(sim.keras_model.non_trainable_variables) == 10
+            assert len(sim.keras_model.trainable_variables) == 0
+            vars = sim.keras_model.non_trainable_variables[:2]
+        else:
+            assert len(sim.keras_model.non_trainable_variables) == 8
+            assert len(sim.keras_model.trainable_variables) == 2
+            vars = sim.keras_model.trainable_variables
 
         assert len(vars) == 2
-        assert vars[0].get_shape() == ()
-        assert sim.sess.run(vars[0]) == 2
-        assert vars[1].get_shape() == (1, 10)
-        assert np.allclose(sim.sess.run(vars[1]), 3)
+        assert vars[0].shape == ()
+        assert tf.keras.backend.get_value(vars[0]) == 2
+        assert vars[1].shape == (1, 10)
+        assert np.allclose(tf.keras.backend.get_value(vars[1]), 3)

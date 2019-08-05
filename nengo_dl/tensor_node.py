@@ -39,7 +39,7 @@ def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
             attr="tensor_func",
         )
 
-    shape = output.get_shape()
+    shape = output.shape
     if (
         shape.ndims != 2
         or (minibatch_size is not None and shape[0] != minibatch_size)
@@ -47,7 +47,7 @@ def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
     ):
         raise ValidationError(
             "TensorNode output should have shape (%s, %s) "
-            "(got shape %s)" % (minibatch_size, output_d, output.get_shape()),
+            "(got shape %s)" % (minibatch_size, output_d, shape),
             attr="tensor_func",
         )
 
@@ -98,15 +98,20 @@ class TensorFuncParam(Parameter):
                     result = func(*args)
                 except Exception as e:
                     raise ValidationError(
-                        "Calling TensorNode function with arguments %s "
-                        "produced an error:\n%s" % (args, e),
+                        "Attempting to automatically determine TensorNode output shape "
+                        "by calling TensorNode function produced an error. "
+                        "If you would like to avoid this step "
+                        "(e.g., because your TensorNode contains a `pre_build` "
+                        "function), try manually setting "
+                        "`TensorNode(..., size_out=x)`. The error is shown below:\n%s"
+                        % e,
                         attr=self.name,
                         obj=node,
                     )
 
             validate_output(result)
 
-            node.size_out = result.get_shape()[1].value
+            node.size_out = result.shape[1]
 
         return output
 
@@ -209,6 +214,7 @@ class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
         super(SimTensorNode, self).__init__(tag=tag)
 
         self.func = func
+        self.time = time
         self.input = input
         self.output = output
 
@@ -230,6 +236,8 @@ class SimTensorNodeBuilder(OpBuilder):
         assert len(ops) == 1
         op = ops[0]
 
+        self.time_data = signals[op.time].reshape(())
+
         if op.input is None:
             self.src_data = None
         else:
@@ -241,24 +249,23 @@ class SimTensorNodeBuilder(OpBuilder):
         self.func = op.func
 
         if hasattr(self.func, "pre_build"):
-            vars = self.func.pre_build(
-                None
-                if self.src_data is None
-                else ((signals.minibatch_size,) + self.src_data.shape),
-                (signals.minibatch_size,) + self.dst_data.shape,
+            self.func.pre_build(
+                shape_in=(
+                    None
+                    if self.src_data is None
+                    else ((signals.minibatch_size,) + self.src_data.shape)
+                ),
+                shape_out=(signals.minibatch_size,) + self.dst_data.shape,
+                config=config,
             )
 
-            if isinstance(vars, (list, tuple)):
-                signals.user_vars.extend(vars)
-            elif vars is not None:
-                signals.user_vars.append(vars)
-
     def build_step(self, signals):
+        time = signals.gather(self.time_data)
         if self.src_data is None:
-            output = self.func(signals.time)
+            output = self.func(time)
         else:
             input = signals.gather(self.src_data)
-            output = self.func(signals.time, input)
+            output = self.func(time, input)
 
         validate_output(
             output,
@@ -269,9 +276,9 @@ class SimTensorNodeBuilder(OpBuilder):
 
         signals.scatter(self.dst_data, output)
 
-    def build_post(self, ops, signals, sess, rng):
+    def build_post(self, ops, signals, config):
         if hasattr(self.func, "post_build"):
-            self.func.post_build(sess, rng)
+            self.func.post_build()
 
 
 def reshaped(shape_in):
@@ -293,7 +300,7 @@ def reshaped(shape_in):
 
     def reshape_dec(func):
         def reshaped_func(t, x):
-            batch_size = x.get_shape()[0]
+            batch_size = x.shape[0]
             x = tf.reshape(x, (batch_size,) + shape_in)
             x = func(t, x)
             x = tf.reshape(x, (batch_size, -1))
@@ -370,16 +377,14 @@ def tensor_layer(
             class WrappedLayer:
                 """Wraps a Keras Layer in a TensorNode function."""
 
-                def pre_build(self, pre_shape_in, _):
+                def pre_build(self, shape_in, shape_out, config):
                     """Build the layer and return the weights."""
 
                     self.layer = layer_func(**layer_args)
+                    self.layer.add_weight = config.add_weight
                     self.layer.build(
-                        pre_shape_in
-                        if shape_in is None
-                        else (pre_shape_in[0],) + shape_in
+                        shape_in if shape_in is None else (shape_in[0],) + shape_in
                     )
-                    return self.layer.weights
 
                 def __call__(self, _, x):
                     return self.layer(x)
@@ -388,9 +393,7 @@ def tensor_layer(
 
             # we can use Keras' static shape inference to get the
             # output shape, which avoids having to build/call the layer
-            size_out = (
-                layer_func(**layer_args).compute_output_shape((1, size_in))[1].value
-            )
+            size_out = layer_func(**layer_args).compute_output_shape((1, size_in))[1]
         else:
             # add (ignored) time input and pass kwargs
             def node_func(_, x):

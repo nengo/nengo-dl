@@ -3,7 +3,6 @@
 import nengo
 import numpy as np
 import pytest
-import tensorflow as tf
 
 from nengo_dl import config, dists, SoftLIFRate, neuron_builders
 
@@ -82,7 +81,7 @@ def test_soft_lif(Simulator, sigma, seed):
         sim.run_steps(30)
 
     with net:
-        config.configure_settings(dtype=tf.float64)
+        config.configure_settings(dtype="float64")
 
     with Simulator(net) as sim2:
         _, nengo_dl_curves = nengo.utils.ensemble.tuning_curves(ens, sim2)
@@ -106,7 +105,7 @@ def test_neuron_gradients(Simulator, neuron_type, seed, rng):
     kwargs = {"sigma": 0.1} if neuron_type == SoftLIFRate else {}
 
     with nengo.Network(seed=seed) as net:
-        config.configure_settings(dtype=tf.float64)
+        config.configure_settings(dtype="float64")
         net.config[nengo.Ensemble].intercepts = intercepts
         a = nengo.Node(output=[0, 0])
         b = nengo.Ensemble(50, 2, neuron_type=neuron_type(**kwargs))
@@ -127,11 +126,12 @@ def test_neuron_gradients(Simulator, neuron_type, seed, rng):
         (SoftLIFRate, nengo.LIF),
     ],
 )
+@pytest.mark.training
 def test_spiking_swap(Simulator, rate, spiking, seed):
     grads = []
     for neuron_type in [rate, spiking]:
         with nengo.Network(seed=seed) as net:
-            config.configure_settings(dtype=tf.float64)
+            config.configure_settings(dtype="float64")
 
             if rate == SoftLIFRate and neuron_type == spiking:
                 config.configure_settings(lif_smoothing=1.0)
@@ -148,17 +148,11 @@ def test_spiking_swap(Simulator, rate, spiking, seed):
             p = nengo.Probe(c.neurons)
 
         with Simulator(net) as sim:
-            grads.append(
-                sim.sess.run(
-                    tf.gradients(
-                        ys=sim.tensor_graph.probe_arrays[p],
-                        xs=sim.tensor_graph.signals.all_variables,
-                    ),
-                    feed_dict=sim._fill_feed(10, training=True),
-                )
-            )
-
-            sim.soft_reset()
+            # note: not actually checking gradients, just using this to get the
+            # gradients
+            # TODO: why doesn't the gradient tape method work?
+            # TODO: why does the gradient check fail?
+            grads.append(sim.check_gradients(atol=1e10)[p]["analytic"])
             sim.run(0.5)
 
         # check that the normal output is unaffected by the swap logic

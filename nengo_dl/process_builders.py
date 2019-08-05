@@ -45,6 +45,7 @@ class GenericProcessBuilder(OpBuilder):
     def __init__(self, ops, signals, config):
         super(GenericProcessBuilder, self).__init__(ops, signals, config)
 
+        self.time_data = signals[ops[0].t].reshape(())
         self.input_data = (
             None if ops[0].input is None else signals.combine([op.input for op in ops])
         )
@@ -103,6 +104,7 @@ class GenericProcessBuilder(OpBuilder):
         )
 
     def build_step(self, signals):
+        time = [signals.gather(self.time_data)]
         input = [] if self.input_data is None else [signals.gather(self.input_data)]
         state = [signals.gather(s) for s in self.state_data]
 
@@ -112,7 +114,7 @@ class GenericProcessBuilder(OpBuilder):
         with tf.control_dependencies(self.prev_result), tf.device("/cpu:0"):
             result = tf.numpy_function(
                 self.merged_func,
-                [signals.time] + input + state,
+                time + input + state,
                 [self.output_data.dtype] + [s.dtype for s in self.state_data],
                 name=self.merged_func.__name__,
             )
@@ -126,7 +128,7 @@ class GenericProcessBuilder(OpBuilder):
             s.set_shape(self.state_data[i].full_shape)
             signals.scatter(self.state_data[i], s, mode="update")
 
-    def build_post(self, ops, signals, sess, rng):
+    def build_post(self, ops, signals, config):
         # generate state for each op
         step_states = [
             make_process_state(
@@ -179,7 +181,7 @@ class GenericProcessBuilder(OpBuilder):
                     op.input.shape if op.input is not None else (0,),
                     op.output.shape,
                     signals.dt_val,
-                    op.process.get_rng(rng),
+                    op.process.get_rng(config.rng),
                     state,
                 )
 
@@ -304,7 +306,7 @@ class LinearFilterBuilder(OpBuilder):
                 dtype=signals.dtype,
             )
 
-            assert self.D.get_shape() == (1, self.n_ops, 1)
+            assert self.D.shape == (1, self.n_ops, 1)
         elif self.step_type == OneX:
             # combine A scalars for each op, and broadcast along batch/state
             self.A = signals.constant(
@@ -318,8 +320,8 @@ class LinearFilterBuilder(OpBuilder):
             self.C = None
             self.D = None
 
-            assert self.A.get_shape() == (1, self.n_ops, 1)
-            assert self.B.get_shape() == (1, self.n_ops, 1)
+            assert self.A.shape == (1, self.n_ops, 1)
+            assert self.B.shape == (1, self.n_ops, 1)
         else:
             self.A = signals.constant(
                 np.stack([step.A for step in steps], axis=0), dtype=signals.dtype
@@ -338,19 +340,21 @@ class LinearFilterBuilder(OpBuilder):
                     np.concatenate([step.D[:, None, None] for step in steps]),
                     dtype=signals.dtype,
                 )
-                assert self.D.get_shape() == (self.n_ops, 1, 1)
+                assert self.D.shape == (self.n_ops, 1, 1)
 
             # create a variable to represent the internal state of the filter
             if LooseVersion(nengo_version) < "3.0.0":
                 self.state_data = signals.make_internal(
-                    "state", (self.n_ops * self.state_d, self.signal_d)
+                    "state",
+                    (self.n_ops * self.state_d, self.signal_d),
+                    config.add_weight,
                 )
             else:
                 self.state_data = signals.combine([op.state["X"] for op in ops])
 
-            assert self.A.get_shape() == (self.n_ops, self.state_d, self.state_d)
-            assert self.B.get_shape() == (self.n_ops, self.state_d, 1)
-            assert self.C.get_shape() == (self.n_ops, 1, self.state_d)
+            assert self.A.shape == (self.n_ops, self.state_d, self.state_d)
+            assert self.B.shape == (self.n_ops, self.state_d, 1)
+            assert self.C.shape == (self.n_ops, 1, self.state_d)
 
     def build_step(self, signals):
         input = signals.gather(self.input_data)
@@ -454,9 +458,9 @@ class SimProcessBuilder(OpBuilder):
     def build_step(self, signals):
         self.built_process.build_step(signals)
 
-    def build_post(self, ops, signals, sess, rng):
+    def build_post(self, ops, signals, config):
         if isinstance(self.built_process, GenericProcessBuilder):
-            self.built_process.build_post(ops, signals, sess, rng)
+            self.built_process.build_post(ops, signals, config)
 
     @staticmethod
     def mergeable(x, y):

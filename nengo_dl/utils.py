@@ -14,7 +14,6 @@ from nengo.exceptions import SimulationError
 import numpy as np
 import progressbar
 import tensorflow as tf
-from tensorflow.python.framework.ops import get_gradient_function
 
 from nengo_dl.compat import tf_compat
 
@@ -183,44 +182,9 @@ def print_op(input, message):
 
     with tf.device("/cpu:0"):
         output = tf_compat.py_func(print_func, [input], input.dtype)
-    output.set_shape(input.get_shape())
+    output.set_shape(input.shape)
 
     return output
-
-
-def find_non_differentiable(inputs, outputs):
-    """
-    Searches through a TensorFlow graph to find non-differentiable elements
-    between ``inputs`` and ``outputs`` (elements that would prevent us from
-    computing ``d_outputs / d_inputs``.
-
-    Parameters
-    ----------
-    inputs : list of ``tf.Tensor``
-        Input tensors
-    outputs : list of ``tf.Tensor``
-        Output tensors
-    """
-
-    for o in outputs:
-        if o in inputs:
-            continue
-
-        try:
-            grad = get_gradient_function(o.op)
-
-            if grad is None and len(o.op.inputs) > 0:
-                # note: technically we're not sure that this op is
-                # on the path to inputs. we could wait and propagate this
-                # until we find inputs, but that can take a long time for
-                # large graphs. it seems more useful to fail quickly, and
-                # risk some false positives
-                raise LookupError
-            find_non_differentiable(inputs, o.op.inputs)
-        except LookupError:
-            raise SimulationError(
-                "Graph contains non-differentiable elements: %s" % o.op
-            )
 
 
 class MessageBar(progressbar.BouncingBar):
@@ -273,15 +237,13 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
     max_value : int or None
         The maximum number of steps in the tracked process (or ``None`` if
         the maximum number of steps is unknown)
-    vars : list of str
-        Extra variables that will be displayed at the end of the progress bar
 
     Notes
     -----
     Launches a separate thread to handle the progress bar display updates.
     """
 
-    def __init__(self, present="", past=None, max_value=1, vars=None, **kwargs):
+    def __init__(self, present="", past=None, max_value=1, **kwargs):
 
         self.present = present
         self.sub_bar = None
@@ -299,15 +261,6 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
             widgets.append(
                 progressbar.ETA(format="ETA: %(eta)s", format_finished="%(elapsed)s")
             )
-
-        if vars is not None:
-            self.var_vals = progressbar.FormatCustomText(
-                " (" + ", ".join("%s: %%(%s)s" % (v, v) for v in vars) + ")",
-                {v: "---" for v in vars},
-            )
-            widgets.append(self.var_vals)
-        else:
-            self.var_vals = None
 
         def update_thread():
             while not self.finished:
@@ -350,19 +303,11 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
 
         super(ProgressBar, self).finish(**kwargs)
 
-    def step(self, **vars):
+    def step(self):
         """
         Advance the progress bar one step.
-
-        Parameters
-        ----------
-        vars : dict of {str: str}
-            Values for the extra variables displayed at the end of the progress
-            bar (defined in ``__init__``)
         """
 
-        if self.var_vals is not None:
-            self.var_vals.update_mapping(**vars)
         self.value += 1
 
     def sub(self, msg=None, **kwargs):
@@ -405,10 +350,8 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
         """Wraps an iterable using this progress bar."""
 
         try:
-            if self.start_time is None:
-                self.start()
-            else:
-                self.step()
+            assert self.start_time is not None
+            self.step()
             value = next(self._iterable)
             return value
         except StopIteration:
@@ -433,7 +376,7 @@ class NullProgressBar(progressbar.NullBar):  # pylint: disable=too-many-ancestor
     Used to replace ProgressBar when we want to disable output.
     """
 
-    def __init__(self, present="", past=None, max_value=1, vars=None, **kwargs):
+    def __init__(self, present="", past=None, max_value=1, **kwargs):
         super(NullProgressBar, self).__init__(max_value=max_value, **kwargs)
 
     def sub(self, *args, **kwargs):

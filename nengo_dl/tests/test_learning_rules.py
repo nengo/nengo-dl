@@ -6,7 +6,6 @@ import nengo
 from nengo.builder.learning_rules import SimVoja, SimOja, SimBCM
 import numpy as np
 import pytest
-import tensorflow as tf
 
 from nengo_dl import configure_settings, graph_optimizer
 from nengo_dl.learning_rule_builders import SimPES
@@ -28,8 +27,7 @@ def test_merged_learning(Simulator, rule, weights, seed):
     dimensions = 2
     with nengo.Network(seed=seed) as net:
         configure_settings(
-            planner=partial(graph_optimizer.tree_planner, max_depth=10),
-            dtype=tf.float64,
+            planner=partial(graph_optimizer.tree_planner, max_depth=10), dtype="float64"
         )
 
         a = nengo.Ensemble(3, dimensions, label="a")

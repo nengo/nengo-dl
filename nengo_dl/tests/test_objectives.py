@@ -5,27 +5,22 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import objectives
-from nengo_dl.compat import tf_compat
+from nengo_dl import losses
 
 
-@pytest.mark.parametrize(
-    "axis, weight, order", [(None, 0.6, 1), (None, 0.7, "euclidean"), (1, None, 2)]
-)
-def test_regularize(axis, weight, order, rng, sess):
+@pytest.mark.parametrize("axis, order", [(None, 1), (None, "euclidean"), (1, 2)])
+@pytest.mark.training
+def test_regularize(axis, order, rng):
     x_init = rng.randn(2, 3, 4, 5)
 
     x = tf.constant(x_init)
 
-    reg = objectives.Regularize(weight=weight, order=order, axis=axis)(x)
+    reg = losses.Regularize(order=order, axis=axis)(None, x)
 
-    reg_val = sess.run(reg)
+    reg_val = reg.numpy()
 
     if order == "euclidean":
         order = 2
-
-    if weight is None:
-        weight = 1
 
     if axis is None:
         truth = np.reshape(x_init, x_init.shape[:2] + (-1,))
@@ -34,13 +29,12 @@ def test_regularize(axis, weight, order, rng, sess):
         truth = x_init
         axis += 2
     truth = np.mean(np.linalg.norm(truth, ord=order, axis=axis))
-    truth *= weight
 
     assert np.allclose(reg_val, truth)
 
 
-@pytest.mark.training
 @pytest.mark.parametrize("mode", ("activity", "weights"))
+@pytest.mark.training
 def test_regularize_train(Simulator, mode, seed):
     with nengo.Network(seed=seed) as net:
         a = nengo.Node([1])
@@ -60,13 +54,16 @@ def test_regularize_train(Simulator, mode, seed):
         else:
             p = nengo.Probe(b.neurons)
 
+        # default output required so that there is a defined gradient for all
+        # parameters
+        default_p = nengo.Probe(b)
+
     with Simulator(net) as sim:
-        sim.train(
-            5,
-            tf_compat.train.RMSPropOptimizer(0.01 if mode == "weights" else 0.1),
-            objective={p: objectives.Regularize()},
-            n_epochs=100,
+        sim.compile(
+            tf.optimizers.RMSprop(0.01 if mode == "weights" else 0.1),
+            loss={p: losses.Regularize(), default_p: lambda y_true, y_pred: 0 * y_pred},
         )
+        sim.fit(n_steps=5, epochs=100)
 
         sim.step()
         assert np.allclose(sim.data[p], 0, atol=1e-2)

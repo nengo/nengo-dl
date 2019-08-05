@@ -110,6 +110,10 @@ def test_zero_matrices(Simulator, zero, seed):
     assert signals_allclose(t, y, yhat, delay=dt, atol=5e-5)
 
 
+@pytest.mark.xfail(
+    nengo.version.version_info <= (2, 8, 0),
+    reason="check_gradients requires all Variables to be created in `build`",
+)
 @pytest.mark.training
 def test_linear_filter_gradient(Simulator):
     with nengo.Network() as net:

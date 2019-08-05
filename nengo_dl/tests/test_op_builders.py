@@ -1,5 +1,6 @@
 # pylint: disable=missing-docstring
 
+import nengo
 from nengo import builder
 from nengo.builder import signal, operator
 import numpy as np
@@ -26,10 +27,7 @@ def test_elementwise_inc(Simulator):
     model.add_op(op)
 
     with Simulator(None, model=model) as sim:
-        sim.sess.run(
-            sim.tensor_graph.steps_run,
-            feed_dict={sim.tensor_graph.step_var: 0, sim.tensor_graph.stop_var: 5},
-        )
+        sim.run_steps(5)
 
 
 @pytest.mark.parametrize("device", ("/cpu:0", "/gpu:0", None))
@@ -61,3 +59,39 @@ def test_sparse_matmul(sess, dtype, device):
     assert Y.dtype == dtype
 
     assert np.allclose(sess.run(Y), np.ones(3) * 2)
+
+
+def test_merged_simpyfunc(Simulator):
+    with nengo.Network() as net:
+        # nodes get time + x
+        node0 = nengo.Node(lambda t, x: x + t, size_in=1)
+        node1 = nengo.Node(lambda t, x: x + 2 * t, size_in=1)
+
+        # direct ensembles won't get time as input
+        ens0 = nengo.Ensemble(10, 1, neuron_type=nengo.Direct())
+        nengo.Connection(ens0, node0, function=lambda x: x + 1)
+        ens1 = nengo.Ensemble(10, 1, neuron_type=nengo.Direct())
+        nengo.Connection(ens1, node1, function=lambda x: x + 2)
+
+        p0 = nengo.Probe(node0)
+        p1 = nengo.Probe(node1)
+
+    with nengo.Simulator(net) as canonical:
+        canonical.run_steps(10)
+
+    with Simulator(net) as sim:
+        assert (
+            len(
+                [
+                    ops
+                    for ops in sim.tensor_graph.plan
+                    if isinstance(ops[0], operator.SimPyFunc)
+                ]
+            )
+            == 2
+        )
+
+        sim.run_steps(10)
+
+    assert np.allclose(canonical.data[p0], sim.data[p0])
+    assert np.allclose(canonical.data[p1], sim.data[p1])

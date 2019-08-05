@@ -16,7 +16,7 @@ def make_test_sim(request):
     to the ``nengo_simloader`` option when running the Nengo core tests.
     """
 
-    dtype = tf.as_dtype(request.config.getoption("--dtype"))
+    dtype = request.config.getoption("--dtype")
     unroll = request.config.getoption("--unroll-simulation")
     device = request.config.getoption("--device")
     inference_only = request.config.getoption("--inference-only")

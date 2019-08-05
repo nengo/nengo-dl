@@ -6,7 +6,14 @@ from collections import defaultdict
 import logging
 import warnings
 
-from nengo.builder.operator import Reset, Copy, ElementwiseInc, DotInc, SimPyFunc
+from nengo.builder.operator import (
+    Reset,
+    Copy,
+    ElementwiseInc,
+    DotInc,
+    SimPyFunc,
+    TimeUpdate,
+)
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops import gen_sparse_ops
@@ -348,6 +355,7 @@ class DotIncBuilder(OpBuilder):
                 # (n_ops, a0, a1) x (batch, n_ops, a1)
                 # -> (n_ops, a0, a1) x (n_ops, a1, batch)
                 dot = tf.matmul(A, tf.transpose(X, perm=self.perm))
+
                 # transpose back to (batch, n_ops, a0)
                 dot = tf.transpose(dot, perm=self.perm_inv)
 
@@ -396,7 +404,7 @@ class SimPyFuncBuilder(OpBuilder):
         logger.debug("x %s", [op.x for op in ops])
         logger.debug("fn %s", [op.fn for op in ops])
 
-        self.time_input = ops[0].t is not None
+        self.time_data = None if ops[0].t is None else signals[ops[0].t].reshape(())
         self.input_data = signals.combine([op.x for op in ops])
 
         if ops[0].output is not None:
@@ -442,7 +450,7 @@ class SimPyFuncBuilder(OpBuilder):
         )
 
     def build_step(self, signals):
-        time = signals.time if self.time_input else []
+        time = [] if self.time_data is None else signals.gather(self.time_data)
         inputs = [] if self.input_data is None else signals.gather(self.input_data)
 
         with tf.device("/cpu:0"):
@@ -538,3 +546,33 @@ class SparseDotIncBuilder(OpBuilder):
     @staticmethod
     def mergeable(x, y):
         return True
+
+
+@Builder.register(TimeUpdate)
+class TimeUpdateBuilder(OpBuilder):
+    """
+    Build a group of `~nengo.builder.operator.TimeUpdate` operators.
+    """
+
+    def __init__(self, ops, signals, config):
+        super().__init__(ops, signals, config)
+
+        assert len(ops) == 1
+        op = ops[0]
+
+        self.step_data = signals[op.step]
+        self.time_data = signals[op.time]
+        self.one = tf.constant(1, dtype=tf.int32)
+
+    def build_step(self, signals):
+        step = signals.gather(self.step_data)
+
+        step += self.one
+
+        signals.scatter(self.step_data, step)
+        signals.scatter(self.time_data, tf.cast(step, signals.dtype) * signals.dt)
+
+    @staticmethod
+    def mergeable(x, y):
+        # there should only ever be one TimeUpdate so this should never be called
+        raise NotImplementedError

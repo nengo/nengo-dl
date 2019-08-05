@@ -6,7 +6,6 @@ import sys
 from nengo import version as nengo_version
 import pytest
 
-import nengo_dl
 from nengo_dl import version
 
 
@@ -43,13 +42,3 @@ def test_nengo_version_check():
         reload(version)
     assert len(w) == 0
     sys.modules["nengo.version"] = saved
-
-
-@pytest.mark.gpu
-def test_tensorflow_gpu_warning():
-    # we assume that if the --gpu flag is set then tensorflow-gpu is installed,
-    # so there should be no warning
-    with pytest.warns(None) as w:
-        reload(nengo_dl)
-
-    assert len(w) == 0

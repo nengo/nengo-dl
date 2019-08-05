@@ -40,11 +40,6 @@ def configure_settings(**kwargs):
         Pass a list of `graph simplification functions
         <https://www.nengo.ai/nengo-dl/graph_optimizer.html>`_ to change the
         default simplifications applied.
-    session_config: dict
-        Config options passed to ``tf.Session`` initialization (e.g., to change
-        the `GPU memory allocation method
-        <https://github.com/tensorflow/docs/blob/master/site/en/r1/guide/using_gpu.md>`_
-        pass ``{"gpu_options.allow_growth": True}``).
     inference_only : bool
         Set to True if the network will only be run in inference mode (i.e.,
         no calls to `.Simulator.train`).  This may result in a small
@@ -96,7 +91,6 @@ def configure_settings(**kwargs):
             "planner",
             "sorter",
             "simplifications",
-            "session_config",
             "inference_only",
             "lif_smoothing",
             "dtype",

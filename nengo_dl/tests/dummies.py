@@ -5,7 +5,7 @@ from collections import defaultdict
 import nengo
 import numpy as np
 
-from nengo_dl import builder, tensor_graph, signals, configure_settings
+from nengo_dl import builder, tensor_graph, signals
 
 
 class Signal:
@@ -113,6 +113,16 @@ class Probe(nengo.Probe):
             # bypass target validation
             nengo.Probe.target.data[self] = target
 
+    @property
+    def size_in(self):
+        """Modified version of size_in that supports Signal targets."""
+
+        return (
+            self.target.size
+            if isinstance(self.target, (Signal, nengo.builder.signal.Signal))
+            else self.target.size_out
+        )
+
 
 class Simulator:
     """
@@ -129,9 +139,10 @@ class TensorGraph(tensor_graph.TensorGraph):
     """
 
     def __init__(self, plan=None, dtype=None, minibatch_size=None):
-        # pylint: disable=super-init-not-called
+        # pylint: disable=bad-super-call
+        super(tensor_graph.TensorGraph, self).__init__(dtype=dtype)
+
         self.plan = plan
-        self.dtype = dtype
         self.minibatch_size = minibatch_size
 
         self.signals = signals.SignalDict(self.dtype, self.minibatch_size, False)
@@ -144,21 +155,8 @@ def linear_net():
 
     with nengo.Network() as net:
         a = nengo.Node([1])
-
-        # note: in theory this would be nengo.Node(size_in=1), but due to
-        # https://github.com/tensorflow/tensorflow/issues/23383
-        # TensorFlow will hang
-        b = nengo.Ensemble(
-            1,
-            1,
-            neuron_type=nengo.RectifiedLinear(),
-            gain=np.ones(1),
-            bias=np.ones(1) * 1e-6,
-        )
-        configure_settings(trainable=None)
-        net.config[b.neurons].trainable = False
-        nengo.Connection(a, b.neurons, synapse=None)
-
-        p = nengo.Probe(b.neurons)
+        b = nengo.Node(size_in=1)
+        nengo.Connection(a, b, synapse=None)
+        p = nengo.Probe(b)
 
     return net, a, p
