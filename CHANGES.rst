@@ -22,6 +22,10 @@ Release History
 2.2.1 (unreleased)
 ==================
 
+**Fixed**
+
+- Fixed ``tensorflow-gpu`` installation check in pep517-style isolated build
+  environments.
 
 2.2.0 (July 24, 2019)
 =====================
