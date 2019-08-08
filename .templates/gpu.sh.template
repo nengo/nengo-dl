@@ -17,9 +17,9 @@
     exe ssh abrgpu << EOF
         export PATH="/home/travis-ci/miniconda3/bin:\$PATH"
         cd /tmp/nengo-dl-"$TRAVIS_JOB_NUMBER"
-        conda create -y -n travis-ci-"$TRAVIS_JOB_NUMBER" python="$TRAVIS_PYTHON_VERSION" "$TF_VERSION" "$NUMPY_VERSION"
+        conda create -y -n travis-ci-"$TRAVIS_JOB_NUMBER" python="$TRAVIS_PYTHON_VERSION" "$NUMPY_VERSION" cudatoolkit=10.0 cudnn cupti
         source activate travis-ci-"$TRAVIS_JOB_NUMBER"
-        pip install "$NENGO_VERSION"
+        pip install "$NENGO_VERSION" "$TF_VERSION"
         pip install git+https://github.com/drasmuss/spaun2.0.git
         pip install -e .[tests]
         echo "Waiting for lock"
