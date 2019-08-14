@@ -54,6 +54,7 @@ Release History
 - ``Simulator.save_params`` now saves internal state as a separate
   ``<filepath>.internal.npz`` file (if ``include_internal=True``), rather than
   including it in the TensorFlow checkpoint file.
+- Standardized all signals/operations in a simulation to be batch-first.
 
 2.2.2 (unreleased)
 ==================

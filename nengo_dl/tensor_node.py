@@ -258,10 +258,6 @@ class SimTensorNodeBuilder(OpBuilder):
             output = self.func(signals.time)
         else:
             input = signals.gather(self.src_data)
-
-            # move minibatch dimension to front
-            input = tf.transpose(a=input, perm=(1, 0))
-
             output = self.func(signals.time, input)
 
         validate_output(
@@ -270,9 +266,6 @@ class SimTensorNodeBuilder(OpBuilder):
             output_d=self.dst_data.shape[0],
             dtype=signals.dtype,
         )
-
-        # move minibatch dimension back to end
-        output = tf.transpose(a=output, perm=(1, 0))
 
         signals.scatter(self.dst_data, output)
 

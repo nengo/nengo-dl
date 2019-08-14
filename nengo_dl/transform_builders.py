@@ -64,53 +64,61 @@ class ConvIncBuilder(OpBuilder):
             )
 
         # set up X transformations
-        # move batch to front
-        perm_x = np.roll(np.arange(self.conv.dimensions + 2), 1)
         if force_last:
+            perm_x = np.arange(self.conv.dimensions + 2)
+
             # move channel dimension to the end
             perm_x[1:-1] = perm_x[2:]
-            perm_x[-1] = 0
-        self.perm_x = signals.constant(perm_x)
+            perm_x[-1] = 1
+
+            self.perm_x = signals.constant(perm_x)
+        else:
+            self.perm_x = None
 
         # set up Y transformations
         if len(ops) > 1:
             if self.conv.channels_last or force_last:
-                # separate last dimension into output for each op
+                # separate channel dimension into output for each op
                 reshape_y = (
                     (signals.minibatch_size,)
                     + self.conv.output_shape.spatial_shape
                     + (-1, len(ops))
                 )
 
-                # move ops to front and batch to end
+                # move ops to second axis (after batch)
                 perm_y = np.arange(self.conv.dimensions + 3)
-                perm_y[[0, -1]] = perm_y[[-1, 0]]
+                perm_y[2:] = perm_y[1:-1]
+                perm_y[1] = len(perm_y) - 1
 
                 if force_last:
-                    # move channel dimension back to the front
-                    perm_y[1:-1] = perm_y[:-2]
-                    perm_y[1] = len(perm_y) - 2
+                    # switch back to channels-first (after batch/ops)
+                    perm_y[-2:] = perm_y[2:-1]
+                    perm_y[2] = len(perm_y) - 2
             else:
+                # separate channel dimension into output for each op
                 reshape_y = (
                     signals.minibatch_size,
                     -1,
                     len(ops),
                 ) + self.conv.output_shape.spatial_shape
 
-                perm_y = (2, 1) + tuple(range(3, self.conv.dimensions + 3)) + (0,)
+                # move ops to second axis (after batch)
+                perm_y = np.arange(self.conv.dimensions + 3)
+                perm_y[[1, 2]] = perm_y[[2, 1]]
 
             self.reshape_y = signals.constant(reshape_y)
             self.perm_y = signals.constant(perm_y)
         else:
             self.reshape_y = None
 
-            # move batch to end
-            perm_y = np.roll(np.arange(self.conv.dimensions + 2), -1)
-
             if force_last:
-                perm_y[1:-1] = perm_y[:-2]
-                perm_y[0] = len(perm_y) - 1
-            self.perm_y = signals.constant(perm_y)
+                # switch back to channels-first (after batch)
+                perm_y = np.arange(self.conv.dimensions + 2)
+                perm_y[-2:] = perm_y[1:-1]
+                perm_y[1] = len(perm_y) - 1
+                self.perm_y = signals.constant(perm_y)
+            else:
+                self.perm_y = None
 
         # set up W transformations
         if len(ops) > 1:
@@ -132,8 +140,9 @@ class ConvIncBuilder(OpBuilder):
         W = signals.gather(self.W_data)
         X = signals.gather(self.X_data)
 
-        # put batch dimension first
-        X = tf.transpose(a=X, perm=self.perm_x)
+        if self.perm_x is not None:
+            # move channels to end
+            X = tf.transpose(a=X, perm=self.perm_x)
 
         if self.perm_w is not None:
             # concatenate kernels along output channel dimension
@@ -148,10 +157,10 @@ class ConvIncBuilder(OpBuilder):
             padding=self.conv.padding.upper(),
         )
 
-        # move batch back to end, ops to front
         if self.reshape_y is not None:
             Y = tf.reshape(Y, self.reshape_y)
-        Y = tf.transpose(a=Y, perm=self.perm_y)
+        if self.perm_y is not None:
+            Y = tf.transpose(a=Y, perm=self.perm_y)
 
         signals.scatter(self.Y_data, Y, mode="inc")
 

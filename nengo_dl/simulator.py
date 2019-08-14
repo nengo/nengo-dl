@@ -1628,16 +1628,16 @@ class Simulator:
         for n, output in self.tensor_graph.input_funcs.items():
             if n in data:
                 # move minibatch dimension to the end
-                feed_val = np.moveaxis(data[n], 0, -1)
+                feed_val = data[n]
             elif isinstance(output, np.ndarray):
                 # tile to n_steps/minibatch size
                 feed_val = np.tile(
-                    output[None, :, None], (n_steps, 1, self.minibatch_size)
+                    output[None, None, :], (self.minibatch_size, n_steps, 1)
                 )
             else:
                 # call output function to determine value
                 feed_val = np.zeros(
-                    (n_steps, n.size_out, self.minibatch_size),
+                    (self.minibatch_size, n_steps, n.size_out),
                     dtype=self.tensor_graph.dtype.as_numpy_dtype,
                 )
 
@@ -1646,9 +1646,9 @@ class Simulator:
                     # may mutate its outputs in-place on subsequent calls.
                     # this assignment will broadcast the output along the
                     # minibatch dimension if required.
-                    feed_val[i] = np.transpose(
-                        [func((i + self.n_steps + 1) * self.dt) for func in output]
-                    )
+                    feed_val[:, i] = [
+                        func((i + self.n_steps + 1) * self.dt) for func in output
+                    ]
 
             # note: we still call the function (above) even if the output
             # is not being used, because it may have side-effects
@@ -1981,12 +1981,9 @@ class SimulationData(collections.Mapping):
             if type(params[i]) == object:
                 params[i] = fetched[params[i]]
 
-            # handle minibatch dimension
-            if sig.minibatched:
-                if not self.minibatched:
-                    params[i] = params[i][..., 0]
-                else:
-                    params[i] = np.moveaxis(params[i], -1, 0)
+            if sig.minibatched and not self.minibatched:
+                # drop minibatch dimension
+                params[i] = params[i][0]
 
         return params
 

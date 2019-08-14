@@ -223,12 +223,21 @@ class TensorSignal:
     @property
     def tf_indices_nd(self):
         """
-        A ``tf.Tensor`` representing the indices of this signal, including
-        empty dimensions for axes > 0.
+        A ``tf.Tensor`` representing the indices of this signal for use with e.g.
+        ``scatter_nd``.
         """
 
         if self._tf_indices_nd is None:
-            self._tf_indices_nd = tf.expand_dims(self.tf_indices, -1)
+            if self.minibatched:
+                idxs = np.stack(
+                    np.meshgrid(
+                        np.arange(self.minibatch_size), self.indices, indexing="ij"
+                    ),
+                    axis=-1,
+                )
+                self._tf_indices_nd = self.constant(idxs, dtype=tf.int32)
+            else:
+                self._tf_indices_nd = tf.expand_dims(self.tf_indices, -1)
 
         return self._tf_indices_nd
 
@@ -246,10 +255,20 @@ class TensorSignal:
             stop = self.indices[-1] + 1
             step = self.indices[1] - self.indices[0] if len(self.indices) > 1 else 1
             if step != 0 and np.array_equal(self.indices, np.arange(start, stop, step)):
+                if self.minibatched:
+                    # add full slice along first (batch) dimension
+                    start = [0, start]
+                    stop = [self.minibatch_size, stop]
+                    step = [1, step]
+                else:
+                    start = [start]
+                    stop = [stop]
+                    step = [step]
+
                 self._tf_slice = (
-                    tf.constant([start]),
-                    tf.constant([stop]),
-                    tf.constant([step]),
+                    tf.constant(start),
+                    tf.constant(stop),
+                    tf.constant(step),
                 )
             else:
 
@@ -261,7 +280,7 @@ class TensorSignal:
     def full_shape(self):
         """Shape of the signal including the minibatch dimension."""
 
-        return self.shape + (self.minibatch_size,) if self.minibatched else self.shape
+        return ((self.minibatch_size,) + self.shape) if self.minibatched else self.shape
 
     @property
     def minibatched(self):
@@ -318,6 +337,12 @@ class SignalDict(Mapping):
             Overwrite/add the data at ``dst`` with ``val``
         """
 
+        logger.debug("scatter")
+        logger.debug("values %s", val)
+        logger.debug("dst %s", dst)
+        logger.debug("indices %s", dst.indices)
+        logger.debug("dst base %s", self.bases[dst.key])
+
         if val.dtype.is_floating and val.dtype.base_dtype != self.dtype:
             raise BuildError(
                 "Tensor detected with wrong dtype (%s), should "
@@ -327,17 +352,10 @@ class SignalDict(Mapping):
         # align val shape with dst base shape
         self.bases[dst.key].get_shape().assert_is_fully_defined()
         val.get_shape().assert_is_fully_defined()
-        dst_shape = (dst.shape[0],) + tuple(
-            self.bases[dst.key].get_shape().as_list()[1:]
-        )
+        dst_shape = self.bases[dst.key].shape.as_list()
+        dst_shape[dst.minibatched] = dst.shape[0]
         if val.get_shape() != dst_shape:
             val = tf.reshape(val, dst.tf_shape)
-
-        logger.debug("scatter")
-        logger.debug("values %s", val)
-        logger.debug("dst %s", dst)
-        logger.debug("indices %s", dst.indices)
-        logger.debug("dst base %s", self.bases[dst.key])
 
         var = self.bases[dst.key]
 
@@ -349,8 +367,8 @@ class SignalDict(Mapping):
             dst.tf_slice is not None
             and var.get_shape().is_compatible_with(val.get_shape())
             and dst.indices[0] == 0
-            and dst.indices[-1] == var.get_shape()[0] - 1
-            and len(dst.indices) == var.get_shape()[0]
+            and dst.indices[-1] == var.shape[dst.minibatched] - 1
+            and len(dst.indices) == var.shape[dst.minibatched]
         ):
             if mode == "inc":
                 result = var + val
@@ -406,12 +424,12 @@ class SignalDict(Mapping):
                 # See https://github.com/tensorflow/tensorflow/issues/30537
                 var = var + 0
 
-            result = tf.gather(var, src.tf_indices)
+            result = tf.gather(var, src.tf_indices, axis=1 if src.minibatched else 0)
             self.read_types["gather"] += 1
         elif (
             src.indices[0] == 0
-            and src.indices[-1] == var.get_shape()[0] - 1
-            and len(src.indices) == var.get_shape()[0]
+            and src.indices[-1] == var.shape[src.minibatched] - 1
+            and len(src.indices) == var.shape[src.minibatched]
         ):
             result = var
             self.read_types["identity"] += 1
@@ -586,7 +604,7 @@ class SignalDict(Mapping):
         ----------
         value : `~numpy.ndarray`
             Array containing the value of the constant
-        dtype : `~numpy.dtype`
+        dtype : `~numpy.dtype` or ``tf.DType``
             The type for the constant (if ``None``, the dtype of ``value``
             will be used)
         cutoff : int
@@ -602,7 +620,9 @@ class SignalDict(Mapping):
 
         if dtype is None:
             dtype = value.dtype
-        dtype = tf.as_dtype(dtype)
+
+        if not isinstance(dtype, tf.DType):
+            dtype = tf.as_dtype(dtype)
 
         if value.nbytes > cutoff:
             ph = tf_compat.placeholder(
@@ -613,7 +633,7 @@ class SignalDict(Mapping):
         else:
             return tf.constant(value, dtype=dtype)
 
-    def op_constant(self, ops, op_sizes, attr, dtype, ndims=2):
+    def op_constant(self, ops, op_sizes, attr, dtype, shape=(1, -1)):
         """
         Creates a tensor representing the constant parameters of an op group.
 
@@ -625,11 +645,11 @@ class SignalDict(Mapping):
             The number of constant elements in each op
         attr : str
             The attribute of the op that describes the constant parameter
-        dtype : `~numpy.dtype`
+        dtype : `~numpy.dtype` or ``tf.DType``
             Numeric type of the parameter
-        ndims : int
-            Empty dimensions will be added to the end of the returned tensor
-            for all ndims > 1 (in the case that it is not a scalar).
+        shape : tuple of int
+            Shape for returned constant (this will be ignored in the scalar case).
+            The default adds an empty dimension for broadcasting along the batch axis.
 
         Returns
         -------
@@ -639,16 +659,23 @@ class SignalDict(Mapping):
             an array giving the parameter value for each element in each op.
         """
 
+        if not isinstance(dtype, tf.DType):
+            dtype = tf.as_dtype(dtype)
+
         vals = [getattr(op, attr) for op in ops]
         if np.allclose(vals, vals[0]):
-            return tf.constant(vals[0], dtype=tf.as_dtype(dtype))
+            return tf.constant(vals[0], dtype=dtype)
 
         assert len(op_sizes) == len(ops)
-        v = np.zeros([sum(op_sizes)] + [1] * (ndims - 1), dtype=dtype)
+        v = np.zeros(sum(op_sizes), dtype=dtype.as_numpy_dtype)
         k = 0
         for val, size in zip(vals, op_sizes):
             v[k : k + size] = val
             k += size
+
+        if shape is not None:
+            v = np.reshape(v, shape)
+
         return self.constant(v, dtype=dtype)
 
     def __getitem__(self, sig):

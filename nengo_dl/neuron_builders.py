@@ -48,13 +48,13 @@ class GenericNeuronBuilder(OpBuilder):
             for op in ops:
                 # slice out the individual state vectors from the overall
                 # array
-                op_J = J[J_offset : J_offset + op.J.shape[0]]
+                op_J = J[:, J_offset : J_offset + op.J.shape[0]]
                 J_offset += op.J.shape[0]
 
                 op_states = []
                 for j, s in enumerate(op.states):
                     op_states += [
-                        states[j][state_offset[j] : state_offset[j] + s.shape[0]]
+                        states[j][:, state_offset[j] : state_offset[j] + s.shape[0]]
                     ]
                     state_offset[j] += s.shape[0]
 
@@ -66,16 +66,16 @@ class GenericNeuronBuilder(OpBuilder):
                     # blank output variable
                     neuron_output = np.zeros(op.output.shape, self.output_data.dtype)
                     op.neurons.step_math(
-                        dt, op_J[..., j], neuron_output, *[s[..., j] for s in op_states]
+                        dt, op_J[j], neuron_output, *[s[j] for s in op_states]
                     )
                     mini_out += [neuron_output]
-                neuron_output = np.stack(mini_out, axis=-1)
+                neuron_output = np.stack(mini_out, axis=0)
 
                 # concatenate outputs
                 if output is None:
                     output = neuron_output
                 else:
-                    output = np.concatenate((output, neuron_output), axis=0)
+                    output = np.concatenate((output, neuron_output), axis=1)
 
             return (output,) + states
 
@@ -102,11 +102,11 @@ class GenericNeuronBuilder(OpBuilder):
             neuron_out, state_out = ret[0], ret[1:]
         self.prev_result = [neuron_out]
 
-        neuron_out.set_shape(self.output_data.shape + (signals.minibatch_size,))
+        neuron_out.set_shape((signals.minibatch_size,) + self.output_data.shape)
         signals.scatter(self.output_data, neuron_out)
 
         for i, s in enumerate(self.state_data):
-            state_out[i].set_shape(s.shape + (signals.minibatch_size,))
+            state_out[i].set_shape((signals.minibatch_size,) + s.shape)
             signals.scatter(s, state_out[i])
 
 
@@ -235,7 +235,7 @@ class LIFRateBuilder(OpBuilder):
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
         self.zeros = tf.zeros(
-            self.J_data.shape + (signals.minibatch_size,), signals.dtype
+            (signals.minibatch_size,) + self.J_data.shape, signals.dtype
         )
 
         self.epsilon = tf.constant(1e-15, dtype=signals.dtype)

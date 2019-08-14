@@ -86,16 +86,16 @@ class GenericProcessBuilder(OpBuilder):
             for i, op in enumerate(ops):
                 if op.input is not None:
                     input_shape = op.input.shape[0]
-                    func_input = input[input_offset : input_offset + input_shape]
+                    func_input = input[:, input_offset : input_offset + input_shape]
                     input_offset += input_shape
 
                 mini_out = []
                 for j in range(signals.minibatch_size):
-                    x = [] if op.input is None else [func_input[..., j]]
+                    x = [] if op.input is None else [func_input[j]]
                     mini_out += [self.step_fs[i][j](*([time] + x))]
-                func_output += [np.stack(mini_out, axis=-1)]
+                func_output += [np.stack(mini_out, axis=0)]
 
-            return [np.concatenate(func_output, axis=0)] + self.step_states
+            return [np.concatenate(func_output, axis=1)] + self.step_states
 
         self.merged_func = merged_func
         self.merged_func.__name__ = utils.sanitize_name(
@@ -139,22 +139,27 @@ class GenericProcessBuilder(OpBuilder):
         ]
 
         # build all the states into combined array with shape
-        # (n_states, n_ops, state_d, minibatch_size)
+        # (n_states, n_ops, *state_d)
         combined_states = [[None for _ in ops] for _ in range(len(ops[0].state))]
         for i, op in enumerate(ops):
             for j, s in enumerate(step_states[i].values()):
-                # duplicate state for each minibatch
-                if signals[list(op.state.values())[j]].minibatched:
-                    s = np.tile(s[..., None], (1,) * s.ndim + (signals.minibatch_size,))
                 combined_states[j][i] = s
 
-        # combine op states along first dimension, giving shape
-        # (n_states, n_ops * state_d, minibatch_size)
+        # combine op states, giving shape
+        # (n_states, n_ops * state_d[0], *state_d[1:])
         # (keeping track of the offset of where each op's state lies in the
         # combined array)
         offsets = [[s.shape[0] for s in state] for state in combined_states]
         offsets = np.cumsum(offsets, axis=-1)
         self.step_states = [np.concatenate(state, axis=0) for state in combined_states]
+
+        # duplicate state for each minibatch, giving shape
+        # (n_states, minibatch_size, n_ops * state_d[0], *state_d[1:])
+        assert all(s.minibatched for op in ops for s in op.state.values())
+        for i, state in enumerate(self.step_states):
+            self.step_states[i] = np.tile(
+                state[None, ...], (signals.minibatch_size,) + (1,) * state.ndim
+            )
 
         # build the step functions
         for i, op in enumerate(ops):
@@ -165,7 +170,7 @@ class GenericProcessBuilder(OpBuilder):
                     start = 0 if i == 0 else offsets[k][i - 1]
                     stop = offsets[k][i]
 
-                    state[name] = self.step_states[k][start:stop, ..., j]
+                    state[name] = self.step_states[k][j, start:stop]
 
                     assert np.allclose(state[name], step_states[i][name])
 
@@ -216,17 +221,13 @@ class LowpassBuilder(OpBuilder):
             nums += [num] * op.input.shape[0]
             dens += [den] * op.input.shape[0]
 
-        nums = np.asarray(nums)
-        while nums.ndim < len(self.input_data.full_shape):
-            nums = np.expand_dims(nums, -1)
+        if self.input_data.minibatched:
+            # add batch dimension for broadcasting
+            nums = np.expand_dims(nums, 0)
+            dens = np.expand_dims(dens, 0)
 
-        # note: applying the negative here
+        # apply the negative here
         dens = -np.asarray(dens)
-        while dens.ndim < len(self.input_data.full_shape):
-            dens = np.expand_dims(dens, -1)
-
-        # need to manually broadcast for scatter_mul
-        # dens = np.tile(dens, (1, signals.minibatch_size))
 
         self.nums = signals.constant(nums, dtype=self.output_data.dtype)
         self.dens = signals.constant(dens, dtype=self.output_data.dtype)
@@ -236,10 +237,6 @@ class LowpassBuilder(OpBuilder):
         #     "state", self.output_data.shape)
 
     def build_step(self, signals):
-        # signals.scatter(self.output_data, self.dens, mode="mul")
-        # input = signals.gather(self.input_data)
-        # signals.scatter(self.output_data, self.nums * input, mode="inc")
-
         input = signals.gather(self.input_data)
         output = signals.gather(self.output_data)
 
@@ -278,6 +275,11 @@ class LinearFilterBuilder(OpBuilder):
         self.input_data = signals.combine([op.input for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
 
+        if self.input_data.ndim != 1:
+            raise NotImplementedError(
+                "LinearFilter of non-vector signals is not implemented"
+            )
+
         steps = [
             make_linear_step(
                 op.process, op.input.shape, op.output.shape, signals.dt_val
@@ -295,26 +297,29 @@ class LinearFilterBuilder(OpBuilder):
             self.A = None
             self.B = None
             self.C = None
-            # combine D scalars for each op, and broadcast along signal_d
+            # combine D scalars for each op, and broadcast along minibatch and
+            # signal dimensions
             self.D = signals.constant(
-                np.concatenate([step.D[:, None] for step in steps]), dtype=signals.dtype
+                np.concatenate([step.D[None, :, None] for step in steps], axis=1),
+                dtype=signals.dtype,
             )
 
-            assert self.D.get_shape() == (self.n_ops, 1)
+            assert self.D.get_shape() == (1, self.n_ops, 1)
         elif self.step_type == OneX:
-            # combine A scalars for each op, and broadcast along state_d
+            # combine A scalars for each op, and broadcast along batch/state
             self.A = signals.constant(
-                np.concatenate([step.A for step in steps]), dtype=signals.dtype
+                np.concatenate([step.A for step in steps])[None, :], dtype=signals.dtype
             )
-            # combine B and C scalars for each op, and broadcast along signal_d
+            # combine B and C scalars for each op, and broadcast along batch/state
             self.B = signals.constant(
-                np.concatenate([step.B * step.C for step in steps]), dtype=signals.dtype
+                np.concatenate([step.B * step.C for step in steps])[None, :],
+                dtype=signals.dtype,
             )
             self.C = None
             self.D = None
 
-            assert self.A.get_shape() == (self.n_ops, 1)
-            assert self.B.get_shape() == (self.n_ops, 1)
+            assert self.A.get_shape() == (1, self.n_ops, 1)
+            assert self.B.get_shape() == (1, self.n_ops, 1)
         else:
             self.A = signals.constant(
                 np.stack([step.A for step in steps], axis=0), dtype=signals.dtype
@@ -351,19 +356,35 @@ class LinearFilterBuilder(OpBuilder):
         input = signals.gather(self.input_data)
 
         if self.step_type == NoX:
+            input = tf.reshape(input, (signals.minibatch_size, self.n_ops, -1))
+
             signals.scatter(self.output_data, self.D * input)
         elif self.step_type == OneX:
-            input = tf.reshape(input, (self.n_ops, -1))
+            input = tf.reshape(input, (signals.minibatch_size, self.n_ops, -1))
 
             # note: we use the output signal in place of a separate state
             output = signals.gather(self.output_data)
-            output = tf.reshape(output, (self.n_ops, -1))
+            output = tf.reshape(output, (signals.minibatch_size, self.n_ops, -1))
 
             signals.scatter(self.output_data, self.A * output + self.B * input)
         else:
-            input = tf.reshape(input, (self.n_ops, 1, -1))
+            # TODO: possible to rework things to not require all the
+            #  transposing/reshaping required for moving batch to end?
+            def undo_batch(x):
+                x = tf.reshape(x, x.shape[:-1].as_list() + [-1, signals.minibatch_size])
+                x = tf.transpose(x, np.roll(np.arange(x.shape.ndims), 1))
+                return x
+
+            # separate by op and collapse batch/state dimensions
+            assert input.shape.ndims == 2
+            input = tf.transpose(input)
+            input = tf.reshape(
+                input, (self.n_ops, 1, self.signal_d * signals.minibatch_size)
+            )
 
             state = signals.gather(self.state_data)
+            assert input.shape.ndims == 3
+            state = tf.transpose(state, perm=(1, 2, 0))
             state = tf.reshape(
                 state,
                 (self.n_ops, self.state_d, self.signal_d * signals.minibatch_size),
@@ -372,22 +393,23 @@ class LinearFilterBuilder(OpBuilder):
             if self.step_type == NoD:
                 # for NoD, we update the state before computing the output
                 new_state = tf.matmul(self.A, state) + self.B * input
-                signals.scatter(self.state_data, new_state)
+
+                signals.scatter(self.state_data, undo_batch(new_state))
 
                 output = tf.matmul(self.C, new_state)
 
-                signals.scatter(self.output_data, output)
+                signals.scatter(self.output_data, undo_batch(output))
             else:
                 # in the general case, we compute the output before updating
                 # the state
                 output = tf.matmul(self.C, state)
                 if self.step_type == General:
                     output += self.D * input
-                signals.scatter(self.output_data, output)
+                signals.scatter(self.output_data, undo_batch(output))
 
                 new_state = tf.matmul(self.A, state) + self.B * input
 
-                signals.scatter(self.state_data, new_state)
+                signals.scatter(self.state_data, undo_batch(new_state))
 
 
 @Builder.register(SimProcess)

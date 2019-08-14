@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import config, dists, SoftLIFRate
+from nengo_dl import config, dists, SoftLIFRate, neuron_builders
 
 
 def test_lif_deterministic(Simulator, seed):
@@ -23,6 +23,38 @@ def test_lif_deterministic(Simulator, seed):
             sim.run_steps(50)
 
         assert np.allclose(sim.data[p], canonical)
+
+
+def test_merged_generic(Simulator, seed):
+    with nengo.Network(seed=seed) as net:
+        nodes = []
+        ensembles = []
+        probes = []
+        for _ in range(2):
+            nodes.append(nengo.Node([1]))
+            ensembles.append(nengo.Ensemble(10, 1, neuron_type=nengo.AdaptiveLIF()))
+            nengo.Connection(nodes[-1], ensembles[-1], synapse=None)
+            probes.append(nengo.Probe(ensembles[-1].neurons))
+
+    with nengo.Simulator(net) as canonical:
+        canonical.run_steps(100)
+
+    with Simulator(net) as sim:
+        ops = [
+            ops
+            for ops in sim.tensor_graph.plan
+            if isinstance(ops[0], nengo.builder.neurons.SimNeurons)
+        ]
+        assert len(ops) == 1
+        assert isinstance(
+            sim.tensor_graph.op_builder.op_builds[ops[0]].built_neurons,
+            neuron_builders.GenericNeuronBuilder,
+        )
+
+        sim.run_steps(100)
+
+        for p in probes:
+            assert np.allclose(sim.data[p], canonical.data[p])
 
 
 @pytest.mark.parametrize("sigma", (1, 0.5))
