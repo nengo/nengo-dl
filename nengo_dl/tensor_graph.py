@@ -328,7 +328,7 @@ class TensorGraph:
                 # initial value.
                 if probe_sig.minibatched:
                     init_val = np.tile(
-                        probe_sig.initial_value[..., None], (1, self.minibatch_size)
+                        probe_sig.initial_value[None, :], (self.minibatch_size, 1)
                     )
                 else:
                     init_val = probe_sig.initial_value
@@ -379,7 +379,7 @@ class TensorGraph:
                     for n in self.input_ph:
                         self.signals.scatter(
                             self.signals[self.model.sig[n]["out"]],
-                            self.input_ph[n][loop_i],
+                            self.input_ph[n][:, loop_i],
                         )
 
                     # build the operators for a single step
@@ -454,8 +454,12 @@ class TensorGraph:
             x = a.stack()
 
             if self.model.sig[p]["in"].minibatched:
-                x = tf.transpose(a=x, perm=np.roll(np.arange(x.get_shape().ndims), 1))
+                # change from tensorarray's (steps, batch, d) to (batch, steps, d)
+                perm = np.arange(x.shape.ndims)
+                perm[[0, 1]] = perm[[1, 0]]
+                x = tf.transpose(a=x, perm=perm)
             else:
+                # add minibatch dimension for consistency
                 x = tf.expand_dims(x, 0)
 
             self.probe_arrays[p] = x
@@ -480,7 +484,7 @@ class TensorGraph:
                 # set up a placeholder input for this node
                 self.input_ph[n] = tf_compat.placeholder(
                     self.dtype,
-                    (None, n.size_out, self.minibatch_size),
+                    (self.minibatch_size, None, n.size_out),
                     name="%s_ph" % utils.sanitize_name(n),
                 )
 
@@ -903,7 +907,9 @@ class TensorGraph:
             # rebuild tf indices outside the while loop
             tensor_sig._tf_indices = None
 
-        return tf.gather(base, tensor_sig.tf_indices)
+        return tf.gather(
+            base, tensor_sig.tf_indices, axis=1 if tensor_sig.minibatched else 0
+        )
 
     def mark_signals(self):
         """
@@ -1152,17 +1158,22 @@ class TensorGraph:
             if sig.minibatched:
                 # duplicate along minibatch dimension
                 initial_value = np.tile(
-                    initial_value[..., None],
-                    tuple(1 for _ in shape) + (self.minibatch_size,),
+                    initial_value[None, ...],
+                    (self.minibatch_size,) + tuple(1 for _ in shape),
                 )
 
             if key in base_arrays:
                 base_arrays[key][0].append(initial_value)
                 base_arrays[key][2] += shape[0]
             else:
-                base_arrays[key] = [[initial_value], sig.trainable, shape[0]]
+                base_arrays[key] = [
+                    [initial_value],
+                    sig.trainable,
+                    shape[0],
+                    sig.minibatched,
+                ]
 
-            n = base_arrays[key][-1]
+            n = base_arrays[key][2]
             indices = np.arange(n - shape[0], n)
 
             tensor_sig = self.signals.get_tensor_signal(
@@ -1173,9 +1184,10 @@ class TensorGraph:
             logger.debug(sig)
             logger.debug(tensor_sig)
 
+        # concatenate all the signal initial values into full base arrays
         for key in base_arrays:
-            arrs, t, _ = base_arrays[key]
-            base_arrays[key] = (np.concatenate(arrs, axis=0), t)
+            arrs, t, _, minibatched = base_arrays[key]
+            base_arrays[key] = (np.concatenate(arrs, axis=1 if minibatched else 0), t)
 
         # add any signal views to the sig_map
         all_views = [
@@ -1221,12 +1233,14 @@ class TensorGraph:
                     initial_value = initial_value.data
                 else:
                     initial_value = initial_value.tocoo().data
+
+            base_value = base_arrays[tensor_sig.key][0]
             if sig.minibatched:
-                initial_value = initial_value[..., None]
-            assert np.allclose(
-                base_arrays[tensor_sig.key][0][tensor_sig.indices],
-                initial_value.astype(dtype),
-            )
+                initial_value = initial_value[None, ...]
+                base_value = base_value[:, tensor_sig.indices]
+            else:
+                base_value = base_value[tensor_sig.indices]
+            assert np.allclose(base_value, initial_value.astype(dtype))
 
         logger.debug("base arrays")
         logger.debug(

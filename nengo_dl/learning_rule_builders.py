@@ -13,7 +13,6 @@ from nengo.builder.learning_rules import (
 from nengo.builder.operator import Reset, DotInc, Copy
 from nengo.learning_rules import PES
 import numpy as np
-import tensorflow as tf
 
 from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
 from nengo_dl.compat import SimPES
@@ -28,7 +27,9 @@ class SimBCMBuilder(OpBuilder):
         super(SimBCMBuilder, self).__init__(ops, signals, config)
 
         self.post_data = signals.combine([op.post_filtered for op in ops])
+        self.post_data = self.post_data.reshape(self.post_data.shape + (1,))
         self.theta_data = signals.combine([op.theta for op in ops])
+        self.theta_data = self.theta_data.reshape(self.theta_data.shape + (1,))
 
         self.pre_data = signals.combine(
             [op.pre_filtered for op in ops for _ in range(op.post_filtered.shape[0])]
@@ -42,7 +43,7 @@ class SimBCMBuilder(OpBuilder):
             [op.post_filtered.shape[0] for op in ops],
             "learning_rate",
             signals.dtype,
-            ndims=3,
+            shape=(1, -1, 1),
         )
 
         self.output_data = signals.combine([op.delta for op in ops])
@@ -53,8 +54,6 @@ class SimBCMBuilder(OpBuilder):
         theta = signals.gather(self.theta_data)
 
         post = self.learning_rate * signals.dt * post * (post - theta)
-
-        post = tf.expand_dims(post, 1)
 
         signals.scatter(self.output_data, post * pre)
 
@@ -74,6 +73,7 @@ class SimOjaBuilder(OpBuilder):
         super(SimOjaBuilder, self).__init__(ops, signals, config)
 
         self.post_data = signals.combine([op.post_filtered for op in ops])
+        self.post_data = self.post_data.reshape(self.post_data.shape + (1,))
 
         self.pre_data = signals.combine(
             [op.pre_filtered for op in ops for _ in range(op.post_filtered.shape[0])]
@@ -90,7 +90,7 @@ class SimOjaBuilder(OpBuilder):
             [op.post_filtered.shape[0] for op in ops],
             "learning_rate",
             signals.dtype,
-            ndims=3,
+            shape=(1, -1, 1),
         )
 
         self.beta = signals.op_constant(
@@ -98,15 +98,13 @@ class SimOjaBuilder(OpBuilder):
             [op.post_filtered.shape[0] for op in ops],
             "beta",
             signals.dtype,
-            ndims=3,
+            shape=(1, -1, 1),
         )
 
     def build_step(self, signals):
         pre = signals.gather(self.pre_data)
         post = signals.gather(self.post_data)
         weights = signals.gather(self.weights_data)
-
-        post = tf.expand_dims(post, 1)
 
         alpha = self.learning_rate * signals.dt
 
@@ -132,6 +130,7 @@ class SimVojaBuilder(OpBuilder):
         super(SimVojaBuilder, self).__init__(ops, signals, config)
 
         self.post_data = signals.combine([op.post_filtered for op in ops])
+        self.post_data = self.post_data.reshape(self.post_data.shape + (1,))
 
         self.pre_data = signals.combine(
             [op.pre_decoded for op in ops for _ in range(op.post_filtered.shape[0])]
@@ -143,11 +142,12 @@ class SimVojaBuilder(OpBuilder):
         self.learning_data = signals.combine(
             [op.learning_signal for op in ops for _ in range(op.post_filtered.shape[0])]
         )
+        self.learning_data = self.learning_data.reshape(self.learning_data.shape + (1,))
         self.encoder_data = signals.combine([op.scaled_encoders for op in ops])
         self.output_data = signals.combine([op.delta for op in ops])
 
         self.scale = signals.constant(
-            np.concatenate([op.scale[:, None, None] for op in ops], axis=0),
+            np.concatenate([op.scale[None, :, None] for op in ops], axis=1),
             dtype=signals.dtype,
         )
 
@@ -156,6 +156,7 @@ class SimVojaBuilder(OpBuilder):
             [op.post_filtered.shape[0] for op in ops],
             "learning_rate",
             signals.dtype,
+            shape=(1, -1, 1),
         )
 
     def build_step(self, signals):
@@ -164,8 +165,7 @@ class SimVojaBuilder(OpBuilder):
         learning_signal = signals.gather(self.learning_data)
         scaled_encoders = signals.gather(self.encoder_data)
 
-        alpha = tf.expand_dims(self.learning_rate * signals.dt * learning_signal, 1)
-        post = tf.expand_dims(post, 1)
+        alpha = self.learning_rate * signals.dt * learning_signal
 
         update = alpha * (self.scale * post * pre - post * scaled_encoders)
 
@@ -254,7 +254,7 @@ class SimPESBuilder(OpBuilder):
         )
 
         self.alpha = signals.op_constant(
-            ops, [1 for _ in ops], "learning_rate", signals.dtype, ndims=4
+            ops, [1 for _ in ops], "learning_rate", signals.dtype, shape=(1, -1, 1, 1)
         ) * (-signals.dt_val / ops[0].pre_filtered.shape[0])
 
         assert all(op.encoders is None for op in ops)

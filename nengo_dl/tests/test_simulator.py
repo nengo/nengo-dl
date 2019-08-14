@@ -503,17 +503,17 @@ def test_generate_inputs(Simulator, seed):
         sim.run_steps(3, data={inp[0]: np.zeros((2, 3, 1))})
 
         vals = [
-            np.zeros((3, 1, 2)),
-            np.tile(np.sin(sim.trange())[:, None, None], (1, 1, 2)),
-            np.tile(proc.run_steps(3)[:, :, None], (1, 1, 2)),
-            np.ones((3, 1, 2)) * 2,
+            np.zeros((2, 3, 1)),
+            np.tile(np.sin(sim.trange())[None, :, None], (2, 1, 1)),
+            np.tile(proc.run_steps(3)[None, :, :], (2, 1, 1)),
+            np.ones((2, 3, 1)) * 2,
         ]
         for i, x in enumerate(vals):
             assert np.allclose(feed[ph[i]], x)
-            assert np.allclose(sim.data[p[i]], x.transpose(2, 0, 1))
+            assert np.allclose(sim.data[p[i]], x)
 
         # check that unseeded process was different in each minibatch item
-        assert not np.allclose(feed[ph[-1]][..., 0], feed[ph[-1]][..., 1])
+        assert not np.allclose(feed[ph[-1]][0], feed[ph[-1]][1])
 
 
 @pytest.mark.training

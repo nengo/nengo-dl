@@ -63,8 +63,8 @@ class ResetBuilder(OpBuilder):
                 axis=0,
             )
             value = np.tile(
-                value[..., None],
-                tuple(1 for _ in value.shape) + (signals.minibatch_size,),
+                value[None, ...],
+                (signals.minibatch_size,) + tuple(1 for _ in value.shape),
             )
             self.scatters += [
                 (signals.combine([x.dst for x in group]), signals.constant(value))
@@ -110,7 +110,7 @@ class CopyBuilder(OpBuilder):
         if not self.src_data.minibatched and self.dst_data.minibatched:
             # broadcast indices so that the un-minibatched src data gets
             # copied to each minibatch dimension in dst
-            self.src_data = self.src_data.broadcast(-1, signals.minibatch_size)
+            self.src_data = self.src_data.broadcast(0, signals.minibatch_size)
 
     def build_step(self, signals):
         signals.scatter(self.dst_data, signals.gather(self.src_data), mode=self.mode)
@@ -149,6 +149,7 @@ class ElementwiseIncBuilder(OpBuilder):
         self.X_data = signals.combine([op.X for op in ops])
 
         # separate data from each op along the first dimension
+        # (we only need to do this if they don't have the same length already)
         if self.A_data.shape[0] != self.X_data.shape[0]:
             self.A_data = self.A_data.reshape((len(ops), -1) + self.A_data.shape[1:])
             self.X_data = self.X_data.reshape((len(ops), -1) + self.X_data.shape[1:])
@@ -159,7 +160,7 @@ class ElementwiseIncBuilder(OpBuilder):
 
         # add broadcast dimension for minibatch, if needed
         if not self.A_data.minibatched and self.X_data.minibatched:
-            self.A_data = self.A_data.reshape(self.A_data.shape + (1,))
+            self.A_data = self.A_data.reshape((1,) + self.A_data.shape)
 
     def build_step(self, signals):
         A = signals.gather(self.A_data)
@@ -186,7 +187,7 @@ class ElementwiseIncBuilder(OpBuilder):
         return True
 
 
-def sparse_matmul(A_indices, A_data, A_shape, X):
+def sparse_matmul(A_indices, A_data, A_shape, X, transpose_x=False):
     """
     Matrix multiplication between sparse matrix A and dense matrix X
 
@@ -200,6 +201,8 @@ def sparse_matmul(A_indices, A_data, A_shape, X):
         Shape of full A matrix
     X : ``tf.Tensor``
         Dense matrix being multiplied by A
+    transpose_x : bool
+        Transpose X before multiply
 
     Returns
     -------
@@ -222,7 +225,9 @@ def sparse_matmul(A_indices, A_data, A_shape, X):
     else:
         A = A_data
 
-    dot = gen_sparse_ops.sparse_tensor_dense_mat_mul(A_indices, A, A_shape, X)
+    dot = gen_sparse_ops.sparse_tensor_dense_mat_mul(
+        A_indices, A, A_shape, X, adjoint_b=transpose_x
+    )
 
     if must_downcast:
         dot = tf.cast(dot, A_data.dtype.base_dtype)
@@ -244,9 +249,7 @@ class DotIncBuilder(OpBuilder):
     """
 
     def __init__(self, ops, signals, config):
-        # note: bypassing the DotIncBuilder init
-        # pylint: disable=bad-super-call
-        super(DotIncBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         logger.debug("dst %s", [op.Y for op in ops])
         logger.debug("A %s", [op.A for op in ops])
@@ -284,12 +287,12 @@ class DotIncBuilder(OpBuilder):
             self.X_data = X_data.reshape((len(ops), -1))
 
             if self.A_data.minibatched:
-                # add broadcast dimension to X
+                # change X to matrix
                 self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
-
-                # precompute transposition indices
-                self.perm = tf.constant((0, 3, 1, 2))
-                self.perm_inv = tf.constant((0, 2, 3, 1))
+            else:
+                # precompute transposition permutation
+                self.perm = tf.constant((1, 2, 0))
+                self.perm_inv = tf.constant((2, 0, 1))
         else:
             # if the first dimensions don't match, then we create a block
             # diagonal matrix out of all the op matrices, and then multiply
@@ -330,45 +333,46 @@ class DotIncBuilder(OpBuilder):
             )
             self.A_shape = tf.constant(corner, dtype=tf.int64)
 
+            # precompute transposition permutation
+            self.perm = tf.constant((1, 0))
+
     def build_step(self, signals):
         A = signals.gather(self.A_data)
         X = signals.gather(self.X_data)
 
         if self.len_match:
             if self.A_data.minibatched and self.X_data.minibatched:
-                # dot = tf.einsum("ijkl,ikl->ijl", A, X)
-
-                # note: this is just a duplicate of what einsum does
-                # internally; we do it manually so that we can move the
-                # perm/perm_inv constants into the pre-build step
-                A = tf.transpose(a=A, perm=self.perm)
-                X = tf.transpose(a=X, perm=self.perm)
+                # (batch, n_ops, a0, a1) x (batch, n_ops, a1, 1)
                 dot = tf.matmul(A, X)
-                dot = tf.transpose(a=dot, perm=self.perm_inv)
-                dot.set_shape(self.A_data.shape[:2] + (1, signals.minibatch_size))
             elif not self.A_data.minibatched and self.X_data.minibatched:
-                dot = tf.matmul(A, X)
-            else:
-                # note: these cases never come up (so far) in nengo, since X
-                # is always minibatched. but preserving them here for
-                # posterity, in case they are ever used
+                # (n_ops, a0, a1) x (batch, n_ops, a1)
+                # -> (n_ops, a0, a1) x (n_ops, a1, batch)
+                dot = tf.matmul(A, tf.transpose(X, perm=self.perm))
+                # transpose back to (batch, n_ops, a0)
+                dot = tf.transpose(dot, perm=self.perm_inv)
 
-                # A minibatched, X not minibatched
-                # dot = tf.einsum("ijkl,ik->ijl", A, X)
-                # A not minibatched, X not minibatched
-                # dot = tf.einsum("ijk,ik->ij", A, X)
+                # for some reason the transposing causes TensorFlow to lose track of
+                # the shape (only when the `perm` constants are outside the loop)
+                dot.set_shape((signals.minibatch_size,) + self.A_data.shape[:2])
+            else:
                 raise NotImplementedError
         else:
-            dot = sparse_matmul(self.sparse_indices, A, self.A_shape, X)
+            # (sum(a0s), sum(a1s)) x (batch, sum(a1s))
+            # -> (sum(a0s), sum(a1s)) x (sum(a1s), batch)
+            dot = sparse_matmul(
+                self.sparse_indices, A, self.A_shape, X, transpose_x=True
+            )
+            # transpose result back to (batch, sum(a0s))
+            dot = tf.transpose(dot, self.perm)
 
-            dot.set_shape(self.Y_data.shape + (signals.minibatch_size,))
+            dot.set_shape((signals.minibatch_size,) + self.Y_data.shape)
 
         signals.scatter(self.Y_data, dot, mode=self.mode)
 
     @staticmethod
     def mergeable(x, y):
-        # if the matrix (A) is minibatched, then the first dimensions need
-        # to match up (to allow us to transpose the dimensions)
+        # if the matrix (A) is minibatched, then we're in the non-sparse case, and the
+        # first dimensions need to match up (to allow us to separate them by op)
         if x.A.minibatched:
             for s0, s1 in zip(x.all_signals, y.all_signals):
                 shape0 = s0.shape[0] if s0.shape != () else 1
@@ -411,31 +415,31 @@ class SimPyFuncBuilder(OpBuilder):
                 else:
                     func = utils.align_func(op.output.shape, self.output_dtype)(op.fn)
 
-                func_input = inputs[offset : offset + op.x.shape[0]]
+                func_input = inputs[:, offset : offset + op.x.shape[0]]
                 offset += op.x.shape[0]
 
                 mini_out = []
                 for j in range(signals.minibatch_size):
                     if op.t is None:
-                        func_out = func(func_input[..., j])
+                        func_out = func(func_input[j])
                     else:
-                        func_out = func(time, func_input[..., j])
+                        func_out = func(time, func_input[j])
 
                     if op.output is None:
                         # just return time as a noop (since we need to
                         # return something)
-                        func_out = time
+                        func_out = [time]
                     mini_out += [func_out]
-                outputs += [np.stack(mini_out, axis=-1)]
+                outputs += [np.stack(mini_out, axis=0)]
 
-            return np.concatenate(outputs, axis=0)
+            return np.concatenate(outputs, axis=1)
 
         self.merged_func = merged_func
         self.merged_func.__name__ = "_".join([utils.function_name(op.fn) for op in ops])
-        self.output_shape = (
+        self.output_shape = (signals.minibatch_size,)
+        self.output_shape += (
             (len(ops),) if self.output_data is None else self.output_data.shape
         )
-        self.output_shape += (signals.minibatch_size,)
 
     def build_step(self, signals):
         time = signals.time if self.time_input else []
@@ -514,13 +518,20 @@ class SparseDotIncBuilder(OpBuilder):
         )
         self.A_shape = tf.constant(corner, dtype=tf.int64)
 
+        self.perm = tf.constant((1, 0))
+
     def build_step(self, signals):
         A = signals.gather(self.A_data)
         X = signals.gather(self.X_data)
 
-        dot = sparse_matmul(self.sparse_indices, A, self.A_shape, X)
+        # (sum(a0s), sum(a1s)) x (batch, sum(a1s))
+        # -> (sum(a0s), sum(a1s)) x (sum(a1s), batch)
+        dot = sparse_matmul(self.sparse_indices, A, self.A_shape, X, transpose_x=True)
 
-        dot.set_shape(self.Y_data.shape + (signals.minibatch_size,))
+        # transpose result back to (batch, sum(a0s))
+        dot = tf.transpose(dot, perm=self.perm)
+
+        dot.set_shape((signals.minibatch_size,) + self.Y_data.shape)
 
         signals.scatter(self.Y_data, dot, mode="inc")
 

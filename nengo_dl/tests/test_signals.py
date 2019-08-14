@@ -106,107 +106,120 @@ def test_tensor_signal_load_indices(sess):
     assert sig.tf_slice is None
 
 
-def test_signal_dict_scatter(sess):
-    minibatch_size = 1
+@pytest.mark.parametrize("minibatched", (True, False))
+def test_signal_dict_scatter(sess, minibatched):
+    minibatch_size = 2
     var_size = 19
     signals = SignalDict(tf.float32, minibatch_size, False)
 
     key = object()
     var_key = object()
-    val = np.random.randn(var_size, minibatch_size).astype(np.float32)
+    val = np.random.random(
+        (minibatch_size, var_size) if minibatched else (var_size,)
+    ).astype(np.float32)
+    update_shape = (minibatch_size, 4) if minibatched else (4,)
+    pre_slice = np.index_exp[:, :4] if minibatched else np.index_exp[:4]
+    post_slice = np.index_exp[:, 4:] if minibatched else np.index_exp[4:]
 
     signals.bases = {
         key: tf.constant(val),
         var_key: tf_compat.assign(tf.Variable(val), val),
     }
 
-    x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), True)
+    x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), minibatched)
     with pytest.raises(BuildError, match="wrong dtype"):
-        signals.scatter(x, tf.ones((4,), dtype=tf.float64))
+        signals.scatter(x, tf.ones(update_shape, dtype=tf.float64))
 
-    y = signals.get_tensor_signal([0, 1, 2, 3], var_key, tf.float32, (4,), True)
+    x_var = signals.get_tensor_signal(
+        [0, 1, 2, 3], var_key, tf.float32, (4,), minibatched
+    )
     with pytest.raises(BuildError, match="should not be a Variable"):
-        signals.scatter(y, tf.ones((4,)))
+        signals.scatter(x_var, tf.ones(update_shape))
 
     # update
-    signals.scatter(x, tf.ones((4,)))
+    signals.scatter(x, tf.ones(update_shape))
     y = sess.run(signals.bases[key])
-    assert np.allclose(y[:4], 1)
-    assert np.allclose(y[4:], val[4:])
+    assert np.allclose(y[pre_slice], 1)
+    assert np.allclose(y[post_slice], val[post_slice])
 
     # increment, and reshaping val
-    signals.scatter(x, tf.ones((2, 2)), mode="inc")
+    signals.scatter(
+        x, tf.ones((minibatch_size, 2, 2) if minibatched else (2, 2)), mode="inc"
+    )
     y = sess.run(signals.bases[key])
-    assert np.allclose(y[:4], 2)
-    assert np.allclose(y[4:], val[4:])
+    assert np.allclose(y[pre_slice], 2)
+    assert np.allclose(y[post_slice], val[post_slice])
 
     # recognize assignment to full array
     x = signals.get_tensor_signal(
-        np.arange(var_size), key, tf.float32, (var_size,), True
+        np.arange(var_size), key, tf.float32, (var_size,), minibatched
     )
-    y = tf.ones((var_size, 1))
+    y = tf.ones((minibatch_size, var_size) if minibatched else (var_size,))
     signals.scatter(x, y)
     assert signals.bases[key] is y
 
     # recognize assignment to strided full array
     x = signals.get_tensor_signal(
-        np.arange(0, var_size, 2), key, tf.float32, (var_size // 2 + 1,), True
+        np.arange(0, var_size, 2), key, tf.float32, (var_size // 2 + 1,), minibatched
     )
-    y = tf.ones((var_size // 2 + 1, 1))
+    y = tf.ones(
+        (minibatch_size, var_size // 2 + 1) if minibatched else (var_size // 2 + 1,)
+    )
     signals.scatter(x, y)
     assert signals.bases[key].op.type == "TensorScatterUpdate"
 
 
-def test_signal_dict_gather(sess):
-    minibatch_size = 1
+@pytest.mark.parametrize("minibatched", (True, False))
+def test_signal_dict_gather(sess, minibatched):
+    minibatch_size = 3
     var_size = 19
     signals = SignalDict(tf.float32, minibatch_size, False)
 
     key = object()
-    val = np.random.randn(var_size, minibatch_size)
+    val = np.random.random(
+        (minibatch_size, var_size) if minibatched else (var_size,)
+    ).astype(np.float32)
+    gathered_val = val[:, :4] if minibatched else val[:4]
     signals.bases = {key: tf.constant(val, dtype=tf.float32)}
 
-    x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), True)
+    x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), minibatched)
 
     # sliced read
-    assert np.allclose(sess.run(signals.gather(x)), val[:4])
+    assert np.allclose(sess.run(signals.gather(x)), gathered_val)
 
     # read with reshape
-    x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (2, 2), True)
-    assert np.allclose(
-        sess.run(signals.gather(x)), val[:4].reshape((2, 2, minibatch_size))
-    )
+    x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (2, 2), minibatched)
+    y = sess.run(signals.gather(x))
+    shape = (minibatch_size, 2, 2) if minibatched else (2, 2)
+    assert y.shape == shape
+    assert np.allclose(y, gathered_val.reshape(shape))
 
     # gather read
-    x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), True)
+    x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), minibatched)
     y = signals.gather(x, force_copy=True)
     assert "Gather" in y.op.type
 
-    x = signals.get_tensor_signal([0, 0, 3, 3], key, tf.float32, (4,), True)
-    assert np.allclose(sess.run(signals.gather(x)), val[[0, 0, 3, 3]])
+    x = signals.get_tensor_signal([0, 0, 3, 3], key, tf.float32, (4,), minibatched)
+    assert np.allclose(
+        sess.run(signals.gather(x)),
+        val[:, [0, 0, 3, 3]] if minibatched else val[[0, 0, 3, 3]],
+    )
     assert "Gather" in y.op.type
 
     # reading from full array
     x = signals.get_tensor_signal(
-        np.arange(var_size), key, tf.float32, (var_size,), True
+        np.arange(var_size), key, tf.float32, (var_size,), minibatched
     )
     y = signals.gather(x)
     assert y is signals.bases[key]
 
     # reading from strided full array
     x = signals.get_tensor_signal(
-        np.arange(0, var_size, 2), key, tf.float32, (var_size // 2 + 1,), True
+        np.arange(0, var_size, 2), key, tf.float32, (var_size // 2 + 1,), minibatched
     )
     y = signals.gather(x)
     assert y.op.type == "StridedSlice"
     assert y.op.inputs[0] is signals.bases[key]
-
-    # minibatch dimension
-    x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), True)
-    assert signals.gather(x).get_shape() == (4, 1)
-
-    x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), False)
-    assert signals.gather(x).get_shape() == (4,)
 
 
 def test_signal_dict_combine():
@@ -284,14 +297,14 @@ def test_op_constant(dtype, diff, sess):
         [op.J.shape[0] for op in ops],
         "tau_rc",
         dtype,
-        ndims=1,
+        shape=(-1,),
     )
     const3 = signals.op_constant(
         [op.neurons for op in ops],
         [op.J.shape[0] for op in ops],
         "tau_rc",
         dtype,
-        ndims=3,
+        shape=(1, -1, 1),
     )
 
     assert const.dtype.base_dtype == dtype
@@ -299,8 +312,8 @@ def test_op_constant(dtype, diff, sess):
     x, x1, x3 = sess.run([const, const1, const3])
 
     if diff:
-        assert np.array_equal(x, [[1]] * 10 + [[2]] * 10)
-        assert np.array_equal(x[:, 0], x1)
+        assert np.array_equal(x, [[1.0] * 10 + [2.0] * 10])
+        assert np.array_equal(x[0], x1)
         assert np.array_equal(x, x3[..., 0])
     else:
         assert np.array_equal(x, 1.0)

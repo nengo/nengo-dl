@@ -6,6 +6,7 @@ import nengo
 from nengo.builder.learning_rules import SimVoja, SimOja, SimBCM
 import numpy as np
 import pytest
+import tensorflow as tf
 
 from nengo_dl import configure_settings, graph_optimizer
 from nengo_dl.learning_rule_builders import SimPES
@@ -26,7 +27,10 @@ def test_merged_learning(Simulator, rule, weights, seed):
     # make sure that works OK
     dimensions = 2
     with nengo.Network(seed=seed) as net:
-        configure_settings(planner=partial(graph_optimizer.tree_planner, max_depth=10))
+        configure_settings(
+            planner=partial(graph_optimizer.tree_planner, max_depth=10),
+            dtype=tf.float64,
+        )
 
         a = nengo.Ensemble(3, dimensions, label="a")
         b = nengo.Ensemble(3, dimensions, label="b")
@@ -39,13 +43,13 @@ def test_merged_learning(Simulator, rule, weights, seed):
         conn0 = nengo.Connection(
             a,
             c,
-            learning_rule_type=rule(),
+            learning_rule_type=rule(learning_rate=0.1),
             solver=nengo.solvers.LstsqL2(weights=weights),
         )
         conn1 = nengo.Connection(
             b,
             d,
-            learning_rule_type=rule(),
+            learning_rule_type=rule(learning_rate=0.2),
             solver=nengo.solvers.LstsqL2(weights=weights),
         )
 
@@ -57,7 +61,7 @@ def test_merged_learning(Simulator, rule, weights, seed):
 
         canonical = (sim.data[p0], sim.data[p1])
 
-    with Simulator(net) as sim:
+    with Simulator(net, minibatch_size=2) as sim:
         build_type = {
             nengo.Voja: SimVoja,
             nengo.Oja: SimOja,
@@ -72,5 +76,6 @@ def test_merged_learning(Simulator, rule, weights, seed):
 
         sim.run_steps(10)
 
-        assert np.allclose(sim.data[p0], canonical[0])
-        assert np.allclose(sim.data[p1], canonical[1])
+        for i in range(sim.minibatch_size):
+            assert np.allclose(sim.data[p0][i], canonical[0])
+            assert np.allclose(sim.data[p1][i], canonical[1])
