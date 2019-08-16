@@ -8,6 +8,7 @@ dependencies.
 from distutils.version import LooseVersion
 
 import nengo
+import numpy as np
 import tensorflow as tf
 
 if LooseVersion(tf.__version__) < LooseVersion("2.0.0"):
@@ -51,6 +52,7 @@ else:
 
 
 if LooseVersion(nengo.__version__) < "3.0.0":
+    from nengo.utils.testing import allclose as signals_allclose
 
     class SimPES(nengo.builder.Operator):  # pylint: disable=abstract-method
         """Future `nengo.builder.operator.SimPES` class."""
@@ -178,12 +180,15 @@ if LooseVersion(nengo.__version__) < "3.0.0":
         """Old processes don't have any state."""
         return {}
 
+    # set seed upper bound to uint32 (instead of int32)
+    nengo.base.Process.seed.high = np.iinfo(np.uint32).max
 
 else:
     from nengo.builder.learning_rules import SimPES
     from nengo.builder.transforms import ConvInc, SparseDotInc
     from nengo.transforms import Convolution, SparseMatrix
     from nengo.synapses import LinearFilter
+    from nengo.utils.testing import signals_allclose
 
     def is_sparse(sig):
         """Check if Signal is sparse"""

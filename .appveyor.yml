@@ -5,16 +5,19 @@ environment:
   PYTHON_VERSION: C:\Miniconda36-x64
   NUMPY_VERSION: numpy
   TF_VERSION: tensorflow
-  NENGO_VERSION: nengo
+  NENGO_VERSION: nengo[tests]
+  TEST_ARGS: ""
 
   matrix:
     - MODE: test # default build
-    - NENGO_VERSION: git+https://github.com/nengo/nengo.git
+      TEST_ARGS: -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
+    - NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
       TF_VERSION: tensorflow --pre
-    - NENGO_VERSION: nengo==2.8.0
+    - NENGO_VERSION: nengo[tests]==2.8.0
       TF_VERSION: tensorflow==1.4.0
       NUMPY_VERSION: numpy==1.14.5
       PYTHON_VERSION: C:\Miniconda35-x64
+      TEST_ARGS: -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
 
 init:
   - set PATH=%PYTHON_VERSION%;%PYTHON_VERSION%\\Scripts;%PATH%
@@ -24,6 +27,7 @@ install:
   - conda update -q conda
   - conda info -a
   - conda install "six>=1.11.0"
+  - python -m pip install pip --upgrade
   - pip install %NUMPY_VERSION% %TF_VERSION% %NENGO_VERSION%
   - pip install -e .[tests]
   - conda list -e
@@ -32,4 +36,4 @@ install:
 build: false  # Not a C# project
 
 test_script:
-  - pytest -n 2 --pyargs nengo && pytest -n 2 --durations 20 nengo_dl
+  - pytest -n 2 --pyargs nengo %TEST_ARGS% && pytest -n 2 --durations 20 nengo_dl %TEST_ARGS%

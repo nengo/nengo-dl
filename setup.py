@@ -87,7 +87,9 @@ tests_req = [
     "nbval>=0.6.0",
     "pylint>=1.9.2",
     "pytest>=3.6.0,<4.1.0",
+    "pytest-allclose>=1.0.0",
     "pytest-cov>=2.6.0",
+    "pytest-rng>=1.0.0",
     "pytest-xdist>=1.16.0,<1.28.0",
     "six>=1.11.0",
 ]

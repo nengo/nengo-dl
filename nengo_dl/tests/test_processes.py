@@ -3,21 +3,13 @@
 import nengo
 from nengo.builder.processes import SimProcess
 from nengo.synapses import Alpha, LinearFilter, Triangle
-from nengo.tests.test_synapses import run_synapse, allclose
+from nengo.tests.test_synapses import run_synapse
 from nengo.utils.filter_design import ss2tf
 import numpy as np
 import pytest
 
 
-def test_alpha(Simulator, seed):
-    dt = 1e-3
-    tau = 0.03
-    num, den = [1], [tau ** 2, 2 * tau, 1]
-
-    t, x, yhat = run_synapse(Simulator, seed, Alpha(tau), dt=dt)
-    y = LinearFilter(num, den).filt(x, dt=dt, y0=0)
-
-    assert allclose(t, y, yhat, delay=dt, atol=5e-5)
+from nengo_dl.compat import signals_allclose
 
 
 @pytest.mark.parametrize("Synapse", (Alpha, Triangle))
@@ -75,20 +67,6 @@ def test_alpha_multidim(Simulator, seed):
         assert np.allclose(sim.data[p1], canonical[1], atol=5e-5)
 
 
-def test_linearfilter(Simulator, seed):
-    # The following num, den are for a 4th order analog Butterworth filter,
-    # generated with `scipy.signal.butter(4, 0.1, analog=False)`
-    butter_num = np.array([0.0004166, 0.0016664, 0.0024996, 0.0016664, 0.0004166])
-    butter_den = np.array([1.0, -3.18063855, 3.86119435, -2.11215536, 0.43826514])
-
-    dt = 1e-3
-    synapse = LinearFilter(butter_num, butter_den, analog=False)
-    t, x, yhat = run_synapse(Simulator, seed, synapse, dt=dt)
-    y = synapse.filt(x, dt=dt, y0=0)
-
-    assert allclose(t, y, yhat, delay=dt, atol=1e-4)
-
-
 def test_linear_analog(Simulator, seed):
     dt = 1e-3
 
@@ -103,7 +81,7 @@ def test_linear_analog(Simulator, seed):
     t, x, yhat = run_synapse(Simulator, seed, synapse, dt=dt)
     y = synapse.filt(x, dt=dt, y0=0)
 
-    assert allclose(t, y, yhat, delay=dt, atol=5e-4)
+    assert signals_allclose(t, y, yhat, delay=dt, atol=5e-4)
 
 
 @pytest.mark.parametrize("zero", ("C", "D", "X"))
@@ -129,7 +107,7 @@ def test_zero_matrices(Simulator, zero, seed):
     t, x, yhat = run_synapse(Simulator, seed, synapse, dt=dt)
     y = synapse.filt(x, dt=dt, y0=0)
 
-    assert allclose(t, y, yhat, delay=dt, atol=5e-5)
+    assert signals_allclose(t, y, yhat, delay=dt, atol=5e-5)
 
 
 @pytest.mark.training

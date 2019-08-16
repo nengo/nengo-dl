@@ -20,7 +20,7 @@ env:
     - BRANCH_NAME="${TRAVIS_PULL_REQUEST_BRANCH:-$TRAVIS_BRANCH}"
     - NUMPY_VERSION="numpy"
     - TF_VERSION="tensorflow"
-    - NENGO_VERSION="nengo"
+    - NENGO_VERSION="nengo[tests]"
     - SCIPY_VERSION="noop"
 
 jobs:
@@ -36,16 +36,18 @@ jobs:
         packages:
           - pandoc
   -
+    env:
+      TEST_ARGS="-p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator"
     cache: False
   -
     env:
-      NENGO_VERSION="git+https://github.com/nengo/nengo.git"
+      NENGO_VERSION="git+https://github.com/nengo/nengo.git#egg=nengo[tests]"
       TF_VERSION="tensorflow-gpu"
       SCRIPT="gpu"
       TEST_ARGS="--device /gpu:3 --performance"
   -
     env:
-      NENGO_VERSION="git+https://github.com/nengo/nengo.git#egg=nengo"
+      NENGO_VERSION="git+https://github.com/nengo/nengo.git#egg=nengo[tests]"
       TF_VERSION="tensorflow"
       SCIPY_VERSION="scipy"
       SCRIPT="test-coverage"
@@ -53,20 +55,21 @@ jobs:
     python: 3.7
   -
     env:
-      NENGO_VERSION="nengo==2.8.0"
+      NENGO_VERSION="nengo[tests]==2.8.0"
       TF_VERSION="tensorflow==1.4.0"
       NUMPY_VERSION="numpy==1.14.5"
       SCRIPT="test-coverage"
+      TEST_ARGS="-p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator"
     python: 3.5
   -
     env:
-      TEST_ARGS="--dtype float64 --simulator-only"
+      TEST_ARGS="--dtype float64 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator"
   -
     env:
-      TEST_ARGS="--unroll-simulation 5 --simulator-only"
+      TEST_ARGS="--unroll-simulation 5 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator"
   -
     env:
-      TEST_ARGS="--inference-only --simulator-only"
+      TEST_ARGS="--inference-only --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator"
   -
     env:
       SCRIPT="examples"

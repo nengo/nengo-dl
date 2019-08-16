@@ -22,54 +22,49 @@ manifest_in:
 setup_cfg:
   pytest:
     addopts:
-      - -p nengo.tests.options
-      - --simulator nengo_dl.Simulator
-      - --ref-simulator nengo_dl.Simulator
       - --disable-warnings
     filterwarnings:
       - always
     xfail_strict: True
+    nengo_simloader: nengo_dl.tests.make_test_sim
     nengo_test_unsupported:
-      nengo/tests/test_simulator.py:test_warn_on_opensim_del:
+      tests/test_simulator.py::test_warn_on_opensim_del:
         nengo_dl raises a different (more visible) warning, see
-        tests/test_nengo_tests.py:test_warn_on_opensim_del
-      nengo/tests/test_simulator.py:test_signal_init_values:
+        tests/test_nengo_tests.py::test_warn_on_opensim_del
+      tests/test_simulator.py::test_signal_init_values:
         different method required to manually step simulator, see
-        tests/test_nengo_tests.py:test_signal_init_values
-      nengo/tests/test_simulator.py:test_entry_point:
+        tests/test_nengo_tests.py::test_signal_init_values
+      tests/test_simulator.py::test_entry_point:
         overridden so we can pass custom test simulators, see
-        tests/test_nengo_tests.py:test_entry_point
-      nengo/tests/test_simulator.py:test_simulator_progress_bars:
+        tests/test_nengo_tests.py::test_entry_point
+      tests/test_simulator.py::test_simulator_progress_bars:
         nengo_dl uses a different progress bar system, see
-        tests/test_utils.py:test_progress_bar
-      nengo/tests/test_simulator.py:test_dtype[*:
+        tests/test_utils.py::test_progress_bar
+      tests/test_simulator.py::test_dtype[*:
         nengo_dl uses a different system for signals/dtype, see
-        tests/test_nengo_tests.py:test_dtype
-      nengo/tests/test_node.py:test_args:
+        tests/test_nengo_tests.py::test_dtype
+      tests/test_node.py::test_args:
         time is passed as np.float32, not a float, see
-        tests/test_nengo_tests.py:test_args
-      nengo/tests/test_node.py:test_unconnected_node:
+        tests/test_nengo_tests.py::test_args
+      tests/test_node.py::test_unconnected_node:
         need to set `unroll_simulation` to ensure node runs the correct
         number of times, see
-        tests/test_nengo_tests.py:test_unconnected_node
-      nengo/tests/test_synapses.py:test_alpha:
-        need to set looser tolerances due to float32 implementation, see
-        tests/test_processes.py:test_alpha
-      nengo/tests/test_synapses.py:test_linearfilter:
-        need to set looser tolerances due to float32 implementation, see
-        tests/test_processes.py:test_linearfilter
-      nengo/tests/test_ensemble.py:test_gain_bias:
+        tests/test_nengo_tests.py::test_unconnected_node
+      tests/test_ensemble.py::test_gain_bias:
         use allclose instead of array_equal, see
-        tests/test_simulator.py:test_gain_bias
-      nengo/tests/test_transforms.py:test_convolution*:
-        need to set looser tolerances due to float32 implementation, see
-        tests/test_transforms.py:test_convolution
-      nengo/tests/test_transforms.py:test_sparse[False-*:
+        tests/test_nengo_tests.py::test_gain_bias
+      tests/test_transforms.py::test_sparse[False-*:
         nengo-dl doesn't raise a warning for scipy=False, see
-        tests/test_nengo_tests.py:test_sparse
-      nengo/tests/test_copy.py:test_pickle_sim[*:
+        tests/test_nengo_tests.py::test_sparse
+      tests/test_copy.py::test_pickle_sim[*:
         nengo-dl does not support pickling a Simulator, see
-        tests/test_simulator.py:test_pickle_error
+        tests/test_simulator.py::test_pickle_error
+    allclose_tolerances:
+      - tests/test_synapses.py::test_lowpass atol=5e-7
+      - tests/test_synapses.py::test_triangle atol=5e-7
+      - tests/test_synapses.py::test_alpha atol=5e-5
+      - tests/test_synapses.py::test_linearfilter atol=1e-4
+      - tests/test_transforms.py::test_convolution[* atol=1e-6
   pylint:
     known_third_party:
       - PIL
@@ -124,33 +119,35 @@ travis_yml:
   global_vars:
     NUMPY_VERSION: numpy
     TF_VERSION: tensorflow
-    NENGO_VERSION: nengo
+    NENGO_VERSION: nengo[tests]
     SCIPY_VERSION: noop
   jobs:
     - script: static
     - script: docs
     - cache: false
+      test_args: -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
     - script: gpu
       test_args: --device /gpu:3 --performance
       env:
-        NENGO_VERSION: git+https://github.com/nengo/nengo.git
+        NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
         TF_VERSION: tensorflow-gpu
     - script: test-coverage
       env:
-        NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo
+        NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
         TF_VERSION: tensorflow
         SCIPY_VERSION: scipy
       dist: xenial
       python: 3.7
     - script: test-coverage
       env:
-        NENGO_VERSION: nengo==2.8.0
+        NENGO_VERSION: nengo[tests]==2.8.0
         TF_VERSION: tensorflow==1.4.0
         NUMPY_VERSION: numpy==1.14.5
+      test_args: -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
       python: 3.5
-    - test_args: --dtype float64 --simulator-only
-    - test_args: --unroll-simulation 5 --simulator-only
-    - test_args: --inference-only --simulator-only
+    - test_args: --dtype float64 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
+    - test_args: --unroll-simulation 5 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
+    - test_args: --inference-only --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
     - script: examples
   pypi_user: drasmuss
   deploy_dists:
@@ -177,7 +174,9 @@ setup_py:
     - nbval>=0.6.0
     - pylint>=1.9.2
     - pytest>=3.6.0,<4.1.0  # >=4.1.0 doesn't work with nengo tests TODO: remove this once there is a compatible nengo release
+    - pytest-allclose>=1.0.0
     - pytest-cov>=2.6.0
+    - pytest-rng>=1.0.0
     - pytest-xdist>=1.16.0,<1.28.0  # 1.28.0 requires pytest>=4.4.0 (see above)
     - six>=1.11.0  # hint for pip dependency resolution, required by nbval
   entry_points:

@@ -195,3 +195,21 @@ def test_sparse(use_dist, Simulator, rng, seed, monkeypatch):
         ref_sim.run(sim_time)
 
     assert np.allclose(sim.data[ap], ref_sim.data[ap])
+
+
+def test_gain_bias(Simulator):
+    N = 17
+    D = 2
+
+    gain = np.random.uniform(low=0.2, high=5, size=N)
+    bias = np.random.uniform(low=0.2, high=1, size=N)
+
+    model = nengo.Network()
+    with model:
+        a = nengo.Ensemble(N, D)
+        a.gain = gain
+        a.bias = bias
+
+    with Simulator(model) as sim:
+        assert np.allclose(gain, sim.data[a].gain)
+        assert np.allclose(bias, sim.data[a].bias)

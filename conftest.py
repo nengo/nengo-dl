@@ -1,33 +1,32 @@
 from distutils.version import LooseVersion
-import hashlib
-import os
 import shlex
 
-import nengo.conftest
+import nengo
 from nengo.tests import test_synapses, test_learning_rules
 import numpy as np
 import pytest
 import tensorflow as tf
 
-import nengo_dl
-from nengo_dl import config, simulator, utils
+from nengo_dl import simulator, utils
 from nengo_dl.compat import tf_compat
+from nengo_dl.tests import make_test_sim
 
 
 def pytest_configure(config):
     # add unsupported attribute to Simulator (for compatibility with nengo<3.0)
     # join all the lines and then split (preserving quoted strings)
-    unsupported = shlex.split(" ".join(config.getini("nengo_test_unsupported")))
-    # group pairs (representing testname + reason)
-    unsupported = [unsupported[i : i + 2] for i in range(0, len(unsupported), 2)]
-    # wrap square brackets to interpret them literally
-    # (see https://docs.python.org/3/library/fnmatch.html)
-    for i, (testname, _) in enumerate(unsupported):
-        unsupported[i][0] = "".join(
-            "[%s]" % c if c in ("[", "]") else c for c in testname
-        )
+    if nengo.version.version_info <= (2, 8, 0):
+        unsupported = shlex.split(" ".join(config.getini("nengo_test_unsupported")))
+        # group pairs (representing testname + reason)
+        unsupported = [unsupported[i : i + 2] for i in range(0, len(unsupported), 2)]
+        # wrap square brackets to interpret them literally
+        # (see https://docs.python.org/3/library/fnmatch.html)
+        for i, (testname, _) in enumerate(unsupported):
+            unsupported[i][0] = "".join(
+                "[%s]" % c if c in ("[", "]") else c for c in testname
+            ).replace("::", ":")
 
-    simulator.Simulator.unsupported = unsupported
+        simulator.Simulator.unsupported = unsupported
 
 
 def pytest_runtest_setup(item):
@@ -83,84 +82,21 @@ def pytest_addoption(parser):
     )
 
     if nengo.version.version_info <= (2, 8, 0):
-        # add the pytest option from future nengo versions
+        # add the pytest options from future nengo versions
         parser.addini(
             "nengo_test_unsupported",
             type="linelist",
-            help="List of unsupported unit tests with reason for " "exclusion",
+            help="List of unsupported unit tests with reason for exclusion",
         )
-
-
-def function_seed(function, mod=0):
-    """
-    Generates a unique seed for the given test function.
-
-    The seed should be the same across all machines/platforms.
-    """
-    c = function.__code__
-
-    # get function file path relative to Nengo directory root
-    nengo_path = os.path.abspath(os.path.dirname(nengo_dl.__file__))
-    path = os.path.relpath(c.co_filename, start=nengo_path)
-
-    # take start of md5 hash of function file and name, should be unique
-    hash_list = os.path.normpath(path).split(os.path.sep) + [c.co_name]
-    hash_string = ("/".join(hash_list)).encode("utf-8")
-    i = int(hashlib.md5(hash_string).hexdigest()[:15], 16)
-    s = (i + mod) % np.iinfo(np.int32).max
-    return s
-
-
-@pytest.fixture
-def rng(request):
-    """
-    A seeded random number generator.
-
-    This should be used in lieu of np.random because we control its seed.
-    """
-    # add 1 to seed to be different from `seed` fixture
-    seed = function_seed(request.function, mod=1)
-    return np.random.RandomState(seed)
-
-
-@pytest.fixture
-def seed(request):
-    """
-    A number for seeding random number generators.
-
-    This should be used in lieu of a fixed number so that we can ensure that
-    tests are not dependent on specific seeds.
-    """
-    return function_seed(request.function)
 
 
 @pytest.fixture(scope="session")
 def Simulator(request):
     """
-    Simulator class to be used in tests (use this instead of
-    ``nengo_dl.Simulator``).
+    Simulator class to be used in tests (use this instead of ``nengo_dl.Simulator``).
     """
 
-    dtype = getattr(tf, request.config.getoption("--dtype"))
-    unroll = request.config.getoption("--unroll-simulation")
-    device = request.config.getoption("--device")
-    inference_only = request.config.getoption("--inference-only")
-
-    def TestSimulator(net, *args, **kwargs):
-        kwargs.setdefault("unroll_simulation", unroll)
-        kwargs.setdefault("device", device)
-
-        if net is not None and config.get_setting(net, "inference_only") is None:
-            with net:
-                config.configure_settings(inference_only=inference_only)
-
-        if net is not None and config.get_setting(net, "dtype") is None:
-            with net:
-                config.configure_settings(dtype=dtype)
-
-        return simulator.Simulator(net, *args, **kwargs)
-
-    return TestSimulator
+    return make_test_sim(request)
 
 
 @pytest.fixture(scope="function")
@@ -177,17 +113,21 @@ def patch_nengo_tests():
     work correctly when running those tests through NengoDL.
     """
 
-    # replace nengo Simulator fixture
-    nengo.conftest.Simulator = Simulator
-
-    # set looser tolerances on synapse tests
-    def allclose(*args, **kwargs):
-        kwargs.setdefault("atol", 5e-7)
-        return nengo.utils.testing.allclose(*args, **kwargs)
-
-    test_synapses.allclose = allclose
-
     if LooseVersion(nengo.__version__) < "3.0.0":
+        from nengo import conftest
+
+        # monkey patch the nengo Simulator fixture, so that we can also use the pytest
+        # arguments to control nengo tests
+        conftest.Simulator = Simulator
+
+        # set looser tolerances on synapse tests (since allclose fixture doesn't work
+        # in these versions)
+        def allclose(*args, **kwargs):
+            kwargs.setdefault("atol", 5e-5)
+            return nengo.utils.testing.allclose(*args, **kwargs)
+
+        test_synapses.allclose = allclose
+
         # cast output of run_synapse to float64. this is necessary because
         # Synapse.filt bases its internal dtypes on the dtype of its inputs, and
         # we don't want to downcast everything there to float32.

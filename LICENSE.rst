@@ -53,7 +53,7 @@ To build the documentation, NengoDL uses:
 * `sphinx-click <https://sphinx-click.readthedocs.io/en/latest/>`_ - Used under
   `MIT license <https://github.com/click-contrib/sphinx-click/blob/master/LICENSE>`__
 
-To run the unit tests, NengoDL uses:
+To run the tests, NengoDL uses:
 
 * `Click <https://click.palletsprojects.com/en/6.x/>`_ - Used under
   `BSD license <https://click.palletsprojects.com/en/6.x/license/>`__
@@ -67,7 +67,11 @@ To run the unit tests, NengoDL uses:
   `GPL license <https://github.com/PyCQA/pylint/blob/master/COPYING>`__
 * `pytest <https://docs.pytest.org/en/latest/>`_ - Used under
   `MIT license <https://docs.pytest.org/en/latest/license.html>`__
+* `pytest-allclose <https://www.nengo.ai/pytest-allclose/>`__ Used under
+  `MIT license <https://github.com/nengo/pytest-allclose/blob/master/LICENSE.rst>`__
 * `pytest-cov <https://github.com/pytest-dev/pytest-cov>`_ - Used under
   `MIT license <https://github.com/pytest-dev/pytest-cov/blob/master/LICENSE>`__
+* `pytest-rng <https://www.nengo.ai/pytest-rng/>`__ Used under
+  `MIT license <https://github.com/nengo/pytest-rng/blob/master/LICENSE.rst>`__
 * `pytest-xdist <https://github.com/pytest-dev/pytest-xdist>`_ - Used under
   `MIT license <https://github.com/pytest-dev/pytest-xdist/blob/master/LICENSE>`__

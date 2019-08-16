@@ -22,6 +22,11 @@ Release History
 2.2.1 (unreleased)
 ==================
 
+**Changed**
+
+- Update testing framework to use new nengo pytest ecosystem (``pytest-rng``,
+  ``pytest-allclose``, and ``pytest-nengo``)
+
 **Fixed**
 
 - Fixed ``tensorflow-gpu`` installation check in pep517-style isolated build
