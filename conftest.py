@@ -17,16 +17,15 @@ from nengo_dl.compat import tf_compat
 def pytest_configure(config):
     # add unsupported attribute to Simulator (for compatibility with nengo<3.0)
     # join all the lines and then split (preserving quoted strings)
-    unsupported = shlex.split(
-        " ".join(config.getini("nengo_test_unsupported")))
+    unsupported = shlex.split(" ".join(config.getini("nengo_test_unsupported")))
     # group pairs (representing testname + reason)
-    unsupported = [
-        unsupported[i:i + 2] for i in range(0, len(unsupported), 2)]
+    unsupported = [unsupported[i : i + 2] for i in range(0, len(unsupported), 2)]
     # wrap square brackets to interpret them literally
     # (see https://docs.python.org/3/library/fnmatch.html)
     for i, (testname, _) in enumerate(unsupported):
-        unsupported[i][0] = "".join("[%s]" % c if c in ('[', ']') else c
-                                    for c in testname)
+        unsupported[i][0] = "".join(
+            "[%s]" % c if c in ("[", "]") else c for c in testname
+        )
 
     simulator.Simulator.unsupported = unsupported
 
@@ -34,38 +33,62 @@ def pytest_configure(config):
 def pytest_runtest_setup(item):
     if item.get_closest_marker("gpu", False) and not utils.tf_gpu_installed:
         pytest.skip("This test requires tensorflow-gpu")
-    elif (hasattr(item, "fixturenames") and
-          "Simulator" not in item.fixturenames and
-          item.config.getvalue("--simulator-only")):
+    elif (
+        hasattr(item, "fixturenames")
+        and "Simulator" not in item.fixturenames
+        and item.config.getvalue("--simulator-only")
+    ):
         pytest.skip("Only running tests that require a Simulator")
     elif item.get_closest_marker("training", False) and item.config.getvalue(
-            "--inference-only"):
+        "--inference-only"
+    ):
         pytest.skip("Skipping training test in inference-only mode")
-    elif (item.get_closest_marker("performance", False)
-          and not item.config.getvalue("--performance")):
+    elif item.get_closest_marker("performance", False) and not item.config.getvalue(
+        "--performance"
+    ):
         pytest.skip("Skipping performance test")
 
 
 def pytest_addoption(parser):
-    parser.addoption("--simulator-only", action="store_true", default=False,
-                     help="Only run tests involving Simulator")
-    parser.addoption("--inference-only", action="store_true", default=False,
-                     help="Run tests in inference-only mode")
-    parser.addoption("--dtype", default="float32",
-                     choices=("float32", "float64"),
-                     help="Simulator float precision")
-    parser.addoption("--unroll-simulation", default=1, type=int,
-                     help="`unroll_simulation` parameter for Simulator")
-    parser.addoption("--device", default=None,
-                     help="`device` parameter for Simulator")
-    parser.addoption("--performance", action="store_true", default=False,
-                     help="Run performance tests")
+    parser.addoption(
+        "--simulator-only",
+        action="store_true",
+        default=False,
+        help="Only run tests involving Simulator",
+    )
+    parser.addoption(
+        "--inference-only",
+        action="store_true",
+        default=False,
+        help="Run tests in inference-only mode",
+    )
+    parser.addoption(
+        "--dtype",
+        default="float32",
+        choices=("float32", "float64"),
+        help="Simulator float precision",
+    )
+    parser.addoption(
+        "--unroll-simulation",
+        default=1,
+        type=int,
+        help="`unroll_simulation` parameter for Simulator",
+    )
+    parser.addoption("--device", default=None, help="`device` parameter for Simulator")
+    parser.addoption(
+        "--performance",
+        action="store_true",
+        default=False,
+        help="Run performance tests",
+    )
 
     if nengo.version.version_info <= (2, 8, 0):
         # add the pytest option from future nengo versions
-        parser.addini("nengo_test_unsupported", type="linelist",
-                      help="List of unsupported unit tests with reason for "
-                           "exclusion")
+        parser.addini(
+            "nengo_test_unsupported",
+            type="linelist",
+            help="List of unsupported unit tests with reason for " "exclusion",
+        )
 
 
 def function_seed(function, mod=0):
@@ -82,7 +105,7 @@ def function_seed(function, mod=0):
 
     # take start of md5 hash of function file and name, should be unique
     hash_list = os.path.normpath(path).split(os.path.sep) + [c.co_name]
-    hash_string = ('/'.join(hash_list)).encode("utf-8")
+    hash_string = ("/".join(hash_list)).encode("utf-8")
     i = int(hashlib.md5(hash_string).hexdigest()[:15], 16)
     s = (i + mod) % np.iinfo(np.int32).max
     return s
@@ -127,8 +150,7 @@ def Simulator(request):
         kwargs.setdefault("unroll_simulation", unroll)
         kwargs.setdefault("device", device)
 
-        if net is not None and config.get_setting(
-                net, "inference_only") is None:
+        if net is not None and config.get_setting(net, "inference_only") is None:
             with net:
                 config.configure_settings(inference_only=inference_only)
 
@@ -160,7 +182,7 @@ def patch_nengo_tests():
 
     # set looser tolerances on synapse tests
     def allclose(*args, **kwargs):
-        kwargs.setdefault('atol', 5e-7)
+        kwargs.setdefault("atol", 5e-7)
         return nengo.utils.testing.allclose(*args, **kwargs)
 
     test_synapses.allclose = allclose
@@ -178,11 +200,21 @@ def patch_nengo_tests():
         test_synapses.run_synapse = run_synapse
 
         # remove the correction probes from _test_pes
-        def _test_pes(NengoSimulator, nl, plt, seed,
-                      pre_neurons=False, post_neurons=False,
-                      weight_solver=False,
-                      vin=np.array([0.5, -0.5]), vout=None, n=200,
-                      function=None, transform=np.array(1.), rate=1e-3):
+        def _test_pes(
+            NengoSimulator,
+            nl,
+            plt,
+            seed,
+            pre_neurons=False,
+            post_neurons=False,
+            weight_solver=False,
+            vin=np.array([0.5, -0.5]),
+            vout=None,
+            n=200,
+            function=None,
+            transform=np.array(1.0),
+            rate=1e-3,
+        ):
             vout = np.array(vin) if vout is None else vout
 
             model = nengo.Network(seed=seed)
@@ -197,13 +229,17 @@ def patch_nengo_tests():
 
                 nengo.Connection(u, a)
 
-                bslice = b[:v.size_out] if v.size_out < u.size_out else b
+                bslice = b[: v.size_out] if v.size_out < u.size_out else b
                 pre = a.neurons if pre_neurons else a
                 post = b.neurons if post_neurons else bslice
 
-                conn = nengo.Connection(pre, post,
-                                        function=function, transform=transform,
-                                        learning_rule_type=nengo.PES(rate))
+                conn = nengo.Connection(
+                    pre,
+                    post,
+                    function=function,
+                    transform=transform,
+                    learning_rule_type=nengo.PES(rate),
+                )
                 if weight_solver:
                     conn.solver = nengo.solvers.LstsqL2(weights=True)
 
@@ -214,7 +250,7 @@ def patch_nengo_tests():
                 b_p = nengo.Probe(bslice, synapse=0.03)
                 e_p = nengo.Probe(e, synapse=0.03)
 
-                weights_p = nengo.Probe(conn, 'weights', sample_every=0.01)
+                weights_p = nengo.Probe(conn, "weights", sample_every=0.01)
 
             with NengoSimulator(model) as sim:
                 sim.run(0.5)
