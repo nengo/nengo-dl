@@ -150,6 +150,7 @@ Utilities
 ^^^^^^^^^
 
 .. automodule:: nengo_dl.utils
+    :exclude-members: MessageBar
 
 Benchmarks
 ^^^^^^^^^^
