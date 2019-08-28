@@ -13,7 +13,6 @@ import numpy as np
 import tensorflow as tf
 
 from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
-from nengo_dl.compat import tf_shape
 
 
 def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
@@ -105,7 +104,7 @@ class TensorFuncParam(Parameter):
 
             validate_output(result)
 
-            node.size_out = tf_shape(result.get_shape())[1]
+            node.size_out = result.get_shape()[1].value
 
         return output
 

@@ -23,11 +23,6 @@ if LooseVersion(tf.__version__) < LooseVersion("2.0.0"):
 
     tf_math = tf
 
-    def tf_shape(shape):
-        """Convert ``tf.Dimension`` to int."""
-
-        return tuple(x.value for x in shape)
-
     tf_uniform = tf.random_uniform
 
     RefVariable = tf.Variable
@@ -37,11 +32,6 @@ else:
     tf_convolution = tf.nn.convolution
 
     tf_math = tf.math
-
-    def tf_shape(shape):
-        """Return shape (elements are already ints)."""
-
-        return shape
 
     tf_uniform = tf.random.uniform
 

@@ -26,6 +26,8 @@ Release History
 
 - Update testing framework to use new nengo pytest ecosystem (``pytest-rng``,
   ``pytest-allclose``, and ``pytest-nengo``)
+- Disable TensorFlow 2.0 behaviour (e.g. control flow v2) by default.  This will be
+  re-enabled when full TensorFlow 2.0 support is added.
 
 **Fixed**
 
