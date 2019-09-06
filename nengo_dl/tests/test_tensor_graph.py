@@ -10,7 +10,7 @@ import pytest
 import tensorflow as tf
 from tensorflow import keras
 
-from nengo_dl import tensor_graph, utils, graph_optimizer, config, objectives
+from nengo_dl import tensor_graph, utils, graph_optimizer, config
 from nengo_dl.compat import tf_compat
 from nengo_dl.tests import dummies
 

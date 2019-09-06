@@ -33,8 +33,8 @@ Release History
   the main function, mirroring the structure of those arguments.
 - Keras ``Layer`` classes can now be used with ``nengo_dl.tensor_layer``.
 - ``TensorGraph`` can now be used as a Keras ``Layer``.
-- Added ``Simulator.predict/predict_on_batch/predict_generator`` functions, which
-  implement the Keras ``Model.predict`` API (see
+- Added ``Simulator.predict/evaluate/fit`` functions, which
+  implement the Keras ``Model`` API (see
   https://www.tensorflow.org/api_docs/python/tf/keras/Model).
 - Added a warning that changing the TensorFlow seed (e.g. on ``Simulator.reset``) will
   not affect any existing TensorFlow operations (this was always true in TensorFlow,
@@ -92,6 +92,9 @@ Release History
 - Removed the ``Simulator.sess`` attribute (Sessions are no longer used in
   TensorFlow 2.0).  The underlying Keras model (``Simulator.keras_model``) should be
   used as the entrypoint into the engine underlying a Simulator instead.
+- Removed the ``Simulator.loss`` function (use ``Simulator.compile`` and
+  ``Simulator.evaluate`` to compute loss values instead).
+- Removed ``nengo_dl.objectives`` (use ``tf.losses`` instead).
 
 2.2.2 (unreleased)
 ==================

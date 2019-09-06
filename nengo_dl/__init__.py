@@ -32,9 +32,11 @@ del sys
 
 # filter out "INFO" level log messages
 import os
-from nengo_dl.compat import tf_compat
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
+
+from nengo_dl.compat import tf_compat
+
 tf_compat.logging.set_verbosity(tf_compat.logging.WARN)
 
 
@@ -59,14 +61,11 @@ from nengo_dl import (
 )
 
 # import into top-level namespace
-from nengo_dl import dists, objectives
+from nengo_dl import dists
 from nengo_dl.simulator import Simulator
 from nengo_dl.tensor_node import TensorNode, tensor_layer, reshaped
 from nengo_dl.config import configure_settings
 from nengo_dl.neurons import SoftLIFRate
-
-# shortcut for objective namespace
-obj = objectives
 
 # apply tensorflow monkey patches
 from nengo_dl import tensorflow_patch

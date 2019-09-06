@@ -3,40 +3,8 @@
 import nengo
 import numpy as np
 import pytest
-import tensorflow as tf
 
-from nengo_dl import objectives
 from nengo_dl.compat import tf_compat
-
-
-@pytest.mark.parametrize(
-    "axis, weight, order", [(None, 0.6, 1), (None, 0.7, "euclidean"), (1, None, 2)]
-)
-def test_regularize(axis, weight, order, rng, sess):
-    x_init = rng.randn(2, 3, 4, 5)
-
-    x = tf.constant(x_init)
-
-    reg = objectives.Regularize(weight=weight, order=order, axis=axis)(x)
-
-    reg_val = sess.run(reg)
-
-    if order == "euclidean":
-        order = 2
-
-    if weight is None:
-        weight = 1
-
-    if axis is None:
-        truth = np.reshape(x_init, x_init.shape[:2] + (-1,))
-        axis = 2
-    else:
-        truth = x_init
-        axis += 2
-    truth = np.mean(np.linalg.norm(truth, ord=order, axis=axis))
-    truth *= weight
-
-    assert np.allclose(reg_val, truth)
 
 
 @pytest.mark.xfail(reason="TODO: support train")

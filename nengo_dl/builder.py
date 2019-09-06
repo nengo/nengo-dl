@@ -265,9 +265,9 @@ class OpBuilder:
 
         Parameters
         ----------
-        x : :class:`~nengo:nengo.builder.Operator`
+        x : `nengo.builder.Operator`
             The operator being tested
-        y : :class:`~nengo:nengo.builder.Operator`
+        y : `nengo.builder.Operator`
             The operator being merged into (this is representative of a group
             of operators that have already been merged)
 

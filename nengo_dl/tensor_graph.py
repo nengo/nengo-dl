@@ -177,7 +177,7 @@ class TensorGraph(keras.layers.Layer):
         -------
         n_steps : ``tf.keras.layers.Input``
             Input layer for specifying the number of simulation timesteps.
-        inputs : dict of {`nengo:nengo.Node`: ``tf.keras.layers.Input``}
+        inputs : dict of {`nengo.Node`: ``tf.keras.layers.Input``}
             Input layers for each of the Nodes in the network.
         """
 
@@ -345,7 +345,9 @@ class TensorGraph(keras.layers.Layer):
             )
         ]
         with tf.control_dependencies(updated_states):
-            self.steps_run_and_save = tf.identity(self.steps_run)
+            self.steps_run_and_save = tf.identity(
+                self.steps_run, name="steps_run_and_save"
+            )
 
         # logging
         logger.info(
@@ -538,21 +540,22 @@ class TensorGraph(keras.layers.Layer):
 
         # change to shape (minibatch_size,) (required by keras) instead of a scalar
         self.steps_run = tf.tile(
-            tf.expand_dims(loop_vars[0], 0), (self.minibatch_size,)
+            tf.expand_dims(loop_vars[0], 0), (self.minibatch_size,), name="steps_run"
         )
 
         self.probe_arrays = OrderedDict()
-        for p, a in zip(self.model.probes, loop_vars[2]):
+        for i, (p, a) in enumerate(zip(self.model.probes, loop_vars[2])):
+            name = "probe_%d" % i if p.label is None else p.label
             x = a.stack()
 
             if self.model.sig[p]["in"].minibatched:
                 # change from tensorarray's (steps, batch, d) to (batch, steps, d)
                 perm = np.arange(x.shape.ndims)
                 perm[[0, 1]] = perm[[1, 0]]
-                x = tf.transpose(a=x, perm=perm)
+                x = tf.transpose(a=x, perm=perm, name=name)
             else:
                 # add minibatch dimension for consistency
-                x = tf.expand_dims(x, 0)
+                x = tf.expand_dims(x, 0, name=name)
 
             self.probe_arrays[p] = x
 
@@ -817,7 +820,7 @@ class TensorGraph(keras.layers.Layer):
         self.outputs[key] = output_vals
         return output_vals, new_vars_init
 
-    # @with_self
+    @trackable.no_automatic_dependency_tracking
     def build_post(self):
         """
         Executes post-build processes for operators (after the graph has

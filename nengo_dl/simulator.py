@@ -29,7 +29,7 @@ from tensorflow import keras
 from tensorflow.python.client.timeline import Timeline
 from tensorflow.python.ops import gradient_checker
 
-from nengo_dl import utils, config, objectives
+from nengo_dl import utils, config
 from nengo_dl.builder import NengoBuilder, NengoModel
 from nengo_dl.compat import tf_compat, Convolution
 from nengo_dl.tensor_graph import TensorGraph
@@ -206,10 +206,17 @@ class Simulator:  # pylint: disable=too-many-public-methods
         n_steps, self.node_inputs = self.tensor_graph.build_inputs()
         inputs = [n_steps] + list(self.node_inputs.values())
         outputs = self.tensor_graph(inputs)
+
         self.keras_model = keras.Model(inputs=inputs, outputs=outputs)
         self.keras_model_save = keras.Model(
             inputs=inputs, outputs=[self.tensor_graph.steps_run_and_save] + outputs[1:]
         )
+
+        # set more informative output names
+        # keras names them like LayerName_i, whereas we would like to have the names
+        # associated with the probes
+        for model in (self.keras_model, self.keras_model_save):
+            model.output_names = [o.op.name.split("/")[-1] for o in model.outputs]
 
     @with_self
     def reset(self, seed=None):
@@ -228,7 +235,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         no impact on existing ops (either changing their seed or resetting their random
         state). So calling `.reset` will likely have no impact on any TensorFlow
         randomness (it will still affect numpy randomness, such as in
-        `~nengo:nengo.Processes`, as normal).
+        `nengo.Processes`, as normal).
         """
 
         if self.closed is not None and self.closed:
@@ -293,7 +300,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         self._update_steps()
 
-    def predict(self, inputs=None, n_steps=None, update_state=False, **kwargs):
+    def predict(self, x=None, n_steps=None, update_state=False, **kwargs):
         """
         Generate output predictions for the input samples.
 
@@ -304,19 +311,19 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         Parameters
         ----------
-        inputs
+        x
             Inputs can be specified as:
-            - A dictionary of {`nengo:nengo.Node` or str: `~numpy:numpy.ndarray`}
+            - A dictionary of {`nengo.Node` or str: `numpy.ndarray`}
               indicating the input values for the given nodes. Nodes can be referred
               to by the Node object itself or by a string name, which will be
               ``Node.label`` if one was specified, or ``"node_i"`` where ``i``
               indexes the nodes according to the order they were added to the model
-              (this corresponds to the order found in `nengo:nengo.Network.all_nodes`).
-            - A list of `~numpy:numpy.ndarray` indicating the input values for each
+              (this corresponds to the order found in `nengo.Network.all_nodes`).
+            - A list of `numpy.ndarray` indicating the input values for each
               input Node, ordered according to the order in which the Nodes were
               added to the model (this corresponds to the order found in
-              `nengo:nengo.Network.all_nodes`).
-            - An `~numpy:numpy.ndarray` indicating the input value for a single input
+              `nengo.Network.all_nodes`).
+            - An `numpy.ndarray` indicating the input value for a single input
               Node.
             - A generator or ``tf.data.Dataset`` that produces one of the above. These
               input types must also explicitly pass a value for the ``n_steps`` input,
@@ -340,7 +347,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         Returns
         -------
-        probe_values : dict of {`~nengo:nengo.Probe`: `~numpy:numpy.ndarray`}
+        probe_values : dict of {`nengo.Probe`: `numpy.ndarray`}
             Output values from all the Probes in the network.
         """
 
@@ -352,17 +359,13 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 "Batch size is determined statically via Simulator.minibatch_size; "
                 "ignoring value passed to `predict`"
             )
-        kwargs["batch_size"] = None
+            kwargs["batch_size"] = None
 
         return self._predict(
-            "predict",
-            inputs=inputs,
-            n_steps=n_steps,
-            update_state=update_state,
-            **kwargs,
+            "predict", inputs=x, n_steps=n_steps, update_state=update_state, **kwargs
         )
 
-    def predict_on_batch(self, inputs=None, n_steps=None, update_state=False, **kwargs):
+    def predict_on_batch(self, x=None, n_steps=None, update_state=False, **kwargs):
         """
         Generate output predictions for the input samples.
 
@@ -375,19 +378,19 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         Parameters
         ----------
-        inputs
+        x
             Inputs can be specified as:
-            - A dictionary of {`nengo:nengo.Node` or str: `~numpy:numpy.ndarray`}
+            - A dictionary of {`nengo.Node` or str: `numpy.ndarray`}
               indicating the input values for the given nodes. Nodes can be referred
               to by the Node object itself or by a string name, which will be
               ``Node.label`` if one was specified, or ``"node_i"`` where ``i``
               indexes the nodes according to the order they were added to the model
-              (this corresponds to the order found in `nengo:nengo.Network.all_nodes`).
-            - A list of `~numpy:numpy.ndarray` indicating the input values for each
+              (this corresponds to the order found in `nengo.Network.all_nodes`).
+            - A list of `numpy.ndarray` indicating the input values for each
               input Node, ordered according to the order in which the Nodes were
               added to the model (this corresponds to the order found in
-              `nengo:nengo.Network.all_nodes`).
-            - An `~numpy:numpy.ndarray` indicating the input value for a single input
+              `nengo.Network.all_nodes`).
+            - An `numpy.ndarray` indicating the input value for a single input
               Node.
             - A generator or ``tf.data.Dataset`` that produces one of the above. These
               input types must also explicitly pass a value for the ``n_steps`` input,
@@ -412,18 +415,18 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         Returns
         -------
-        probe_values : dict of {`~nengo:nengo.Probe`: `~numpy:numpy.ndarray`}
+        probe_values : dict of {`nengo.Probe`: `numpy.ndarray`}
             Output values from all the Probes in the network.
         """
         return self._predict(
             "predict_on_batch",
-            inputs=inputs,
+            inputs=x,
             n_steps=n_steps,
             update_state=update_state,
             **kwargs,
         )
 
-    def predict_generator(self, inputs=None, update_state=False, **kwargs):
+    def predict_generator(self, x=None, update_state=False, **kwargs):
         """
         Generate output predictions for the input samples.
 
@@ -437,7 +440,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         Parameters
         ----------
-        inputs
+        x
             A generator or ``tf.data.Dataset`` that produces inputs in one of the forms
             supported by `.predict_on_batch`.
 
@@ -459,11 +462,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         Returns
         -------
-        probe_values : dict of {`~nengo:nengo.Probe`: `~numpy:numpy.ndarray`}
+        probe_values : dict of {`nengo.Probe`: `numpy.ndarray`}
             Output values from all the Probes in the network.
         """
         return self._predict(
-            "predict_generator", inputs=inputs, update_state=update_state, **kwargs
+            "predict_generator", inputs=x, update_state=update_state, **kwargs
         )
 
     @with_self
@@ -493,13 +496,17 @@ class Simulator:  # pylint: disable=too-many-public-methods
         # TODO: double check this doesn't rebuild the graph each time it is called
         #  (e.g. with different values for n_steps)
 
+        if self.closed:
+            raise SimulatorClosed("Cannot call predict after simulator is closed")
+
         # batch size is determined from data in `predict`; others are single batch so
         # we know the size should be minibatch_size
-        batch_size = None if predict_type == "predict" else self.minibatch_size
-        inputs = self._generate_inputs(
-            data=inputs, n_steps=n_steps, batch_size=batch_size
+        inputs = self._generate_inputs(data=inputs, n_steps=n_steps)
+        self._check_data(
+            inputs,
+            n_steps=n_steps,
+            batch_size=None if predict_type == "predict" else self.minibatch_size,
         )
-        self._check_data(inputs, n_steps=n_steps, batch_size=batch_size)
 
         # call predict function
         model = self.keras_model_save if update_state else self.keras_model
@@ -511,6 +518,230 @@ class Simulator:  # pylint: disable=too-many-public-methods
         output_dict = {p: outputs[1 + i] for i, p in enumerate(self.model.probes)}
 
         return output_dict
+
+    @with_self
+    def compile(self, *args, loss=None, metrics=None, loss_weights=None, **kwargs):
+        """
+        Configure the model for training/evaluation.
+
+        Parameters
+        ----------
+        args
+            Will be passed on to `tf.keras.Model.compile
+            <https://www.tensorflow.org/api_docs/python/tf/keras/Model#compile>`_.
+        loss
+            Loss functions define the error that will be minimized during
+            training.
+
+            Losses can be specified as:
+            - A ``tf.losses.Loss`` instance (see
+              https://www.tensorflow.org/api_docs/python/tf/losses).
+            - A string matching the name of one of the loss functions above.
+            - A function that accepts two arguments (``y_true, y_pred``) and returns
+              a loss value.
+            - A list of some combination of the above, indicating different loss
+              functions for each output Probe (ordered according to the order in
+              which Probes were added to the model, which corresponds to the order
+              found in ``Simulator.model.probes``).
+            - A dictionary mapping Probe instances or names to loss functions.
+
+            The total loss minimized during training will be the sum over the loss
+            computed on each Probe (possibly weighted by ``loss_weights``).
+        metrics
+            Metrics are additional values (generally different kinds of losses) that
+            will be computed during training for tracking purposes, but do not affect
+            the result of the training.
+
+            They can be specified in all the same ways as ``loss`` above.
+
+            In addition, multiple metrics can be specified for each output Probe when
+            using a list or dict, by providing multiple functions in a list (e.g.,
+            ``metrics={my_probe: ["mae", "mse"]}``).
+        loss_weights : list or dict
+            Scalar weights that will be applied to the loss value computed for each
+            output probe before summing them to compute the overall training loss. Can
+            be a list (order corresponding to the order in ``loss``) or a dict mapping
+            Probe instances/names to weights.
+        kwargs
+            Will be passed on to `tf.keras.Model.compile
+            <https://www.tensorflow.org/api_docs/python/tf/keras/Model#compile>`_.
+        """
+
+        # convert inputs to canonical name dict form
+        loss = self._standardize_data(loss, self.model.probes, broadcast_unary=True)
+        metrics = self._standardize_data(
+            metrics, self.model.probes, broadcast_unary=True
+        )
+        loss_weights = self._standardize_data(loss_weights, self.model.probes)
+
+        # TODO: do we need to compile keras_model_save?
+        self.keras_model.compile(
+            *args, loss=loss, metrics=metrics, loss_weights=loss_weights, **kwargs
+        )
+
+    # @with_self
+    # def fit(self, x=None, y=None, **kwargs):
+    #     if self.closed:
+    #         raise SimulatorClosed("Cannot call fit after simulator is closed")
+    #
+    #     if "batch_size" in kwargs:
+    #         warnings.warn(
+    #             "Batch size is determined statically via Simulator.minibatch_size; "
+    #             "ignoring value passed to `fit`"
+    #         )
+    #         kwargs["batch_size"] = None
+    #
+    #     self.keras_model.fit(x=x, y=y, **kwargs)
+
+    def evaluate(self, x=None, y=None, n_steps=None, **kwargs):
+        """
+        Compute the loss and metric values for the network.
+
+        Loss functions and other metrics are defined separately in `.Simulator.compile`.
+
+        This function implements the `tf.keras.Model.evaluate
+        <https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate>`_ API.
+
+        Parameters
+        ----------
+        x
+            Input values for Nodes in the model. Inputs can be specified as:
+            - A dictionary of {`nengo.Node` or str: `numpy.ndarray`}
+              indicating the input values for the given nodes. Nodes can be referred
+              to by the Node object itself or by a string name, which will be
+              ``Node.label`` if one was specified, or ``"node_i"`` where ``i``
+              indexes the nodes according to the order they were added to the model
+              (this corresponds to the order found in `nengo.Network.all_nodes`).
+            - A list of `numpy.ndarray` indicating the input values for each
+              input Node, ordered according to the order in which the Nodes were
+              added to the model (this corresponds to the order found in
+              `nengo.Network.all_nodes`).
+            - An `numpy.ndarray` indicating the input value for a single input
+              Node.
+            - A generator or ``tf.data.Dataset`` that produces one of the above. These
+              input types must also explicitly pass a value for the ``n_steps`` input,
+              which should have shape ``(batch_size, 1)``. This input should come first
+              in the input list or use the string name "n_steps" (if passing a dict).
+
+            All inputs should have shape ``(batch_size, n_steps, node.size_out)``.
+
+            If an input value is not specified for one of the Nodes in the model then
+            data will be filled in according to the Node definition (e.g., by calling
+            the output function associated with that Node).  However, generator input
+            types must explicitly specify values for all the input nodes.
+        y
+            Target values for Probes in the model. These can be specified in the same
+            ways as the input values in ``x``.  However, targets should only be
+            specified for the probes used in the loss function (specified when calling
+            `Simulator.compile`).
+
+            All targets should have shape ``(batch_size, n_steps, probe.size_in)``.
+
+            This parameter is not used if ``x`` is a generator (the generator passed to
+            ``x` should yield ``(x, y)`` tuples).
+        n_steps : int
+            Number of simulation timesteps
+        kwargs: dict
+            Will be passed on to `tf.keras.Model.evaluate
+            <https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate>`_.
+
+        Returns
+        -------
+        outputs : dict of {str: `numpy.ndarray`}
+            Computed loss/metric values. The overall loss will be in
+            ``outputs["loss"]``, and values for each Probe will be in
+            ``outputs["probe_name_loss"]`` or ``outputs["probe_name_metric_name"]``.
+        """
+
+        if "batch_size" in kwargs:
+            warnings.warn(
+                "Batch size is determined statically via Simulator.minibatch_size; "
+                "ignoring value passed to `evaluate`"
+            )
+            kwargs["batch_size"] = None
+
+        inputs = self._generate_inputs(x, n_steps=n_steps)
+        self._check_data(inputs, n_steps=n_steps, batch_size=None)
+
+        y = self._standardize_data(y, self.model.probes)
+
+        # check that y is consistent with x (rather than only being
+        # internally consistent)
+        if isinstance(inputs, dict):
+            # not a generator, so can determine target y shapes from x shapes
+            steps = next(iter(inputs.values()))
+            input_steps = steps[0, 0]
+            input_batch = steps.shape[0]
+        else:
+            input_steps = None
+            input_batch = None
+        self._check_data(y, n_steps=input_steps, batch_size=input_batch, nodes=False)
+
+        return self._evaluate("evaluate", x=inputs, y=y, **kwargs)
+
+    def evaluate_generator(self, generator, **kwargs):
+        """
+        Compute the loss and metric values for the network.
+
+        Loss functions and other metrics are defined separately in `.Simulator.compile`.
+
+        This function implements the `tf.keras.Model.evaluate
+        <https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate>`_ API.
+
+        Parameters
+        ----------
+        x
+            A generator or ``tf.data.Dataset`` that produces inputs in one of the forms
+            supported by `Simulator.evaluate`.
+
+            These generators must also explicitly pass a value for the ``n_steps``
+            input, which should have shape ``(batch_size, 1)``. This input should come
+            first in the input list or use the string name "n_steps"
+            (if generating a dict).
+
+            Inputs must be explicitly specified for all input Nodes in the network.
+
+            If ``y`` values are required for the loss function, then the generator
+            should yield tuples ``(x, y)``, where ``x`` and ``y`` have the forms
+            described in ``x`` and ``y`` for `.Simulator.evaluate`.
+
+            All generated inputs should have shape
+            ``(sim.minibatch_size, n_steps, node.size_out)``.
+            All targets should have shape
+            ``(sim.minibatch_size, n_steps, probe.size_in)``.
+        kwargs: dict
+            Will be passed on to `tf.keras.Model.evaluate_generator
+            <https://www.tensorflow.org/api_docs/python/tf/keras/Model
+            #evaluate_generator>`_.
+        """
+
+        return self._evaluate("evaluate_generator", generator, **kwargs)
+
+    @with_self
+    def _evaluate(self, evaluate_type, *args, **kwargs):
+        """
+        Internal base function for all the evaluate functions.
+
+        Parameters
+        ----------
+        evaluate_type : "evaluate" or "evaluate_generator"
+            The underlying function to call on the Keras model.
+        args
+            See description in documentation of ``<evaluate_type>`` function.
+        kwargs
+            See description in documentation of ``<evaluate_type>`` function.
+
+        Returns
+        -------
+            See description in documentation of ``<evaluate_type>`` function.
+        """
+        if self.closed:
+            raise SimulatorClosed("Cannot call evaluate after simulator is closed")
+
+        outputs = getattr(self.keras_model, evaluate_type)(*args, **kwargs)
+
+        # return outputs as named dict
+        return dict(zip(self.keras_model.metrics_names, outputs))
 
     def step(self, **kwargs):
         """
@@ -652,330 +883,236 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
             self.model.params[probe].append(val)
 
-    def train(
-        self,
-        data,
-        optimizer,
-        n_epochs=1,
-        objective=None,
-        shuffle=True,
-        truncation=None,
-        summaries=None,
-        profile=False,
-        extra_feeds=None,
-        progress_bar=True,
-    ):
-        """
-        Optimize the trainable parameters of the network using the given
-        optimization method, minimizing the objective value over the given
-        inputs and targets.
+    # def train(
+    #     self,
+    #     data,
+    #     optimizer,
+    #     n_epochs=1,
+    #     objective=None,
+    #     shuffle=True,
+    #     truncation=None,
+    #     summaries=None,
+    #     profile=False,
+    #     extra_feeds=None,
+    #     progress_bar=True,
+    # ):
+    #     """
+    #     Optimize the trainable parameters of the network using the given
+    #     optimization method, minimizing the objective value over the given
+    #     inputs and targets.
+    #
+    #     Parameters
+    #     ----------
+    #     data : dict of {`~nengo.Node` or `~nengo.Probe`: \
+    #                     `~numpy.ndarray`} or int
+    #         Input values for Nodes in the network or target values for Probes;
+    #         arrays should have shape ``(batch_size, n_steps,
+    #         node.size_out/probe.size_in)``.  If no input data is required,
+    #         an integer can be given specifying the number of timesteps to
+    #         run the simulation.
+    #     optimizer : ``tf.train.Optimizer``
+    #         TensorFlow optimizer, e.g.
+    #         ``tf.train.GradientDescentOptimizer(learning_rate=0.1)``
+    #     n_epochs : int
+    #         Run training for the given number of epochs (complete passes
+    #         through ``data``)
+    #     objective : dict of {(tuple of) `~nengo.Probe`: callable or ``None``}
+    #         The objective to be minimized. The default applies
+    #         `.objectives.mse` to all probes in ``data``.  This can be
+    #         overridden by passing a dictionary mapping Probes to functions
+    #         ``f(output, target) -> loss`` that consume the actual output and
+    #         target output for the given probe(s) and return a ``tf.Tensor``
+    #         representing a scalar loss value.  The function may also accept a
+    #         single argument ``f(output) -> loss`` if targets are not required.
+    #         Some common objective functions can be found in
+    #         `nengo_dl.objectives`.
+    #
+    #         Passing ``None`` as the probe value (instead of a callable)
+    #         indicates that the error is being computed outside the simulation,
+    #         and the value passed for that probe in ``data`` directly specifies
+    #         the output error gradient.
+    #
+    #         If multiple probes are specified as the key, then the corresponding
+    #         output/target values will be passed as a list to the objective
+    #         function.
+    #
+    #         The overall loss value being minimized will be the sum across all
+    #         the objectives specified.
+    #     shuffle : bool
+    #         If True, randomize the data into different minibatches each epoch
+    #     truncation: int
+    #         If not None, use truncated backpropagation when training the
+    #         network, with the given truncation length.
+    #     summaries : list of `~nengo.Connection` or \
+    #                         `~nengo.Ensemble` or \
+    #                         `~nengo.ensemble.Neurons` or \
+    #                         ``"loss"`` or \
+    #                         ``tf.Tensor``
+    #         If not None, collect data during the training process using
+    #         TensorFlow's ``tf.summary`` format.  The summary objects can be a
+    #         Connection (in which case data on the corresponding weights will be
+    #         collected), Ensemble (encoders), Neurons (biases), or ``"loss"``
+    #         (the loss value for ``objective``).  The user can also create their
+    #         own summaries and pass in the Tensors representing the summary ops.
+    #     profile : bool
+    #         If True, collect TensorFlow profiling information while the
+    #         simulation is running (this will slow down the simulation).
+    #         Can also pass a string specifying a non-default filename for the
+    #         saved profile data.
+    #     extra_feeds : dict of {``tf.Tensor``: `~numpy.ndarray`}
+    #         Can be used to feed a value for arbitrary Tensors in the simulation
+    #         (will be passed directly to the TensorFlow session)
+    #     progress_bar : bool
+    #         If True, print information about the simulation status to standard
+    #         output.
+    #
+    #     Notes
+    #     -----
+    #     Most deep learning methods require the network to be differentiable,
+    #     which means that trying to train a network with non-differentiable
+    #     elements will result in an error.  Examples of common
+    #     non-differentiable elements include `~nengo.LIF`,
+    #     `~nengo.Direct`, or processes/neurons that don't have a
+    #     custom TensorFlow implementation (see
+    #     `.process_builders.SimProcessBuilder`/
+    #     `.neuron_builders.SimNeuronsBuilder`)
+    #     """
+    #
+    #     if isinstance(data, int):
+    #         batch_size = self.minibatch_size
+    #         n_steps = data
+    #     else:
+    #         batch_size, n_steps = next(iter(data.values())).shape[:2]
+    #
+    #     # error checking
+    #     synapses = [
+    #         x.synapse is not None
+    #         for x in (
+    #             self.model.toplevel.all_connections
+    #             + (
+    #                 list(p for p in data if isinstance(p, Probe))
+    #                 if isinstance(data, dict)
+    #                 else []
+    #             )
+    #         )
+    #     ]
+    #     if n_steps == 1 and self.model.toplevel is not None and any(synapses):
+    #         warnings.warn(
+    #             "Training for one timestep, but the network contains "
+    #             "synaptic filters (which will introduce at least a "
+    #             "one-timestep delay); did you mean to set synapse=None?"
+    #         )
+    #     if isinstance(optimizer, dict):
+    #         raise ValidationError(
+    #             "The second argument to `sim.train` should be a "
+    #             "tf.train.Optimizer, not a dictionary; it is likely that this "
+    #             "code was written for NengoDL 1.x and needs to be updated for "
+    #             "NengoDL 2.x; see "
+    #             "https://www.nengo.ai/nengo-dl/project.html#release-history",
+    #             "optimizer",
+    #         )
+    #
+    #     # fill in default objective
+    #     if objective is None:
+    #         if isinstance(data, int):
+    #             raise ValidationError(
+    #                 "Must specify an explicit objective if no input data given",
+    #                 "objective",
+    #             )
+    #         objective = {p: objectives.mse for p in data if isinstance(p, Probe)}
+    #
+    #     if not isinstance(objective, dict):
+    #         raise ValidationError(
+    #             "Must be a dictionary mapping Probes to objective functions",
+    #             "objective",
+    #         )
+    #
+    #     # build the objective
+    #     loss, init_ops = self.tensor_graph.build_outputs(
+    #         {k: v for k, v in objective.items() if v is not None}
+    #     )
+    #     if init_ops is not None:
+    #         self.sess.run(init_ops)
+    #
+    #     # create the optimizer function
+    #     apply_optimizer = self.tensor_graph.build_optimizer_func(
+    #         optimizer, loss,
+    #         direct_grads=[p for p, g in objective.items() if g is None]
+    #     )
+    #
+    #     extra_fetches = dict()
+    #
+    #     # add summaries
+    #     if summaries is not None:
+    #         if self.summary is None:
+    #             warnings.warn(
+    #                 "Simulator was created with tensorboard=False; "
+    #                 "ignoring requested summaries"
+    #             )
+    #         else:
+    #             for i, v in enumerate(summaries):
+    #                 if isinstance(v, str) and v == "loss":
+    #                     summaries[i] = objective
+    #             summary_op, init = self.tensor_graph.build_summaries(summaries)
+    #             if init is not None:
+    #                 # initialize any variables created when building summaries
+    #                 self.sess.run(init)
+    #             extra_fetches["summaries"] = summary_op
+    #
+    #     progress = (
+    #         utils.ProgressBar(
+    #             "Training",
+    #             max_value=(
+    #                 n_epochs
+    #                 * (batch_size // self.minibatch_size)
+    #                 * (1 if truncation is None else n_steps // truncation)
+    #             ),
+    #             vars=["loss"],
+    #         )
+    #         if progress_bar
+    #         else utils.NullProgressBar()
+    #     )
+    #
+    #     objective_probes = tuple(objective.keys())
+    #
+    #     def callback(out_vals, extra_vals):
+    #         # update progress bar, with loss value
+    #         loss = out_vals[objective_probes][1]
+    #         # loss will be {} if only direct grads used when calculating
+    #         # gradient
+    #         kwargs = {} if loss == {} else dict(loss="%.4f" % loss)
+    #         progress.step(**kwargs)
+    #
+    #         # export summaries to tensorboard
+    #         if "summaries" in extra_vals:
+    #             # note: the first output value is the new value of the
+    #             # global training_step
+    #             self.summary.add_summary(
+    #                 extra_vals["summaries"], out_vals[objective_probes][0]
+    #             )
+    #
+    #     # run training
+    #     with progress:
+    #         self.run_batch(
+    #             data,
+    #             {objective_probes: apply_optimizer},
+    #             n_epochs=n_epochs,
+    #             combine=lambda x: None,
+    #             extra_feeds=extra_feeds,
+    #             extra_fetches=extra_fetches,
+    #             truncation=truncation,
+    #             profile=profile,
+    #             shuffle=shuffle,
+    #             training=True,
+    #             callback=callback,
+    #         )
 
-        Parameters
-        ----------
-        data : dict of {`~nengo.Node` or `~nengo.Probe`: \
-                        `~numpy.ndarray`} or int
-            Input values for Nodes in the network or target values for Probes;
-            arrays should have shape ``(batch_size, n_steps,
-            node.size_out/probe.size_in)``.  If no input data is required,
-            an integer can be given specifying the number of timesteps to
-            run the simulation.
-        optimizer : ``tf.train.Optimizer``
-            TensorFlow optimizer, e.g.
-            ``tf.train.GradientDescentOptimizer(learning_rate=0.1)``
-        n_epochs : int
-            Run training for the given number of epochs (complete passes
-            through ``data``)
-        objective : dict of {(tuple of) `~nengo.Probe`: callable or ``None``}
-            The objective to be minimized. The default applies
-            `.objectives.mse` to all probes in ``data``.  This can be
-            overridden by passing a dictionary mapping Probes to functions
-            ``f(output, target) -> loss`` that consume the actual output and
-            target output for the given probe(s) and return a ``tf.Tensor``
-            representing a scalar loss value.  The function may also accept a
-            single argument ``f(output) -> loss`` if targets are not required.
-            Some common objective functions can be found in
-            `nengo_dl.objectives`.
+    def loss(self, *args, **kwargs):
+        """Deprecated, use `.Simulator.compile` and `.Simulator.eval` instead."""
 
-            Passing ``None`` as the probe value (instead of a callable)
-            indicates that the error is being computed outside the simulation,
-            and the value passed for that probe in ``data`` directly specifies
-            the output error gradient.
-
-            If multiple probes are specified as the key, then the corresponding
-            output/target values will be passed as a list to the objective
-            function.
-
-            The overall loss value being minimized will be the sum across all
-            the objectives specified.
-        shuffle : bool
-            If True, randomize the data into different minibatches each epoch
-        truncation: int
-            If not None, use truncated backpropagation when training the
-            network, with the given truncation length.
-        summaries : list of `~nengo.Connection` or \
-                            `~nengo.Ensemble` or \
-                            `~nengo.ensemble.Neurons` or \
-                            ``"loss"`` or \
-                            ``tf.Tensor``
-            If not None, collect data during the training process using
-            TensorFlow's ``tf.summary`` format.  The summary objects can be a
-            Connection (in which case data on the corresponding weights will be
-            collected), Ensemble (encoders), Neurons (biases), or ``"loss"``
-            (the loss value for ``objective``).  The user can also create their
-            own summaries and pass in the Tensors representing the summary ops.
-        profile : bool
-            If True, collect TensorFlow profiling information while the
-            simulation is running (this will slow down the simulation).
-            Can also pass a string specifying a non-default filename for the
-            saved profile data.
-        extra_feeds : dict of {``tf.Tensor``: `~numpy.ndarray`}
-            Can be used to feed a value for arbitrary Tensors in the simulation
-            (will be passed directly to the TensorFlow session)
-        progress_bar : bool
-            If True, print information about the simulation status to standard
-            output.
-
-        Notes
-        -----
-        Most deep learning methods require the network to be differentiable,
-        which means that trying to train a network with non-differentiable
-        elements will result in an error.  Examples of common
-        non-differentiable elements include `~nengo.LIF`,
-        `~nengo.Direct`, or processes/neurons that don't have a
-        custom TensorFlow implementation (see
-        `.process_builders.SimProcessBuilder`/
-        `.neuron_builders.SimNeuronsBuilder`)
-        """
-
-        if isinstance(data, int):
-            batch_size = self.minibatch_size
-            n_steps = data
-        else:
-            batch_size, n_steps = next(iter(data.values())).shape[:2]
-
-        # error checking
-        synapses = [
-            x.synapse is not None
-            for x in (
-                self.model.toplevel.all_connections
-                + (
-                    list(p for p in data if isinstance(p, Probe))
-                    if isinstance(data, dict)
-                    else []
-                )
-            )
-        ]
-        if n_steps == 1 and self.model.toplevel is not None and any(synapses):
-            warnings.warn(
-                "Training for one timestep, but the network contains "
-                "synaptic filters (which will introduce at least a "
-                "one-timestep delay); did you mean to set synapse=None?"
-            )
-        if isinstance(optimizer, dict):
-            raise ValidationError(
-                "The second argument to `sim.train` should be a "
-                "tf.train.Optimizer, not a dictionary; it is likely that this "
-                "code was written for NengoDL 1.x and needs to be updated for "
-                "NengoDL 2.x; see "
-                "https://www.nengo.ai/nengo-dl/project.html#release-history",
-                "optimizer",
-            )
-
-        # fill in default objective
-        if objective is None:
-            if isinstance(data, int):
-                raise ValidationError(
-                    "Must specify an explicit objective if no input data given",
-                    "objective",
-                )
-            objective = {p: objectives.mse for p in data if isinstance(p, Probe)}
-
-        if not isinstance(objective, dict):
-            raise ValidationError(
-                "Must be a dictionary mapping Probes to objective functions",
-                "objective",
-            )
-
-        # build the objective
-        loss, init_ops = self.tensor_graph.build_outputs(
-            {k: v for k, v in objective.items() if v is not None}
+        raise SimulationError(
+            "Simulator.loss has been deprecated, use Simulator.compile/eval instead"
         )
-        if init_ops is not None:
-            self.sess.run(init_ops)
-
-        # create the optimizer function
-        apply_optimizer = self.tensor_graph.build_optimizer_func(
-            optimizer, loss, direct_grads=[p for p, g in objective.items() if g is None]
-        )
-
-        extra_fetches = dict()
-
-        # add summaries
-        if summaries is not None:
-            if self.summary is None:
-                warnings.warn(
-                    "Simulator was created with tensorboard=False; "
-                    "ignoring requested summaries"
-                )
-            else:
-                for i, v in enumerate(summaries):
-                    if isinstance(v, str) and v == "loss":
-                        summaries[i] = objective
-                summary_op, init = self.tensor_graph.build_summaries(summaries)
-                if init is not None:
-                    # initialize any variables created when building summaries
-                    self.sess.run(init)
-                extra_fetches["summaries"] = summary_op
-
-        progress = (
-            utils.ProgressBar(
-                "Training",
-                max_value=(
-                    n_epochs
-                    * (batch_size // self.minibatch_size)
-                    * (1 if truncation is None else n_steps // truncation)
-                ),
-                vars=["loss"],
-            )
-            if progress_bar
-            else utils.NullProgressBar()
-        )
-
-        objective_probes = tuple(objective.keys())
-
-        def callback(out_vals, extra_vals):
-            # update progress bar, with loss value
-            loss = out_vals[objective_probes][1]
-            # loss will be {} if only direct grads used when calculating
-            # gradient
-            kwargs = {} if loss == {} else dict(loss="%.4f" % loss)
-            progress.step(**kwargs)
-
-            # export summaries to tensorboard
-            if "summaries" in extra_vals:
-                # note: the first output value is the new value of the
-                # global training_step
-                self.summary.add_summary(
-                    extra_vals["summaries"], out_vals[objective_probes][0]
-                )
-
-        # run training
-        with progress:
-            self.run_batch(
-                data,
-                {objective_probes: apply_optimizer},
-                n_epochs=n_epochs,
-                combine=lambda x: None,
-                extra_feeds=extra_feeds,
-                extra_fetches=extra_fetches,
-                truncation=truncation,
-                profile=profile,
-                shuffle=shuffle,
-                training=True,
-                callback=callback,
-            )
-
-    def loss(
-        self,
-        data,
-        objective=None,
-        combine=np.mean,
-        extra_feeds=None,
-        progress_bar=True,
-        training=False,
-    ):
-        """
-        Compute the loss value for the given objective and inputs/targets.
-
-        Parameters
-        ----------
-        data : dict of {`~nengo.Node` or `~nengo.Probe`: \
-                        `~numpy.ndarray`} or int
-            Input values for Nodes in the network or target values for Probes;
-            arrays should have shape ``(batch_size, n_steps,
-            node.size_out/probe.size_in)``.  If no input data is required,
-            an integer can be given specifying the number of timesteps to
-            run the simulation.
-        objective : dict of {(tuple of) `~nengo.Probe`: callable}
-            The objective to compute the loss. The default applies
-            `.objectives.mse` to all probes in ``data``.  This can be
-            overridden by passing a dictionary mapping Probes to functions
-            ``f(output, target) -> loss`` that consume the actual output and
-            target output for the given probe(s) and return a ``tf.Tensor``
-            representing a scalar loss value.  The function may also accept a
-            single argument ``f(output) -> loss`` if targets are not required.
-            Some common objective functions can be found in
-            `nengo_dl.objectives`.
-
-            If multiple probes are specified as the key, then the corresponding
-            output/target values will be passed as a list to the objective
-            function.
-
-            The overall value returned will be the sum across all
-            the objectives specified.
-        combine : callable
-            Function used to combine objective values from each minibatch.
-        extra_feeds : dict of {``tf.Tensor``: `~numpy.ndarray`}
-            Can be used to feed a value for arbitrary Tensors in the simulation
-            (will be passed directly to the TensorFlow session)
-        progress_bar : bool
-            If True, print information about the simulation status to standard
-            output.
-        training : bool
-            If True, run the network in training mode (where, e.g., spiking
-            neuron models are swapped for the equivalent differentiable
-            approximation).
-
-        Returns
-        -------
-        loss : float
-            Sum of computed error values for each function in ``objective``.
-        """
-
-        batch_size = (
-            self.minibatch_size
-            if isinstance(data, int)
-            else next(iter(data.values())).shape[0]
-        )
-
-        # fill in default objective
-        if objective is None:
-            if isinstance(data, int):
-                raise ValidationError(
-                    "Must specify an explicit objective if no input data given",
-                    "objective",
-                )
-            objective = {p: objectives.mse for p in data if isinstance(p, Probe)}
-
-        if not isinstance(objective, dict):
-            raise ValidationError(
-                "Must be a dictionary mapping Probes to objective functions",
-                "objective",
-            )
-
-        progress = (
-            utils.ProgressBar(
-                "Calculating loss",
-                "Calculation",
-                max_value=batch_size // self.minibatch_size,
-            )
-            if progress_bar
-            else utils.NullProgressBar()
-        )
-        with progress:
-            loss = self.run_batch(
-                data,
-                objective,
-                extra_feeds=extra_feeds,
-                callback=lambda *_: progress.step(),
-                combine=combine,
-                training=training,
-            )
-
-        # sum across objectives
-        loss = np.sum(list(loss.values()))
-
-        return loss
 
     def run_batch(
         self,
@@ -1693,7 +1830,92 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
             self.closed = True
 
-    def _generate_inputs(self, data=None, n_steps=None, batch_size=None):
+    def get_name(self, obj):
+        """
+        Returns the standardized string name for input Nodes or output Probes.
+
+        These are used when referring to inputs/outputs by string in Keras.
+
+        Parameters
+        ----------
+        obj : `nengo.Node` or `nengo.Probe`
+            Input Node or output Probe
+
+        Returns
+        -------
+        name : str
+            Name of the given object
+        """
+
+        if isinstance(obj, Node):
+            if obj not in self.node_inputs:
+                raise ValidationError(
+                    "%s is not an input Node (a nengo.Node with "
+                    "size_in==0), or is from a different network." % obj,
+                    "obj",
+                )
+            tensor = self.node_inputs[obj]
+        elif isinstance(obj, Probe):
+            if obj not in self.tensor_graph.probe_arrays:
+                raise ValidationError("%s is from a different network." % obj, "obj")
+            tensor = self.tensor_graph.probe_arrays[obj]
+        else:
+            raise ValidationError(
+                "%s is of an unknown type (%s); should be nengo.Node "
+                "or nengo.Probe" % (obj, type(obj)),
+                "obj",
+            )
+        return tensor.op.name.split("/")[-1]
+
+    def _standardize_data(self, data, objects, broadcast_unary=False):
+        """Converts data to the standardized input format (named string dicts).
+
+        Parameters
+        ----------
+        data : `numpy.ndarray` or list or dict
+            Input data in one of the formats supported by fit/predict/eval.
+        objects : list of `nengo.Node` or `nengo.Probe`
+            List of input Nodes or output Probes in the model (depending on which
+            kind of data is being standardized).
+        broadcast_unary: bool
+            If True, singular (e.g. non-list/dict) inputs will be applied to all
+            ``objects``, otherwise will only be applied to first item in ``objects``.
+
+        Returns
+        -------
+        data : dict of {str: object}
+            Elements of data reorganized into standardized data structure (named
+            string dict).
+        """
+
+        if data is None:
+            return data
+
+        if not isinstance(data, (list, tuple, dict)):
+            # convert unary inputs to length-1 lists
+            data = [data]
+            if broadcast_unary:
+                data *= len(objects)
+
+        if isinstance(data, (list, tuple)):
+            # convert list to named dict
+            data = collections.OrderedDict(
+                (self.get_name(obj), val) for obj, val in zip(objects, data)
+            )
+        elif isinstance(data, dict):
+            # convert objects to string names
+            new_data = collections.OrderedDict()
+            for obj, val in data.items():
+                if isinstance(obj, str):
+                    name = obj
+                else:
+                    name = self.get_name(obj)
+                new_data[name] = val
+            data = new_data
+
+        return data
+
+    def _generate_inputs(self, data=None, n_steps=None):
         """
         Generate inputs for the network (the output values of each Node with
         no incoming connections).
@@ -1731,40 +1953,14 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
             return data
 
-        if isinstance(data, np.ndarray):
-            # convert unary inputs to length-1 lists
-            data = [data]
-        if isinstance(data, (list, tuple)):
-            # convert list to named dict
-            data = collections.OrderedDict(
-                (input.op.name, val)
-                for input, val in zip(self.keras_model.inputs[1:], data)
-            )
-        elif isinstance(data, dict):
-            # convert nodes to string names
-            new_data = collections.OrderedDict()
-            for node, val in data.items():
-                if isinstance(node, Node):
-                    if node not in self.node_inputs:
-                        raise ValidationError(
-                            "%s is not an input Node (a nengo.Node with "
-                            "size_in==0), or is from a different network." % node,
-                            "data",
-                        )
-
-                    name = self.node_inputs[node].op.name
-                else:
-                    name = node
-                new_data[name] = val
-            data = new_data
+        data = self._standardize_data(data, self.node_inputs)
 
         if len(data) == 0:
             data_batch = data_steps = None
         else:
             data_batch, data_steps = next(iter(data.values())).shape[:2]
 
-        if batch_size is None:
-            batch_size = self.minibatch_size if data_batch is None else data_batch
+        batch_size = self.minibatch_size if data_batch is None else data_batch
         if n_steps is None:
             if data_steps is None:
                 raise ValidationError(
@@ -1808,7 +2004,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         return input_vals
 
-    def _check_data(self, data, batch_size=None, n_steps=None):
+    def _check_data(self, data, batch_size=None, n_steps=None, nodes=True):
         """
         Performs error checking on simulation data.
 
@@ -1823,6 +2019,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
         n_steps : int
             Number of simulation steps (if None, will just verify that all
             data items have same number of steps)
+        nodes : bool
+            If True the data being validated is associated with Nodes, if False the
+            data is associated with Probes.
         """
 
         if not isinstance(data, dict):
@@ -1830,51 +2029,74 @@ class Simulator:  # pylint: disable=too-many-public-methods
             # TODO: could map this into the generator process as well?
             return
 
-        if "n_steps" not in data:
-            raise ValidationError("Must specify 'n_steps' in input data", "data")
-        if (
-            batch_size is None
-            and (data["n_steps"].ndim != 2 or data["n_steps"].shape[1] != 1)
-        ) or (batch_size is not None and data["n_steps"].shape != (batch_size, 1)):
-            raise ValidationError(
-                "'n_steps' has wrong shape; should be %s (note that this is just the "
-                "integer n_steps value repeated)" % ((batch_size, 1),),
-                "data",
-            )
-        if not np.all(data["n_steps"] == data["n_steps"][0, 0]):
-            raise ValidationError("'n_steps' should all have the same value", "data")
+        if nodes:
+            # validate special n_steps input
+
+            if "n_steps" not in data:
+                raise ValidationError("Must specify 'n_steps' in input data", "data")
+            if (
+                batch_size is None
+                and (data["n_steps"].ndim != 2 or data["n_steps"].shape[1] != 1)
+            ) or (batch_size is not None and data["n_steps"].shape != (batch_size, 1)):
+                raise ValidationError(
+                    "'n_steps' has wrong shape; should be %s (note that this is just "
+                    "the integer n_steps value repeated)" % ((batch_size, 1),),
+                    "data",
+                )
+            if not np.all(data["n_steps"] == data["n_steps"][0, 0]):
+                raise ValidationError(
+                    "'n_steps' should all have the same value", "data"
+                )
+            if n_steps is not None and not np.all(data["n_steps"] == n_steps):
+                raise ValidationError(
+                    "`n_steps` input does not match the requested number of steps",
+                    "data",
+                )
 
         # exclude n_steps from further data checking
         data = {k: val for k, val in data.items() if k != "n_steps"}
 
         for name, x in data.items():
-            if name not in [n.op.name for n in self.node_inputs.values()]:
-                raise ValidationError(
-                    "'%s' is not a valid input name; perhaps the name is wrong (it "
-                    "should match the `label` on the Node), or this is not an input "
-                    "Node (a Node with size_in==0) in this network." % name,
-                    "data",
-                )
+            # check that name is valid
+            if nodes:
+                if name not in [self.get_name(n) for n in self.node_inputs]:
+                    raise ValidationError(
+                        "'%s' is not a valid node name; perhaps the name is wrong (it "
+                        "should match the `label` on the Node), or this is not an "
+                        "input Node (a Node with size_in==0) in this network." % name,
+                        "data",
+                    )
+            else:
+                if name not in [self.get_name(p) for p in self.model.probes]:
+                    raise ValidationError(
+                        "'%s' is not a valid probe name; perhaps the name is wrong (it "
+                        "should match the `label` on the Probe), or this is not a "
+                        "Probe in this network." % name,
+                        "data",
+                    )
 
+            # generic shape checks
             if len(x.shape) != 3:
                 raise ValidationError(
                     "should have rank 3 (batch_size, n_steps, dimensions), "
                     "found rank %d" % len(x.shape),
                     "%s data" % name,
                 )
-
-            # elif isinstance(d, Probe):
-            #     if d not in self.model.probes:
-            #         raise ValidationError("%s is from a different network" % d,
-            #                               "data")
-
             if x.shape[0] < self.minibatch_size:
                 raise ValidationError(
                     "Size of minibatch (%d) less than Simulation `minibatch_size` (%d)"
                     % (x.shape[0], self.minibatch_size),
                     "%s data" % name,
                 )
+            if x.shape[1] % self.unroll != 0:
+                raise ValidationError(
+                    "The number of timesteps in data (%s) must be evenly "
+                    "divisible by unroll_simulation (%s)" % (x.shape[1], self.unroll),
+                    "data",
+                )
 
+        # check that shapes match the given values (if specified) or are
+        # internally consistent (if not)
         args = [batch_size, n_steps]
         labels = ["batch size", "number of timesteps"]
 
@@ -1897,11 +2119,16 @@ class Simulator:  # pylint: disable=too-many-public-methods
                             "data",
                         )
 
-        for node, input in self.node_inputs.items():
-            if data[input.op.name].shape[2] != node.size_out:
+        # object-specific checks
+        for obj in self.node_inputs if nodes else self.model.probes:
+            name = self.get_name(obj)
+
+            # data size matches object size
+            size = obj.size_out if nodes else obj.size_in
+            if name in data and data[name].shape[2] != size:
                 raise ValidationError(
                     "Dimensionality of data (%s) does not match "
-                    "dimensionality of %s (%s)" % (x.shape[2], node, node.size_out),
+                    "dimensionality of %s (%s)" % (x.shape[2], obj, size),
                     "data",
                 )
 

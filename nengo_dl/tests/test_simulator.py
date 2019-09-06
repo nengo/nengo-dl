@@ -21,7 +21,6 @@ from tensorflow import keras
 
 from nengo_dl import configure_settings, tensor_layer, dists, TensorNode
 from nengo_dl.compat import tf_compat
-from nengo_dl.objectives import mse
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
 from nengo_dl.utils import tf_gpu_installed
@@ -236,11 +235,8 @@ def test_train_recurrent(Simulator, truncation, seed):
 
         sim.check_gradients(sim.tensor_graph.build_outputs({p: mse})[0][p])
 
-        sim.run_steps(n_steps, data={inp: x[:minibatch_size]})
-
-    assert np.sqrt(np.mean((sim.data[p] - y[:minibatch_size]) ** 2)) < (
-        0.07 if truncation else 0.05
-    )
+        loss = sim.evaluate({inp: x}, {p: y})["loss"]
+        assert loss < (0.005 if truncation else 0.0025)
 
 
 @pytest.mark.xfail(reason="TODO: support train")
@@ -403,72 +399,6 @@ def test_train_no_data(Simulator):
         )
         sim.step()
         assert np.allclose(sim.data[p], 2)
-
-
-@pytest.mark.xfail(reason="TODO: support loss")
-def test_loss(Simulator):
-    with nengo.Network() as net:
-        inp = nengo.Node([1])
-        ens = nengo.Ensemble(30, 1)
-        nengo.Connection(inp, ens)
-        p = nengo.Probe(ens)
-
-    n_steps = 20
-    with Simulator(net) as sim:
-        sim.run_steps(n_steps)
-        data = sim.data[p]
-
-        # check default mse objective
-        assert np.allclose(
-            sim.loss({inp: np.ones((4, n_steps, 1)), p: np.zeros((4, n_steps, 1))}),
-            np.mean(data ** 2),
-        )
-
-        # check custom objective
-        assert np.allclose(
-            sim.loss(
-                {inp: np.ones((4, n_steps, 1)), p: np.zeros((4, n_steps, 1))},
-                {p: lambda x, y: tf.constant(2.0)},
-            ),
-            2,
-        )
-
-        # error for mismatched n_steps
-        with pytest.raises(ValidationError):
-            sim.loss({inp: np.ones((1, n_steps + 1, 1)), p: np.ones((1, n_steps, 1))})
-
-        # error for mismatched batch size
-        with pytest.raises(ValidationError):
-            sim.loss({inp: np.ones((2, n_steps, 1)), p: np.ones((1, n_steps, 1))})
-
-        # error for mismatched n_steps (in targets)
-        with pytest.raises(ValidationError):
-            sim.loss({inp: np.ones((1, n_steps, 1)), p: np.ones((1, n_steps + 1, 1))})
-
-        # error for mismatched batch size (in targets)
-        with pytest.raises(ValidationError):
-            sim.loss({inp: np.ones((1, n_steps, 1)), p: np.ones((2, n_steps, 1))})
-
-        # error when not specifying objective as a dict
-        with pytest.raises(ValidationError):
-            sim.loss({inp: np.ones((1, n_steps, 1)), p: np.ones((1, n_steps, 1))}, mse)
-
-        # deprecation warning when using "mse" string
-        with pytest.warns(DeprecationWarning):
-            sim.loss({p: np.ones((1, n_steps, 1))}, {p: "mse"})
-
-        # must specify objective if no data
-        with pytest.raises(ValidationError):
-            sim.loss(5)
-
-    # error when calling loss after close
-    with pytest.raises(SimulatorClosed):
-        sim.loss({None: np.zeros((1, 1))})
-
-    with Simulator(net, unroll_simulation=2) as sim:
-        # error when data n_steps does not match unroll
-        with pytest.raises(ValidationError):
-            sim.loss({inp: np.ones((1, 1, 1)), p: np.ones((1, 1, 1))})
 
 
 def test_generate_inputs(Simulator, seed):
@@ -883,35 +813,35 @@ def test_check_gradients_error(Simulator):
 
 def test_check_data(Simulator):
     with nengo.Network() as net:
-        nengo.Node([0, 0], label="inpa")
-        nengo.Node([0], label="inpb")
+        inpa = nengo.Node([0, 0], label="inpa")
+        inpb = nengo.Node([0], label="inpb")
         nengo.Node(size_in=2, label="n")
-        # pa = nengo.Probe(inpa)
-        # pb = nengo.Probe(inpb)
+        nengo.Probe(inpa, label="pa")
+        nengo.Probe(inpb, label="pb")
         nengo.Ensemble(10, 1)
 
     with nengo.Network():
-        nengo.Node([0, 0], label="inp2")
-        # p2 = nengo.Probe(inp2)
+        inp2 = nengo.Node([0, 0], label="inp2")
+        nengo.Probe(inp2, label="p2")
 
-    with Simulator(net, minibatch_size=3) as sim:
+    with Simulator(net, minibatch_size=3, unroll_simulation=1) as sim:
         zeros1 = np.zeros((3, 1, 1))
         zeros2 = np.zeros((3, 1, 2))
         n_steps = np.ones((3, 1))
 
         # make sure that valid inputs pass
         sim._check_data({"inpa": zeros2, "inpb": zeros1, "n_steps": n_steps})
-        # sim._check_data({pa: zeros2, pb: zeros1})
+        sim._check_data({"pa": zeros2, "pb": zeros1}, nodes=False)
 
         # invalid input objects
-        with pytest.raises(ValidationError, match="not a valid input name"):
+        with pytest.raises(ValidationError, match="not a valid node name"):
             sim._check_data({"inp2": zeros2, "n_steps": n_steps})
-        with pytest.raises(ValidationError, match="not a valid input name"):
+        with pytest.raises(ValidationError, match="not a valid node name"):
             sim._check_data({"n": zeros2, "n_steps": n_steps})
 
         # invalid target object
-        # with pytest.raises(ValidationError):
-        #     sim._check_data({p2: zeros2})
+        with pytest.raises(ValidationError, match="not a valid probe name"):
+            sim._check_data({"p2": zeros2}, nodes=False)
 
         # mismatched input data
         with pytest.raises(ValidationError, match="different batch size"):
@@ -924,38 +854,40 @@ def test_check_data(Simulator):
             )
 
         # mismatched target data
-        # with pytest.raises(ValidationError):
-        #     sim._check_data({pa: zeros2, pb: np.zeros((2, 1, 1))})
-        # with pytest.raises(ValidationError):
-        #     sim._check_data({pa: zeros2, pb: np.zeros((1, 2, 1))})
+        with pytest.raises(ValidationError, match="different batch size"):
+            sim._check_data({"pa": zeros2, "pb": np.zeros((4, 1, 1))}, nodes=False)
+        with pytest.raises(ValidationError, match="different number of timesteps"):
+            sim._check_data({"pa": zeros2, "pb": np.zeros((3, 2, 1))}, nodes=False)
 
-        # data that doesn't match explicit target
+        # data that doesn't match explicit validation value
         with pytest.raises(ValidationError, match="does not match expected size"):
             sim._check_data({"inpa": zeros2, "n_steps": np.ones((2, 1))}, batch_size=2)
         with pytest.raises(ValidationError, match="does not match expected size"):
-            sim._check_data({"inpa": zeros2, "n_steps": n_steps}, n_steps=2)
-        # with pytest.raises(ValidationError):
-        #     sim._check_data({pa: zeros2}, batch_size=2)
-        # with pytest.raises(ValidationError):
-        #     sim._check_data({pa: zeros2}, n_steps=2)
+            sim._check_data(
+                {"inpa": zeros2, "n_steps": np.ones_like(n_steps) * 2}, n_steps=2
+            )
+        with pytest.raises(ValidationError, match="does not match expected size"):
+            sim._check_data({"pa": zeros2}, batch_size=2, nodes=False)
+        with pytest.raises(ValidationError, match="does not match expected size"):
+            sim._check_data({"pa": zeros2}, n_steps=2, nodes=False)
 
         # data with wrong object dimensionality
         with pytest.raises(ValidationError, match="Dimensionality of data"):
             sim._check_data({"inpa": zeros1, "n_steps": n_steps})
-        # with pytest.raises(ValidationError):
-        #     sim._check_data({pa: zeros1})
+        with pytest.raises(ValidationError, match="Dimensionality of data"):
+            sim._check_data({"pa": zeros1}, nodes=False)
 
         # data with batch size < minibatch_size
         with pytest.raises(ValidationError, match="Size of minibatch"):
             sim._check_data({"inpa": zeros2[[0]], "n_steps": n_steps})
-        # with pytest.raises(ValidationError):
-        #     sim._check_data({pa: zeros2[[0]]})
+        with pytest.raises(ValidationError, match="Size of minibatch"):
+            sim._check_data({"pa": zeros2[[0]]}, nodes=False)
 
         # data with incorrect rank
         with pytest.raises(ValidationError, match="should have rank 3"):
             sim._check_data({"inpa": zeros2[0], "n_steps": n_steps})
-        # with pytest.raises(ValidationError):
-        #     sim._check_data({pa: zeros2[0]})
+        with pytest.raises(ValidationError, match="should have rank 3"):
+            sim._check_data({"pa": zeros2[0]}, nodes=False)
 
         # no n_steps
         with pytest.raises(ValidationError, match="Must specify 'n_steps'"):
