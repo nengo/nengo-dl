@@ -306,7 +306,7 @@ class LinearFilterBuilder(OpBuilder):
                 dtype=signals.dtype,
             )
 
-            assert self.D.get_shape() == (1, self.n_ops, 1)
+            assert self.D.shape == (1, self.n_ops, 1)
         elif self.step_type == OneX:
             # combine A scalars for each op, and broadcast along batch/state
             self.A = signals.constant(
@@ -320,8 +320,8 @@ class LinearFilterBuilder(OpBuilder):
             self.C = None
             self.D = None
 
-            assert self.A.get_shape() == (1, self.n_ops, 1)
-            assert self.B.get_shape() == (1, self.n_ops, 1)
+            assert self.A.shape == (1, self.n_ops, 1)
+            assert self.B.shape == (1, self.n_ops, 1)
         else:
             self.A = signals.constant(
                 np.stack([step.A for step in steps], axis=0), dtype=signals.dtype
@@ -340,7 +340,7 @@ class LinearFilterBuilder(OpBuilder):
                     np.concatenate([step.D[:, None, None] for step in steps]),
                     dtype=signals.dtype,
                 )
-                assert self.D.get_shape() == (self.n_ops, 1, 1)
+                assert self.D.shape == (self.n_ops, 1, 1)
 
             # create a variable to represent the internal state of the filter
             if LooseVersion(nengo_version) < "3.0.0":
@@ -352,9 +352,9 @@ class LinearFilterBuilder(OpBuilder):
             else:
                 self.state_data = signals.combine([op.state["X"] for op in ops])
 
-            assert self.A.get_shape() == (self.n_ops, self.state_d, self.state_d)
-            assert self.B.get_shape() == (self.n_ops, self.state_d, 1)
-            assert self.C.get_shape() == (self.n_ops, 1, self.state_d)
+            assert self.A.shape == (self.n_ops, self.state_d, self.state_d)
+            assert self.B.shape == (self.n_ops, self.state_d, 1)
+            assert self.C.shape == (self.n_ops, 1, self.state_d)
 
     def build_step(self, signals):
         input = signals.gather(self.input_data)

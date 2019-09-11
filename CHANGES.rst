@@ -24,13 +24,6 @@ Release History
 
 **Added**
 
-- Objective functions passed to ``Simulator.loss/train`` (or any output
-  functions passed to ``Simulator.run_batch`` in general) can now define
-  a ``pre_build`` function (similar to TensorNodes). This function should
-  perform any setup required by the objective (in particular, creating any
-  Variables, which should be returned from the ``pre_build`` function).
-  The input to the ``pre_build`` function will be the shapes of the inputs to
-  the main function, mirroring the structure of those arguments.
 - Keras ``Layer`` classes can now be used with ``nengo_dl.tensor_layer``.
 - ``TensorGraph`` can now be used as a Keras ``Layer``.
 - Added ``Simulator.predict/evaluate/fit`` functions, which
@@ -77,6 +70,11 @@ Release History
   ``sim.tensor_graph.graph``).
 - ``Simulator.n_steps/time`` are now managed as part of the op graph, rather than
   manually in the Simulator.
+- Renamed ``nengo_dl.objectives`` to ``nengo_dl.losses`` (to align with
+  ``tf.keras.losses``).
+- ``nengo_dl.objectives.Regularize`` now takes two arguments (``y_true`` and ``y_pred``)
+  in order to be compatible with the ``tf.losses.Loss`` API (``y_true`` is ignored).
+
 
 **Removed**
 
@@ -94,7 +92,20 @@ Release History
   used as the entrypoint into the engine underlying a Simulator instead.
 - Removed the ``Simulator.loss`` function (use ``Simulator.compile`` and
   ``Simulator.evaluate`` to compute loss values instead).
-- Removed ``nengo_dl.objectives`` (use ``tf.losses`` instead).
+- Removed the ``Simulator.train`` function (use ``Simulator.compile`` and
+  ``Simulator.fit`` to optimize a network instead).
+- Removed the ``nengo_dl.objectives.Regularize(weight=x, ...)`` argument. Use the
+  ``Simulator.compile(loss_weights=...)`` functionality instead.
+- Removed ``nengo_dl.objectives.mse``. Use ``tf.losses.mse`` instead.
+- Removed the ``Simulator.run(..., extra_feeds=...)`` argument. TensorFlow 2.0 no longer
+  uses the Session/feed execution model.
+- Removed ``Simulator.run_batch``. This functionality is now managed by the underlying
+  ``Simulator.keras_model``.
+- Removed ``TensorGraph.training_step``. The training step is now managed by Keras.
+- Removed ``TensorGraph.build_outputs`` and ``TensorGraph.build_optimizer_func``.
+  Building loss functions/optimizers is now managed by Keras.
+- Removed ``nengo_dl.utils.find_non_differentiable`` (this no longer works in TF2.0's
+  eager mode).
 
 2.2.2 (unreleased)
 ==================

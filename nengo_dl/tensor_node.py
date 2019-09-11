@@ -39,7 +39,7 @@ def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
             attr="tensor_func",
         )
 
-    shape = output.get_shape()
+    shape = output.shape
     if (
         shape.ndims != 2
         or (minibatch_size is not None and shape[0] != minibatch_size)
@@ -47,7 +47,7 @@ def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
     ):
         raise ValidationError(
             "TensorNode output should have shape (%s, %s) "
-            "(got shape %s)" % (minibatch_size, output_d, output.get_shape()),
+            "(got shape %s)" % (minibatch_size, output_d, shape),
             attr="tensor_func",
         )
 
@@ -106,7 +106,7 @@ class TensorFuncParam(Parameter):
 
             validate_output(result)
 
-            node.size_out = result.get_shape()[1].value
+            node.size_out = result.shape[1].value
 
         return output
 
@@ -300,7 +300,7 @@ def reshaped(shape_in):
 
     def reshape_dec(func):
         def reshaped_func(t, x):
-            batch_size = x.get_shape()[0]
+            batch_size = x.shape[0]
             x = tf.reshape(x, (batch_size,) + shape_in)
             x = func(t, x)
             x = tf.reshape(x, (batch_size, -1))

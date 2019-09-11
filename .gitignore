@@ -25,4 +25,5 @@ docs/whitepaper/*
 !docs/whitepaper/*.tex
 !docs/whitepaper/*.py
 !docs/whitepaper/*.svg
+pip-wheel-metadata
 tmp

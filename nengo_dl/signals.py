@@ -371,11 +371,11 @@ class SignalDict(Mapping):
             )
 
         # align val shape with dst base shape
-        self.bases[dst.key].get_shape().assert_is_fully_defined()
-        val.get_shape().assert_is_fully_defined()
+        self.bases[dst.key].shape.assert_is_fully_defined()
+        val.shape.assert_is_fully_defined()
         dst_shape = self.bases[dst.key].shape.as_list()
         dst_shape[dst.minibatched] = dst.shape[0]
-        if val.get_shape() != dst_shape:
+        if val.shape != dst_shape:
             val = tf.reshape(val, dst.tf_shape)
 
         var = self.bases[dst.key]
@@ -386,7 +386,7 @@ class SignalDict(Mapping):
 
         if (
             dst.tf_slice is not None
-            and var.get_shape().is_compatible_with(val.get_shape())
+            and var.shape.is_compatible_with(val.shape)
             and dst.indices[0] == 0
             and dst.indices[-1] == var.shape[dst.minibatched] - 1
             and len(dst.indices) == var.shape[dst.minibatched]
@@ -460,7 +460,7 @@ class SignalDict(Mapping):
 
         # reshape the data according to the shape set in `src`, if there is
         # one, otherwise keep the shape of the base array
-        if result.get_shape() != src.full_shape:
+        if result.shape != src.full_shape:
             result = tf.reshape(result, src.tf_shape)
 
         return result

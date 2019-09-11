@@ -1,6 +1,5 @@
 # pylint: disable=missing-docstring
 
-from nengo.exceptions import SimulationError
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -124,21 +123,6 @@ def test_print_op(capsys, sess):
     out, _ = capsys.readouterr()
 
     assert out == "hello 0\n"
-
-
-def test_find_non_differentiable():
-    x = tf.constant(0)
-    y = utils.print_op(x, "test")
-    z = y + 1
-
-    with pytest.raises(SimulationError):
-        utils.find_non_differentiable([x], [z])
-
-    x = tf.constant(0)
-    y = x * 2
-    z = y + 1
-
-    utils.find_non_differentiable([x], [z])
 
 
 def test_progress_bar():

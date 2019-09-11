@@ -43,6 +43,7 @@ tf_compat.logging.set_verbosity(tf_compat.logging.WARN)
 # disable v2 behaviour (for now, pending full TF 2.0 compatibility)
 try:
     tf_compat.disable_v2_behavior()
+    tf_compat.enable_eager_execution()
 except AttributeError:
     # on a version of TensorFlow that doesn't have v2 behaviour anyway, so no problem
     pass

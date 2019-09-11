@@ -1,21 +1,16 @@
 # pylint: disable=missing-docstring
 
-from functools import partial
-
 import nengo
 from nengo.builder.operator import Reset
-from nengo.exceptions import ValidationError
 import numpy as np
 import pytest
 import tensorflow as tf
-from tensorflow import keras
 
 from nengo_dl import tensor_graph, utils, graph_optimizer, config
-from nengo_dl.compat import tf_compat
 from nengo_dl.tests import dummies
 
 
-@pytest.mark.xfail(reason="TODO: support train")
+@pytest.mark.xfail(reason="TODO: support gradients")
 @pytest.mark.parametrize("unroll", (1, 2))
 @pytest.mark.training
 def test_gradients(Simulator, unroll, seed):
@@ -56,171 +51,6 @@ def test_gradients(Simulator, unroll, seed):
 
     with Simulator(net, unroll_simulation=unroll, minibatch_size=minibatch_size) as sim:
         sim.check_gradients(atol=1e-4)
-
-
-@pytest.mark.xfail(reason="TODO: support train")
-def test_build_outputs(Simulator):
-    with nengo.Network() as net:
-        inp = nengo.Node([0])
-        p = nengo.Probe(inp)
-
-    with Simulator(net) as sim:
-        # check that the output caching works
-        assert (
-            sim.tensor_graph.build_outputs({p: objectives.mse})[0]
-            is sim.tensor_graph.build_outputs({p: objectives.mse})[0].__wrapped__
-        )
-
-        def loss(x):
-            return x
-
-        assert (
-            sim.tensor_graph.build_outputs({p: loss})[0]
-            is sim.tensor_graph.build_outputs({p: loss})[0].__wrapped__
-        )
-
-        # check function argument counting
-        def loss3(x, y, z):
-            return x
-
-        with pytest.raises(ValidationError):
-            sim.tensor_graph.build_outputs({p: loss3})
-
-        def loss3b(x, y, z=None):
-            return x
-
-        # no error for extra keyword arguments
-        sim.tensor_graph.build_outputs({p: loss3b})
-
-        # arg parsing works with callable class
-        class CallableLoss:
-            def __call__(self, outputs, targets):
-                return outputs
-
-        sim.tensor_graph.build_outputs({p: CallableLoss()})
-
-        # arg parsing works with class methods
-        class MethodLoss:
-            def loss(self, outputs, targets):
-                return outputs
-
-        sim.tensor_graph.build_outputs({p: MethodLoss().loss})
-
-        # arg parsing works with partial functions
-        sim.tensor_graph.build_outputs({p: partial(loss3b, z=5)})
-
-        # validation error for invalid output type
-        with pytest.raises(ValidationError):
-            sim.tensor_graph.build_outputs({p: 1})
-
-
-@pytest.mark.xfail(reason="TODO: support train")
-def test_build_outputs_variables(Simulator):
-    with nengo.Network() as net:
-        a = nengo.Node([0])
-        b = nengo.Node([0, 0])
-        p_a = nengo.Probe(a)
-        p_b = nengo.Probe(b)
-
-    with Simulator(net, minibatch_size=5) as sim:
-
-        class VarFunc:
-            def pre_build(self, probes_shape, targets_shape):
-                assert probes_shape == [[5, None, 1], [5, None, 2]]
-                assert targets_shape == probes_shape
-
-                self.var = tf.Variable(
-                    tf.ones((5, 1), dtype=sim.tensor_graph.dtype), name="one"
-                )
-
-                return self.var
-
-            def __call__(self, outputs, targets):
-                return self.var
-
-        class VarFunc2:
-            def pre_build(self, probes_shape):
-                assert probes_shape == [5, None, 2]
-
-                self.var0 = tf.Variable(
-                    tf.ones((5, 2), dtype=sim.tensor_graph.dtype), name="var0"
-                )
-                self.var1 = tf.Variable(
-                    tf.ones((5, 2), dtype=sim.tensor_graph.dtype), name="var1"
-                )
-
-                return [self.var0, self.var1]
-
-            def __call__(self, outputs):
-                return self.var0 + self.var1
-
-        func = VarFunc()
-        func2 = VarFunc2()
-
-        _, init_op = sim.tensor_graph.build_outputs({(p_a, p_b): func, p_b: func2})
-
-        sim.sess.run(init_op)
-        var, var0, var1 = sim.sess.run([func.var, func2.var0, func2.var1])
-        assert np.allclose(var, 1)
-        assert np.allclose(var0, 1)
-        assert np.allclose(var1, 1)
-
-
-@pytest.mark.xfail(reason="TODO: support train")
-@pytest.mark.training
-def test_build_optimizer(Simulator):
-    with nengo.Network() as net:
-        inp = nengo.Node([0])
-        ens = nengo.Ensemble(10, 1, neuron_type=nengo.Sigmoid())
-        nengo.Connection(inp, ens)
-        p = nengo.Probe(ens)
-
-    # check optimizer caching
-    with Simulator(net) as sim:
-        opt = tf_compat.train.GradientDescentOptimizer(0)
-        assert sim.tensor_graph.build_optimizer_func(
-            opt, {p: objectives.mse}
-        ) is sim.tensor_graph.build_optimizer_func(opt, {p: objectives.mse})
-
-    # error when no trainable elements
-    with nengo.Network() as net:
-        inp = nengo.Node([0])
-        p = nengo.Probe(inp)
-
-    with Simulator(net) as sim:
-        with pytest.raises(ValueError):
-            sim.tensor_graph.build_outputs(
-                {
-                    p: sim.tensor_graph.build_optimizer_func(
-                        opt, sim.tensor_graph.build_outputs({p: objectives.mse})[0]
-                    )
-                }
-            )
-
-    net, _, p = dummies.linear_net()
-
-    with Simulator(net) as sim:
-        # capturing variables from nested loss function
-        class Loss:
-            def pre_build(self, *_):
-                self.var = tf.Variable(
-                    tf.constant(2.0, dtype=sim.tensor_graph.dtype),
-                    name="two",
-                    trainable=False,
-                )
-                return self.var
-
-            def __call__(self, x):
-                return abs(self.var - x)
-
-        sim.train(
-            5,
-            tf_compat.train.GradientDescentOptimizer(0.1),
-            objective={p: Loss()},
-            n_epochs=10,
-        )
-        sim.step()
-        assert np.allclose(sim.data[p], 2)
 
 
 def test_mark_signals():
@@ -584,7 +414,7 @@ def test_get_tensor(Simulator):
     with Simulator(net) as sim:
         tensor = sim.tensor_graph.get_tensor(sim.model.sig[c]["weights"])
 
-        assert np.allclose(keras.backend.get_value(tensor), np.arange(10)[:, None])
+        assert np.allclose(tf.keras.backend.get_value(tensor), np.arange(10)[:, None])
 
         sim.run_steps(10)
         assert np.allclose(sim.data[p], np.arange(10)[None, :])

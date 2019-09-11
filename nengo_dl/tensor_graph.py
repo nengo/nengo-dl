@@ -6,8 +6,6 @@ network, which will be executed by the simulator.
 """
 
 from collections import OrderedDict, defaultdict
-import functools
-import inspect
 import logging
 import warnings
 
@@ -16,11 +14,10 @@ from nengo.builder.operator import SimPyFunc, Reset
 from nengo.builder.processes import SimProcess
 from nengo.config import ConfigError
 from nengo.ensemble import Neurons
-from nengo.exceptions import SimulationError, ValidationError
+from nengo.exceptions import SimulationError
 from nengo.neurons import Direct
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras
 from tensorflow.python.training.tracking import base as trackable
 
 from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node, config
@@ -35,7 +32,7 @@ from nengo_dl.compat import (
 logger = logging.getLogger(__name__)
 
 
-class TensorGraph(keras.layers.Layer):
+class TensorGraph(tf.keras.layers.Layer):
     """
     Manages the construction of the TensorFlow symbolic computation graph.
 
@@ -182,7 +179,7 @@ class TensorGraph(keras.layers.Layer):
         """
 
         # number of steps to run
-        n_steps = keras.layers.Input(
+        n_steps = tf.keras.layers.Input(
             shape=(1,), batch_size=self.minibatch_size, dtype="int32", name="n_steps"
         )
 
@@ -190,7 +187,7 @@ class TensorGraph(keras.layers.Layer):
         inputs = OrderedDict(
             (
                 n,
-                keras.layers.Input(
+                tf.keras.layers.Input(
                     shape=(None, n.size_out),
                     batch_size=self.minibatch_size,
                     dtype=self.dtype,
@@ -290,12 +287,6 @@ class TensorGraph(keras.layers.Layer):
         self.signals.zero = tf.constant(0, self.dtype)
         self.signals.one = tf.constant(1, self.dtype)
 
-        # variable to track training step
-        # if not self.inference_only:
-        #     self.training_step = tf_compat.train.get_or_create_global_step()
-        # else:
-        #     self.training_step = None
-
         input_idx = 0
         self.steps_to_run = inputs[input_idx][0, 0]
         input_idx += 1
@@ -305,7 +296,7 @@ class TensorGraph(keras.layers.Layer):
         for n in self.invariant_inputs:
             # specify batch dimension (keras sets it to None)
             inputs[input_idx].set_shape(
-                [self.minibatch_size] + inputs[input_idx].get_shape().as_list()[1:]
+                [self.minibatch_size] + inputs[input_idx].shape.as_list()[1:]
             )
 
             self.input_phs[n] = inputs[input_idx]
@@ -338,16 +329,12 @@ class TensorGraph(keras.layers.Layer):
             self._build_loop(sub)
 
         # update saved internal state
-        updated_states = [
+        self.state_updates = [
             var.assign(val)
             for var, val in zip(
                 self.signals.saved_state.values(), self.final_internal_state
             )
         ]
-        with tf.control_dependencies(updated_states):
-            self.steps_run_and_save = tf.identity(
-                self.steps_run, name="steps_run_and_save"
-            )
 
         # logging
         logger.info(
@@ -560,265 +547,6 @@ class TensorGraph(keras.layers.Layer):
             self.probe_arrays[p] = x
 
         self.final_internal_state = loop_vars[3]
-
-    def build_optimizer_func(self, optimizer, loss, direct_grads=None):
-        """
-        Adds elements into the graph to execute the given optimizer.
-
-        Parameters
-        ----------
-        optimizer : ``tf.train.Optimizer``
-            Instance of a TensorFlow optimizer class
-        objective : dict of {`~nengo.Probe`: callable or ``None``}
-            The objective to be minimized. This is a dictionary mapping Probes
-            to functions
-            ``f(output, target) -> loss`` that consume the actual output and
-            target output for the given probe(s) and return a ``tf.Tensor``
-            representing a scalar loss value.  The function may also accept a
-            single argument ``f(output) -> loss`` if targets are not required.
-            Some common objective functions can be found in
-            `nengo_dl.objectives`.
-
-            Passing ``None`` as the probe value (instead of a callable)
-            indicates that the error is being computed outside the simulation,
-            and the value passed for that probe in ``data`` directly specifies
-            the output error gradient.
-
-            If multiple probes are specified as the key, then the corresponding
-            output/target values will be passed as a list to the objective
-            function.
-
-            The overall loss value being minimized will be the sum across all
-            the objectives specified.
-
-        Returns
-        -------
-        apply_optimizer : callable
-            A function that builds the operators required to implement the
-            given optimizer update.  Generally this function will then be
-            passed to `~.build_outputs`.
-
-        Notes
-        -----
-        This function caches its outputs, so if it is called again with the
-        same arguments then it will return the previous function.  This avoids
-        building duplicates of the same operations over and over.  This can
-        also be important functionally, e.g. if the optimizer has internal
-        state like momentum.  By caching the output we ensure that subsequent
-        calls share the same internal state.
-        """
-
-        if direct_grads is None:
-            direct_grads = []
-
-        key = (optimizer, frozenset(loss.items()), frozenset(direct_grads))
-
-        try:
-            # return the cached optimizer function if it exists
-            return self.optimizers[key]
-        except KeyError:
-            pass
-
-        # note: the standard workflow is that sim.train calls
-        # build_optimizer_func to get this function. it then passes the
-        # function to run_batch, which calls build_outputs to actually
-        # build these operations into the graph. we do this somewhat
-        # indirect method so that everything passes through build_output,
-        # allowing us to consolidate certain logic there (like capturing
-        # new variables)
-        def apply_optimizer(outputs, targets):
-            # note: we don't actually use outputs/targets, because the loss
-            # has already been computed outside this function
-            nonlocal loss
-
-            agg_method = tf.AggregationMethod.DEFAULT
-            grads = []
-            vars = [v for v in self.signals.all_variables if v.trainable]
-
-            # compute gradients wrt loss
-            if len(loss) > 0:
-                # reduce loss to a scalar
-                loss = tf.reduce_sum(
-                    input_tensor=[tf.reduce_sum(input_tensor=v) for v in loss.values()]
-                )
-
-                grads.append(
-                    tf.gradients(ys=loss, xs=vars, aggregation_method=agg_method)
-                )
-
-            # add in any gradients where the user directly specified the output
-            # error grad
-            for p in direct_grads:
-                grads.append(
-                    tf.gradients(
-                        ys=self.probe_arrays[p],
-                        xs=vars,
-                        grad_ys=self.target_phs[p],
-                        aggregation_method=agg_method,
-                    )
-                )
-
-            # combine gradients for each variable
-            if len(grads) == 1:
-                grads = grads[0]
-            else:
-                grads = [tf.reduce_sum(input_tensor=gs, axis=0) for gs in zip(*grads)]
-
-            opt_op = optimizer.apply_gradients(zip(grads, vars))
-
-            with tf.control_dependencies([opt_op]):
-                new_step = tf_compat.assign_add(
-                    self.training_step, tf.constant(1, dtype=tf.int64)
-                )
-
-            return new_step, loss
-
-        self.optimizers[key] = apply_optimizer
-
-        return self.optimizers[key]
-
-    # @with_self
-    def build_outputs(self, outputs):
-        """
-        Adds elements into the graph to compute the given outputs.
-
-        Parameters
-        ----------
-        outputs : dict of {(tuple of) `~nengo.Probe`: callable or None}
-            The output function to be applied to each probe or group of probes.
-            The function can accept one argument (the output of that probe) or
-            two (output and target values for that probe).  If a tuple of
-            Probes are given as the key, then those output/target parameters
-            will be the corresponding tuple of probe/target values.  The
-            function should return a ``tf.Tensor`` or tuple of Tensors
-            representing the output we want from those probes.  If ``None`` is
-            given instead of a function then the output will simply be the
-            output value from the corresponding probes.
-
-        Returns
-        -------
-        output_vals : dict of {(tuple of) `~nengo.Probe`: \
-                               (tuple of) ``tf.Tensor``}
-            Tensors representing the result of applying the output functions
-            to the probes.
-        new_vars_init : ``tf.Tensor`` or None
-            Initialization op for any new variables created when building
-            the outputs.
-
-        Notes
-        -----
-        This function caches its outputs, so if it is called again with the
-        same arguments then it will return the previous Tensors.  This avoids
-        building duplicates of the same operations over and over.  This can
-        also be important functionally, e.g. if the outputs have internal
-        state.  By caching the output we ensure that subsequent
-        calls share the same internal state.
-        """
-
-        key = frozenset(outputs.items())
-
-        try:
-            # return the cached outputs if they exist
-            return self.outputs[key], None
-        except KeyError:
-            pass
-
-        output_vals = {}
-        new_vars = []
-        # certain output functions may not return variables in a pre_build
-        # function, but do add them to the global_variables collection
-        # (e.g., tf.train.Optimizers). so we can compare the items
-        # in that collection before and after building the function to
-        # try to capture those variables as well.
-        # TODO: remove this if we switch completely to keras optimizers
-        pre_vars = set(
-            tf_compat.get_default_graph().get_collection(
-                tf_compat.GraphKeys.GLOBAL_VARIABLES
-            )
-        )
-        for probes, out in outputs.items():
-            is_tuple = isinstance(probes, tuple)
-            probe_arrays = (
-                tuple(self.probe_arrays[p] for p in probes)
-                if is_tuple
-                else self.probe_arrays[probes]
-            )
-
-            if out is None:
-                # return probe output value
-                output_vals[probes] = probe_arrays
-            elif callable(out):
-                # look up number of arguments for function
-                spec = inspect.getfullargspec(out)
-                nargs = len(spec.args)
-
-                # don't count keyword arguments
-                if spec.defaults is not None:
-                    nargs -= len(spec.defaults)
-
-                # don't count self argument for methods or callable classes
-                out_func = out.func if isinstance(out, functools.partial) else out
-                if inspect.ismethod(out_func) or not inspect.isroutine(out_func):
-                    nargs -= 1
-
-                # build function arguments
-                if nargs == 1:
-                    args = [probe_arrays]
-                elif nargs == 2:
-                    target_phs = (
-                        tuple(self.target_phs[p] for p in probes)
-                        if is_tuple
-                        else self.target_phs[probes]
-                    )
-                    args = [probe_arrays, target_phs]
-                else:
-                    raise ValidationError(
-                        "Output functions must accept 1 or 2 arguments; '%s' "
-                        "takes %s arguments"
-                        % (utils.function_name(out, sanitize=False), nargs),
-                        "outputs",
-                    )
-
-                # call output pre_build function (if any)
-                if hasattr(out, "pre_build"):
-                    vars = out.pre_build(
-                        *[
-                            (
-                                [x.shape.as_list() for x in arg]
-                                if is_tuple
-                                else arg.shape.as_list()
-                            )
-                            for arg in args
-                        ]
-                    )
-                    if isinstance(vars, (list, tuple)):
-                        new_vars.extend(vars)
-                    elif vars is not None:
-                        new_vars.append(vars)
-
-                # apply output function
-                with tf_compat.name_scope(utils.function_name(out)):
-                    output_vals[probes] = out(*args)
-
-            else:
-                raise ValidationError("Outputs must be callable or None)", "outputs")
-
-        # collect any new variables created during build process
-        self.signals.user_vars.extend(new_vars)
-        new_vars.extend(
-            set(
-                tf_compat.get_default_graph().get_collection(
-                    tf_compat.GraphKeys.GLOBAL_VARIABLES
-                )
-            )
-            - pre_vars
-        )
-        new_vars_init = (
-            tf_compat.variables_initializer(new_vars) if len(new_vars) > 0 else None
-        )
-
-        self.outputs[key] = output_vals
-        return output_vals, new_vars_init
 
     @trackable.no_automatic_dependency_tracking
     def build_post(self):

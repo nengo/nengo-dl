@@ -5,7 +5,6 @@ from nengo.exceptions import ValidationError, SimulationError
 import numpy as np
 import pytest
 import tensorflow as tf
-from tensorflow import keras
 
 from nengo_dl import TensorNode, configure_settings, reshaped, tensor_layer
 from nengo_dl.compat import tf_compat
@@ -152,7 +151,7 @@ def test_post_build(Simulator):
             return self.weights
 
         def post_build(self):
-            keras.backend.set_value(self.weights, np.ones((2, 3)))
+            tf.keras.backend.set_value(self.weights, np.ones((2, 3)))
 
         def __call__(self, t, x):
             return tf.matmul(x, tf.cast(self.weights, x.dtype))
@@ -284,7 +283,7 @@ def test_reuse_vars(Simulator):
             vars = sim.keras_model.trainable_variables
 
         assert len(vars) == 2
-        assert vars[0].get_shape() == ()
-        assert keras.backend.get_value(vars[0]) == 2
-        assert vars[1].get_shape() == (1, 10)
-        assert np.allclose(keras.backend.get_value(vars[1]), 3)
+        assert vars[0].shape == ()
+        assert tf.keras.backend.get_value(vars[0]) == 2
+        assert vars[1].shape == (1, 10)
+        assert np.allclose(tf.keras.backend.get_value(vars[1]), 3)

@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import config, dists, SoftLIFRate, neuron_builders
+from nengo_dl import config, SoftLIFRate, neuron_builders
 
 
 def test_lif_deterministic(Simulator, seed):
@@ -92,7 +92,7 @@ def test_soft_lif(Simulator, sigma, seed):
     assert np.allclose(sim.data[p], sim2.data[p])
 
 
-@pytest.mark.xfail(reason="TODO: support train")
+@pytest.mark.xfail(reason="TODO: support gradients")
 @pytest.mark.parametrize(
     "neuron_type", (nengo.LIFRate, nengo.RectifiedLinear, SoftLIFRate)
 )
@@ -120,7 +120,7 @@ def test_neuron_gradients(Simulator, neuron_type, seed, rng):
         sim.check_gradients()
 
 
-@pytest.mark.xfail(reason="TODO: support train")
+@pytest.mark.xfail(reason="TODO: support gradients")
 @pytest.mark.parametrize(
     "rate, spiking",
     [
@@ -129,6 +129,7 @@ def test_neuron_gradients(Simulator, neuron_type, seed, rng):
         (SoftLIFRate, nengo.LIF),
     ],
 )
+@pytest.mark.training
 def test_spiking_swap(Simulator, rate, spiking, seed):
     grads = []
     for neuron_type in [rate, spiking]:
@@ -139,28 +140,51 @@ def test_spiking_swap(Simulator, rate, spiking, seed):
                 config.configure_settings(lif_smoothing=1.0)
 
             a = nengo.Node(output=[1])
-            b = nengo.Ensemble(50, 1, neuron_type=neuron_type())
-            c = nengo.Ensemble(50, 1, neuron_type=neuron_type(amplitude=0.1))
-            nengo.Connection(a, b, synapse=None)
+            # b = nengo.Ensemble(50, 1, neuron_type=neuron_type())
+            # c = nengo.Ensemble(50, 1, neuron_type=neuron_type(amplitude=0.1))
+            # nengo.Connection(a, b, synapse=None)
+            #
+            # # note: we avoid decoders, as the rate/spiking models may have
+            # # different rate implementations in nengo, resulting in different
+            # # decoders
+            # nengo.Connection(b.neurons, c.neurons, synapse=None, transform=dists.He())
+            # p = nengo.Probe(c.neurons)
 
-            # note: we avoid decoders, as the rate/spiking models may have
-            # different rate implementations in nengo, resulting in different
-            # decoders
-            nengo.Connection(b.neurons, c.neurons, synapse=None, transform=dists.He())
-            p = nengo.Probe(c.neurons)
+            b = nengo.Node(size_in=1)
+            nengo.Connection(a, b, synapse=None)
+            p = nengo.Probe(a)
 
         with Simulator(net) as sim:
-            grads.append(
-                sim.sess.run(
-                    tf.gradients(
-                        ys=sim.tensor_graph.probe_arrays[p],
-                        xs=sim.tensor_graph.signals.all_variables,
-                    ),
-                    feed_dict=sim._fill_feed(10, training=True),
+
+            with tf.GradientTape() as tape:
+                tape.watch(sim.tensor_graph.signals.all_variables)
+
+                outputs = sim.keras_model.call(
+                    [
+                        tf.ones((1, 1), dtype=np.int32),
+                        tf.ones((1, 1, 1), dtype=np.float64),
+                    ],
+                    training=True,
                 )
+                outputs = [tf.reduce_sum(x) for x in outputs]
+
+            grads = tape.gradient(
+                outputs[1],
+                sim.tensor_graph.signals.all_variables,
+                # unconnected_gradients=tf.UnconnectedGradients.ZERO,
             )
 
-            sim.soft_reset()
+            # grads.append(
+            #     sim.sess.run(
+            #         tf.gradients(
+            #             ys=sim.tensor_graph.probe_arrays[p],
+            #             xs=sim.tensor_graph.signals.all_variables,
+            #         ),
+            #         feed_dict=sim._fill_feed(10, training=True),
+            #     )
+            # )
+
+            # sim.soft_reset()
             sim.run(0.5)
 
         # check that the normal output is unaffected by the swap logic

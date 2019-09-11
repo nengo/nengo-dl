@@ -5,7 +5,7 @@ from collections import defaultdict
 import nengo
 import numpy as np
 
-from nengo_dl import builder, tensor_graph, signals, configure_settings
+from nengo_dl import builder, tensor_graph, signals
 
 
 class Signal:
@@ -155,21 +155,8 @@ def linear_net():
 
     with nengo.Network() as net:
         a = nengo.Node([1])
-
-        # note: in theory this would be nengo.Node(size_in=1), but due to
-        # https://github.com/tensorflow/tensorflow/issues/23383
-        # TensorFlow will hang
-        b = nengo.Ensemble(
-            1,
-            1,
-            neuron_type=nengo.RectifiedLinear(),
-            gain=np.ones(1),
-            bias=np.ones(1) * 1e-6,
-        )
-        configure_settings(trainable=None)
-        net.config[b.neurons].trainable = False
-        nengo.Connection(a, b.neurons, synapse=None)
-
-        p = nengo.Probe(b.neurons)
+        b = nengo.Node(size_in=1)
+        nengo.Connection(a, b, synapse=None)
+        p = nengo.Probe(b)
 
     return net, a, p

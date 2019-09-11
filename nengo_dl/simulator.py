@@ -25,9 +25,7 @@ from nengo.utils.magic import decorator
 from nengo.version import version_info as nengo_version
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras
 from tensorflow.python.client.timeline import Timeline
-from tensorflow.python.ops import gradient_checker
 
 from nengo_dl import utils, config
 from nengo_dl.builder import NengoBuilder, NengoModel
@@ -52,6 +50,19 @@ def with_self(wrapped, instance, args, kwargs):
     tf.keras.backend.set_floatx(keras_dtype)
 
     return output
+
+
+@decorator
+def require_open(wrapped, instance, args, kwargs):
+    """A decorator that can be used to mark methods that require the Simulator to
+    be open."""
+
+    if instance.closed:
+        raise SimulatorClosed(
+            "Cannot call %s after simulator is closed" % wrapped.__name__
+        )
+
+    return wrapped(*args, **kwargs)
 
 
 class Simulator:  # pylint: disable=too-many-public-methods
@@ -85,6 +96,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
     progress_bar : bool
         If True (default), display progress information when building a model
     """
+
+    # TODO: document important attributes (e.g. keras_model)
 
     def __init__(
         self,
@@ -171,9 +184,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
         self.graph = tf.Graph()
         self._build_keras()
 
-        self.reset()
-
         self.closed = False
+
+        self.reset()
 
     @with_self
     def _build_keras(self):
@@ -207,10 +220,13 @@ class Simulator:  # pylint: disable=too-many-public-methods
         inputs = [n_steps] + list(self.node_inputs.values())
         outputs = self.tensor_graph(inputs)
 
-        self.keras_model = keras.Model(inputs=inputs, outputs=outputs)
-        self.keras_model_save = keras.Model(
-            inputs=inputs, outputs=[self.tensor_graph.steps_run_and_save] + outputs[1:]
-        )
+        self.keras_model = tf.keras.Model(inputs=inputs, outputs=outputs)
+
+        with tf.control_dependencies(self.tensor_graph.state_updates), tf.name_scope(
+            "save"
+        ):
+            outputs = [tf.identity(x, name=x.op.name.split("/")[-1]) for x in outputs]
+        self.keras_model_save = tf.keras.Model(inputs=inputs, outputs=outputs)
 
         # set more informative output names
         # keras names them like LayerName_i, whereas we would like to have the names
@@ -219,6 +235,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             model.output_names = [o.op.name.split("/")[-1] for o in model.outputs]
 
     @with_self
+    @require_open
     def reset(self, seed=None):
         """
         Resets the simulator to initial conditions.
@@ -238,9 +255,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
         `nengo.Processes`, as normal).
         """
 
-        if self.closed is not None and self.closed:
-            raise SimulatorClosed("Cannot reset closed Simulator.")
-
         # initialize variables and internal simulation state
         self.soft_reset(include_params=True, include_probes=True)
 
@@ -258,6 +272,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         self.tensor_graph.build_post()
 
     @with_self
+    @require_open
     def soft_reset(self, include_params=False, include_probes=False):
         """
         Resets the internal state of the simulation, but doesn't
@@ -281,11 +296,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 # this is state created by `signals.make_internal`
                 val = np.zeros(var.shape, dtype=var.dtype.as_numpy_dtype())
             var_vals.append((var, val))
-        keras.backend.batch_set_value(var_vals)
+        tf.keras.backend.batch_set_value(var_vals)
 
         if include_params:
             # reset base params
-            keras.backend.batch_set_value(
+            tf.keras.backend.batch_set_value(
                 list(
                     zip(
                         self.tensor_graph.signals.base_params.values(),
@@ -300,6 +315,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         self._update_steps()
 
+    @require_open
     def predict(self, x=None, n_steps=None, update_state=False, **kwargs):
         """
         Generate output predictions for the input samples.
@@ -362,9 +378,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
             kwargs["batch_size"] = None
 
         return self._predict(
-            "predict", inputs=x, n_steps=n_steps, update_state=update_state, **kwargs
+            "predict", x=x, n_steps=n_steps, update_state=update_state, **kwargs
         )
 
+    @require_open
     def predict_on_batch(self, x=None, n_steps=None, update_state=False, **kwargs):
         """
         Generate output predictions for the input samples.
@@ -420,12 +437,13 @@ class Simulator:  # pylint: disable=too-many-public-methods
         """
         return self._predict(
             "predict_on_batch",
-            inputs=x,
+            x=x,
             n_steps=n_steps,
             update_state=update_state,
             **kwargs,
         )
 
+    @require_open
     def predict_generator(self, x=None, update_state=False, **kwargs):
         """
         Generate output predictions for the input samples.
@@ -466,12 +484,12 @@ class Simulator:  # pylint: disable=too-many-public-methods
             Output values from all the Probes in the network.
         """
         return self._predict(
-            "predict_generator", inputs=x, update_state=update_state, **kwargs
+            "predict_generator", x=x, update_state=update_state, **kwargs
         )
 
     @with_self
     def _predict(
-        self, predict_type, inputs=None, n_steps=None, update_state=False, **kwargs
+        self, predict_type, x=None, n_steps=None, update_state=False, **kwargs
     ):
         """
         Internal base function for all the predict functions.
@@ -480,7 +498,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         ----------
         predict_type : "predict" or "predict_on_batch" or "predict_generator"
             The underlying function to call on the Keras model.
-        inputs
+        x
             See description in documentation of ``<predict_type>`` function.
         n_steps
             See description in documentation of ``<predict_type>`` function.
@@ -496,12 +514,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
         # TODO: double check this doesn't rebuild the graph each time it is called
         #  (e.g. with different values for n_steps)
 
-        if self.closed:
-            raise SimulatorClosed("Cannot call predict after simulator is closed")
-
         # batch size is determined from data in `predict`; others are single batch so
         # we know the size should be minibatch_size
-        inputs = self._generate_inputs(data=inputs, n_steps=n_steps)
+        inputs = self._generate_inputs(data=x, n_steps=n_steps)
         self._check_data(
             inputs,
             n_steps=n_steps,
@@ -520,6 +535,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         return output_dict
 
     @with_self
+    @require_open
     def compile(self, *args, loss=None, metrics=None, loss_weights=None, **kwargs):
         """
         Configure the model for training/evaluation.
@@ -575,25 +591,215 @@ class Simulator:  # pylint: disable=too-many-public-methods
         loss_weights = self._standardize_data(loss_weights, self.model.probes)
 
         # TODO: do we need to compile keras_model_save?
-        self.keras_model.compile(
-            *args, loss=loss, metrics=metrics, loss_weights=loss_weights, **kwargs
+        for model in (self.keras_model, self.keras_model_save):
+            model.compile(
+                *args, loss=loss, metrics=metrics, loss_weights=loss_weights, **kwargs
+            )
+
+    @require_open
+    def fit(self, x=None, y=None, n_steps=None, update_state=False, **kwargs):
+        """
+        Trains the model on some dataset.
+
+        Optimizer and loss functions are defined separately in `.Simulator.compile`.
+
+        This function implements the `tf.keras.Model.fit
+        <https://www.tensorflow.org/api_docs/python/tf/keras/Model#fit>`_ API.
+
+        Parameters
+        ----------
+        x
+            Input values for Nodes in the model. Inputs can be specified as:
+            - A dictionary of {`nengo.Node` or str: `numpy.ndarray`}
+              indicating the input values for the given nodes. Nodes can be referred
+              to by the Node object itself or by a string name, which will be
+              ``Node.label`` if one was specified, or ``"node_i"`` where ``i``
+              indexes the nodes according to the order they were added to the model
+              (this corresponds to the order found in `nengo.Network.all_nodes`).
+            - A list of `numpy.ndarray` indicating the input values for each
+              input Node, ordered according to the order in which the Nodes were
+              added to the model (this corresponds to the order found in
+              `nengo.Network.all_nodes`).
+            - An `numpy.ndarray` indicating the input value for a single input
+              Node.
+            - A generator or ``tf.data.Dataset`` that produces one of the above. These
+              input types must also explicitly pass a value for the ``n_steps`` input,
+              which should have shape ``(batch_size, 1)``. This input should come first
+              in the input list or use the string name "n_steps" (if passing a dict).
+
+            All inputs should have shape ``(batch_size, n_steps, node.size_out)``.
+
+            If an input value is not specified for one of the Nodes in the model then
+            data will be filled in according to the Node definition (e.g., by calling
+            the output function associated with that Node).  However, generator input
+            types must explicitly specify values for all the input nodes.
+        y
+            Target values for Probes in the model. These can be specified in the same
+            ways as the input values in ``x``.  However, targets should only be
+            specified for the probes used in the loss function (specified when calling
+            `Simulator.compile`).
+
+            All targets should have shape ``(batch_size, n_steps, probe.size_in)``.
+
+            This parameter is not used if ``x`` is a generator (the generator passed to
+            ``x` should yield ``(x, y)`` tuples).
+        n_steps : int
+            Number of simulation timesteps.
+        update_state : bool
+            If True, update the saved simulation state at the end of the run, so that
+            future operations will resume from the terminal state of this run.
+        kwargs: dict
+            Will be passed on to `tf.keras.Model.evaluate
+            <https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate>`_.
+
+        Returns
+        -------
+        history : ``tf.keras.callbacks.History``
+            The history has two attributes, ``history.epoch`` is the list of epoch
+            numbers and ``history.history`` is a dictionary keyed by metric names
+            (e.g., "loss") containing a list of values of those metrics from each epoch.
+        """
+
+        if "batch_size" in kwargs:
+            warnings.warn(
+                "Batch size is determined statically via Simulator.minibatch_size; "
+                "ignoring value passed to `fit`"
+            )
+            kwargs["batch_size"] = None
+
+        # TODO: factor out common logic between this and evaluate
+        x = self._generate_inputs(x, n_steps=n_steps)
+        self._check_data(x, n_steps=n_steps, batch_size=None)
+
+        y = self._standardize_data(y, self.model.probes)
+
+        # check that y is consistent with x (rather than only being
+        # internally consistent)
+        if isinstance(x, dict):
+            # not a generator, so can determine target y shapes from x shapes
+            steps = next(iter(x.values()))
+            input_steps = steps[0, 0]
+            input_batch = steps.shape[0]
+
+            target_probes = [
+                p
+                for p, e in zip(
+                    self.model.probes,
+                    getattr(self.keras_model, "_training_endpoints", [])[1:],
+                )
+                if not e.should_skip_target()
+            ]
+
+            if y is None:
+                # if no targets were provided, fill in some defaults
+                y = {
+                    self.get_name(p): np.zeros((input_batch, input_steps, p.size_in))
+                    for p in target_probes
+                }
+
+            # warn for synapses with n_steps=1
+            synapses = [
+                x.synapse is not None
+                for x in (self.model.toplevel.all_connections + target_probes)
+            ]
+            if (
+                x["n_steps"][0, 0] == 1
+                and self.model.toplevel is not None
+                and any(synapses)
+            ):
+                warnings.warn(
+                    "Training for one timestep, but the network contains "
+                    "synaptic filters (which will introduce at least a "
+                    "one-timestep delay); did you mean to set synapse=None?"
+                )
+        else:
+            input_steps = None
+            input_batch = None
+        self._check_data(y, n_steps=input_steps, batch_size=input_batch, nodes=False)
+
+        return self._fit("fit", x=x, y=y, update_state=update_state, **kwargs)
+
+    @require_open
+    def fit_generator(self, generator, update_state=False, **kwargs):
+        """
+        Trains the model on some dataset.
+
+        Optimizer and loss functions are defined separately in `.Simulator.compile`.
+
+        This function implements the `tf.keras.Model.fit_generator
+        <https://www.tensorflow.org/api_docs/python/tf/keras/Model#fit_generator>`_ API.
+
+        Parameters
+        ----------
+        x
+            A generator or ``tf.data.Dataset`` that produces inputs in one of the forms
+            supported by `.Simulator.fit`.
+
+            These generators must also explicitly pass a value for the ``n_steps``
+            input, which should have shape ``(batch_size, 1)``. This input should come
+            first in the input list or use the string name "n_steps"
+            (if generating a dict).
+
+            Inputs must be explicitly specified for all input Nodes in the network.
+
+            If ``y`` values are required for the loss function, then the generator
+            should yield tuples ``(x, y)``, where ``x`` and ``y`` have the forms
+            described in ``x`` and ``y`` for `.Simulator.fit`.
+
+            All generated inputs should have shape
+            ``(sim.minibatch_size, n_steps, node.size_out)``.
+            All targets should have shape
+            ``(sim.minibatch_size, n_steps, probe.size_in)``.
+        update_state : bool
+            If True, update the saved simulation state at the end of the run, so that
+            future operations will resume from the terminal state of this run.
+        kwargs: dict
+            Will be passed on to `tf.keras.Model.fit_generator
+            <https://www.tensorflow.org/api_docs/python/tf/keras/Model#fit_generator>`_.
+
+        Returns
+        -------
+        history : ``tf.keras.callbacks.History``
+            The history has two attributes, ``history.epoch`` is the list of epoch
+            numbers and ``history.history`` is a dictionary keyed by metric names
+            (e.g., "loss") containing a list of values of those metrics from each epoch.
+        """
+        # TODO: apply standardize/generate/check data to generator somehow
+        # maybe move it into a callback where the generated data is available?
+        return self._fit(
+            "fit_generator", generator=generator, update_state=update_state, **kwargs
         )
 
-    # @with_self
-    # def fit(self, x=None, y=None, **kwargs):
-    #     if self.closed:
-    #         raise SimulatorClosed("Cannot call fit after simulator is closed")
-    #
-    #     if "batch_size" in kwargs:
-    #         warnings.warn(
-    #             "Batch size is determined statically via Simulator.minibatch_size; "
-    #             "ignoring value passed to `fit`"
-    #         )
-    #         kwargs["batch_size"] = None
-    #
-    #     self.keras_model.fit(x=x, y=y, **kwargs)
+    @with_self
+    def _fit(self, fit_type, update_state=False, **kwargs):
+        """
+        Internal base function for all the fit functions.
 
-    def evaluate(self, x=None, y=None, n_steps=None, **kwargs):
+        Parameters
+        ----------
+        fit_type : "fit" or "fit_generator"
+            The underlying function to call on the Keras model.
+        update_state : bool
+            See description in documentation of ``<fit_type>`` function.
+        kwargs
+            See description in documentation of ``<fit_type>`` function.
+
+        Returns
+        -------
+            See description in documentation of ``<fit_type>`` function.
+        """
+
+        if self.tensor_graph.inference_only:
+            raise SimulationError(
+                "Network was created with inference_only=True, cannot "
+                "be run in training mode"
+            )
+
+        model = self.keras_model_save if update_state else self.keras_model
+        return getattr(model, fit_type)(**kwargs)
+
+    @require_open
+    def evaluate(self, x=None, y=None, n_steps=None, update_state=False, **kwargs):
         """
         Compute the loss and metric values for the network.
 
@@ -640,7 +846,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
             This parameter is not used if ``x`` is a generator (the generator passed to
             ``x` should yield ``(x, y)`` tuples).
         n_steps : int
-            Number of simulation timesteps
+            Number of simulation timesteps.
+        update_state : bool
+            If True, update the saved simulation state at the end of the run, so that
+            future operations will resume from the terminal state of this run.
         kwargs: dict
             Will be passed on to `tf.keras.Model.evaluate
             <https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate>`_.
@@ -660,39 +869,56 @@ class Simulator:  # pylint: disable=too-many-public-methods
             )
             kwargs["batch_size"] = None
 
-        inputs = self._generate_inputs(x, n_steps=n_steps)
-        self._check_data(inputs, n_steps=n_steps, batch_size=None)
+        x = self._generate_inputs(x, n_steps=n_steps)
+        self._check_data(x, n_steps=n_steps, batch_size=None)
 
         y = self._standardize_data(y, self.model.probes)
 
         # check that y is consistent with x (rather than only being
         # internally consistent)
-        if isinstance(inputs, dict):
+        if isinstance(x, dict):
             # not a generator, so can determine target y shapes from x shapes
-            steps = next(iter(inputs.values()))
+            steps = next(iter(x.values()))
             input_steps = steps[0, 0]
             input_batch = steps.shape[0]
+
+            if y is None:
+                # if no targets were provided, fill in some defaults
+                target_probes = [
+                    p
+                    for p, e in zip(
+                        self.model.probes,
+                        getattr(self.keras_model, "_training_endpoints", [])[1:],
+                    )
+                    if not e.should_skip_target()
+                ]
+                y = {
+                    self.get_name(p): np.zeros((input_batch, input_steps, p.size_in))
+                    for p in target_probes
+                }
         else:
             input_steps = None
             input_batch = None
         self._check_data(y, n_steps=input_steps, batch_size=input_batch, nodes=False)
 
-        return self._evaluate("evaluate", x=inputs, y=y, **kwargs)
+        return self._evaluate("evaluate", x=x, y=y, update_state=update_state, **kwargs)
 
-    def evaluate_generator(self, generator, **kwargs):
+    @require_open
+    def evaluate_generator(self, generator, update_state=False, **kwargs):
         """
         Compute the loss and metric values for the network.
 
         Loss functions and other metrics are defined separately in `.Simulator.compile`.
 
-        This function implements the `tf.keras.Model.evaluate
-        <https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate>`_ API.
+        This function implements the `tf.keras.Model.evaluate_generator
+        <https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate_generator>`_
+        API.
 
         Parameters
         ----------
         x
             A generator or ``tf.data.Dataset`` that produces inputs in one of the forms
-            supported by `Simulator.evaluate`.
+            supported by `.Simulator.evaluate`.
 
             These generators must also explicitly pass a value for the ``n_steps``
             input, which should have shape ``(batch_size, 1)``. This input should come
@@ -709,16 +935,31 @@ class Simulator:  # pylint: disable=too-many-public-methods
             ``(sim.minibatch_size, n_steps, node.size_out)``.
             All targets should have shape
             ``(sim.minibatch_size, n_steps, probe.size_in)``.
+        update_state : bool
+            If True, update the saved simulation state at the end of the run, so that
+            future operations will resume from the terminal state of this run.
         kwargs: dict
             Will be passed on to `tf.keras.Model.evaluate_generator
             <https://www.tensorflow.org/api_docs/python/tf/keras/Model
             #evaluate_generator>`_.
+
+        Returns
+        -------
+        outputs : dict of {str: `numpy.ndarray`}
+            Computed loss/metric values. The overall loss will be in
+            ``outputs["loss"]``, and values for each Probe will be in
+            ``outputs["probe_name_loss"]`` or ``outputs["probe_name_metric_name"]``.
         """
 
-        return self._evaluate("evaluate_generator", generator, **kwargs)
+        return self._evaluate(
+            "evaluate_generator",
+            generator=generator,
+            update_state=update_state,
+            **kwargs,
+        )
 
     @with_self
-    def _evaluate(self, evaluate_type, *args, **kwargs):
+    def _evaluate(self, evaluate_type, update_state=False, **kwargs):
         """
         Internal base function for all the evaluate functions.
 
@@ -726,7 +967,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         ----------
         evaluate_type : "evaluate" or "evaluate_generator"
             The underlying function to call on the Keras model.
-        args
+        update_state : bool
             See description in documentation of ``<evaluate_type>`` function.
         kwargs
             See description in documentation of ``<evaluate_type>`` function.
@@ -735,13 +976,12 @@ class Simulator:  # pylint: disable=too-many-public-methods
         -------
             See description in documentation of ``<evaluate_type>`` function.
         """
-        if self.closed:
-            raise SimulatorClosed("Cannot call evaluate after simulator is closed")
 
-        outputs = getattr(self.keras_model, evaluate_type)(*args, **kwargs)
+        model = self.keras_model_save if update_state else self.keras_model
+        outputs = getattr(model, evaluate_type)(**kwargs)
 
         # return outputs as named dict
-        return dict(zip(self.keras_model.metrics_names, outputs))
+        return dict(zip(model.metrics_names, outputs))
 
     def step(self, **kwargs):
         """
@@ -788,7 +1028,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
         else:
             self.run_steps(steps, **kwargs)
 
-    def run_steps(self, n_steps, data=None, progress_bar=True, extra_feeds=None):
+    @require_open
+    def run_steps(self, n_steps, data=None, progress_bar=True):
         """
         Simulate for the given number of steps.
 
@@ -802,9 +1043,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
         progress_bar : bool
             If True, print information about the simulation status to standard
             output.
-        extra_feeds : dict of {``tf.Tensor``: `~numpy.ndarray`}
-            Can be used to feed a value for arbitrary Tensors in the simulation
-            (will be passed directly to the TensorFlow session)
 
         Notes
         -----
@@ -816,8 +1054,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
         actual_steps = self.unroll * int(np.ceil(n_steps / self.unroll))
 
         # error checking
-        if self.closed:
-            raise SimulatorClosed("Simulator cannot run because it is closed.")
         if actual_steps != n_steps:
             warnings.warn(
                 "Number of steps (%d) is not an even multiple of "
@@ -883,497 +1119,21 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
             self.model.params[probe].append(val)
 
-    # def train(
-    #     self,
-    #     data,
-    #     optimizer,
-    #     n_epochs=1,
-    #     objective=None,
-    #     shuffle=True,
-    #     truncation=None,
-    #     summaries=None,
-    #     profile=False,
-    #     extra_feeds=None,
-    #     progress_bar=True,
-    # ):
-    #     """
-    #     Optimize the trainable parameters of the network using the given
-    #     optimization method, minimizing the objective value over the given
-    #     inputs and targets.
-    #
-    #     Parameters
-    #     ----------
-    #     data : dict of {`~nengo.Node` or `~nengo.Probe`: \
-    #                     `~numpy.ndarray`} or int
-    #         Input values for Nodes in the network or target values for Probes;
-    #         arrays should have shape ``(batch_size, n_steps,
-    #         node.size_out/probe.size_in)``.  If no input data is required,
-    #         an integer can be given specifying the number of timesteps to
-    #         run the simulation.
-    #     optimizer : ``tf.train.Optimizer``
-    #         TensorFlow optimizer, e.g.
-    #         ``tf.train.GradientDescentOptimizer(learning_rate=0.1)``
-    #     n_epochs : int
-    #         Run training for the given number of epochs (complete passes
-    #         through ``data``)
-    #     objective : dict of {(tuple of) `~nengo.Probe`: callable or ``None``}
-    #         The objective to be minimized. The default applies
-    #         `.objectives.mse` to all probes in ``data``.  This can be
-    #         overridden by passing a dictionary mapping Probes to functions
-    #         ``f(output, target) -> loss`` that consume the actual output and
-    #         target output for the given probe(s) and return a ``tf.Tensor``
-    #         representing a scalar loss value.  The function may also accept a
-    #         single argument ``f(output) -> loss`` if targets are not required.
-    #         Some common objective functions can be found in
-    #         `nengo_dl.objectives`.
-    #
-    #         Passing ``None`` as the probe value (instead of a callable)
-    #         indicates that the error is being computed outside the simulation,
-    #         and the value passed for that probe in ``data`` directly specifies
-    #         the output error gradient.
-    #
-    #         If multiple probes are specified as the key, then the corresponding
-    #         output/target values will be passed as a list to the objective
-    #         function.
-    #
-    #         The overall loss value being minimized will be the sum across all
-    #         the objectives specified.
-    #     shuffle : bool
-    #         If True, randomize the data into different minibatches each epoch
-    #     truncation: int
-    #         If not None, use truncated backpropagation when training the
-    #         network, with the given truncation length.
-    #     summaries : list of `~nengo.Connection` or \
-    #                         `~nengo.Ensemble` or \
-    #                         `~nengo.ensemble.Neurons` or \
-    #                         ``"loss"`` or \
-    #                         ``tf.Tensor``
-    #         If not None, collect data during the training process using
-    #         TensorFlow's ``tf.summary`` format.  The summary objects can be a
-    #         Connection (in which case data on the corresponding weights will be
-    #         collected), Ensemble (encoders), Neurons (biases), or ``"loss"``
-    #         (the loss value for ``objective``).  The user can also create their
-    #         own summaries and pass in the Tensors representing the summary ops.
-    #     profile : bool
-    #         If True, collect TensorFlow profiling information while the
-    #         simulation is running (this will slow down the simulation).
-    #         Can also pass a string specifying a non-default filename for the
-    #         saved profile data.
-    #     extra_feeds : dict of {``tf.Tensor``: `~numpy.ndarray`}
-    #         Can be used to feed a value for arbitrary Tensors in the simulation
-    #         (will be passed directly to the TensorFlow session)
-    #     progress_bar : bool
-    #         If True, print information about the simulation status to standard
-    #         output.
-    #
-    #     Notes
-    #     -----
-    #     Most deep learning methods require the network to be differentiable,
-    #     which means that trying to train a network with non-differentiable
-    #     elements will result in an error.  Examples of common
-    #     non-differentiable elements include `~nengo.LIF`,
-    #     `~nengo.Direct`, or processes/neurons that don't have a
-    #     custom TensorFlow implementation (see
-    #     `.process_builders.SimProcessBuilder`/
-    #     `.neuron_builders.SimNeuronsBuilder`)
-    #     """
-    #
-    #     if isinstance(data, int):
-    #         batch_size = self.minibatch_size
-    #         n_steps = data
-    #     else:
-    #         batch_size, n_steps = next(iter(data.values())).shape[:2]
-    #
-    #     # error checking
-    #     synapses = [
-    #         x.synapse is not None
-    #         for x in (
-    #             self.model.toplevel.all_connections
-    #             + (
-    #                 list(p for p in data if isinstance(p, Probe))
-    #                 if isinstance(data, dict)
-    #                 else []
-    #             )
-    #         )
-    #     ]
-    #     if n_steps == 1 and self.model.toplevel is not None and any(synapses):
-    #         warnings.warn(
-    #             "Training for one timestep, but the network contains "
-    #             "synaptic filters (which will introduce at least a "
-    #             "one-timestep delay); did you mean to set synapse=None?"
-    #         )
-    #     if isinstance(optimizer, dict):
-    #         raise ValidationError(
-    #             "The second argument to `sim.train` should be a "
-    #             "tf.train.Optimizer, not a dictionary; it is likely that this "
-    #             "code was written for NengoDL 1.x and needs to be updated for "
-    #             "NengoDL 2.x; see "
-    #             "https://www.nengo.ai/nengo-dl/project.html#release-history",
-    #             "optimizer",
-    #         )
-    #
-    #     # fill in default objective
-    #     if objective is None:
-    #         if isinstance(data, int):
-    #             raise ValidationError(
-    #                 "Must specify an explicit objective if no input data given",
-    #                 "objective",
-    #             )
-    #         objective = {p: objectives.mse for p in data if isinstance(p, Probe)}
-    #
-    #     if not isinstance(objective, dict):
-    #         raise ValidationError(
-    #             "Must be a dictionary mapping Probes to objective functions",
-    #             "objective",
-    #         )
-    #
-    #     # build the objective
-    #     loss, init_ops = self.tensor_graph.build_outputs(
-    #         {k: v for k, v in objective.items() if v is not None}
-    #     )
-    #     if init_ops is not None:
-    #         self.sess.run(init_ops)
-    #
-    #     # create the optimizer function
-    #     apply_optimizer = self.tensor_graph.build_optimizer_func(
-    #         optimizer, loss,
-    #         direct_grads=[p for p, g in objective.items() if g is None]
-    #     )
-    #
-    #     extra_fetches = dict()
-    #
-    #     # add summaries
-    #     if summaries is not None:
-    #         if self.summary is None:
-    #             warnings.warn(
-    #                 "Simulator was created with tensorboard=False; "
-    #                 "ignoring requested summaries"
-    #             )
-    #         else:
-    #             for i, v in enumerate(summaries):
-    #                 if isinstance(v, str) and v == "loss":
-    #                     summaries[i] = objective
-    #             summary_op, init = self.tensor_graph.build_summaries(summaries)
-    #             if init is not None:
-    #                 # initialize any variables created when building summaries
-    #                 self.sess.run(init)
-    #             extra_fetches["summaries"] = summary_op
-    #
-    #     progress = (
-    #         utils.ProgressBar(
-    #             "Training",
-    #             max_value=(
-    #                 n_epochs
-    #                 * (batch_size // self.minibatch_size)
-    #                 * (1 if truncation is None else n_steps // truncation)
-    #             ),
-    #             vars=["loss"],
-    #         )
-    #         if progress_bar
-    #         else utils.NullProgressBar()
-    #     )
-    #
-    #     objective_probes = tuple(objective.keys())
-    #
-    #     def callback(out_vals, extra_vals):
-    #         # update progress bar, with loss value
-    #         loss = out_vals[objective_probes][1]
-    #         # loss will be {} if only direct grads used when calculating
-    #         # gradient
-    #         kwargs = {} if loss == {} else dict(loss="%.4f" % loss)
-    #         progress.step(**kwargs)
-    #
-    #         # export summaries to tensorboard
-    #         if "summaries" in extra_vals:
-    #             # note: the first output value is the new value of the
-    #             # global training_step
-    #             self.summary.add_summary(
-    #                 extra_vals["summaries"], out_vals[objective_probes][0]
-    #             )
-    #
-    #     # run training
-    #     with progress:
-    #         self.run_batch(
-    #             data,
-    #             {objective_probes: apply_optimizer},
-    #             n_epochs=n_epochs,
-    #             combine=lambda x: None,
-    #             extra_feeds=extra_feeds,
-    #             extra_fetches=extra_fetches,
-    #             truncation=truncation,
-    #             profile=profile,
-    #             shuffle=shuffle,
-    #             training=True,
-    #             callback=callback,
-    #         )
-
-    def loss(self, *args, **kwargs):
-        """Deprecated, use `.Simulator.compile` and `.Simulator.eval` instead."""
+    def train(self, *args, **kwargs):
+        """Deprecated, use `.Simulator.compile` and `.Simulator.fit` instead."""
 
         raise SimulationError(
-            "Simulator.loss has been deprecated, use Simulator.compile/eval instead"
+            "Simulator.train has been deprecated, use Simulator.compile/fit instead"
         )
 
-    def run_batch(
-        self,
-        data,
-        outputs,
-        extra_feeds=None,
-        extra_fetches=None,
-        n_epochs=1,
-        truncation=None,
-        shuffle=False,
-        profile=False,
-        training=False,
-        callback=None,
-        combine=np.stack,
-        isolate_state=True,
-    ):
-        """
-        Run the simulation on a batch of input data, computing the given
-        output functions.
+    def loss(self, *args, **kwargs):
+        """Deprecated, use `.Simulator.compile` and `.Simulator.evaluate` instead."""
 
-        Parameters
-        ----------
-        data : dict of {`~nengo.Node` or `~nengo.Probe`: \
-                        `~numpy.ndarray`} or int
-            Input values for Nodes in the network or target values for Probes;
-            arrays should have shape ``(batch_size, n_steps,
-            node.size_out/probe.size_in)``.  If no input data is required,
-            an integer can be given specifying the number of timesteps to
-            run the simulation.
-        outputs : dict of {(tuple of) `~nengo.Probe`: callable or None}
-            Functions to apply to probe outputs.  Functions can accept one
-            positional argument (the output from that probe on one minibatch)
-            or two (also passed the corresponding target value from ``data``).
-            If a tuple of Probes are given as the key then the first
-            argument will be a list of probe outputs, and the second
-            argument will be the corresponding list of target values.  The
-            function can return a ``tf.Tensor``, or tuple of Tensors,
-            which will be evaluated on each minibatch of data.  If ``None``
-            is given then the return value will be the output value from that
-            probe.
-        extra_feeds : dict of {``tf.Tensor``: `~numpy.ndarray`}
-            Can be used to feed a value for arbitrary Tensors in the simulation
-            (will be passed directly to the TensorFlow session)
-        extra_fetches : (list/tuple/dict of) ``tf.Tensor``
-            Can be used to fetch arbitrary (structures of) Tensor values from
-            the simulation (will be fetched directly from the TensorFlow
-            session).
-        n_epochs : int
-            Repeat ``data`` for ``n_epochs`` iterations.
-        truncation : int
-            If not None, run the simulation ``truncation`` timesteps at a time.
-            Outputs from each truncation block will be passed sequentially to
-            ``combine``, in the same way as minibatch blocks.  Note
-            that the simulation state is preserved between truncation blocks,
-            so the sequence forms one continuous run within each minibatch.
-        shuffle : bool
-            If True, randomize the data into different minibatches each epoch.
-        profile : bool
-            If True, collect TensorFlow profiling information while the
-            simulation is running (this will slow down the simulation).
-            Can also pass a string specifying a non-default filename for the
-            saved profile data.
-        training : bool
-            If True, run the network in training mode, otherwise run it in
-            inference mode (this can affect things like the neuron model
-            used).
-        callback : callable
-            A function that will be called after each minibatch is evaluated.
-            The function is passed two arguments; the first is a dictionary
-            corresponding to ``outputs`` with the output values from each
-            function, and the second is the value of ``extra_feeds``.
-        combine : callable
-            The function that will be used to combine the outputs from each
-            minibatch/truncation block.  The values from each output function
-            on each minibatch will be formed into a list and passed to
-            ``combine`` in order to compute the final return values from
-            this function.  Note that if the output function returns multiple
-            values, then ``combine`` will be applied separately to each of
-            those outputs across the minibatches.
-        isolate_state : bool
-            If True (default), isolate the simulation state for this run
-            from the rest of the simulation (so the execution of this run
-            is not affected by previous runs and will not affect future runs).
-            If False, then this run begins from the terminal state of the
-            last run, each minibatch will continue in sequence from the state
-            of the previous, and future runs will resume from the terminal
-            state of the last minibatch of this run.
+        raise SimulationError(
+            "Simulator.loss has been deprecated, use Simulator.compile/evaluate instead"
+        )
 
-        Returns
-        -------
-        output_vals : dict of {(tuple of) `~nengo.Probe`: \
-                               (tuple of) `~numpy.ndarray`}
-            The result of computing ``outputs`` on simulation probe values,
-            given ``data``.  This pseudocode may help to understand how the
-            return values are constructed given the various parameters of this
-            function:
-
-            .. code-block:: python
-
-                output_vals = {}
-                for probe, func in outputs.items():
-                    probe_vals = []
-                    for i in range(n_epochs):
-                        for minibatch in data:
-                            network_output = run_network(minibatch)
-                            probe_vals.append(func(network_output[probe]))
-                    output_vals[probe] = combine(output_values)
-
-            Note that this is not how the values are computed in practice,
-            as it would be quite inefficient.  This pseudocode also omits
-            some of the finer details (e.g. truncation and state isolation).
-
-        Notes
-        -----
-        In general, users should call one of the wrappers for this function
-        (e.g., `.run_steps`, `.train`, or `.loss`),
-        according to their use case.  However, this function can be called
-        directly to run the simulation in a customized way.
-        """
-
-        n_steps = data if isinstance(data, int) else next(iter(data.values())).shape[1]
-
-        # error checking
-        if self.closed:
-            raise SimulatorClosed("Simulator cannot run because it is closed.")
-        if not isinstance(data, int):
-            self._check_data(data)
-        if n_steps % self.unroll != 0:
-            raise ValidationError(
-                "The number of timesteps in batch data must be evenly "
-                "divisible by unroll_simulation",
-                "data",
-            )
-        if truncation is not None and truncation % self.unroll != 0:
-            raise ValidationError(
-                "Truncation length must be evenly divisible by unroll_simulation",
-                "truncation",
-            )
-        if training and self.tensor_graph.inference_only:
-            raise ValidationError(
-                "Network was created with inference_only=True, cannot "
-                "be run in training mode",
-                "inference_only",
-            )
-
-        if extra_fetches is None:
-            extra_fetches = []
-
-        # apply functions (if any) to output probes
-        output_ops, init_ops = self.tensor_graph.build_outputs(outputs)
-
-        # initialize any new variables
-        if init_ops is not None:
-            self.sess.run(init_ops)
-
-        # save the internal state of the simulator
-        if isolate_state:
-            saved_state = self.sess.run(self.tensor_graph.signals.saved_state)
-
-        # set up profiling
-        if profile:
-            run_options = tf_compat.RunOptions(
-                trace_level=tf_compat.RunOptions.FULL_TRACE
-            )
-            run_metadata = tf_compat.RunMetadata()
-        else:
-            run_options = None
-            run_metadata = None
-
-        # compute outputs on batch
-        output_vals = collections.defaultdict(list)
-        for _ in range(n_epochs):
-            for offset, mini_data in utils.minibatch_generator(
-                data,
-                self.minibatch_size,
-                truncation=truncation,
-                shuffle=shuffle,
-                rng=self.rng,
-            ):
-                if offset == 0 and isolate_state:
-                    self.soft_reset()
-
-                # fill in feed_dict values
-                if isinstance(mini_data, int):
-                    steps = mini_data
-                    mini_data = None
-                else:
-                    steps = next(iter(mini_data.values())).shape[1]
-                feed = self._fill_feed(
-                    steps,
-                    data=mini_data,
-                    training=training,
-                    start=offset + (0 if isolate_state else self.n_steps),
-                )
-                if extra_feeds is not None:
-                    feed.update(extra_feeds)
-
-                # run the simulation
-                try:
-                    out_vals, state, extra_vals = self.sess.run(
-                        (
-                            output_ops,
-                            self.tensor_graph.final_internal_state,
-                            extra_fetches,
-                        ),
-                        feed_dict=feed,
-                        options=run_options,
-                        run_metadata=run_metadata,
-                    )
-                except (tf.errors.InternalError, tf.errors.UnknownError) as e:
-                    if e.op is not None and e.op.type == "PyFunc":
-                        raise SimulationError(
-                            "Function '%s' caused an error (see error log "
-                            "above)" % e.op.name
-                        )
-                    else:
-                        raise e  # pragma: no cover (unknown errors)
-
-                if callback is not None:
-                    callback(out_vals, extra_vals)
-
-                for k, v in out_vals.items():
-                    output_vals[k].append(v)
-
-                # update saved state
-                self.sess.run(
-                    [
-                        var.assign(val)
-                        for var, val in zip(self.signals.saved_state.values(), state)
-                    ]
-                )
-
-        if isolate_state:
-            # restore internal state of simulator
-            self.sess.run(
-                [
-                    var.assign(val)
-                    for var, val in zip(
-                        self.tensor_graph.signals.saved_state.values(),
-                        saved_state.values(),
-                    )
-                ]
-            )
-
-        # combine outputs from each minibatch
-        for probe, vals in output_vals.items():
-            # if the output function returns multiple items, keep those
-            # arrays separate
-            if isinstance(vals[0], (list, tuple)):
-                output_vals[probe] = tuple(combine(v) for v in zip(*vals))
-            else:
-                output_vals[probe] = combine(vals)
-
-        # convert back from defaultdict
-        output_vals = dict(output_vals)
-
-        # output profile data to file
-        self._profile_output(profile, run_metadata)
-
-        return output_vals
-
+    @require_open
     def save_params(self, path, include_internal=False):
         """
         Save network parameters to the given ``path``.
@@ -1392,8 +1152,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
         saving/loading individual objects within a model, see
         `.get_nengo_params`.
         """
-        if self.closed:
-            raise SimulatorClosed("Simulation has been closed, cannot save parameters")
 
         vars = self.tensor_graph.signals.all_variables
 
@@ -1405,6 +1163,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         logger.info("Model parameters saved to %s", path)
 
+    @require_open
     def load_params(self, path, include_internal=False):
         """
         Load network parameters from the given ``path``.
@@ -1423,8 +1182,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
         saving/loading individual objects within a model, see
         `.get_nengo_params`.
         """
-        if self.closed:
-            raise SimulatorClosed("Simulation has been closed, cannot load parameters")
 
         vars = self.tensor_graph.signals.all_variables
 
@@ -1436,6 +1193,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         logger.info("Model parameters loaded from %s", path)
 
+    @require_open
     def freeze_params(self, objs):
         """
         Stores the live parameter values from the simulation back into a
@@ -1474,11 +1232,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
         into errors in this process, try manually extracting the parameters you
         need in your model (from ``sim.data``).
         """
-
-        if self.closed:
-            raise SimulatorClosed(
-                "Simulation has been closed, cannot freeze parameters"
-            )
 
         if not isinstance(objs, (list, tuple)):
             objs = [objs]
@@ -1671,114 +1424,92 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         Parameters
         ----------
-        outputs : ``tf.Tensor`` or list of ``tf.Tensor`` or \
-                  list of `~nengo.Probe`
+        outputs : ``tf.Tensor`` or list of `~nengo.Probe`
             Compute gradients wrt this output (if None, computes wrt each
             output probe)
         atol : float
             Absolute error tolerance
         rtol : float
             Relative (to numeric grad) error tolerance
-
-        Notes
-        -----
-        Calling this function will reset all values in the network, so it
-        should not be intermixed with calls to `.Simulator.run`.
         """
 
+        # TODO: get check_gradients working
+
         if self.tensor_graph.inference_only:
-            raise ValidationError(
+            raise SimulationError(
                 "Network was created with inference_only=True, cannot "
-                "compute gradients",
-                "inference_only",
+                "compute gradients"
             )
 
-        delta = 1e-3
         n_steps = self.unroll * 2
 
         data = {
             n: np.zeros((self.minibatch_size, n_steps, n.size_out))
-            for n in self.tensor_graph.invariant_inputs
+            for n in self.node_inputs
         }
-        data.update(
-            {
-                p: np.zeros((self.minibatch_size, n_steps, p.size_in))
-                for p in self.tensor_graph.target_phs
-            }
-        )
-        feed = self._fill_feed(n_steps, data=data, training=True)
 
         if outputs is None:
-            # note: the x + 0 is necessary because `gradient_checker`
-            # doesn't work properly if the output variable is a tensorarray
-            outputs = [x + 0 for x in self.tensor_graph.probe_arrays.values()]
-        elif isinstance(outputs, tf.Tensor):
+            outputs = self.model.probes
+
+        if isinstance(outputs, tf.Tensor):
             outputs = [outputs]
         else:
+            # note: the x + 0 is necessary because `gradient_checker`
+            # doesn't work properly if the output variable is a tensorarray
             outputs = [self.tensor_graph.probe_arrays[p] + 0 for p in outputs]
 
+        # # build a new tensorgraph (necessary because we're building this one in eager
+        # # mode, see below)
+        # tensor_graph = TensorGraph(
+        #     self.model,
+        #     self.dt,
+        #     self.unroll,
+        #     config.get_setting(self.model, "dtype", "float32"),
+        #     self.minibatch_size,
+        #     self.tensor_graph.device,
+        #     utils.NullProgressBar(),
+        #     self.rng,
+        # )
+        #
+        # # compute_gradients expects the function to work in specific ways, so we wrap
+        # # call to work in the way it expects
+        # @tf.function
+        # @tf.autograph.experimental.do_not_convert
+        # def arg_func(*args):
+        #     for i, x in enumerate(args):
+        #         x.set_shape(data[i].shape)
+        #
+        #     tensor_graph.build()
+        #     return tensor_graph.call(args, training=True)[1]
+        #
+        # with tf.Graph().as_default():
+        #     tf_compat.enable_eager_execution()
+        #     analytic, numeric = tf.test.compute_gradient(arg_func, data)
+        #     tf_compat.disable_eager_execution()
+
         # check gradient wrt inp
-        for node, inp in self.tensor_graph.input_phs.items():
-            inp_shape = inp.get_shape().as_list()
-            inp_shape = [n_steps if x is None else x for x in inp_shape]
-            inp_tens = self.tensor_graph.input_phs[node]
-            feed[inp_tens] = np.ascontiguousarray(feed[inp_tens])
-            inp_val = np.ravel(feed[inp_tens])
-            for out in outputs:
-                out_shape = out.get_shape().as_list()
-                out_shape = [n_steps if x is None else x for x in out_shape]
+        with tf_compat.Session(graph=self.graph).as_default():
+            for node, inp in self.tensor_graph.input_phs.items():
+                inp_shape = inp.get_shape().as_list()
+                inp_shape = [n_steps if x is None else x for x in inp_shape]
+                inp_val = data[node]
+                for out in outputs:
+                    out_shape = out.get_shape().as_list()
+                    out_shape = [n_steps if x is None else x for x in out_shape]
 
-                # we need to compute the numeric jacobian manually, to
-                # correctly handle variables (tensorflow doesn't expect
-                # state ops in `compute_gradient`, because it doesn't define
-                # gradients for them)
-                numeric = np.zeros(
-                    (
-                        np.prod(inp_shape, dtype=np.int32),
-                        np.prod(out_shape, dtype=np.int32),
-                    )
-                )
-
-                for i in range(numeric.shape[0]):
-                    self.soft_reset()
-                    inp_val[i] = delta
-                    plus = self.sess.run(out, feed_dict=feed)
-
-                    self.soft_reset()
-                    inp_val[i] = -delta
-                    minus = self.sess.run(out, feed_dict=feed)
-
-                    numeric[i] = np.ravel((plus - minus) / (2 * delta))
-
-                    inp_val[i] = 0
-
-                self.soft_reset()
-
-                dx, dy = gradient_checker._compute_dx_and_dy(inp, out, out_shape)
-
-                with self.sess.as_default():
-                    analytic = gradient_checker._compute_theoretical_jacobian(
-                        inp,
-                        inp_shape,
-                        np.zeros(inp_shape),
-                        dy,
-                        out_shape,
-                        dx,
-                        extra_feed_dict=feed,
+                    analytic, numeric = tf_compat.test.compute_gradient(
+                        inp, inp_shape, out, out_shape, x_init_value=inp_val
                     )
 
-                if np.any(np.isnan(analytic)) or np.any(np.isnan(numeric)):
-                    raise SimulationError("NaNs detected in gradient")
-                fail = abs(analytic - numeric) >= atol + rtol * abs(numeric)
-                if np.any(fail):
-                    raise SimulationError(
-                        "Gradient check failed for input %s and output %s\n"
-                        "numeric values:\n%s\n"
-                        "analytic values:\n%s\n"
-                        % (node, out, numeric[fail], analytic[fail])
-                    )
-
-        self.soft_reset()
+        if np.any(np.isnan(analytic)) or np.any(np.isnan(numeric)):
+            raise SimulationError("NaNs detected in gradient")
+        fail = abs(analytic - numeric) >= atol + rtol * abs(numeric)
+        if np.any(fail):
+            raise SimulationError(
+                "Gradient check failed\n"
+                "numeric values:\n%s\n"
+                "analytic values:\n%s\n" % (numeric[fail], analytic[fail])
+            )
 
         logger.info("Gradient check passed")
 
@@ -2024,6 +1755,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
             data is associated with Probes.
         """
 
+        # TODO: which of this data checking is redundant with keras?
+
         if not isinstance(data, dict):
             # data is a generator, so don't perform validation
             # TODO: could map this into the generator process as well?
@@ -2059,19 +1792,23 @@ class Simulator:  # pylint: disable=too-many-public-methods
         for name, x in data.items():
             # check that name is valid
             if nodes:
-                if name not in [self.get_name(n) for n in self.node_inputs]:
+                valid_names = [self.get_name(n) for n in self.node_inputs]
+                if name not in valid_names:
                     raise ValidationError(
                         "'%s' is not a valid node name; perhaps the name is wrong (it "
                         "should match the `label` on the Node), or this is not an "
-                        "input Node (a Node with size_in==0) in this network." % name,
+                        "input Node (a Node with size_in==0) in this network. "
+                        "Valid names are: %s." % (name, valid_names),
                         "data",
                     )
             else:
-                if name not in [self.get_name(p) for p in self.model.probes]:
+                valid_names = [self.get_name(p) for p in self.model.probes]
+                if name not in valid_names:
                     raise ValidationError(
                         "'%s' is not a valid probe name; perhaps the name is wrong (it "
                         "should match the `label` on the Probe), or this is not a "
-                        "Probe in this network." % name,
+                        "Probe in this network. Valid names are: %s."
+                        % (name, valid_names),
                         "data",
                     )
 
@@ -2165,7 +1902,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             ]
 
         self._n_steps, self._time = [
-            x.item() for x in keras.backend.batch_get_value(self._step_tensors)
+            x.item() for x in tf.keras.backend.batch_get_value(self._step_tensors)
         ]
 
     @property
@@ -2390,7 +2127,9 @@ class SimulationData(collections.Mapping):
 
         # get the live parameter values
         fetched = dict(
-            zip(fetches.keys(), keras.backend.batch_get_value(list(fetches.values())))
+            zip(
+                fetches.keys(), tf.keras.backend.batch_get_value(list(fetches.values()))
+            )
         )
 
         # final updating of parameters

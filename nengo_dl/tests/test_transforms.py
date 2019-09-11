@@ -5,8 +5,8 @@ from distutils.version import LooseVersion
 import nengo
 import numpy as np
 import pytest
+import tensorflow as tf
 
-from nengo_dl.compat import tf_compat
 from nengo_dl.utils import tf_gpu_installed
 
 
@@ -104,7 +104,6 @@ def test_conv_error(Simulator, d):
         assert d == 3
 
 
-@pytest.mark.xfail(reason="TODO: support train")
 @pytest.mark.skipif(
     LooseVersion(nengo.__version__) <= "2.8.0",
     reason="Nengo Sparse transforms not implemented",
@@ -174,15 +173,11 @@ def test_sparse(Simulator, rng):
 
         # check that training on sparse and dense transforms produces the
         # same result
-        sim.train(
-            {
-                in0: np.ones((10, 5, 3)),
-                in1: np.ones((10, 5, 4)),
-                p_dense: np.ones((10, 5, 5)),
-                p_sparse: np.ones((10, 5, 5)),
-            },
-            tf_compat.train.GradientDescentOptimizer(0.01),
-            n_epochs=10,
+        sim.compile(tf.optimizers.SGD(0.01), loss=tf.losses.mse)
+        sim.fit(
+            {in0: np.ones((10, 5, 3)), in1: np.ones((10, 5, 4))},
+            {p_dense: np.ones((10, 5, 5)), p_sparse: np.ones((10, 5, 5))},
+            epochs=10,
         )
         assert np.allclose(
             sim.data[c_dense0].weights.ravel(), sim.data[c_sparse0].weights
