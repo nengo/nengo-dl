@@ -204,8 +204,8 @@ def test_evaluate(Simulator):
         assert np.allclose(output["probe_1_loss"], 4)
         assert np.allclose(output["probe_0_constant_error"], 3)
         assert np.allclose(output["probe_1_constant_error"], 3)
-        assert "probe_0_mean_absolute_error" not in output
-        assert np.allclose(output["probe_1_mean_absolute_error"], 2)
+        assert "probe_0_mae" not in output
+        assert np.allclose(output["probe_1_mae"], 2)
 
 
 @pytest.mark.training

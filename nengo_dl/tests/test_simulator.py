@@ -17,8 +17,9 @@ from nengo.exceptions import (
 import numpy as np
 import pytest
 import tensorflow as tf
+from tensorflow.python.summary.summary_iterator import summary_iterator
 
-from nengo_dl import configure_settings, tensor_layer, dists, TensorNode
+from nengo_dl import configure_settings, tensor_layer, dists, callbacks, TensorNode
 from nengo_dl.compat import tf_compat
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
@@ -651,7 +652,6 @@ def test_side_effects(Simulator):
     assert func.x == 11
 
 
-@pytest.mark.xfail(reason="TODO: support tensorboard")
 @pytest.mark.training
 def test_tensorboard(Simulator, tmpdir):
     with nengo.Network() as net:
@@ -661,84 +661,77 @@ def test_tensorboard(Simulator, tmpdir):
         p = nengo.Probe(b)
         p2 = nengo.Probe(c)
 
-    with Simulator(net, tensorboard=str(tmpdir)):
-        assert os.path.exists("%s/run_0" % tmpdir)
-
-    # check that the run incrementing works properly
-    with Simulator(net, tensorboard=str(tmpdir)):
-        assert os.path.exists("%s/run_1" % tmpdir)
-
     # check that training summaries are output properly
-    with Simulator(net, tensorboard=str(tmpdir)) as sim:
-        with tf.device("/cpu:0"):
-            summ = tf_compat.summary.scalar("step_var", sim.training_step)
+    n_epochs = 3
+    with Simulator(net) as sim:
 
-        class Loss:
-            def pre_build(self, *_):
-                self.var = tf.Variable(
-                    tf.constant(1.0, dtype=sim.tensor_graph.dtype), name="one"
-                )
-                return self.var
+        log_dir = str(tmpdir.join("a_run"))
 
-            def __call__(self, x):
-                return self.var
-
-        sim.train(
-            {
-                a: np.zeros((1, 10, 1)),
-                p: np.zeros((1, 10, 1)),
-                p2: np.zeros((1, 10, 1)),
-            },
-            tf_compat.train.GradientDescentOptimizer(0.0),
-            objective={p: Loss(), p2: tf.losses.mse},
-            summaries=["loss", b, b.neurons, c, summ, {p: Loss()}],
-            n_epochs=3,
+        sim.compile(
+            tf.optimizers.SGD(0.0),
+            loss={p: lambda y_true, y_pred: y_pred, p2: tf.losses.mse},
         )
 
-    event_file = os.path.join(str(tmpdir), "run_2", os.listdir("%s/run_2" % tmpdir)[0])
+        sim.fit(
+            {a: np.zeros((1, 10, 1))},
+            {p: np.zeros((1, 10, 1)), p2: np.zeros((1, 10, 1))},
+            epochs=n_epochs,
+            callbacks=[
+                tf.keras.callbacks.TensorBoard(log_dir=log_dir),
+                callbacks.NengoSummaries(
+                    log_dir=os.path.join(log_dir, "nengo"),
+                    sim=sim,
+                    objects=[b, b.neurons, c],
+                ),
+            ],
+        )
+
+    event_file = os.path.join(
+        str(tmpdir), "a_run", "train", os.listdir(os.path.join(log_dir, "train"))[0]
+    )
 
     assert os.path.exists(event_file)
 
-    for i, event in enumerate(tf_compat.train.summary_iterator(event_file)):
-        if i < 3:
+    summaries = ["epoch_loss", "epoch_probe_0_loss", "epoch_probe_1_loss"]
+    for i, event in enumerate(summary_iterator(event_file)):
+        if i < 2:
             # metadata stuff
             continue
 
-        assert event.step == i - 2
-        tags = [s.tag for s in event.summary.value]
-        assert len(tags) == 8
-        assert "loss/loss" in tags[0]
-        assert "loss/Probe_None_loss" in tags[1]
-        assert "loss/Probe_None_loss" in tags[2]
-        assert tags[3] == "Ensemble_None_encoders"
-        assert tags[4] == "Ensemble.neurons_None_bias"
-        assert tags[5] == "Connection_None_weights"
-        assert tags[6] == "step_var"
-        assert "loss/loss" in tags[7]
+        curr_step = (i - 2) // len(summaries)
+        assert event.step == curr_step
 
-    assert i == 5  # pylint: disable=undefined-loop-variable
+        # assert event.summary.value[0].tag == summaries[(i - 2) % len(summaries)]
+        # log order non-deterministic in python 3.5 so we use this less stringent check
+        assert event.summary.value[0].tag in summaries
 
-    # check for warning if user requests summaries with tensorboard=None
-    with pytest.warns(UserWarning):
-        with Simulator(net, tensorboard=None) as sim:
-            sim.train(
-                {a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1))},
-                tf_compat.train.GradientDescentOptimizer(0.0),
-                summaries=["loss"],
-            )
+    assert i == len(summaries) * n_epochs + 1  # pylint: disable=undefined-loop-variable
+
+    event_file = os.path.join(
+        str(tmpdir), "a_run", "nengo", os.listdir(os.path.join(log_dir, "nengo"))[0]
+    )
+
+    assert os.path.exists(event_file)
+
+    summaries = [
+        "Ensemble_None_encoders",
+        "Ensemble.neurons_None_bias",
+        "Connection_None_weights",
+    ]
+    for i, event in enumerate(summary_iterator(event_file)):
+        if i < 1:
+            # metadata stuff
+            continue
+
+        curr_step = (i - 1) // len(summaries)
+        assert event.step == curr_step
+        assert event.summary.value[0].tag == summaries[(i - 1) % len(summaries)]
+
+    assert i == len(summaries) * n_epochs  # pylint: disable=undefined-loop-variable
 
     # check for error on invalid object
-    with pytest.raises(SimulationError):
-        with Simulator(net, tensorboard=str(tmpdir)) as sim:
-            sim.train(
-                {a: np.zeros((1, 10, 1)), p: np.zeros((1, 10, 1))},
-                tf_compat.train.GradientDescentOptimizer(0.0),
-                summaries=[a],
-            )
-
-    # check that nonexistent dir gets created
-    with Simulator(net, tensorboard=str(tmpdir.join("new"))):
-        assert os.path.exists(str(tmpdir.join("new")))
+    with pytest.raises(ValidationError, match="Unknown summary object"):
+        callbacks.NengoSummaries(log_dir=log_dir + "/nengo", sim=sim, objects=[a])
 
 
 @pytest.mark.xfail(reason="TODO: support profile")

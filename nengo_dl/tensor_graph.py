@@ -9,12 +9,10 @@ from collections import OrderedDict, defaultdict
 import logging
 import warnings
 
-from nengo import Connection, Process, Ensemble
+from nengo import Connection, Process
 from nengo.builder.operator import SimPyFunc, Reset
 from nengo.builder.processes import SimProcess
 from nengo.config import ConfigError
-from nengo.ensemble import Neurons
-from nengo.exceptions import SimulationError
 from nengo.neurons import Direct
 import numpy as np
 import tensorflow as tf
@@ -22,7 +20,6 @@ from tensorflow.python.training.tracking import base as trackable
 
 from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node, config
 from nengo_dl.compat import (
-    tf_compat,
     SparseMatrix,
     is_sparse,
     make_process_state,
@@ -164,7 +161,6 @@ class TensorGraph(tf.keras.layers.Layer):
             *tuple(len(x) for x in self.base_arrays_init),
         )
 
-    # @with_self
     def build_inputs(self):
         """
         Generates a set of Input layers that can be used as inputs to a
@@ -201,7 +197,6 @@ class TensorGraph(tf.keras.layers.Layer):
 
         return n_steps, inputs
 
-    # @with_self
     def build(self, input_shape=None):
         """
         Create any Variables used in the model.
@@ -243,7 +238,6 @@ class TensorGraph(tf.keras.layers.Layer):
         logger.debug("created saved state variables")
         logger.debug([str(x) for x in self.signals.saved_state.values()])
 
-    # @with_self
     # @tf.function  # TODO: get this working? does this help?
     @tf.autograph.experimental.do_not_convert  # TODO: enable autograph
     @trackable.no_automatic_dependency_tracking
@@ -586,98 +580,6 @@ class TensorGraph(tf.keras.layers.Layer):
         # execute build_post on all the op builders
         self.op_builder.build_post()
 
-    # @with_self
-    def build_summaries(self, summaries):
-        """
-        Adds ops to collect summary data for the given objects.
-
-        Parameters
-        ----------
-        summaries : list of dict or \
-                            `~nengo.Connection` or \
-                            `~nengo.Ensemble` or \
-                            `~nengo.ensemble.Neurons` or \
-                            ``tf.Tensor``}
-            List of objects for which we want to collect data.  Object can be a
-            Connection (in which case data on weights will be collected),
-            Ensemble (encoders), Neurons (biases), a dict of
-            ``{probe: objective}`` that indicates a loss function that will
-            be tracked, or a pre-built summary tensor.
-
-        Returns
-        -------
-        op : ``tf.Tensor``
-            Merged summary op for the given summaries
-        """
-
-        summary_ops = []
-        inits = []
-        with tf.device("/cpu:0"):
-            for obj in summaries:
-                if isinstance(obj, dict):
-                    # overall loss
-                    loss, init = self.build_outputs(obj)
-                    if init is not None:
-                        inits.append(init)
-                    summary_ops.append(
-                        tf_compat.summary.scalar(
-                            "loss",
-                            tf.reduce_sum(
-                                input_tensor=[
-                                    tf.reduce_sum(input_tensor=v) for v in loss.values()
-                                ]
-                            ),
-                            family="loss",
-                        )
-                    )
-
-                    if len(obj) > 1:
-                        # get loss for each probe
-                        for p, t in loss.items():
-                            summary_ops.append(
-                                tf_compat.summary.scalar(
-                                    utils.sanitize_name("Probe_%s_loss" % p.label),
-                                    tf.reduce_sum(input_tensor=t),
-                                    family="loss",
-                                )
-                            )
-                elif isinstance(obj, (Ensemble, Neurons, Connection)):
-                    if isinstance(obj, Ensemble):
-                        param = "encoders"
-                        name = "Ensemble_%s" % obj.label
-                    elif isinstance(obj, Neurons):
-                        param = "bias"
-                        name = "Ensemble.neurons_%s" % obj.ensemble.label
-                    elif isinstance(obj, Connection):
-                        param = "weights"
-                        name = "Connection_%s" % obj.label
-
-                    summary_ops.append(
-                        tf_compat.summary.histogram(
-                            utils.sanitize_name("%s_%s" % (name, param)),
-                            self.get_tensor(self.model.sig[obj][param]),
-                        )
-                    )
-                elif isinstance(obj, tf.Tensor):
-                    # we assume that obj is a summary op
-                    summary_ops.append(obj)
-                else:
-                    raise SimulationError("Unknown summary object: %s" % obj)
-
-            return (
-                tf_compat.summary.merge(summary_ops),
-                (None if len(inits) == 0 else inits),
-            )
-
-    # def compute_output_signature(self, input_signature):
-    #     inputs = self.build_inputs()
-    #     for spec, ph in zip(input_signature, inputs):
-    #         assert spec.shape == ph.shape
-    #         assert spec.dtype == ph.dtype
-    #
-    #     return [tf.TensorSpec(p.shape, dtype=p.dtype) for p in self.probe_arrays]
-
-    # @with_self
     def get_tensor(self, sig):
         """
         Returns a Tensor corresponding to the given Signal.

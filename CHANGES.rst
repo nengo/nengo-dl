@@ -106,6 +106,9 @@ Release History
   Building loss functions/optimizers is now managed by Keras.
 - Removed ``nengo_dl.utils.find_non_differentiable`` (this no longer works in TF2.0's
   eager mode).
+- Removed ``Simulator(..., tensorboard=...)`` argument. Use the Keras TensorBoard
+  callback approach for TensorBoard logging instead (see
+  ``tf.keras.callbacks.TensorBoard`` or ``nengo_dl.callbacks.NengoSummaries``).
 
 2.2.2 (unreleased)
 ==================

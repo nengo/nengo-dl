@@ -90,9 +90,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
     minibatch_size : int
         The number of simultaneous inputs that will be passed through the
         network
-    tensorboard : str
-        If not None, save network output in the TensorFlow summary format to
-        the given directory, which can be loaded into TensorBoard
     progress_bar : bool
         If True (default), display progress information when building a model
     """
@@ -108,7 +105,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
         device=None,
         unroll_simulation=1,
         minibatch_size=None,
-        tensorboard=None,
         progress_bar=True,
     ):
         self.closed = None
@@ -192,29 +188,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
     def _build_keras(self):
         tf.random.set_seed(self.seed)
         tf.config.set_soft_device_placement(False)
-
-        # output simulation data for viewing via TensorBoard
-        # if tensorboard is not None:
-        #     if not os.path.exists(tensorboard):
-        #         os.makedirs(tensorboard)
-        #
-        #     run_number = (
-        #         max(
-        #             [
-        #                 int(x[4:])
-        #                 for x in os.listdir(tensorboard)
-        #                 if x.startswith("run")
-        #             ]
-        #             or [-1]
-        #         )
-        #         + 1
-        #     )
-        #     self.summary = tf_compat.summary.FileWriter(
-        #         os.path.join(tensorboard, "run_%d" % run_number),
-        #         graph=tf_compat.get_default_graph(),
-        #     )
-        # else:
-        #     self.summary = None
 
         n_steps, self.node_inputs = self.tensor_graph.build_inputs()
         inputs = [n_steps] + list(self.node_inputs.values())
@@ -1554,9 +1527,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
         """
 
         if not self.closed:
-            if getattr(self, "summary", None) is not None:
-                self.summary.close()
-
             # TODO: delete some data structures to free up memory?
 
             self.closed = True

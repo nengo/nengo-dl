@@ -106,7 +106,7 @@ class TensorFuncParam(Parameter):
 
             validate_output(result)
 
-            node.size_out = result.shape[1].value
+            node.size_out = result.shape[1]
 
         return output
 
@@ -393,9 +393,7 @@ def tensor_layer(
 
             # we can use Keras' static shape inference to get the
             # output shape, which avoids having to build/call the layer
-            size_out = (
-                layer_func(**layer_args).compute_output_shape((1, size_in))[1].value
-            )
+            size_out = layer_func(**layer_args).compute_output_shape((1, size_in))[1]
         else:
             # add (ignored) time input and pass kwargs
             def node_func(_, x):
