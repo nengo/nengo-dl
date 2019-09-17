@@ -193,18 +193,22 @@ class Simulator:  # pylint: disable=too-many-public-methods
         inputs = [n_steps] + list(self.node_inputs.values())
         outputs = self.tensor_graph(inputs)
 
-        self.keras_model = tf.keras.Model(inputs=inputs, outputs=outputs)
+        self.keras_model = tf.keras.Model(
+            inputs=inputs, outputs=outputs, name="keras_model"
+        )
 
         with tf.control_dependencies(self.tensor_graph.state_updates), tf.name_scope(
             "save"
         ):
             outputs = [tf.identity(x, name=x.op.name.split("/")[-1]) for x in outputs]
-        self.keras_model_save = tf.keras.Model(inputs=inputs, outputs=outputs)
+        self.keras_model_stateful = tf.keras.Model(
+            inputs=inputs, outputs=outputs, name="keras_model_stateful"
+        )
 
         # set more informative output names
         # keras names them like LayerName_i, whereas we would like to have the names
         # associated with the probes
-        for model in (self.keras_model, self.keras_model_save):
+        for model in (self.keras_model, self.keras_model_stateful):
             model.output_names = [o.op.name.split("/")[-1] for o in model.outputs]
 
     @with_self
@@ -497,7 +501,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         )
 
         # call predict function
-        model = self.keras_model_save if update_state else self.keras_model
+        model = self.keras_model_stateful if update_state else self.keras_model
         outputs = getattr(model, predict_type)(inputs, **kwargs)
 
         # reorganize results (will be flattened) back into dict
@@ -563,8 +567,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         )
         loss_weights = self._standardize_data(loss_weights, self.model.probes)
 
-        # TODO: do we need to compile keras_model_save?
-        for model in (self.keras_model, self.keras_model_save):
+        for model in (self.keras_model, self.keras_model_stateful):
             model.compile(
                 *args, loss=loss, metrics=metrics, loss_weights=loss_weights, **kwargs
             )
@@ -768,7 +771,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 "be run in training mode"
             )
 
-        model = self.keras_model_save if update_state else self.keras_model
+        model = self.keras_model_stateful if update_state else self.keras_model
         return getattr(model, fit_type)(**kwargs)
 
     @require_open
@@ -950,7 +953,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             See description in documentation of ``<evaluate_type>`` function.
         """
 
-        model = self.keras_model_save if update_state else self.keras_model
+        model = self.keras_model_stateful if update_state else self.keras_model
         outputs = getattr(model, evaluate_type)(**kwargs)
 
         # return outputs as named dict
@@ -1107,6 +1110,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         )
 
     @require_open
+    @with_self
     def save_params(self, path, include_internal=False):
         """
         Save network parameters to the given ``path``.
@@ -1126,17 +1130,18 @@ class Simulator:  # pylint: disable=too-many-public-methods
         `.get_nengo_params`.
         """
 
-        vars = self.tensor_graph.signals.all_variables
+        vars = (
+            self.keras_model.weights
+            if include_internal
+            else self.keras_model.trainable_weights
+        )
 
-        if include_internal:
-            vars.extend(self.tensor_graph.signals.saved_state.values())
+        np.savez_compressed(path + ".npz", *tf.keras.backend.batch_get_value(vars))
 
-        with tf.device("/cpu:0"):
-            path = tf_compat.train.Saver(vars).save(self.sess, path)
-
-        logger.info("Model parameters saved to %s", path)
+        logger.info("Model parameters saved to %s.npz", path)
 
     @require_open
+    @with_self
     def load_params(self, path, include_internal=False):
         """
         Load network parameters from the given ``path``.
@@ -1156,15 +1161,18 @@ class Simulator:  # pylint: disable=too-many-public-methods
         `.get_nengo_params`.
         """
 
-        vars = self.tensor_graph.signals.all_variables
+        vars = (
+            self.keras_model.weights
+            if include_internal
+            else self.keras_model.trainable_weights
+        )
 
-        if include_internal:
-            vars.extend(self.tensor_graph.signals.saved_state.values())
+        with np.load(path + ".npz") as vals:
+            tf.keras.backend.batch_set_value(
+                zip(vars, (vals["arr_%d" % i] for i in range(len(vals.files))))
+            )
 
-        with tf.device("/cpu:0"):
-            tf_compat.train.Saver(vars).restore(self.sess, path)
-
-        logger.info("Model parameters loaded from %s", path)
+        logger.info("Model parameters loaded from %s.npz", path)
 
     @require_open
     def freeze_params(self, objs):

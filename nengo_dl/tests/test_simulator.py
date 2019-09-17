@@ -493,71 +493,81 @@ def test_generate_inputs(Simulator, seed):
             sim._generate_inputs(data=range(5), n_steps=1)
 
 
-@pytest.mark.xfail(reason="TODO: support save/load")
+@pytest.mark.parametrize("include_internal", (True, False))
 @pytest.mark.training
-def test_save_load_params(Simulator, tmpdir):
-    with nengo.Network(seed=0) as net:
-        inp = nengo.Node([0])
-        out = nengo.Node(size_in=1)
-        ens = nengo.Ensemble(10, 1)
-        nengo.Connection(inp, ens)
-        nengo.Connection(ens, out)
+def test_save_load_params(Simulator, include_internal, tmpdir):
+    def get_network(seed):
+        with nengo.Network(seed=seed) as net:
+            configure_settings(simplifications=[])
 
-        configure_settings(trainable=None)
-        net.config[ens].trainable = False
+            inp = nengo.Node([0])
+            out = nengo.Node(size_in=1)
+            ens = nengo.Ensemble(10, 1)
+            nengo.Connection(inp, ens)
+            conn = nengo.Connection(ens, out)
+            p = nengo.Probe(out)
 
-    with Simulator(net) as sim:
-        weights_var = [
-            x
-            for x in sim.tensor_graph.signals.base_params.values()
-            if x.shape == (1, 10)
-        ][0]
-        enc_var = sim.tensor_graph.signals.saved_state[
-            sim.tensor_graph.signals[sim.model.sig[ens]["encoders"]].key
-        ][0]
-        weights0, enc0 = sim.sess.run([weights_var, enc_var])
-        sim.save_params(os.path.join(str(tmpdir), "train"))
-        sim.save_params(os.path.join(str(tmpdir), "local"), include_internal=True)
+            configure_settings(trainable=None)
+            net.config[ens].trainable = False
+
+        return net, ens, conn, p
+
+    net0, ens0, conn0, p0 = get_network(0)
+
+    with Simulator(net0) as sim_save:
+        weights0, enc0, bias0 = sim_save.data.get_params(
+            (conn0, "weights"), (ens0, "encoders"), (ens0, "bias")
+        )
+
+        sim_save.run_steps(10)
+
+        sim_save.save_params(str(tmpdir), include_internal=include_internal)
+
+        sim_save.run_steps(10)
 
     with pytest.raises(SimulatorClosed):
-        sim.save_params(None)
+        sim_save.save_params(None)
     with pytest.raises(SimulatorClosed):
-        sim.load_params(None)
+        sim_save.load_params(None)
 
-    with nengo.Network(seed=1) as net2:
-        inp = nengo.Node([0])
-        out = nengo.Node(size_in=1)
-        ens = nengo.Ensemble(10, 1)
-        nengo.Connection(inp, ens)
-        nengo.Connection(ens, out)
+    net1, ens1, conn1, p1 = get_network(1)
 
-        configure_settings(trainable=None)
-        net2.config[ens].trainable = False
-
-    with Simulator(net2) as sim:
-        weights_var = [
-            x
-            for x in sim.tensor_graph.signals.base_params.values()
-            if x.shape == (1, 10)
-        ][0]
-        enc_var = sim.tensor_graph.signals.saved_state[
-            sim.tensor_graph.signals[sim.model.sig[ens]["encoders"]].key
-        ][0]
-        weights1, enc1 = sim.sess.run([weights_var, enc_var])
+    with Simulator(net1) as sim_load:
+        weights1, enc1, bias1 = sim_load.data.get_params(
+            (conn1, "weights"), (ens1, "encoders"), (ens1, "bias")
+        )
         assert not np.allclose(weights0, weights1)
         assert not np.allclose(enc0, enc1)
 
-        sim.load_params(os.path.join(str(tmpdir), "train"))
+        pre_model = sim_load.keras_model
 
-        weights2, enc2 = sim.sess.run([weights_var, enc_var])
+        sim_load.load_params(str(tmpdir), include_internal=include_internal)
+
+        weights2, enc2, bias2 = sim_load.data.get_params(
+            (conn1, "weights"), (ens1, "encoders"), (ens1, "bias")
+        )
+
+        # check if weights match
         assert np.allclose(weights0, weights2)
-        assert not np.allclose(enc0, enc2)
 
-        sim.load_params(os.path.join(str(tmpdir), "local"), include_internal=True)
+        if include_internal:
+            assert np.allclose(enc0, enc2)
+            assert np.allclose(bias0, bias2)
+        else:
+            assert np.allclose(enc1, enc2)
+            assert np.allclose(bias1, bias2)
 
-        weights3, enc3 = sim.sess.run([weights_var, enc_var])
-        assert np.allclose(weights0, weights3)
-        assert np.allclose(enc0, enc3)
+        # check if a new model was created or one was modified in-place
+        assert sim_load.keras_model is pre_model
+
+        # check if things still run correctly
+        sim_load.run_steps(10)
+
+        # check if simulation state resumed correctly
+        if include_internal:
+            assert np.allclose(sim_load.data[p1], sim_save.data[p0][10:])
+        else:
+            assert not np.allclose(sim_load.data[p1], sim_save.data[p0][10:])
 
 
 def test_model_passing(Simulator, seed):

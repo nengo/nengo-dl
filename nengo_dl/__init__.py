@@ -57,7 +57,7 @@ from nengo_dl import (
 )
 
 # import into top-level namespace
-from nengo_dl import dists
+from nengo_dl import dists, callbacks
 from nengo_dl.simulator import Simulator
 from nengo_dl.tensor_node import TensorNode, tensor_layer, reshaped
 from nengo_dl.config import configure_settings

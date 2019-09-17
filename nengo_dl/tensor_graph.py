@@ -118,7 +118,6 @@ class TensorGraph(tf.keras.layers.Layer):
             model,
             "simplifications",
             [
-                graph_optimizer.remove_constant_copies,
                 graph_optimizer.remove_unmodified_resets,
                 graph_optimizer.remove_zero_incs,
                 graph_optimizer.remove_identity_muls,
