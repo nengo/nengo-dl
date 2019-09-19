@@ -180,7 +180,7 @@ def test_train_ff(Simulator, neurons, seed):
         sim.compile(tf.optimizers.Adam(0.01), loss=tf.losses.mse)
         sim.fit({inp_a: x[..., [0]], inp_b: x[..., [1]]}, {p: y}, epochs=500)
 
-        # sim.check_gradients(atol=5e-5)
+        sim.check_gradients(atol=5e-5)
 
         sim.step(data={inp_a: x[..., [0]], inp_b: x[..., [1]]})
 
@@ -252,6 +252,7 @@ def test_train_recurrent(Simulator, truncation, seed):
                         {p: y[:, j * truncation : (j + 1) * truncation]},
                         epochs=1,
                         update_state=True,
+                        verbose=0,
                     )
 
                 # note: this works because each epoch is a single minibatch. otherwise
@@ -259,12 +260,24 @@ def test_train_recurrent(Simulator, truncation, seed):
                 # the callback approach is trying to do)
                 sim.soft_reset()
         else:
-            sim.fit({inp: x}, {p: y}, epochs=200)
-
-        # sim.check_gradients(sim.tensor_graph.build_outputs({p: mse})[0][p])
+            sim.fit({inp: x}, {p: y}, epochs=200, verbose=0)
 
         loss = sim.evaluate({inp: x}, {p: y})["loss"]
         assert loss < (0.005 if truncation else 0.0025)
+
+
+@pytest.mark.training
+def test_recurrent_gradients(Simulator, seed):
+    with nengo.Network(seed=seed) as net:
+        a = nengo.Node([0])
+        b = nengo.Ensemble(
+            10, 1, gain=nengo.dists.Choice([0.5]), bias=nengo.dists.Choice([-0.1])
+        )
+        nengo.Connection(a, b.neurons, transform=nengo.dists.Gaussian(0, 1))
+        p = nengo.Probe(b.neurons)
+
+    with Simulator(net) as sim:
+        sim.check_gradients([p])
 
 
 @pytest.mark.parametrize("unroll", (1, 2))
@@ -296,9 +309,9 @@ def test_train_objective(Simulator, unroll, seed):
             return tf.reduce_mean((output[:, -1] - 0.5 - target[:, -1]) ** 2)
 
         sim.compile(tf.optimizers.SGD(1e-2, momentum=0.9), loss={p: obj, p2: obj})
-        sim.fit({inp: x}, {p: y, p2: z}, epochs=200)
+        sim.fit({inp: x}, {p: y, p2: z}, epochs=200, verbose=0)
 
-        # sim.check_gradients([p, p2])
+        sim.check_gradients([p, p2])
 
         sim.run_steps(n_steps, data={inp: x})
 
@@ -833,7 +846,6 @@ def test_node_output_change(Simulator, pre_val, post_val, seed):
         assert np.allclose(sim.data[p], 1.0)
 
 
-@pytest.mark.xfail(reason="TODO: support gradients")
 @pytest.mark.training
 def test_check_gradients_error(Simulator):
     # check_gradients detects nans in gradient
@@ -843,7 +855,7 @@ def test_check_gradients_error(Simulator):
         nengo.Probe(y)
 
     with Simulator(net) as sim:
-        with pytest.raises(SimulationError):
+        with pytest.raises(SimulationError, match="NaNs detected"):
             sim.check_gradients()
 
     # check_gradients detects errors in gradient (in this case caused by the
@@ -853,7 +865,7 @@ def test_check_gradients_error(Simulator):
         nengo.Probe(x, synapse=nengo.Triangle(0.1))
 
     with Simulator(net) as sim:
-        with pytest.raises(SimulationError):
+        with pytest.raises(SimulationError, match="Gradient check failed"):
             sim.check_gradients()
 
 

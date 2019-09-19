@@ -10,7 +10,6 @@ from nengo_dl import tensor_graph, utils, graph_optimizer, config
 from nengo_dl.tests import dummies
 
 
-@pytest.mark.xfail(reason="TODO: support gradients")
 @pytest.mark.parametrize("unroll", (1, 2))
 @pytest.mark.training
 def test_gradients(Simulator, unroll, seed):

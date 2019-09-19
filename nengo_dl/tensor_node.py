@@ -98,8 +98,13 @@ class TensorFuncParam(Parameter):
                     result = func(*args)
                 except Exception as e:
                     raise ValidationError(
-                        "Calling TensorNode function with arguments %s "
-                        "produced an error:\n%s" % (args, e),
+                        "Attempting to automatically determine TensorNode output shape "
+                        "by calling TensorNode function produced an error. "
+                        "If you would like to avoid this step "
+                        "(e.g., because your TensorNode contains a `pre_build` "
+                        "function), try manually setting "
+                        "`TensorNode(..., size_out=x)`. The error is shown below:\n%s"
+                        % e,
                         attr=self.name,
                         obj=node,
                     )
@@ -244,7 +249,7 @@ class SimTensorNodeBuilder(OpBuilder):
         self.func = op.func
 
         if hasattr(self.func, "pre_build"):
-            vars = self.func.pre_build(
+            self.func.pre_build(
                 shape_in=(
                     None
                     if self.src_data is None
@@ -253,11 +258,6 @@ class SimTensorNodeBuilder(OpBuilder):
                 shape_out=(signals.minibatch_size,) + self.dst_data.shape,
                 config=config,
             )
-
-            if isinstance(vars, (list, tuple)):
-                signals.user_vars.extend(vars)
-            elif vars is not None:
-                signals.user_vars.append(vars)
 
     def build_step(self, signals):
         time = signals.gather(self.time_data)
@@ -381,10 +381,10 @@ def tensor_layer(
                     """Build the layer and return the weights."""
 
                     self.layer = layer_func(**layer_args)
+                    self.layer.add_weight = config.add_weight
                     self.layer.build(
                         shape_in if shape_in is None else (shape_in[0],) + shape_in
                     )
-                    return self.layer.weights
 
                 def __call__(self, _, x):
                     return self.layer(x)

@@ -84,6 +84,8 @@ Release History
   It can be manually re-enabled through the
   `simplifications <https://www.nengo.ai/nengo-dl/config.html#simplifications>`_
   configuration option.
+- ``Simulator.check_gradients`` now only accepts an optional list of Probes (no longer
+  accepts arbitrary Tensors).
 
 **Removed**
 

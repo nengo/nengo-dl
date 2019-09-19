@@ -321,14 +321,6 @@ class TensorGraph(tf.keras.layers.Layer):
         with progress.sub("build stage", max_value=len(self.plan) * self.unroll) as sub:
             self._build_loop(sub)
 
-        # update saved internal state
-        self.state_updates = [
-            var.assign(val)
-            for var, val in zip(
-                self.signals.saved_state.values(), self.final_internal_state
-            )
-        ]
-
         # logging
         logger.info(
             "Number of reads: %d", sum(x for x in self.signals.read_types.values())

@@ -332,7 +332,6 @@ class SignalDict(Mapping):
         """
         # these values will be re-generated whenever the model is rebuilt
         # self.constant_phs = OrderedDict()
-        self.user_vars = []
         self.bases = OrderedDict()
 
         # reset TensorSignals
@@ -715,18 +714,3 @@ class SignalDict(Mapping):
 
     def __contains__(self, sig):
         return sig in self.sig_map
-
-    @property
-    def all_variables(self):
-        """
-        All variables in the model.
-
-        Notes
-        -----
-        There may be variables managed by other processes
-        (e.g. TensorFlow optimizers) that are not captured here. These are
-        only the variables associated with the NengoDL simulation.
-        """
-
-        # TODO: remove this and use keras variable tracking instead
-        return list(self.base_params.values()) + self.user_vars

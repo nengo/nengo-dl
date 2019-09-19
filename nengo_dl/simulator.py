@@ -6,6 +6,7 @@ a model.
 
 import collections
 import copy
+from functools import partial
 import logging
 import warnings
 
@@ -29,7 +30,7 @@ from tensorflow.python.client.timeline import Timeline
 
 from nengo_dl import utils, config
 from nengo_dl.builder import NengoBuilder, NengoModel
-from nengo_dl.compat import tf_compat, Convolution
+from nengo_dl.compat import Convolution
 from nengo_dl.tensor_graph import TensorGraph
 
 
@@ -197,9 +198,14 @@ class Simulator:  # pylint: disable=too-many-public-methods
             inputs=inputs, outputs=outputs, name="keras_model"
         )
 
-        with tf.control_dependencies(self.tensor_graph.state_updates), tf.name_scope(
-            "save"
-        ):
+        state_updates = [
+            var.assign(val)
+            for var, val in zip(
+                self.tensor_graph.signals.saved_state.values(),
+                self.tensor_graph.final_internal_state,
+            )
+        ]
+        with tf.control_dependencies(state_updates), tf.name_scope("save"):
             outputs = [tf.identity(x, name=x.op.name.split("/")[-1]) for x in outputs]
         self.keras_model_stateful = tf.keras.Model(
             inputs=inputs, outputs=outputs, name="keras_model_stateful"
@@ -1394,6 +1400,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         return params
 
+    @require_open
+    @with_self
     def check_gradients(self, outputs=None, atol=1e-5, rtol=1e-3):
         """
         Perform gradient checks for the network (used to verify that the
@@ -1405,7 +1413,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         Parameters
         ----------
-        outputs : ``tf.Tensor`` or list of `~nengo.Probe`
+        outputs : list of `~nengo.Probe`
             Compute gradients wrt this output (if None, computes wrt each
             output probe)
         atol : float
@@ -1414,8 +1422,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
             Relative (to numeric grad) error tolerance
         """
 
-        # TODO: get check_gradients working
-
         if self.tensor_graph.inference_only:
             raise SimulationError(
                 "Network was created with inference_only=True, cannot "
@@ -1423,76 +1429,63 @@ class Simulator:  # pylint: disable=too-many-public-methods
             )
 
         n_steps = self.unroll * 2
-
-        data = {
-            n: np.zeros((self.minibatch_size, n_steps, n.size_out))
-            for n in self.node_inputs
-        }
-
         if outputs is None:
             outputs = self.model.probes
 
-        if isinstance(outputs, tf.Tensor):
-            outputs = [outputs]
-        else:
-            # note: the x + 0 is necessary because `gradient_checker`
-            # doesn't work properly if the output variable is a tensorarray
-            outputs = [self.tensor_graph.probe_arrays[p] + 0 for p in outputs]
+        inputs = [
+            np.zeros(
+                tuple(n_steps if s is None else s for s in x.shape),
+                x.dtype.as_numpy_dtype(),
+            )
+            for x in self.keras_model.inputs[1:]
+        ]
 
-        # # build a new tensorgraph (necessary because we're building this one in eager
-        # # mode, see below)
-        # tensor_graph = TensorGraph(
-        #     self.model,
-        #     self.dt,
-        #     self.unroll,
-        #     config.get_setting(self.model, "dtype", "float32"),
-        #     self.minibatch_size,
-        #     self.tensor_graph.device,
-        #     utils.NullProgressBar(),
-        #     self.rng,
-        # )
-        #
-        # # compute_gradients expects the function to work in specific ways, so we wrap
-        # # call to work in the way it expects
-        # @tf.function
-        # @tf.autograph.experimental.do_not_convert
-        # def arg_func(*args):
-        #     for i, x in enumerate(args):
-        #         x.set_shape(data[i].shape)
-        #
-        #     tensor_graph.build()
-        #     return tensor_graph.call(args, training=True)[1]
-        #
-        # with tf.Graph().as_default():
-        #     tf_compat.enable_eager_execution()
-        #     analytic, numeric = tf.test.compute_gradient(arg_func, data)
-        #     tf_compat.disable_eager_execution()
+        # compute_gradients expects to be called with a function that works in
+        # specific ways, so we wrap the model to work in the way it expects
+        @tf.function
+        @tf.autograph.experimental.do_not_convert
+        def arg_func(*args, output=None):
+            for i, x in enumerate(args):
+                x.set_shape(inputs[i].shape)
 
-        # check gradient wrt inp
-        with tf_compat.Session(graph=self.graph).as_default():
-            for node, inp in self.tensor_graph.input_phs.items():
-                inp_shape = inp.get_shape().as_list()
-                inp_shape = [n_steps if x is None else x for x in inp_shape]
-                inp_val = data[node]
-                for out in outputs:
-                    out_shape = out.get_shape().as_list()
-                    out_shape = [n_steps if x is None else x for x in out_shape]
+            args = (tf.ones((self.minibatch_size, 1), dtype=np.int32) * n_steps,) + args
 
-                    analytic, numeric = tf_compat.test.compute_gradient(
-                        inp, inp_shape, out, out_shape, x_init_value=inp_val
+            out = self.keras_model(args, training=True)
+            self.tensor_graph.build_post()
+
+            # drop steps_run
+            out = out[1:]
+
+            # get selected output
+            out = out[self.model.probes.index(output)]
+
+            return out
+
+        grads = dict()
+        for output in outputs:
+            # TODO: switch to eager evaluation once that is well supported
+            with tf.compat.v1.keras.backend.get_session().as_default():
+                analytic, numeric = tf.test.compute_gradient(
+                    partial(arg_func, output=output), inputs
+                )
+            grads[output] = dict()
+            grads[output]["analytic"] = analytic
+            grads[output]["numeric"] = numeric
+
+            for a, n in zip(analytic, numeric):
+                if np.any(np.isnan(a)) or np.any(np.isnan(n)):
+                    raise SimulationError("NaNs detected in gradient")
+                fail = abs(a - n) >= atol + rtol * abs(n)
+                if np.any(fail):
+                    raise SimulationError(
+                        "Gradient check failed\n"
+                        "numeric values:\n%s\n"
+                        "analytic values:\n%s\n" % (n[fail], a[fail])
                     )
 
-        if np.any(np.isnan(analytic)) or np.any(np.isnan(numeric)):
-            raise SimulationError("NaNs detected in gradient")
-        fail = abs(analytic - numeric) >= atol + rtol * abs(numeric)
-        if np.any(fail):
-            raise SimulationError(
-                "Gradient check failed\n"
-                "numeric values:\n%s\n"
-                "analytic values:\n%s\n" % (numeric[fail], analytic[fail])
-            )
-
         logger.info("Gradient check passed")
+
+        return grads
 
     def trange(self, sample_every=None, dt=None):
         """

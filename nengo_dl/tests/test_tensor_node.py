@@ -148,7 +148,6 @@ def test_post_build(Simulator):
     class TestFunc:
         def pre_build(self, shape_in, shape_out, config):
             self.weights = tf.Variable(tf.zeros((shape_in[1], shape_out[1])))
-            return self.weights
 
         def post_build(self):
             tf.keras.backend.set_value(self.weights, np.ones((2, 3)))
@@ -244,7 +243,6 @@ def test_reuse_vars(Simulator):
             self.w = config.add_weight(
                 initializer=tf.initializers.constant(2.0), name="weights"
             )
-            return self.w
 
         def __call__(self, _, x):
             return x * tf.cast(self.w, x.dtype)
