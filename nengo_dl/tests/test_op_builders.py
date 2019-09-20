@@ -32,7 +32,7 @@ def test_elementwise_inc(Simulator):
 
 @pytest.mark.parametrize("device", ("/cpu:0", "/gpu:0", None))
 @pytest.mark.parametrize("dtype", (tf.float32, tf.float64))
-def test_sparse_matmul(sess, dtype, device):
+def test_sparse_matmul(dtype, device):
     if device == "/gpu:0" and not tf_gpu_installed:
         pytest.skip("Can't test GPU device without GPU support")
 
@@ -49,16 +49,12 @@ def test_sparse_matmul(sess, dtype, device):
         device == "/gpu:0" or (device is None and tf_gpu_installed)
     ):
         assert len([w for w in recwarns if "sparse_matmul" in str(w.message)]) == 1
-
-        # need to go back past cast
-        assert Y.op.inputs[0].op.inputs[1].dtype == tf.float32
     else:
         assert len([w for w in recwarns if "sparse_matmul" in str(w.message)]) == 0
-        assert Y.op.inputs[1].dtype == dtype
 
     assert Y.dtype == dtype
 
-    assert np.allclose(sess.run(Y), np.ones(3) * 2)
+    assert np.allclose(Y, np.ones(3) * 2)
 
 
 def test_merged_simpyfunc(Simulator):

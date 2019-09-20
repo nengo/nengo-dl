@@ -165,7 +165,7 @@ class Builder:
 class BuildConfig(
     namedtuple(
         "BuildConfig",
-        ("inference_only", "lif_smoothing", "cpu_only", "rng", "add_weight"),
+        ("inference_only", "lif_smoothing", "cpu_only", "rng", "training"),
     )
 ):
     """
@@ -183,10 +183,9 @@ class BuildConfig(
         True if TensorFlow is only running on the CPU (because that was
         specified by the user or because tensorflow-gpu is not installed).
     rng : `~numpy.random.mtrand.RandomState`
-        Seeded random number generator
-    add_weight : callable
-        Function that can be used to add weights to the model (see
-        https://www.tensorflow.org/api_docs/python/tf/keras/layers/Layer#add_weight)
+        Seeded random number generator.
+    training : ``tf.Tensor`` (bool)
+        True if building in training mode, False for inference mode.
     """
 
     __slots__ = ()

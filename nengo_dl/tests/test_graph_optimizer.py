@@ -280,7 +280,7 @@ def test_mergeable():
     )
 
     # simtensornode
-    a = SimTensorNode(None, dummies.Signal(), None, dummies.Signal())
+    a = SimTensorNode(None, dummies.Signal(), None, dummies.Signal(), None)
     assert not mergeable(a, [a])
 
     # learning rules

@@ -71,7 +71,7 @@ def test_merge_conv(Simulator, channels_last, seed, pytestconfig):
     ):
         assert len(recwarns) == 0
     else:
-        assert len(recwarns) == 1
+        assert len(recwarns) > 0
 
     with nengo.Simulator(net) as canonical:
         canonical.step()

@@ -20,7 +20,6 @@ import tensorflow as tf
 from tensorflow.python.summary.summary_iterator import summary_iterator
 
 from nengo_dl import configure_settings, tensor_layer, dists, callbacks, TensorNode
-from nengo_dl.compat import tf_compat
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
 from nengo_dl.utils import tf_gpu_installed
@@ -174,11 +173,11 @@ def test_train_ff(Simulator, neurons, seed):
     with Simulator(
         net, minibatch_size=minibatch_size, unroll_simulation=1, seed=seed
     ) as sim:
-        x = np.asarray([[[0, 0]], [[0, 1]], [[1, 0]], [[1, 1]]])
+        x = np.asarray([[[0.0, 0.0]], [[0.0, 1.0]], [[1.0, 0.0]], [[1.0, 1.0]]])
         y = np.asarray([[[0.1]], [[0.9]], [[0.9]], [[0.1]]])
 
         sim.compile(tf.optimizers.Adam(0.01), loss=tf.losses.mse)
-        sim.fit({inp_a: x[..., [0]], inp_b: x[..., [1]]}, {p: y}, epochs=500)
+        sim.fit({inp_a: x[..., [0]], inp_b: x[..., [1]]}, {p: y}, epochs=500, verbose=0)
 
         sim.check_gradients(atol=5e-5)
 
@@ -202,10 +201,7 @@ def test_train_recurrent(Simulator, truncation, seed):
             1,
             neuron_type=nengo.RectifiedLinear(),
             gain=np.ones(n_hidden),
-            # note: using non-zero biases because otherwise we tend to get a lot
-            # of neurons with an inflection point right around zero, which causes
-            # numerical errors in the check_gradients finite differencing
-            bias=np.linspace(-0.1, 0.1, n_hidden),
+            bias=np.zeros(n_hidden),
         )
         out = nengo.Node(size_in=1)
 
@@ -263,7 +259,7 @@ def test_train_recurrent(Simulator, truncation, seed):
             sim.fit({inp: x}, {p: y}, epochs=200, verbose=0)
 
         loss = sim.evaluate({inp: x}, {p: y})["loss"]
-        assert loss < (0.005 if truncation else 0.0025)
+        assert loss < (0.006 if truncation else 0.0025)
 
 
 @pytest.mark.training
@@ -342,14 +338,19 @@ def test_train_sparse(Simulator, seed):
         net, minibatch_size=minibatch_size, unroll_simulation=1, seed=seed
     ) as sim:
         x = np.asarray(
-            [[[0, 0, 0, 0, 0]], [[0, 0, 1, 0, 0]], [[1, 0, 0, 0, 0]], [[1, 0, 1, 0, 0]]]
+            [
+                [[0.0, 0.0, 0.0, 0.0, 0.0]],
+                [[0.0, 0.0, 1.0, 0.0, 0.0]],
+                [[1.0, 0.0, 0.0, 0.0, 0.0]],
+                [[1.0, 0.0, 1.0, 0.0, 0.0]],
+            ]
         )
         y = np.asarray([[[0, 1]], [[1, 0]], [[1, 0]], [[0, 1]]])
 
         sim.compile(
             tf.optimizers.SGD(0.1, momentum=0.9, nesterov=True), loss=tf.losses.mse
         )
-        sim.fit({inp: x}, {p: y}, epochs=500)
+        sim.fit({inp: x}, {p: y}, epochs=500, verbose=0)
 
         sim.step(data={inp: x})
 
@@ -494,7 +495,7 @@ def test_generate_inputs(Simulator, seed):
             np.ones((minibatch_size, n_steps, 1)) * 2,
         ]
         for i, x in enumerate(vals):
-            assert np.allclose(feed["node_%d" % i], x)
+            assert np.allclose(feed["node_%d" % i if i > 0 else "node"], x)
             assert np.allclose(sim.data[p[i]], x)
 
         # check that unseeded process was different in each minibatch item
@@ -700,7 +701,7 @@ def test_tensorboard(Simulator, tmpdir):
             {p: np.zeros((1, 10, 1)), p2: np.zeros((1, 10, 1))},
             epochs=n_epochs,
             callbacks=[
-                tf.keras.callbacks.TensorBoard(log_dir=log_dir),
+                tf.keras.callbacks.TensorBoard(log_dir=log_dir, profile_batch=0),
                 callbacks.NengoSummaries(
                     log_dir=os.path.join(log_dir, "nengo"),
                     sim=sim,
@@ -715,7 +716,7 @@ def test_tensorboard(Simulator, tmpdir):
 
     assert os.path.exists(event_file)
 
-    summaries = ["epoch_loss", "epoch_probe_0_loss", "epoch_probe_1_loss"]
+    summaries = ["epoch_loss", "epoch_probe_loss", "epoch_probe_1_loss"]
     for i, event in enumerate(summary_iterator(event_file)):
         if i < 2:
             # metadata stuff
@@ -757,37 +758,25 @@ def test_tensorboard(Simulator, tmpdir):
         callbacks.NengoSummaries(log_dir=log_dir + "/nengo", sim=sim, objects=[a])
 
 
-@pytest.mark.xfail(reason="TODO: support profile")
-@pytest.mark.parametrize("mode", ("run", "train"))
-@pytest.mark.parametrize("outfile", (None, "tmp.txt"))
+@pytest.mark.parametrize("mode", ("predict", "train"))
 @pytest.mark.training
-def test_profile(Simulator, mode, outfile):
+def test_profile(Simulator, mode, tmpdir):
     net, a, p = dummies.linear_net()
 
-    if outfile is None:
-        filename = "nengo_dl_profile.json"
-    else:
-        filename = outfile
-    if os.path.exists(filename):
-        os.remove(filename)
-
     with Simulator(net) as sim:
-        if outfile is None:
-            prof = True
-        else:
-            prof = outfile
+        callback = callbacks.TensorBoard(
+            log_dir=str(tmpdir.join("profile")), profile_batch=1
+        )
 
-        if mode == "run":
-            sim.run_steps(5, profile=prof)
+        if mode == "predict":
+            sim.predict(n_steps=5, callbacks=[callback])
         else:
-            sim.train(
-                {a: np.zeros((1, 5, 1)), p: np.zeros((1, 5, 1))},
-                tf_compat.train.GradientDescentOptimizer(1),
-                profile=prof,
+            sim.compile(tf.optimizers.SGD(1), loss=tf.losses.mse)
+            sim.fit(
+                {a: np.zeros((1, 5, 1)), p: np.zeros((1, 5, 1))}, callbacks=[callback]
             )
 
-        assert os.path.exists(filename)
-        os.remove(filename)
+        assert os.path.exists(str(tmpdir.join("profile", "train")))
 
 
 def test_dt_readonly(Simulator):
@@ -1104,9 +1093,9 @@ def test_simulation_data(Simulator, seed):
         tensor_sig = sim.tensor_graph.signals[sig]
 
         if sim.tensor_graph.inference_only:
-            base = sim.tensor_graph.signals.saved_state[tensor_sig.key]
+            base = sim.tensor_graph.saved_state[tensor_sig.key]
         else:
-            base = sim.tensor_graph.signals.base_params[tensor_sig.key]
+            base = sim.tensor_graph.base_params[tensor_sig.key]
         tf.keras.backend.set_value(
             base, np.ones(base.shape, dtype=base.dtype.as_numpy_dtype())
         )
@@ -1552,11 +1541,13 @@ def test_pickle_error(Simulator):
 
 
 def test_tensorflow_gpu_warning(Simulator, pytestconfig):
-    with pytest.warns(None) as w:
+    with pytest.warns(None) as recwarns:
         with Simulator(nengo.Network()):
             pass
 
-    assert len(w) == (
+    recwarns = [w for w in recwarns if "No GPU support detected" in str(w.message)]
+
+    assert len(recwarns) == (
         1 if not tf_gpu_installed and pytestconfig.getvalue("--device") is None else 0
     )
 
@@ -1568,3 +1559,51 @@ def test_train_loss_deprecation(Simulator):
 
         with pytest.raises(SimulationError, match="loss has been deprecated"):
             sim.loss()
+
+
+def test_io_names(Simulator):
+    with nengo.Network() as net:
+        nodes = [
+            nengo.Node([0]),
+            nengo.Node([0]),
+            nengo.Node([0], label="aa"),
+            nengo.Node([0], label="aa"),
+            nengo.Node([0], label="Aa"),
+            nengo.Node([0], label="aA"),
+            nengo.Node([0]),
+        ]
+
+        for n in nodes:
+            nengo.Probe(n, label=None if n.label is None else "p_" + n.label)
+
+    with Simulator(net) as sim:
+        assert sim.keras_model.input_names == [
+            "node",
+            "node_1",
+            "aa",
+            "aa_1",
+            "Aa_2",
+            "aA_3",
+            "node_2",
+            "n_steps",
+        ]
+        assert sim.keras_model.output_names == [
+            "probe",
+            "probe_1",
+            "p_aa",
+            "p_aa_1",
+            "p_Aa_2",
+            "p_aA_3",
+            "probe_2",
+            "steps_run",
+        ]
+        sim.step()
+
+        with pytest.raises(ValidationError, match="not an input Node"):
+            sim.get_name(nengo.Node([0], add_to_container=False))
+
+        with pytest.raises(ValidationError, match="from a different network"):
+            sim.get_name(nengo.Probe(nodes[0], add_to_container=False))
+
+        with pytest.raises(ValidationError, match="unknown type"):
+            sim.get_name(nengo.Ensemble(10, 1, add_to_container=False))

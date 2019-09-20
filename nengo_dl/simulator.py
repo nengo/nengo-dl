@@ -26,11 +26,10 @@ from nengo.utils.magic import decorator
 from nengo.version import version_info as nengo_version
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.client.timeline import Timeline
 
 from nengo_dl import utils, config
 from nengo_dl.builder import NengoBuilder, NengoModel
-from nengo_dl.compat import Convolution
+from nengo_dl.compat import Convolution, add_state_signal
 from nengo_dl.tensor_graph import TensorGraph
 
 
@@ -44,9 +43,7 @@ def with_self(wrapped, instance, args, kwargs):
 
     keras_dtype = tf.keras.backend.floatx()
     tf.keras.backend.set_floatx(instance.tensor_graph.dtype)
-    with instance.graph.as_default(), instance.graph.device(
-        instance.tensor_graph.device
-    ):
+    with tf.device(instance.tensor_graph.device):
         output = wrapped(*args, **kwargs)
     tf.keras.backend.set_floatx(keras_dtype)
 
@@ -118,8 +115,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 seed = network.seed + 1
             else:
                 seed = np.random.randint(np.iinfo(np.int32).max)
-        self.seed = seed
-        self.rng = np.random.RandomState(self.seed)
 
         # TODO: multi-GPU support
 
@@ -162,6 +157,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
             p = ProgressBar("Building network", "Build")
             self.model.build(network, progress=p)
 
+        # add in state signal for linearfilters in nengo<3.0.0
+        add_state_signal(self.model)
+
         # set up tensorflow graph plan
         with ProgressBar(
             "Optimizing graph", "Optimization", max_value=None
@@ -174,11 +172,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 self.minibatch_size,
                 device,
                 progress,
-                self.rng,
+                seed,
             )
 
         # build keras models
-        self.graph = tf.Graph()
         self._build_keras()
 
         self.closed = False
@@ -187,35 +184,28 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
     @with_self
     def _build_keras(self):
-        tf.random.set_seed(self.seed)
         tf.config.set_soft_device_placement(False)
 
-        n_steps, self.node_inputs = self.tensor_graph.build_inputs()
-        inputs = [n_steps] + list(self.node_inputs.values())
-        outputs = self.tensor_graph(inputs)
+        self.node_inputs, n_steps = self.tensor_graph.build_inputs()
+        inputs = list(self.node_inputs.values()) + [n_steps]
 
         self.keras_model = tf.keras.Model(
-            inputs=inputs, outputs=outputs, name="keras_model"
+            inputs=inputs, outputs=self.tensor_graph(inputs), name="keras_model"
         )
 
-        state_updates = [
-            var.assign(val)
-            for var, val in zip(
-                self.tensor_graph.signals.saved_state.values(),
-                self.tensor_graph.final_internal_state,
-            )
-        ]
-        with tf.control_dependencies(state_updates), tf.name_scope("save"):
-            outputs = [tf.identity(x, name=x.op.name.split("/")[-1]) for x in outputs]
         self.keras_model_stateful = tf.keras.Model(
-            inputs=inputs, outputs=outputs, name="keras_model_stateful"
+            inputs=inputs,
+            outputs=self.tensor_graph(inputs, stateful=True),
+            name="keras_model_stateful",
         )
 
         # set more informative output names
         # keras names them like LayerName_i, whereas we would like to have the names
         # associated with the probes
         for model in (self.keras_model, self.keras_model_stateful):
-            model.output_names = [o.op.name.split("/")[-1] for o in model.outputs]
+            model.output_names = [
+                self.tensor_graph.io_names[p] for p in self.model.probes
+            ] + ["steps_run"]
 
     @with_self
     @require_open
@@ -247,9 +237,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 "Changing the seed will not affect any TensorFlow operations "
                 "created before the seed was updated"
             )
-            self.seed = seed
-        self.rng.seed(self.seed)
-        tf.random.set_seed(self.seed)
+            self.tensor_graph.seed = seed
 
         # execute post-build processes
         self.tensor_graph.build_post()
@@ -272,13 +260,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         # reset saved state
         var_vals = []
-        for key, var in self.tensor_graph.signals.saved_state.items():
-            try:
-                val = self.tensor_graph.base_arrays_init[False][key]
-            except KeyError:
-                # this is state created by `signals.make_internal`
-                val = np.zeros(var.shape, dtype=var.dtype.as_numpy_dtype())
-            var_vals.append((var, val))
+        for key, var in self.tensor_graph.saved_state.items():
+            var_vals.append((var, self.tensor_graph.base_arrays_init[False][key]))
         tf.keras.backend.batch_set_value(var_vals)
 
         if include_params:
@@ -286,7 +269,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             tf.keras.backend.batch_set_value(
                 list(
                     zip(
-                        self.tensor_graph.signals.base_params.values(),
+                        self.tensor_graph.base_params.values(),
                         self.tensor_graph.base_arrays_init[True].values(),
                     )
                 )
@@ -315,9 +298,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
             - A dictionary of {`nengo.Node` or str: `numpy.ndarray`}
               indicating the input values for the given nodes. Nodes can be referred
               to by the Node object itself or by a string name, which will be
-              ``Node.label`` if one was specified, or ``"node_i"`` where ``i``
-              indexes the nodes according to the order they were added to the model
-              (this corresponds to the order found in `nengo.Network.all_nodes`).
+              ``Node.label`` if one was specified or ``"node"``
+              (duplicate names will have a number appended, corresponding to the order
+              found in `nengo.Network.all_nodes`).
             - A list of `numpy.ndarray` indicating the input values for each
               input Node, ordered according to the order in which the Nodes were
               added to the model (this corresponds to the order found in
@@ -383,9 +366,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
             - A dictionary of {`nengo.Node` or str: `numpy.ndarray`}
               indicating the input values for the given nodes. Nodes can be referred
               to by the Node object itself or by a string name, which will be
-              ``Node.label`` if one was specified, or ``"node_i"`` where ``i``
-              indexes the nodes according to the order they were added to the model
-              (this corresponds to the order found in `nengo.Network.all_nodes`).
+              ``Node.label`` if one was specified or ``"node"``
+              (duplicate names will have a number appended, corresponding to the order
+              found in `nengo.Network.all_nodes`).
             - A list of `numpy.ndarray` indicating the input values for each
               input Node, ordered according to the order in which the Nodes were
               added to the model (this corresponds to the order found in
@@ -513,7 +496,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         # reorganize results (will be flattened) back into dict
         if not isinstance(outputs, list):
             outputs = [outputs]
-        output_dict = {p: outputs[1 + i] for i, p in enumerate(self.model.probes)}
+        output_dict = dict(zip(self.model.probes, outputs))
 
         return output_dict
 
@@ -595,9 +578,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
             - A dictionary of {`nengo.Node` or str: `numpy.ndarray`}
               indicating the input values for the given nodes. Nodes can be referred
               to by the Node object itself or by a string name, which will be
-              ``Node.label`` if one was specified, or ``"node_i"`` where ``i``
-              indexes the nodes according to the order they were added to the model
-              (this corresponds to the order found in `nengo.Network.all_nodes`).
+              ``Node.label`` if one was specified or ``"node"``
+              (duplicate names will have a number appended, corresponding to the order
+              found in `nengo.Network.all_nodes`).
             - A list of `numpy.ndarray` indicating the input values for each
               input Node, ordered according to the order in which the Nodes were
               added to the model (this corresponds to the order found in
@@ -659,7 +642,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         # internally consistent)
         if isinstance(x, dict):
             # not a generator, so can determine target y shapes from x shapes
-            steps = next(iter(x.values()))
+            steps = x["n_steps"]
             input_steps = steps[0, 0]
             input_batch = steps.shape[0]
 
@@ -667,7 +650,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 p
                 for p, e in zip(
                     self.model.probes,
-                    getattr(self.keras_model, "_training_endpoints", [])[1:],
+                    getattr(self.keras_model, "_training_endpoints", []),
                 )
                 if not e.should_skip_target()
             ]
@@ -684,11 +667,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 x.synapse is not None
                 for x in (self.model.toplevel.all_connections + target_probes)
             ]
-            if (
-                x["n_steps"][0, 0] == 1
-                and self.model.toplevel is not None
-                and any(synapses)
-            ):
+            if input_steps == 1 and self.model.toplevel is not None and any(synapses):
                 warnings.warn(
                     "Training for one timestep, but the network contains "
                     "synaptic filters (which will introduce at least a "
@@ -797,9 +776,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
             - A dictionary of {`nengo.Node` or str: `numpy.ndarray`}
               indicating the input values for the given nodes. Nodes can be referred
               to by the Node object itself or by a string name, which will be
-              ``Node.label`` if one was specified, or ``"node_i"`` where ``i``
-              indexes the nodes according to the order they were added to the model
-              (this corresponds to the order found in `nengo.Network.all_nodes`).
+              ``Node.label`` if one was specified or ``"node"``
+              (duplicate names will have a number appended, corresponding to the order
+              found in `nengo.Network.all_nodes`).
             - A list of `numpy.ndarray` indicating the input values for each
               input Node, ordered according to the order in which the Nodes were
               added to the model (this corresponds to the order found in
@@ -860,7 +839,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         # internally consistent)
         if isinstance(x, dict):
             # not a generator, so can determine target y shapes from x shapes
-            steps = next(iter(x.values()))
+            steps = x["n_steps"]
             input_steps = steps[0, 0]
             input_batch = steps.shape[0]
 
@@ -870,7 +849,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
                     p
                     for p, e in zip(
                         self.model.probes,
-                        getattr(self.keras_model, "_training_endpoints", [])[1:],
+                        getattr(self.keras_model, "_training_endpoints", []),
                     )
                     if not e.should_skip_target()
                 ]
@@ -1437,7 +1416,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 tuple(n_steps if s is None else s for s in x.shape),
                 x.dtype.as_numpy_dtype(),
             )
-            for x in self.keras_model.inputs[1:]
+            for x in self.keras_model.inputs[:-1]
         ]
 
         # compute_gradients expects to be called with a function that works in
@@ -1448,13 +1427,13 @@ class Simulator:  # pylint: disable=too-many-public-methods
             for i, x in enumerate(args):
                 x.set_shape(inputs[i].shape)
 
-            args = (tf.ones((self.minibatch_size, 1), dtype=np.int32) * n_steps,) + args
+            args += (tf.ones((self.minibatch_size, 1), dtype=np.int32) * n_steps,)
 
             out = self.keras_model(args, training=True)
             self.tensor_graph.build_post()
 
             # drop steps_run
-            out = out[1:]
+            out = out[:-1]
 
             # get selected output
             out = out[self.model.probes.index(output)]
@@ -1463,11 +1442,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         grads = dict()
         for output in outputs:
-            # TODO: switch to eager evaluation once that is well supported
-            with tf.compat.v1.keras.backend.get_session().as_default():
-                analytic, numeric = tf.test.compute_gradient(
-                    partial(arg_func, output=output), inputs
-                )
+            analytic, numeric = tf.test.compute_gradient(
+                partial(arg_func, output=output), inputs
+            )
             grads[output] = dict()
             grads[output]["analytic"] = analytic
             grads[output]["numeric"] = numeric
@@ -1556,18 +1533,16 @@ class Simulator:  # pylint: disable=too-many-public-methods
                     "size_in==0), or is from a different network." % obj,
                     "obj",
                 )
-            tensor = self.node_inputs[obj]
         elif isinstance(obj, Probe):
             if obj not in self.tensor_graph.probe_arrays:
                 raise ValidationError("%s is from a different network." % obj, "obj")
-            tensor = self.tensor_graph.probe_arrays[obj]
         else:
             raise ValidationError(
                 "%s is of an unknown type (%s); should be nengo.Node "
                 "or nengo.Probe" % (obj, type(obj)),
                 "obj",
             )
-        return tensor.op.name.split("/")[-1]
+        return self.tensor_graph.io_names[obj]
 
     def _standardize_data(self, data, objects, broadcast_unary=False):
         """Converts data to the standardized input format (named string dicts).
@@ -1672,12 +1647,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         input_vals = collections.OrderedDict()
 
-        # fill in n_steps
-        input_vals["n_steps"] = np.resize(n_steps, (batch_size, 1))
-
         # fill in data for input nodes
         for node, output in self.tensor_graph.input_funcs.items():
-            name = self.node_inputs[node].op.name
+            name = self.get_name(node)
 
             if name in data:
                 node_val = data[name]
@@ -1703,6 +1675,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
                     ]
 
             input_vals[name] = node_val
+
+        # fill in n_steps
+        input_vals["n_steps"] = np.resize(n_steps, (batch_size, 1)).astype(np.int32)
 
         return input_vals
 
@@ -1840,40 +1815,16 @@ class Simulator:  # pylint: disable=too-many-public-methods
                     "data",
                 )
 
-    def _profile_output(self, profile, run_metadata):
-        """
-        Outputs profile information to file.
-
-        Parameters
-        ----------
-        profile : bool or str
-            If True or a string (filename), output profile information to file
-        run_metadata : ``tf.RunMetadata``
-            TensorFlow RunMetadata proto populated with profiling data
-        """
-
-        if not profile:
-            return
-
-        trace = Timeline(step_stats=run_metadata.step_stats)
-        if isinstance(profile, str):
-            filename = profile
-        else:
-            filename = "nengo_dl_profile.json"
-        with open(filename, "w") as f:
-            f.write(trace.generate_chrome_trace_format())
-
     @with_self
     def _update_steps(self):
-        if not hasattr(self, "_step_tensors"):
-            # cache these so we aren't adding new ops every time we call this function
-            self._step_tensors = [
-                self.tensor_graph.get_tensor(self.model.step),
-                self.tensor_graph.get_tensor(self.model.time),
-            ]
-
         self._n_steps, self._time = [
-            x.item() for x in tf.keras.backend.batch_get_value(self._step_tensors)
+            x.item()
+            for x in tf.keras.backend.batch_get_value(
+                (
+                    self.tensor_graph.get_tensor(self.model.step),
+                    self.tensor_graph.get_tensor(self.model.time),
+                )
+            )
         ]
 
     @property
@@ -1895,18 +1846,24 @@ class Simulator:  # pylint: disable=too-many-public-methods
         """The current simulation time."""
         return self._time
 
-    def __enter__(self):
-        self._graph_context = self.graph.as_default()
-        self._device_context = self.graph.device(self.tensor_graph.device)
+    @property
+    def seed(self):
+        """The simulation random seed."""
+        return self.tensor_graph.seed
 
-        self._graph_context.__enter__()
+    def __enter__(self):
+        self._device_context = tf.device(self.tensor_graph.device)
         self._device_context.__enter__()
+
+        self._keras_dtype = tf.keras.backend.floatx()
+        tf.keras.backend.set_floatx(self.tensor_graph.dtype)
 
         return self
 
     def __exit__(self, *args):
+        tf.keras.backend.set_floatx(self._keras_dtype)
+
         self._device_context.__exit__(*args)
-        self._graph_context.__exit__(*args)
 
         self.close()
 

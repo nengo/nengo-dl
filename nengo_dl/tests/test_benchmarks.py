@@ -100,15 +100,20 @@ def _test_random(
     assert all(net.inp in x for x in post_conns.values())
 
 
-@pytest.mark.parametrize("train", (True, False))
-def test_run_profile(train, pytestconfig):
-    net = benchmarks.integrator(3, 2, nengo.RectifiedLinear())
+@pytest.mark.parametrize("network, train", [("integrator", True), ("cconv", False)])
+def test_run_profile(network, train, pytestconfig, monkeypatch, tmpdir):
+    monkeypatch.chdir(tmpdir)
+
+    if network == "integrator":
+        net = benchmarks.integrator(3, 2, nengo.SpikingRectifiedLinear())
+    elif network == "cconv":
+        net = benchmarks.cconv(3, 10, nengo.LIF())
 
     benchmarks.run_profile(
         net,
         train=train,
         n_steps=10,
-        do_profile=False,
+        do_profile=True,
         device=pytestconfig.getvalue("--device"),
         unroll_simulation=pytest.config.getvalue("--unroll-simulation"),
         dtype=pytest.config.getvalue("dtype"),

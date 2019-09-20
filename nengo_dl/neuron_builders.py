@@ -178,7 +178,7 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
             rate_out = super(SpikingRectifiedLinearBuilder, self)._step(J)
 
             out, voltage = tf_utils.smart_cond(
-                signals.training,
+                self.config.training,
                 true_fn=lambda: (rate_out, voltage),
                 false_fn=lambda: (spike_out, spike_voltage),
             )
@@ -377,7 +377,7 @@ class LIFBuilder(SoftLIFRateBuilder):
             )
 
             spikes, voltage, refractory = tf_utils.smart_cond(
-                signals.training,
+                self.config.training,
                 true_fn=lambda: (rate_out, voltage, refractory),
                 false_fn=lambda: (spike_out, spike_voltage, spike_ref),
             )

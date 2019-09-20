@@ -3,14 +3,12 @@ TensorNodes allow parts of a model to be defined using TensorFlow and smoothly
 integrated with the rest of a Nengo model.
 """
 
-import inspect
-
 from nengo import Node, Connection, Ensemble, builder
 from nengo.base import NengoObject
 from nengo.builder.operator import Reset
 from nengo.exceptions import ValidationError, SimulationError
 from nengo.neurons import NeuronType
-from nengo.params import Default, IntParam, Parameter
+from nengo.params import Default, ShapeParam, Parameter, BoolParam
 import numpy as np
 import tensorflow as tf
 
@@ -23,7 +21,7 @@ def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
 
     Parameters
     ----------
-    output : ``tf.Tensor``
+    output : ``tf.Tensor`` or ``tf.TensorSpec``
         Output from the ``tensor_func``.
     minibatch_size : int
         Expected minibatch size for the simulation.
@@ -33,21 +31,23 @@ def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
         Expected dtype of the function output.
     """
 
-    if not isinstance(output, tf.Tensor):
+    if not isinstance(output, (tf.Tensor, tf.TensorSpec)):
         raise ValidationError(
             "TensorNode function must return a Tensor (got %s)" % type(output),
             attr="tensor_func",
         )
 
-    shape = output.shape
-    if (
-        shape.ndims != 2
-        or (minibatch_size is not None and shape[0] != minibatch_size)
-        or (output_d is not None and shape[1] != output_d)
-    ):
+    if minibatch_size is not None and output.shape[0] != minibatch_size:
         raise ValidationError(
-            "TensorNode output should have shape (%s, %s) "
-            "(got shape %s)" % (minibatch_size, output_d, shape),
+            "TensorNode output should have batch size %d (got %d)"
+            % (minibatch_size, output.shape[0]),
+            attr="tensor_func",
+        )
+
+    if output_d is not None and np.prod(output.shape[1:]) != output_d:
+        raise ValidationError(
+            "TensorNode output should have size %d (got shape %s with size %d)"
+            % (minibatch_size, output.shape[1:], np.prod(output.shape[1:])),
             attr="tensor_func",
         )
 
@@ -68,7 +68,7 @@ class TensorFuncParam(Parameter):
     def coerce(self, node, func):
         """
         Performs validation on the function passed to TensorNode, and sets
-        ``size_out`` if necessary.
+        ``shape_out`` if necessary.
 
         Parameters
         ----------
@@ -87,23 +87,53 @@ class TensorFuncParam(Parameter):
 
         if not callable(func):
             raise ValidationError(
-                "TensorNode output must be a function", attr=self.name, obj=node
+                "TensorNode output must be a function or Keras Layer",
+                attr=self.name,
+                obj=node,
             )
 
-        if node.size_out is None:
-            with tf.Graph().as_default():
-                t, x = tf.constant(0.0), tf.zeros((1, node.size_in))
-                args = (t, x) if node.size_in > 0 else (t,)
+        if node.shape_out is None:
+            if isinstance(func, tf.keras.layers.Layer):
+                # we can use Keras' static shape inference to get the
+                # output shape, which avoids having to build/call the layer
+                if node.pass_time:
+                    input_spec = [tf.TensorSpec(())]
+                else:
+                    input_spec = []
+                if node.shape_in is not None:
+                    input_spec += [tf.TensorSpec((1,) + node.shape_in)]
+                if len(input_spec) == 1:
+                    input_spec = input_spec[0]
+
+                try:
+                    result = func.compute_output_signature(input_spec)
+                except Exception as e:
+                    raise ValidationError(
+                        "Attempting to automatically determine TensorNode output shape "
+                        "by calling Layer.compute_output_signature produced an error. "
+                        "If you would like to avoid this step, try manually setting "
+                        "`TensorNode(..., shape_out=x)`. The error is shown below:\n%s"
+                        % e,
+                        attr=self.name,
+                        obj=node,
+                    )
+
+            else:
+                if node.pass_time:
+                    args = (tf.constant(0.0),)
+                else:
+                    args = ()
+                if node.shape_in is not None:
+                    args += (tf.zeros((1,) + node.shape_in),)
+
                 try:
                     result = func(*args)
                 except Exception as e:
                     raise ValidationError(
                         "Attempting to automatically determine TensorNode output shape "
                         "by calling TensorNode function produced an error. "
-                        "If you would like to avoid this step "
-                        "(e.g., because your TensorNode contains a `pre_build` "
-                        "function), try manually setting "
-                        "`TensorNode(..., size_out=x)`. The error is shown below:\n%s"
+                        "If you would like to avoid this step, try manually setting "
+                        "`TensorNode(..., shape_out=x)`. The error is shown below:\n%s"
                         % e,
                         attr=self.name,
                         obj=node,
@@ -111,7 +141,7 @@ class TensorFuncParam(Parameter):
 
             validate_output(result)
 
-            node.size_out = result.shape[1]
+            node.shape_out = result.shape[1:]
 
         return output
 
@@ -124,27 +154,39 @@ class TensorNode(Node):
     ----------
     tensor_func : callable
         A function that maps node inputs to outputs
-    size_in : int (Default: 0)
-        The number of elements in the input vector
-    size_out : int (Default: None)
-        The number of elements in the output vector (if None, value will be
-        inferred by calling ``tensor_func``)
+    shape_in : tuple of int
+        Shape of TensorNode input signal (not including batch dimension).
+    shape_out : tuple of int
+        Shape of TensorNode output signal (not including batch dimension).
+        If None, value will be inferred by calling ``tensor_func``.
+    pass_time : bool
+        If True, pass current simulation time to TensorNode function (in addition
+        to the standard input).
     label : str (Default: None)
         A name for the node, used for debugging and visualization
     """
 
     tensor_func = TensorFuncParam("tensor_func")
-    size_in = IntParam("size_in", default=0, low=0, optional=True)
-    size_out = IntParam("size_out", default=None, low=1, optional=True)
+    shape_in = ShapeParam("shape_in", default=None, low=1, optional=True)
+    shape_out = ShapeParam("shape_out", default=None, low=1, optional=True)
+    pass_time = BoolParam("pass_time", default=True)
 
-    def __init__(self, tensor_func, size_in=Default, size_out=Default, label=Default):
+    def __init__(
+        self,
+        tensor_func,
+        shape_in=Default,
+        shape_out=Default,
+        pass_time=Default,
+        label=Default,
+    ):
         # pylint: disable=non-parent-init-called,super-init-not-called
         # note: we bypass the Node constructor, because we don't want to
         # perform validation on `output`
         NengoObject.__init__(self, label=label, seed=None)
 
-        self.size_in = size_in
-        self.size_out = size_out
+        self.shape_in = shape_in
+        self.shape_out = shape_out
+        self.pass_time = pass_time
         self.tensor_func = tensor_func
 
     @property
@@ -164,14 +206,32 @@ class TensorNode(Node):
 
         return output_func
 
+    @property
+    def size_in(self):
+        """Number of input elements (flattened)."""
+
+        return 0 if self.shape_in is None else np.prod(self.shape_in)
+
+    @property
+    def size_out(self):
+        """Number of output elements (flattened)."""
+
+        return 0 if self.shape_out is None else np.prod(self.shape_out)
+
 
 @NengoBuilder.register(TensorNode)
 def build_tensor_node(model, node):
     """This is the Nengo build function, so that Nengo knows what to do with
     TensorNodes."""
 
+    # time signal
+    if node.pass_time:
+        time_in = model.time
+    else:
+        time_in = None
+
     # input signal
-    if node.size_in > 0:
+    if node.shape_in is not None:
         sig_in = builder.Signal(np.zeros(node.size_in), name="%s.in" % node)
         model.add_op(Reset(sig_in))
     else:
@@ -183,7 +243,9 @@ def build_tensor_node(model, node):
     model.sig[node]["out"] = sig_out
     model.params[node] = None
 
-    model.operators.append(SimTensorNode(node.tensor_func, model.time, sig_in, sig_out))
+    model.operators.append(
+        SimTensorNode(node.tensor_func, time_in, sig_in, sig_out, node.shape_in)
+    )
 
 
 class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
@@ -194,11 +256,14 @@ class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
     func : callable
         The TensorNode function (``tensor_func``)
     time : `~nengo.builder.Signal`
-        Signal representing the current simulation time
+        Signal representing the current simulation time (or None if pass_time is False)
     input : `~nengo.builder.Signal` or None
-        Input Signal for the TensorNode (or None if size_in==0)
+        Input Signal for the TensorNode (or None if no inputs)
     output : `~nengo.builder.Signal`
         Output Signal for the TensorNode
+    shape_in : tuple of int or None
+        Shape of input to TensorNode (if None, will leave the shape of input signal
+        unchanged).
     tag : str
         A label associated with the operator, for debugging
 
@@ -210,17 +275,23 @@ class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
     4. updates ``[]``
     """
 
-    def __init__(self, func, time, input, output, tag=None):
+    def __init__(self, func, time, input, output, shape_in, tag=None):
         super(SimTensorNode, self).__init__(tag=tag)
 
         self.func = func
         self.time = time
         self.input = input
         self.output = output
+        self.shape_in = shape_in
 
         self.sets = [output]
         self.incs = []
-        self.reads = [time] if input is None else [time, input]
+        if time is None:
+            self.reads = []
+        else:
+            self.reads = [time]
+        if input is not None:
+            self.reads += [input]
         self.updates = []
 
 
@@ -236,36 +307,38 @@ class SimTensorNodeBuilder(OpBuilder):
         assert len(ops) == 1
         op = ops[0]
 
-        self.time_data = signals[op.time].reshape(())
+        if op.time is None:
+            self.time_data = None
+        else:
+            self.time_data = signals[op.time].reshape(())
 
         if op.input is None:
             self.src_data = None
         else:
             self.src_data = signals[op.input]
             assert self.src_data.ndim == 1
+            if op.shape_in is not None:
+                self.src_data = self.src_data.reshape(op.shape_in)
 
         self.dst_data = signals[op.output]
 
         self.func = op.func
 
-        if hasattr(self.func, "pre_build"):
-            self.func.pre_build(
-                shape_in=(
-                    None
-                    if self.src_data is None
-                    else ((signals.minibatch_size,) + self.src_data.shape)
-                ),
-                shape_out=(signals.minibatch_size,) + self.dst_data.shape,
-                config=config,
-            )
-
     def build_step(self, signals):
-        time = signals.gather(self.time_data)
-        if self.src_data is None:
-            output = self.func(time)
+        if self.time_data is None:
+            inputs = []
         else:
-            input = signals.gather(self.src_data)
-            output = self.func(time, input)
+            inputs = [signals.gather(self.time_data)]
+
+        if self.src_data is not None:
+            inputs += [signals.gather(self.src_data)]
+
+        if isinstance(self.func, tf.keras.layers.Layer):
+            if len(inputs) == 1:
+                inputs = inputs[0]
+            output = self.func.call(inputs)
+        else:
+            output = self.func(*inputs)
 
         validate_output(
             output,
@@ -275,40 +348,6 @@ class SimTensorNodeBuilder(OpBuilder):
         )
 
         signals.scatter(self.dst_data, output)
-
-    def build_post(self, ops, signals, config):
-        if hasattr(self.func, "post_build"):
-            self.func.post_build()
-
-
-def reshaped(shape_in):
-    """A decorator to reshape the inputs to a function into non-vector shapes.
-
-    The output of the function will be flatten back into (batched) vectors.
-
-    Parameters
-    ----------
-    shape_in : tuple of int
-        The desired shape for inputs to the function (not including the first
-        dimension, which corresponds to the batch axis)
-
-    Returns
-    -------
-    reshaper : callable
-        The decorated function
-    """
-
-    def reshape_dec(func):
-        def reshaped_func(t, x):
-            batch_size = x.shape[0]
-            x = tf.reshape(x, (batch_size,) + shape_in)
-            x = func(t, x)
-            x = tf.reshape(x, (batch_size, -1))
-            return x
-
-        return reshaped_func
-
-    return reshape_dec
 
 
 def tensor_layer(
@@ -330,7 +369,7 @@ def tensor_layer(
     Parameters
     ----------
     input : ``NengoObject``
-        Object providing input to the layer
+        Object providing input to the layer.
     layer_func : callable or ``keras.Layer`` or `~nengo.neurons.NeuronType`
         A function that takes the value from ``input`` (represented as a
         ``tf.Tensor``) and maps it to some output value,
@@ -338,23 +377,24 @@ def tensor_layer(
         to ``input``), or a Nengo neuron type (which will be instantiated in
         a Nengo Ensemble and applied to ``input``).
     shape_in : tuple of int
-        If not None, reshape the input to the given shape
+        If not None, reshape the input to the given shape.
     synapse : float or `~nengo.synapses.Synapse`
-        Synapse to apply on connection from ``input`` to this layer
+        Synapse to apply on connection from ``input`` to this layer.
     transform : `~numpy.ndarray`
-        Transform matrix to apply on connection from ``input`` to this layer
+        Transform matrix to apply on connection from ``input`` to this layer.
     return_conn : bool
-        If True, also return the connection linking this layer to ``input``
+        If True, also return the connection linking this layer to ``input``.
     layer_args : dict
-        These arguments will be passed to ``layer_func`` if it is callable, or
-        `~nengo.Ensemble` if ``layer_func`` is a `~nengo.neurons.NeuronType`
+        These arguments will be passed to `.TensorNode` if ``layer_func`` is a callable
+        or Keras Layer, or `~nengo.Ensemble` if ``layer_func`` is a
+        `~nengo.neurons.NeuronType`.
 
     Returns
     -------
     node : `.TensorNode` or `~nengo.ensemble.Neurons`
         A TensorNode that implements the given layer function (if
         ``layer_func`` was a callable), or a Neuron object with the given
-        neuron type, connected to ``input``
+        neuron type, connected to ``input``.
     conn : `~nengo.Connection`
         If ``return_conn`` is True, also returns the connection object linking
         ``input`` and ``node``.
@@ -370,42 +410,12 @@ def tensor_layer(
     if isinstance(layer_func, NeuronType):
         node = Ensemble(size_in, 1, neuron_type=layer_func, **layer_args).neurons
     else:
-        if inspect.isclass(layer_func) and issubclass(
-            layer_func, tf.keras.layers.Layer
-        ):
-
-            class WrappedLayer:
-                """Wraps a Keras Layer in a TensorNode function."""
-
-                def pre_build(self, shape_in, shape_out, config):
-                    """Build the layer and return the weights."""
-
-                    self.layer = layer_func(**layer_args)
-                    self.layer.add_weight = config.add_weight
-                    self.layer.build(
-                        shape_in if shape_in is None else (shape_in[0],) + shape_in
-                    )
-
-                def __call__(self, _, x):
-                    return self.layer(x)
-
-            node_func = WrappedLayer()
-
-            # we can use Keras' static shape inference to get the
-            # output shape, which avoids having to build/call the layer
-            size_out = layer_func(**layer_args).compute_output_shape((1, size_in))[1]
-        else:
-            # add (ignored) time input and pass kwargs
-            def node_func(_, x):
-                return layer_func(x, **layer_args)
-
-            size_out = None
-
-        # reshape input if necessary
-        if shape_in is not None:
-            node_func = reshaped(shape_in)(node_func)
-
-        node = TensorNode(node_func, size_in=size_in, size_out=size_out)
+        node = TensorNode(
+            layer_func,
+            shape_in=(size_in,) if shape_in is None else shape_in,
+            pass_time=False,
+            **layer_args,
+        )
 
     conn = Connection(input, node, synapse=synapse, transform=transform)
 

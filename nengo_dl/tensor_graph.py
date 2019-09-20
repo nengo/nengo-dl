@@ -52,13 +52,21 @@ class TensorGraph(tf.keras.layers.Layer):
         default device as determined by TensorFlow)
     progress : `.utils.ProgressBar`
         Progress bar for optimization stage
-    rng : `~numpy.random.mtrand.RandomState`
-        Seeded random number generator
+    seed : int
+        Seed for random number generation.
     """
 
     @trackable.no_automatic_dependency_tracking
     def __init__(
-        self, model, dt, unroll_simulation, dtype, minibatch_size, device, progress, rng
+        self,
+        model,
+        dt,
+        unroll_simulation,
+        dtype,
+        minibatch_size,
+        device,
+        progress,
+        seed,
     ):
         super().__init__(
             name="TensorGraph",
@@ -73,7 +81,7 @@ class TensorGraph(tf.keras.layers.Layer):
         self.unroll = unroll_simulation
         self.minibatch_size = minibatch_size
         self.device = device
-        self.rng = rng
+        self.seed = seed
         self.inference_only = not self.trainable
         self.signals = signals.SignalDict(
             dtype, self.minibatch_size, self.inference_only
@@ -154,6 +162,27 @@ class TensorGraph(tf.keras.layers.Layer):
         with progress.sub("creating signals", max_value=None):
             self.create_signals(sigs)
 
+        # generate unique names for layer inputs/outputs
+        # this follows the TensorFlow unique naming scheme, so if multiple objects are
+        # created with the same name, they will be named like name, NAME_1, name_2
+        # (note: case insensitive)
+        self.io_names = {}
+        name_count = defaultdict(int)
+        for obj in list(self.invariant_inputs.keys()) + self.model.probes:
+            name = (
+                type(obj).__name__.lower()
+                if obj.label is None
+                else utils.sanitize_name(obj.label)
+            )
+
+            key = name.lower()
+
+            if name_count[key] > 0:
+                name += "_%d" % name_count[key]
+
+            self.io_names[obj] = name
+            name_count[key] += 1
+
         logger.info("Optimized plan length: %d", len(self.plan))
         logger.info(
             "Number of base arrays: %d, %d",
@@ -173,28 +202,22 @@ class TensorGraph(tf.keras.layers.Layer):
             Input layers for each of the Nodes in the network.
         """
 
+        # input placeholders
+        inputs = OrderedDict()
+        for n in self.invariant_inputs:
+            inputs[n] = tf.keras.layers.Input(
+                shape=(None, n.size_out),
+                batch_size=self.minibatch_size,
+                dtype=self.dtype,
+                name=self.io_names[n],
+            )
+
         # number of steps to run
         n_steps = tf.keras.layers.Input(
             shape=(1,), batch_size=self.minibatch_size, dtype="int32", name="n_steps"
         )
 
-        # input placeholders
-        inputs = OrderedDict(
-            (
-                n,
-                tf.keras.layers.Input(
-                    shape=(None, n.size_out),
-                    batch_size=self.minibatch_size,
-                    dtype=self.dtype,
-                    name="node_%d" % i
-                    if n.label is None
-                    else utils.sanitize_name(n.label),
-                ),
-            )
-            for i, n in enumerate(self.invariant_inputs)
-        )
-
-        return n_steps, inputs
+        return inputs, n_steps
 
     def build(self, input_shape=None):
         """
@@ -204,9 +227,11 @@ class TensorGraph(tf.keras.layers.Layer):
         super().build(input_shape)
 
         # variables for model parameters
-        assert len(self.signals.base_params) == 0
+        with trackable.no_automatic_dependency_tracking_scope(self):
+            self.base_params = OrderedDict()
+        assert len(self.base_params) == 0
         for k, v in self.base_arrays_init[True].items():
-            self.signals.base_params[k] = self.add_weight(
+            self.base_params[k] = self.add_weight(
                 initializer=tf.initializers.constant(v),
                 shape=v.shape,
                 dtype=v.dtype,
@@ -215,14 +240,16 @@ class TensorGraph(tf.keras.layers.Layer):
             )
 
         logger.debug("created base param variables")
-        logger.debug([str(x) for x in self.signals.base_params.values()])
+        logger.debug([str(x) for x in self.base_params.values()])
 
         # variables to save the internal state of simulation between runs
         # note: place these on CPU because they'll only be accessed once at the
         # beginning of the simulation loop, and they can be quite large
+        with trackable.no_automatic_dependency_tracking_scope(self):
+            self.saved_state = OrderedDict()
         with tf.device("/cpu:0"):
             for k, v in self.base_arrays_init[False].items():
-                self.signals.saved_state[k] = self.add_weight(
+                self.saved_state[k] = self.add_weight(
                     # TODO: don't make these a constant initializer because we
                     #  don't want to store those large arrays in the graph def
                     #  (double check that this is still a problem in TF2.0)
@@ -235,12 +262,31 @@ class TensorGraph(tf.keras.layers.Layer):
                 )
 
         logger.debug("created saved state variables")
-        logger.debug([str(x) for x in self.signals.saved_state.values()])
+        logger.debug([str(x) for x in self.saved_state.values()])
+
+        # call build on any TensorNode Layers
+        for ops in self.plan:
+            if isinstance(ops[0], tensor_node.SimTensorNode):
+                for op in ops:
+                    if isinstance(op.func, tf.keras.layers.Layer):
+                        if op.time is None:
+                            shape_in = []
+                        else:
+                            shape_in = [()]
+                        if op.input is not None:
+                            shape_in += [(self.minibatch_size,) + op.shape_in]
+                        if len(shape_in) == 1:
+                            shape_in = shape_in[0]
+
+                        op.func.build(shape_in)
+
+                        # add op func to _layers so that any weights are collected
+                        self._layers.append(op.func)
 
     # @tf.function  # TODO: get this working? does this help?
-    @tf.autograph.experimental.do_not_convert  # TODO: enable autograph
+    @tf.autograph.experimental.do_not_convert  # TODO: enable autograph?
     @trackable.no_automatic_dependency_tracking
-    def call(self, inputs, training=None, progress=None):
+    def call(self, inputs, training=None, progress=None, stateful=False):
         """
         Constructs a new graph to simulate the model.
 
@@ -264,54 +310,39 @@ class TensorGraph(tf.keras.layers.Layer):
 
         super().call(inputs, training=training)
 
+        tf.random.set_seed(self.seed)
+
         if progress is None:
             progress = utils.NullProgressBar()
 
         # reset signaldict
         self.signals.reset()
 
-        self.outputs = {}
-        self.optimizers = {}
-
         # create these constants once here for reuse in different operators
-        self.signals.training = (
-            tf.keras.backend.learning_phase() if training is None else training
-        )
         self.signals.dt = tf.constant(self.dt, self.dtype)
         self.signals.dt_val = self.dt  # store the actual value as well
         self.signals.zero = tf.constant(0, self.dtype)
         self.signals.one = tf.constant(1, self.dtype)
 
-        input_idx = 0
-        self.steps_to_run = inputs[input_idx][0, 0]
-        input_idx += 1
-
         # set up invariant inputs
-        self.input_phs = {}
-        for n in self.invariant_inputs:
-            # specify batch dimension (keras sets it to None)
-            inputs[input_idx].set_shape(
-                [self.minibatch_size] + inputs[input_idx].shape.as_list()[1:]
-            )
+        self.node_inputs = {}
+        for n, inp in zip(self.invariant_inputs, inputs):
+            # specify shape of inputs (keras sometimes loses this shape information)
+            inp.set_shape([self.minibatch_size, inp.shape[1], n.size_out])
 
-            self.input_phs[n] = inputs[input_idx]
-            input_idx += 1
+            self.node_inputs[n] = inp
 
-        # set up target placeholders
-        # self.target_phs = {}
-        # for p in self.model.probes:
-        #     self.target_phs[p] = inputs[input_idx]
-        #     input_idx += 1
-
-        assert input_idx == len(inputs)
+        self.steps_to_run = inputs[-1][0, 0]
 
         # initialize op builder
         build_config = builder.BuildConfig(
             inference_only=self.inference_only,
             lif_smoothing=config.get_setting(self.model, "lif_smoothing"),
             cpu_only=self.device == "/cpu:0" or not utils.tf_gpu_installed,
-            rng=self.rng,
-            add_weight=self.add_weight,
+            rng=np.random.RandomState(self.seed),
+            training=(
+                tf.keras.backend.learning_phase() if training is None else training
+            ),
         )
         self.op_builder = builder.Builder(self.plan, self.signals, build_config)
 
@@ -337,9 +368,20 @@ class TensorGraph(tf.keras.layers.Layer):
 
         # note: always return steps_run so that the simulation will run for the given
         # number of steps, even if there are no output probes
-        output = [self.steps_run]
-        output.extend(self.probe_arrays.values())
-        return output
+        outputs = list(self.probe_arrays.values()) + [self.steps_run]
+
+        if stateful:
+            # update saved state
+            state_updates = [
+                var.assign(val)
+                for var, val in zip(
+                    self.saved_state.values(), self.final_internal_state
+                )
+            ]
+            with tf.control_dependencies(state_updates), tf.name_scope("save"):
+                outputs = [tf.identity(x) for x in outputs]
+
+        return outputs
 
     def _build_step(self, progress):
         """
@@ -420,25 +462,24 @@ class TensorGraph(tf.keras.layers.Layer):
         def loop_condition(loop_i, n_steps, *_):
             return loop_i < n_steps
 
-        def loop_body(loop_i, n_steps, probe_arrays, base_tensors):
+        def loop_body(loop_i, n_steps, probe_arrays, base_params, saved_state):
             # fill in signals.bases (note: we need to do this here because we
-            # need to use the tensors from inside the
-            # loop, not the variables in signals.saved_state)
+            # need to use the tensors from inside the loop, not the source variables)
             # TODO: test that rebuilding multiple times works properly
-            assert len(self.signals.bases) == 0
-            for i, key in enumerate(self.signals.saved_state):
-                self.signals.bases[key] = base_tensors[i]
-            # for the parameter variables we can just use the base variable
-            # (since we'll only be reading inside the loop, not updating
-            # the variables)
-            for key in self.signals.base_params:
-                self.signals.bases[key] = self.signals.base_params[key]
+            for key, val in zip(self.saved_state.keys(), saved_state):
+                # eager while loops pass in the variable directly,
+                # so we add the tf.identity so that when we write we're not updating
+                # the saved state
+                self.signals.bases[key] = tf.identity(val)
+            for key, val in zip(self.base_params.keys(), base_params):
+                # we never write to base_params, so don't need identity
+                self.signals.bases[key] = val
 
             for iter in range(self.unroll):
                 logger.debug("BUILDING ITERATION %d", iter)
                 with tf.name_scope("iteration_%d" % iter):
                     # fill in invariant input data
-                    for n in self.input_phs:
+                    for n in self.node_inputs:
                         if self.model.sig[n]["out"] in self.signals:
                             # if the out signal doesn't exist then that means that
                             # the node output isn't actually used anywhere, so we can
@@ -446,7 +487,7 @@ class TensorGraph(tf.keras.layers.Layer):
 
                             self.signals.scatter(
                                 self.signals[self.model.sig[n]["out"]],
-                                self.input_phs[n][:, loop_i],
+                                self.node_inputs[n][:, loop_i],
                             )
 
                     # build the operators for a single step
@@ -470,8 +511,8 @@ class TensorGraph(tf.keras.layers.Layer):
                         else:
                             probe_arrays[i] = tf.cond(
                                 pred=tf.equal(loop_i + 1, n_steps),
-                                true_fn=lambda p=p: probe_arrays[i].write(0, p),
-                                false_fn=lambda: probe_arrays[i],
+                                true_fn=lambda p=p, i=i: probe_arrays[i].write(0, p),
+                                false_fn=lambda i=i: probe_arrays[i],
                             )
 
                     # need to make sure that any operators that could have side
@@ -482,11 +523,10 @@ class TensorGraph(tf.keras.layers.Layer):
                     with tf.control_dependencies(side_effects + probe_tensors):
                         loop_i += 1
 
-            state_arrays = tuple(
-                self.signals.bases[key] for key in self.signals.saved_state
-            )
+            base_arrays = tuple(self.signals.bases[key] for key in self.base_params)
+            state_arrays = tuple(self.signals.bases[key] for key in self.saved_state)
 
-            return loop_i, n_steps, probe_arrays, state_arrays
+            return loop_i, n_steps, probe_arrays, base_arrays, state_arrays
 
         loop_i = tf.constant(0)
 
@@ -500,7 +540,8 @@ class TensorGraph(tf.keras.layers.Layer):
             loop_i,
             self.steps_to_run,
             probe_arrays,
-            tuple(self.signals.saved_state.values()),
+            tuple(self.base_params.values()),
+            tuple(self.saved_state.values()),
         )
 
         # TODO: try out parallel_iterations again with tensors?
@@ -514,26 +555,25 @@ class TensorGraph(tf.keras.layers.Layer):
 
         # change to shape (minibatch_size,) (required by keras) instead of a scalar
         self.steps_run = tf.tile(
-            tf.expand_dims(loop_vars[0], 0), (self.minibatch_size,), name="steps_run"
+            tf.expand_dims(loop_vars[0], 0), (self.minibatch_size,)
         )
 
         self.probe_arrays = OrderedDict()
-        for i, (p, a) in enumerate(zip(self.model.probes, loop_vars[2])):
-            name = "probe_%d" % i if p.label is None else p.label
+        for p, a in zip(self.model.probes, loop_vars[2]):
             x = a.stack()
 
             if self.model.sig[p]["in"].minibatched:
                 # change from tensorarray's (steps, batch, d) to (batch, steps, d)
                 perm = np.arange(x.shape.ndims)
                 perm[[0, 1]] = perm[[1, 0]]
-                x = tf.transpose(a=x, perm=perm, name=name)
+                x = tf.transpose(x, perm=perm)
             else:
                 # add minibatch dimension for consistency
-                x = tf.expand_dims(x, 0, name=name)
+                x = tf.expand_dims(x, 0)
 
             self.probe_arrays[p] = x
 
-        self.final_internal_state = loop_vars[3]
+        self.final_internal_state = loop_vars[4]
 
     @trackable.no_automatic_dependency_tracking
     def build_post(self):
@@ -541,6 +581,8 @@ class TensorGraph(tf.keras.layers.Layer):
         Executes post-build processes for operators (after the graph has
         been constructed and whenever Simulator is reset).
         """
+
+        rng = np.random.RandomState(self.seed)
 
         # build input functions (we need to do this here, because in the case
         # of processes these functions need to be be rebuilt on reset)
@@ -556,7 +598,7 @@ class TensorGraph(tf.keras.layers.Layer):
                         (n.size_in,),
                         (n.size_out,),
                         self.dt,
-                        output.get_rng(self.rng),
+                        output.get_rng(rng),
                         state,
                     )
                     for _ in range(self.minibatch_size)
@@ -591,16 +633,14 @@ class TensorGraph(tf.keras.layers.Layer):
         tensor_sig = self.signals[sig]
 
         try:
-            base = self.signals.base_params[tensor_sig.key]
+            base = self.base_params[tensor_sig.key]
         except KeyError:
-            base = self.signals.saved_state[tensor_sig.key]
-
-        if "while/" in tensor_sig.tf_indices.name:
-            # rebuild tf indices outside the while loop
-            tensor_sig._tf_indices = None
+            base = self.saved_state[tensor_sig.key]
 
         return tf.gather(
-            base, tensor_sig.tf_indices, axis=1 if tensor_sig.minibatched else 0
+            base,
+            tf.constant(tensor_sig.indices),
+            axis=1 if tensor_sig.minibatched else 0,
         )
 
     def mark_signals(self):

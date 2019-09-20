@@ -126,7 +126,6 @@ def test_neuron_gradients(Simulator, neuron_type, seed, rng):
         (SoftLIFRate, nengo.LIF),
     ],
 )
-@pytest.mark.training
 def test_spiking_swap(Simulator, rate, spiking, seed):
     grads = []
     for neuron_type in [rate, spiking]:
@@ -152,7 +151,8 @@ def test_spiking_swap(Simulator, rate, spiking, seed):
             # gradients
             # TODO: why doesn't the gradient tape method work?
             # TODO: why does the gradient check fail?
-            grads.append(sim.check_gradients(atol=1e10)[p]["analytic"])
+            if not sim.tensor_graph.inference_only:
+                grads.append(sim.check_gradients(atol=1e10)[p]["analytic"])
             sim.run(0.5)
 
         # check that the normal output is unaffected by the swap logic

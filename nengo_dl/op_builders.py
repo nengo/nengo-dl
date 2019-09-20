@@ -20,7 +20,7 @@ from tensorflow.python.ops import gen_sparse_ops
 
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
-from nengo_dl.compat import tf_compat, SparseDotInc, SparseMatrix
+from nengo_dl.compat import SparseDotInc, SparseMatrix
 
 logger = logging.getLogger(__name__)
 
@@ -454,7 +454,7 @@ class SimPyFuncBuilder(OpBuilder):
         inputs = [] if self.input_data is None else signals.gather(self.input_data)
 
         with tf.device("/cpu:0"):
-            node_outputs = tf_compat.py_func(
+            node_outputs = tf.numpy_function(
                 self.merged_func,
                 [time, inputs],
                 self.output_dtype,
