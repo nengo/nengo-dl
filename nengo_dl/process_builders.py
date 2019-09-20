@@ -3,14 +3,12 @@ Build classes for Nengo process operators.
 """
 
 from collections import OrderedDict
-from distutils.version import LooseVersion
 import logging
 
 from nengo.builder.processes import SimProcess
 from nengo.exceptions import SimulationError
 from nengo.synapses import Lowpass, LinearFilter
 from nengo.utils.filter_design import cont2discrete
-from nengo.version import version as nengo_version
 import numpy as np
 import tensorflow as tf
 
@@ -343,14 +341,7 @@ class LinearFilterBuilder(OpBuilder):
                 assert self.D.shape == (self.n_ops, 1, 1)
 
             # create a variable to represent the internal state of the filter
-            if LooseVersion(nengo_version) < "3.0.0":
-                self.state_data = signals.make_internal(
-                    "state",
-                    (self.n_ops * self.state_d, self.signal_d),
-                    config.add_weight,
-                )
-            else:
-                self.state_data = signals.combine([op.state["X"] for op in ops])
+            self.state_data = signals.combine([op.state["X"] for op in ops])
 
             assert self.A.shape == (self.n_ops, self.state_d, self.state_d)
             assert self.B.shape == (self.n_ops, self.state_d, 1)

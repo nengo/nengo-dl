@@ -101,14 +101,16 @@ def _test_random(
 
 
 @pytest.mark.parametrize("train", (True, False))
-def test_run_profile(train, pytestconfig):
+def test_run_profile(train, pytestconfig, monkeypatch, tmpdir):
+    monkeypatch.chdir(tmpdir)
+
     net = benchmarks.integrator(3, 2, nengo.RectifiedLinear())
 
     benchmarks.run_profile(
         net,
         train=train,
         n_steps=10,
-        do_profile=False,
+        do_profile=True,
         device=pytestconfig.getvalue("--device"),
         unroll_simulation=pytest.config.getvalue("--unroll-simulation"),
         dtype=pytest.config.getvalue("dtype"),

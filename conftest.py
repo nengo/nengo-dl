@@ -47,6 +47,8 @@ def pytest_runtest_setup(item):
     ):
         pytest.skip("Skipping performance test")
 
+    tf.keras.backend.clear_session()
+
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -97,14 +99,6 @@ def Simulator(request):
     """
 
     return make_test_sim(request)
-
-
-@pytest.fixture(scope="function")
-def sess(request):
-    """Create a TensorFlow session with a unique scope per test."""
-    with tf.Graph().as_default() as graph:
-        with tf_compat.Session(graph=graph) as sess:
-            yield sess
 
 
 def patch_nengo_tests():

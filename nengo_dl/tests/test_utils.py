@@ -113,12 +113,9 @@ def test_truncation(truncation):
             assert d == 1
 
 
-def test_print_op(capsys, sess):
+def test_print_op(capsys):
     x = tf.constant(0)
-    y = utils.print_op(x, "hello")
-    z = y + 0
-
-    sess.run(z)
+    utils.print_op(x, "hello")
 
     out, _ = capsys.readouterr()
 

@@ -39,11 +39,6 @@ from nengo_dl.compat import tf_compat
 
 tf_compat.logging.set_verbosity(tf_compat.logging.WARN)
 
-
-# disable v2 behaviour (for now, pending full TF 2.0 compatibility)
-tf_compat.disable_control_flow_v2()
-
-
 del os
 del tf_compat
 
@@ -59,11 +54,6 @@ from nengo_dl import (
 # import into top-level namespace
 from nengo_dl import dists, callbacks
 from nengo_dl.simulator import Simulator
-from nengo_dl.tensor_node import TensorNode, tensor_layer, reshaped
+from nengo_dl.tensor_node import TensorNode, tensor_layer
 from nengo_dl.config import configure_settings
 from nengo_dl.neurons import SoftLIFRate
-
-# apply tensorflow monkey patches
-from nengo_dl import tensorflow_patch
-
-tensorflow_patch.patch_dynamic_stitch_grad()

@@ -91,3 +91,21 @@ class NengoSummaries(tf.keras.callbacks.Callback):
 
         with context.eager_mode():
             self.writer.close()
+
+
+class TensorBoard(tf.keras.callbacks.TensorBoard):
+    """
+    A version of the Keras TensorBoard callback that also profiles inference.
+    """
+
+    def on_predict_batch_end(self, *args, **kwargs):
+        """Redirect to training function."""
+        self.on_batch_end(*args, **kwargs)
+
+    def on_predict_begin(self, *args, **kwargs):
+        """Redirect to training function."""
+        self.on_train_begin(*args, **kwargs)
+
+    def on_predict_end(self, *args, **kwargs):
+        """Redirect to training function."""
+        self.on_train_end(*args, **kwargs)

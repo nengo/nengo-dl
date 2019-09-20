@@ -23,6 +23,7 @@ class ConvIncBuilder(OpBuilder):
         super(ConvIncBuilder, self).__init__(ops, signals, config)
 
         self.conv = ops[0].conv
+        self.n_ops = len(ops)
 
         if not self.conv.channels_last and config.cpu_only:
             # TensorFlow doesn't support channels first on CPU, so if
@@ -142,11 +143,11 @@ class ConvIncBuilder(OpBuilder):
 
         if self.perm_x is not None:
             # move channels to end
-            X = tf.transpose(a=X, perm=self.perm_x)
+            X = tf.transpose(X, perm=self.perm_x)
 
         if self.perm_w is not None:
             # concatenate kernels along output channel dimension
-            W = tf.transpose(a=W, perm=self.perm_w)
+            W = tf.transpose(W, perm=self.perm_w)
             W = tf.reshape(W, self.reshape_w)
 
         Y = tf.nn.convolution(
@@ -160,7 +161,15 @@ class ConvIncBuilder(OpBuilder):
         if self.reshape_y is not None:
             Y = tf.reshape(Y, self.reshape_y)
         if self.perm_y is not None:
-            Y = tf.transpose(a=Y, perm=self.perm_y)
+            Y = tf.transpose(Y, perm=self.perm_y)
+
+        # tensorflow loses track of shape information during transposes for some reason
+        if self.reshape_y is None:
+            Y.set_shape((signals.minibatch_size,) + self.conv.output_shape.shape)
+        else:
+            Y.set_shape(
+                (signals.minibatch_size, self.n_ops) + self.conv.output_shape.shape
+            )
 
         signals.scatter(self.Y_data, Y, mode="inc")
 

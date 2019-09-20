@@ -15,7 +15,7 @@ import tensorflow as tf
 tf_compat = tf.compat.v1
 
 
-if LooseVersion(nengo.__version__) < "3.0.0":
+if LooseVersion(nengo.__version__) <= "2.8.0":
     from nengo.utils.testing import allclose as signals_allclose
 
     class SimPES(nengo.builder.Operator):  # pylint: disable=abstract-method
@@ -131,11 +131,6 @@ if LooseVersion(nengo.__version__) < "3.0.0":
             assert General.check(A, B, C, D)
             return General(A, B, C, D)
 
-    # monkey-patch in empty state attribute
-    from nengo.builder.processes import SimProcess
-
-    SimProcess.state = {}
-
     def make_process_step(process, shape_in, shape_out, dt, rng, _):
         """Ignore state argument."""
         return process.make_step(shape_in, shape_out, dt, rng)
@@ -144,9 +139,49 @@ if LooseVersion(nengo.__version__) < "3.0.0":
         """Old processes don't have any state."""
         return {}
 
+    def add_state_signal(model):
+        """
+        Add internal state Signal for Processes.
+
+        This signal is only used in `.process_builders.LinearFilterBuilder`. For
+        generic process implementations the state is handled internally by the
+        Process function.
+
+        Parameters
+        ----------
+        model : `nengo.builder.Model`
+            Built nengo Model
+        """
+
+        for op in model.operators:
+            if isinstance(op, nengo.builder.processes.SimProcess):
+                op.state = {}
+
+                if isinstance(
+                    op.process, nengo.synapses.LinearFilter
+                ) and not isinstance(op.process, nengo.synapses.Lowpass):
+                    sig = nengo.builder.signal.Signal(
+                        np.zeros((len(op.process.den) - 1, op.input.shape[0])),
+                        name="patched_X",
+                    )
+                    op.state["X"] = sig
+                    op.updates.append(sig)
+
     # set seed upper bound to uint32 (instead of int32)
     nengo.base.Process.seed.high = np.iinfo(np.uint32).max
 
+    # fix shape/tuple param to allow None
+    for Param in (nengo.params.ShapeParam, nengo.params.TupleParam):
+        old_coerce = Param.coerce
+
+        def coerce(self, instance, value, prev_coerce=old_coerce, base=Param):
+            """A version of the coerce function that properly handles None values."""
+            if value is None:
+                return base.__bases__[0].coerce(self, instance, value)
+
+            return prev_coerce(self, instance, value)
+
+        Param.coerce = coerce
 else:
     from nengo.builder.learning_rules import SimPES
     from nengo.builder.transforms import ConvInc, SparseDotInc
@@ -175,3 +210,7 @@ else:
     def make_process_state(process, shape_in, shape_out, dt):
         """Call process.make_state."""
         return process.make_state(shape_in, shape_out, dt)
+
+    def add_state_signal(model):
+        """Does nothing, ops already have state signals."""
+        return

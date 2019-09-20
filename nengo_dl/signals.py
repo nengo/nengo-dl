@@ -10,7 +10,7 @@ from nengo.exceptions import BuildError
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl.compat import tf_compat, is_sparse
+from nengo_dl.compat import is_sparse
 
 logger = logging.getLogger(__name__)
 
@@ -317,8 +317,6 @@ class SignalDict(Mapping):
         self.minibatch_size = minibatch_size
         self.inference_only = inference_only
         self.sig_map = {}
-        self.base_params = OrderedDict()
-        self.saved_state = OrderedDict()
 
         self.reset()
 
@@ -327,11 +325,10 @@ class SignalDict(Mapping):
         Reset build-specific data structures.
 
         These are data structures that are filled out during the TensorGraph build
-        process (and therefore need to be re-initialized if we build the model again in
-        the same graph), as opposed to data that is constant for a given Nengo model.
+        process (and therefore need to be re-initialized if we build the model again),
+        as opposed to data that is constant for a given Nengo model.
         """
         # these values will be re-generated whenever the model is rebuilt
-        # self.constant_phs = OrderedDict()
         self.bases = OrderedDict()
 
         # reset TensorSignals
@@ -442,6 +439,7 @@ class SignalDict(Mapping):
                 # variables, so we add the + 0 so the gather is applied
                 # to a separate tensor instead.
                 # See https://github.com/tensorflow/tensorflow/issues/30537
+                # TODO: check if this is fixed
                 var = var + 0
 
             result = tf.gather(var, src.tf_indices, axis=1 if src.minibatched else 0)
@@ -510,46 +508,6 @@ class SignalDict(Mapping):
         )
 
         return output
-
-    def make_internal(self, name, shape, add_weight, minibatched=True):
-        """
-        Creates a new `.TensorSignal` to represent an internal
-        simulation signal.
-
-        This is to handle the case where we want to add a signal that is
-        not represented as a `nengo.builder.Signal` in the Nengo op graph.
-
-        Parameters
-        ----------
-        name : str
-            Name for the signal/tensor.
-        shape : tuple of int
-            Shape of the signal/tensor.
-        add_weight : callable
-            ``tf.keras.Model.add_weight`` function for creating new Variables (use
-            this rather than directly creating Variable so that it is tracked correctly
-            by Keras).
-        minibatched : bool
-            Whether or not this signal contains a minibatch dimension.
-
-        Returns
-        -------
-        sig : `.TensorSignal`
-            A TensorSignal representing the newly created tensor.
-        """
-        sig = self.get_tensor_signal(
-            np.arange(shape[0]), object(), self.dtype, shape, minibatched, label=name
-        )
-
-        self.saved_state[sig.key] = add_weight(
-            initializer=tf.initializers.zeros(),
-            shape=sig.full_shape,
-            dtype=sig.dtype,
-            name="%s/%s" % (tf_compat.get_default_graph().get_name_scope(), name),
-            trainable=False,
-        )
-
-        return sig
 
     def get_tensor_signal(
         self, indices, key, dtype, shape, minibatched, signal=None, label="TensorSignal"

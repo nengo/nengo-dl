@@ -190,41 +190,35 @@ def mnist(use_tensor_layer=True):
 
             x = nengo_dl.tensor_layer(
                 net.inp,
-                tf_compat.layers.conv2d,
+                tf.keras.layers.Conv2D(filters=32, kernel_size=3),
                 shape_in=(28, 28, 1),
-                filters=32,
-                kernel_size=3,
             )
             x = nengo_dl.tensor_layer(x, nengo_nl, **ensemble_params)
 
             x = nengo_dl.tensor_layer(
                 x,
-                tf_compat.layers.conv2d,
+                tf.keras.layers.Conv2D(filters=32, kernel_size=3),
                 shape_in=(26, 26, 32),
                 transform=amplitude,
-                filters=32,
-                kernel_size=3,
             )
             x = nengo_dl.tensor_layer(x, nengo_nl, **ensemble_params)
 
             x = nengo_dl.tensor_layer(
                 x,
-                tf_compat.layers.average_pooling2d,
+                tf.keras.layers.AveragePooling2D(pool_size=2, strides=2),
                 shape_in=(24, 24, 32),
                 synapse=synapse,
                 transform=amplitude,
-                pool_size=2,
-                strides=2,
             )
 
-            x = nengo_dl.tensor_layer(x, tf_compat.layers.dense, units=128)
+            x = nengo_dl.tensor_layer(x, tf.keras.layers.Dense(units=128))
             x = nengo_dl.tensor_layer(x, nengo_nl, **ensemble_params)
 
             x = nengo_dl.tensor_layer(
-                x, tf_compat.layers.dropout, rate=0.4, transform=amplitude
+                x, tf.keras.layers.Dropout(rate=0.4), transform=amplitude
             )
 
-            x = nengo_dl.tensor_layer(x, tf_compat.layers.dense, units=10)
+            x = nengo_dl.tensor_layer(x, tf.keras.layers.Dense(units=10))
         else:
             nl = tf.nn.relu
 
@@ -236,19 +230,20 @@ def mnist(use_tensor_layer=True):
             #     rates = amplitude / (tau_ref + tau_rc * tf.log1p(1 / z))
             #     return rates
 
-            @nengo_dl.reshaped((28, 28, 1))
-            def mnist_node(_, x):  # pragma: no cover
-                x = tf_compat.layers.conv2d(x, filters=32, kernel_size=3, activation=nl)
-                x = tf_compat.layers.conv2d(x, filters=32, kernel_size=3, activation=nl)
-                x = tf_compat.layers.average_pooling2d(x, pool_size=2, strides=2)
-                x = tf_compat.layers.flatten(x)
-                x = tf_compat.layers.dense(x, 128, activation=nl)
-                x = tf_compat.layers.dropout(x, rate=0.4)
-                x = tf_compat.layers.dense(x, 10)
+            def mnist_node(x):  # pragma: no cover
+                x = tf.keras.layers.Conv2D(filters=32, kernel_size=3, activation=nl)(x)
+                x = tf.keras.layers.Conv2D(filters=32, kernel_size=3, activation=nl)(x)
+                x = tf.keras.layers.AveragePooling2D(pool_size=2, strides=2)(x)
+                x = tf.keras.layers.Flatten()(x)
+                x = tf.keras.layers.Dense(128, activation=nl)(x)
+                x = tf.keras.layers.Dropout(rate=0.4)(x)
+                x = tf.keras.layers.Dense(10)(x)
 
                 return x
 
-            node = nengo_dl.TensorNode(mnist_node, size_in=28 * 28, size_out=10)
+            node = nengo_dl.TensorNode(
+                mnist_node, shape_in=(28, 28, 1), shape_out=(10,)
+            )
             x = node
             nengo.Connection(net.inp, node, synapse=None)
 
@@ -403,36 +398,68 @@ def run_profile(
     """
 
     exec_time = 1e10
+    n_batches = 3 if do_profile else 1
 
     with net:
         nengo_dl.configure_settings(inference_only=not train, dtype=dtype)
 
     with nengo_dl.Simulator(net, **kwargs) as sim:
+        if do_profile:
+            callback = [
+                nengo_dl.callbacks.TensorBoard(
+                    log_dir="profile", profile_batch=n_batches
+                )
+            ]
+        else:
+            callback = None
+
+        if hasattr(net, "inp"):
+            x = {
+                net.inp: np.random.randn(
+                    sim.minibatch_size * n_batches, n_steps, net.inp.size_out
+                )
+            }
+        else:
+            x = {
+                net.inp_a: np.random.randn(
+                    sim.minibatch_size * n_batches, n_steps, net.inp_a.size_out
+                ),
+                net.inp_b: np.random.randn(
+                    sim.minibatch_size * n_batches, n_steps, net.inp_b.size_out
+                ),
+            }
+
         if train:
+            y = {
+                net.p: np.random.randn(
+                    sim.minibatch_size * n_batches, n_steps, net.p.size_in
+                )
+            }
+
             sim.compile(
                 tf_compat.train.GradientDescentOptimizer(0.001), loss=tf.losses.mse
             )
-            x = np.random.randn(sim.minibatch_size, n_steps, net.inp.size_out)
-            y = np.random.randn(sim.minibatch_size, n_steps, net.p.size_in)
 
             # run once to eliminate startup overhead
             sim.fit(x, y, epochs=1)
 
             for _ in range(reps):
                 start = time.time()
-                sim.fit(x, y, epochs=1)
+                sim.fit(x, y, epochs=1, callbacks=callback)
                 exec_time = min(time.time() - start, exec_time)
             print("Execution time:", exec_time)
 
         else:
             # run once to eliminate startup overhead
-            sim.run_steps(n_steps)
+            sim.predict(x, n_steps=n_steps)
 
             for _ in range(reps):
                 start = time.time()
-                sim.run_steps(n_steps)
+                sim.predict(x, n_steps=n_steps, callbacks=callback)
                 exec_time = min(time.time() - start, exec_time)
             print("Execution time:", exec_time)
+
+    exec_time /= n_batches
 
     return exec_time
 

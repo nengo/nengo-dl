@@ -34,6 +34,9 @@ Release History
   the warning is just to help avoid confusion).
 - Added ``TensorGraph.build_inputs``, which will return a set of Keras ``Input`` layers
   that can be used as input to the TensorGraph layer itself.
+- Added ``nengo_dl.callbacks.TensorBoard``. This is identical to
+  ``tf.keras.callbacks.TensorBoard``, except it will also perform profiling during
+  inference (rather than only during training).
 
 **Changed**
 
@@ -42,18 +45,6 @@ Release History
   ``include_internal=True/False`` (equivalent to the previous
   ``include_local``). Trainable parameters will always be saved, so the
   ``include_global`` argument is removed.
-- TensorNode ``pre_build`` functions will now be passed a ``config`` argument, which
-  is an instance of `nengo_dl.builder.BuildConfig
-  <https://www.nengo.ai/nengo-dl/reference.html#nengo_dl.builder.BuildConfig>`_.
-  Arguments will also be passed by name, rather than position, so they must be named
-  exactly ``shape_in``, ``shape_out``, and ``config``.
-- Any Variables required by a TensorNode should be created in the ``pre_build`` function
-  through ``config.add_weight`` (which is the same as the Keras `Layer.add_weight
-  <https://www.tensorflow.org/api_docs/python/tf/keras/layers/Layer#add_weight>`_
-  function).
-- TensorNode ``post_build`` functions will no longer be passed the ``sess`` or ``rng``
-  arguments.  Sessions are no longer used in TensorFlow 2.0, and ``rng`` can be
-  obtained through the ``config.rng`` attribute in ``pre_build``.
 - ``Simulator.soft_reset`` ``include_trainable`` parameter renamed to
   ``include_params``, which now resets all Variables in the model (not just
   those marked as trainable).  In most cases this won't make a difference,
@@ -66,10 +57,8 @@ Release History
   updated based on the number of steps actually run (rather than the requested
   number of steps).  Note that these extra steps were also run previously, but their
   results were hidden from the user.
-- Renamed ``TensorGraph.input_ph`` to ``TensorGraph.input_phs``.
+- Renamed ``TensorGraph.input_ph`` to ``TensorGraph.node_inputs``.
 - ``Simulator.time/n_steps`` are now read-only.
-- The TensorFlow Graph is now stored in ``sim.graph`` (rather than
-  ``sim.tensor_graph.graph``).
 - ``Simulator.n_steps/time`` are now managed as part of the op graph, rather than
   manually in the Simulator.
 - Renamed ``nengo_dl.objectives`` to ``nengo_dl.losses`` (to align with
@@ -86,6 +75,32 @@ Release History
   configuration option.
 - ``Simulator.check_gradients`` now only accepts an optional list of Probes (no longer
   accepts arbitrary Tensors).
+- All TensorFlow 2 behaviour is now enabled by default (e.g. eager execution,
+  control flow v2, etc.).
+- ``nengo_dl.tensor_layer(x, func, ...)`` now passes any extra kwargs to the
+  ``nengo_dl.TensorNode`` constructor (rather than to ``func``). If you need to pass
+  information to ``func`` consider using partial functions (e.g.
+  ``tensor_layer(functools.partial(x, func, arg=5), ...)`` or a callable class
+  (e.g., ``tensor_layer(x, MyFunc(arg=5), ...))``. When using Keras Layers with
+  ``nengo_dl.tensor_layer``, a fully instantiated Layer
+  object should be passed rather than a Layer class (e.g., use
+  ``tensor_layer(x, tf.keras.layers.Dense(units=10), ...)`` instead of
+  ``tensor_layer(x, tf.keras.layers.Dense, units=10)``).
+- ``benchmarks.run_profile`` now uses Keras' TensorBoard callback to do the profiling,
+  see `the documentation
+  <https://www.tensorflow.org/tensorboard/r2/tensorboard_profiling_keras>`_ for
+  instructions on how to view this information (the information is the same, it is
+  just accessed through TensorBoard rather than requiring that it be loaded directly
+  in a Chrome browser).
+- ``nengo_dl.TensorNode`` now takes ``shape_in`` and ``shape_out`` arguments (which
+  specify a possibly multidimensional shape), rather
+  than the scalar ``size_in`` and ``size_out``.
+- ``TensorNode`` functions no longer use the ``pre_build``/``post_build`` functionality.
+  If you need to implement more complex behaviour in a TensorNode, use a
+  custom Keras Layer subclass instead.  For example, TensorNodes Layers can create new
+  parameter Variables inside the Layer ``build`` method.
+- ``TensorNode`` now has an optional ``pass_time`` parameter which can be set to
+  ``False`` to disable passing the current simulation time to the TensorNode function.
 
 **Removed**
 
@@ -119,6 +134,11 @@ Release History
 - Removed ``Simulator(..., tensorboard=...)`` argument. Use the Keras TensorBoard
   callback approach for TensorBoard logging instead (see
   ``tf.keras.callbacks.TensorBoard`` or ``nengo_dl.callbacks.NengoSummaries``).
+- NengoDL will no longer monkeypatch fix the ``tf.dynamic_stitch`` gradients on import.
+  The gradients are still incorrect (see
+  https://github.com/tensorflow/tensorflow/issues/7397), but we no longer use this
+  operation within NengoDL so we leave it up to the user to fix it in their own code
+  if needed.
 
 2.2.2 (unreleased)
 ==================

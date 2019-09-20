@@ -23,8 +23,8 @@ def test_tensorgraph_layer(Simulator, seed, minibatch_size):
         sim.run_steps(n_steps)
 
     with Simulator(net, minibatch_size=minibatch_size) as layer_sim:
-        steps_input, node_inputs = layer_sim.tensor_graph.build_inputs()
-        inputs = [steps_input] + list(node_inputs.values())
+        node_inputs, steps_input = layer_sim.tensor_graph.build_inputs()
+        inputs = list(node_inputs.values()) + [steps_input]
         outputs = layer_sim.tensor_graph(inputs)
         keras_model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
@@ -33,9 +33,9 @@ def test_tensorgraph_layer(Simulator, seed, minibatch_size):
         output_vals = keras_model.predict(inputs)
 
         assert len(output_vals) == 3
-        assert np.allclose(output_vals[0], n_steps)
-        assert np.allclose(output_vals[1], sim.data[p_a])
-        assert np.allclose(output_vals[2], sim.data[p_b])
+        assert np.allclose(output_vals[0], sim.data[p_a])
+        assert np.allclose(output_vals[1], sim.data[p_b])
+        assert np.allclose(output_vals[2], n_steps)
 
 
 def test_predict(Simulator, seed):
@@ -88,8 +88,8 @@ def test_predict(Simulator, seed):
             output = getattr(sim, func)(
                 (
                     [
-                        np.ones((sim.minibatch_size, 1), dtype=np.int32) * n_steps,
                         a_vals[i * sim.minibatch_size : (i + 1) * sim.minibatch_size],
+                        np.ones((sim.minibatch_size, 1), dtype=np.int32) * n_steps,
                     ]
                     for i in range(n_batches)
                 ),
@@ -102,8 +102,8 @@ def test_predict(Simulator, seed):
     with Simulator(net, minibatch_size=4, device="/cpu:0") as sim:
         dataset = tf.data.Dataset.from_tensor_slices(
             {
-                "n_steps": tf.ones((12, 1), dtype=np.int32) * n_steps,
                 "a": tf.constant(a_vals),
+                "n_steps": tf.ones((12, 1), dtype=np.int32) * n_steps,
             }
         ).batch(sim.minibatch_size)
 
@@ -124,25 +124,25 @@ def test_evaluate(Simulator):
 
     with Simulator(net, minibatch_size=minibatch_size) as sim:
         # single probe
-        sim.compile(loss={"probe_0": tf.losses.mse})
+        sim.compile(loss={"probe": tf.losses.mse})
         targets = np.ones((minibatch_size, n_steps, 1))
         with pytest.warns(UserWarning, match="Batch size is determined statically"):
             loss = sim.evaluate(n_steps=n_steps, y=targets, batch_size=-1)
         assert np.allclose(loss["loss"], 1)
-        assert np.allclose(loss["probe_0_loss"], 1)
+        assert np.allclose(loss["probe_loss"], 1)
         assert "probe_1_loss" not in loss
 
         # multiple probes
         sim.compile(loss=tf.losses.mse)
         loss = sim.evaluate(n_steps=n_steps, y={p0: targets, p1: targets})
         assert np.allclose(loss["loss"], 2)
-        assert np.allclose(loss["probe_0_loss"], 1)
+        assert np.allclose(loss["probe_loss"], 1)
         assert np.allclose(loss["probe_1_loss"], 1)
 
         # default inputs/targets
         loss = sim.evaluate(n_steps=n_steps)
         assert np.allclose(loss["loss"], 0)
-        assert np.allclose(loss["probe_0_loss"], 0)
+        assert np.allclose(loss["probe_loss"], 0)
         assert np.allclose(loss["probe_1_loss"], 0)
 
         # list inputs
@@ -150,29 +150,28 @@ def test_evaluate(Simulator):
         targets = inputs.copy()
         loss = sim.evaluate(x=[inputs, inputs * 2], y={p0: targets, p1: targets})
         assert np.allclose(loss["loss"], 1)
-        assert np.allclose(loss["probe_0_loss"], 0)
+        assert np.allclose(loss["probe_loss"], 0)
         assert np.allclose(loss["probe_1_loss"], 1)
 
         for func in ("evaluate", "evaluate_generator"):
-            loss = getattr(sim, func)(
+            gen = (
                 (
-                    (
-                        {
-                            "n_steps": np.ones((minibatch_size, 1)) * n_steps,
-                            "node_0": np.ones((minibatch_size, n_steps, 1)),
-                            "node_1": np.ones((minibatch_size, n_steps, 1)) * 2,
-                        },
-                        {
-                            "probe_0": np.ones((minibatch_size, n_steps, 1)),
-                            "probe_1": np.ones((minibatch_size, n_steps, 1)),
-                        },
-                    )
-                    for _ in range(n_batches)
-                ),
-                steps=n_batches,
+                    {
+                        "node": np.ones((minibatch_size, n_steps, 1)),
+                        "node_1": np.ones((minibatch_size, n_steps, 1)) * 2,
+                        "n_steps": np.ones((minibatch_size, 1)) * n_steps,
+                    },
+                    {
+                        "probe": np.ones((minibatch_size, n_steps, 1)),
+                        "probe_1": np.ones((minibatch_size, n_steps, 1)),
+                    },
+                )
+                for _ in range(n_batches)
             )
+
+            loss = getattr(sim, func)(gen, steps=n_batches)
             assert np.allclose(loss["loss"], 1)
-            assert np.allclose(loss["probe_0_loss"], 0)
+            assert np.allclose(loss["probe_loss"], 0)
             assert np.allclose(loss["probe_1_loss"], 1)
 
         # check custom objective
@@ -200,11 +199,11 @@ def test_evaluate(Simulator):
             n_steps=n_steps,
         )
         assert np.allclose(output["loss"], 5)
-        assert np.allclose(output["probe_0_loss"], 1)
+        assert np.allclose(output["probe_loss"], 1)
         assert np.allclose(output["probe_1_loss"], 4)
-        assert np.allclose(output["probe_0_constant_error"], 3)
+        assert np.allclose(output["probe_constant_error"], 3)
         assert np.allclose(output["probe_1_constant_error"], 3)
-        assert "probe_0_mae" not in output
+        assert "probe_mae" not in output
         assert np.allclose(output["probe_1_mae"], 2)
 
 
@@ -245,20 +244,21 @@ def test_fit(Simulator, seed):
         # note: batch_size should be ignored
         with pytest.warns(UserWarning, match="Batch size is determined statically"):
             history = sim.fit(
-                [x[..., [0]], x[..., [1]]], y, epochs=500, verbose=0, batch_size=-1
+                [x[..., [0]], x[..., [1]]], y, epochs=200, verbose=0, batch_size=-1
             )
-        assert history.history["loss"][-1] < 1e-10
+        assert history.history["loss"][-1] < 5e-4
 
         sim.reset()
         history = sim.fit_generator(
             (
-                ((np.ones((4, 1), dtype=np.int32), x[..., [0]], x[..., [1]]), y)
-                for _ in range(500)
+                ((x[..., [0]], x[..., [1]], np.ones((4, 1), dtype=np.int32)), y)
+                for _ in range(200)
             ),
-            epochs=50,
+            epochs=20,
             steps_per_epoch=10,
+            verbose=0,
         )
-        assert history.history["loss"][-1] < 1e-10
+        assert history.history["loss"][-1] < 5e-4
 
     # TODO: why does this crash if placed on gpu?
     with Simulator(
@@ -272,8 +272,9 @@ def test_fit(Simulator, seed):
 
         history = sim.fit(
             tf.data.Dataset.from_tensors(
-                ((np.ones((4, 1), dtype=np.int32), x[..., [0]], x[..., [1]]), y)
+                ((x[..., [0]], x[..., [1]], np.ones((4, 1), dtype=np.int32)), y)
             ),
-            epochs=500,
+            epochs=200,
+            verbose=0,
         )
-        assert history.history["loss"][-1] < 1e-10
+        assert history.history["loss"][-1] < 5e-4
