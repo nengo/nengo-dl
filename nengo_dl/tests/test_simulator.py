@@ -592,7 +592,7 @@ def test_model_passing(Simulator, seed):
     model = nengo.builder.Model()
     model.build(net)
 
-    ops = [op for op in model.operators]
+    ops = model.operators.copy()
 
     with nengo.Simulator(None, model=model, optimize=False) as sim:
         sim.run_steps(10)

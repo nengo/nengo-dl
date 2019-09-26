@@ -399,7 +399,7 @@ def contiguous(sigs, all_signals):
 def ordered(ops, all_signals, block=None):
     reads = {}
     for op in ops:
-        reads[op] = [x for x in op.reads]
+        reads[op] = op.reads.copy()
         if type(op) == SimNeurons:
             reads[op] += op.states
         elif type(op) == SimProcess and isinstance(op.process, Lowpass):

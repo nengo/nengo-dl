@@ -133,7 +133,7 @@ def compare_backends(ctx, batch, n_neurons):
             elif backend == "nengo":
                 sim = nengo.Simulator(net, progress_bar=False, optimize=True)
             elif backend == "nengo_ocl":
-                import nengo_ocl
+                import nengo_ocl  # pylint: disable=import-outside-toplevel
 
                 sim = nengo_ocl.Simulator(net, progress_bar=False)
 

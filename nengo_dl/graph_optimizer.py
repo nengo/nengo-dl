@@ -610,7 +610,7 @@ def order_signals(plan, n_passes=10):
         # keeping it as it provides a layer of indirection that has proven
         # useful in the past and may be in the future.
         for op in ops:
-            op_sigs[op] = [s for s in op.all_signals]
+            op_sigs[op] = op.all_signals.copy()
 
         # the i'th signal for each op in the op group is one io group
         # (note that we only care about bases, since those are the things we
@@ -699,7 +699,7 @@ def order_signals(plan, n_passes=10):
 
         # save previous plan/idxs, so we can check if they change for
         # early termination
-        prev_plan = {k: v for k, v in new_plan.items()}
+        prev_plan = new_plan.copy()
         prev_sig_idxs = sig_idxs  # note: no copy necessary
 
         # reorder ops by signal order. this leaves the overall
