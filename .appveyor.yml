@@ -31,4 +31,4 @@ install:
 build: false  # Not a C# project
 
 test_script:
-  - pytest -n 2 --pyargs nengo %TEST_ARGS% && pytest -n 2 --durations 20 nengo_dl %TEST_ARGS%
+  - pytest -n 2 --durations 20 nengo_dl %TEST_ARGS% && pytest -n 2 --durations 20 --pyargs nengo %TEST_ARGS%
