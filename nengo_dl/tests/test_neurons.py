@@ -3,6 +3,7 @@
 import nengo
 import numpy as np
 import pytest
+import tensorflow as tf
 
 from nengo_dl import config, dists, SoftLIFRate, neuron_builders
 
@@ -147,12 +148,17 @@ def test_spiking_swap(Simulator, rate, spiking, seed):
             p = nengo.Probe(c.neurons)
 
         with Simulator(net) as sim:
-            # note: not actually checking gradients, just using this to get the
-            # gradients
-            # TODO: why doesn't the gradient tape method work?
-            # TODO: why does the gradient check fail?
             if not sim.tensor_graph.inference_only:
-                grads.append(sim.check_gradients(atol=1e10)[p]["analytic"])
+                with tf.GradientTape() as tape:
+                    tape.watch(sim.tensor_graph.trainable_variables)
+                    inputs = [
+                        tf.zeros((1, sim.unroll * 2, 1)),
+                        tf.constant([[sim.unroll * 2]]),
+                    ]
+                    outputs = sim.tensor_graph(inputs, training=True)
+                g = tape.gradient(outputs, sim.tensor_graph.trainable_variables)
+                grads.append(g)
+
             sim.run(0.5)
 
         # check that the normal output is unaffected by the swap logic

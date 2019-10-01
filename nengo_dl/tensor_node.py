@@ -357,11 +357,7 @@ def tensor_layer(
     synapse=None,
     transform=1,
     return_conn=False,
-    # TODO: remove once there is a black release with this
-    #  bugfix https://github.com/psf/black/pull/763
-    # fmt: off
     **layer_args
-    # fmt: on
 ):
     """A utility function to construct TensorNodes that apply some function
     to their input (analogous to the ``tf.layers`` syntax).

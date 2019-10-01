@@ -14,10 +14,8 @@ from nengo_dl.compat import ConvInc
 @Builder.register(ConvInc)
 class ConvIncBuilder(OpBuilder):
     """
-    Build a group of ``ConvInc`` operators.
+    Build a group of `nengo.builder.transforms.ConvInc` operators.
     """
-
-    # TODO: fix link to `~nengo.builder.transform.ConvInc` once it exists
 
     def __init__(self, ops, signals, config):
         super(ConvIncBuilder, self).__init__(ops, signals, config)

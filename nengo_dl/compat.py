@@ -113,7 +113,10 @@ if LooseVersion(nengo.__version__) <= "2.8.0":
     def make_linear_step(synapse, input_shape, output_shape, dt):
         """Generate one of the future LinearFilter step types."""
         # pylint: disable=import-outside-toplevel
-        from nengo.utils.filter_design import cont2discrete, tf2ss
+        from nengo.utils.filter_design import (  # pylint: disable=import-outside-toplevel
+            cont2discrete,
+            tf2ss,
+        )
 
         A, B, C, D = tf2ss(synapse.num, synapse.den)
 

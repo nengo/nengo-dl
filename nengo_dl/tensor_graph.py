@@ -282,8 +282,7 @@ class TensorGraph(tf.keras.layers.Layer):
                         self._layers.append(op.func)
 
     # @tf.function  # TODO: get this working? does this help?
-    @tf.autograph.experimental.do_not_convert  # TODO: enable autograph?
-    @trackable.no_automatic_dependency_tracking
+    @tf.autograph.experimental.do_not_convert
     def call(self, inputs, training=None, progress=None, stateful=False):
         """
         Constructs a new graph to simulate the model.
@@ -323,7 +322,8 @@ class TensorGraph(tf.keras.layers.Layer):
         self.signals.one = tf.constant(1, self.dtype)
 
         # set up invariant inputs
-        self.node_inputs = {}
+        with trackable.no_automatic_dependency_tracking_scope(self):
+            self.node_inputs = {}
         for n, inp in zip(self.invariant_inputs, inputs):
             # specify shape of inputs (keras sometimes loses this shape information)
             inp.set_shape([self.minibatch_size, inp.shape[1], n.size_out])
@@ -411,33 +411,16 @@ class TensorGraph(tf.keras.layers.Layer):
         for p in self.model.probes:
             probe_sig = self.model.sig[p]["in"]
             if probe_sig in self.signals:
-                # TODO: better solution to avoid the forced_copy
-                # we need to make sure that probe reads occur before the
-                # probe value is overwritten on the next timestep. however,
-                # just blocking on the sliced value (probe_tensor) doesn't
-                # work, because slices of variables don't perform a
-                # copy, so the slice can be "executed" and then the value
-                # overwritten before the tensorarray write occurs. what we
-                # really want to do is block until the probe_arrays.write
-                # happens, but you can't block on probe_arrays (and blocking on
-                # probe_array.flow doesn't work, although I think it should).
-                # so by adding the copy here and then blocking on the copy, we
-                # make sure that the probe value is read before it can be
-                # overwritten.
-                probe_tensors.append(
-                    self.signals.gather(self.signals[probe_sig], force_copy=True)
-                )
+                probe_tensors.append(self.signals.gather(self.signals[probe_sig]))
             else:
                 # if a probe signal isn't in sig_map, that means that it isn't
                 # involved in any simulator ops.  so we know its value never
                 # changes, and we'll just return a constant containing the
                 # initial value.
+                init_val = probe_sig.initial_value
                 if probe_sig.minibatched:
-                    init_val = np.tile(
-                        probe_sig.initial_value[None, :], (self.minibatch_size, 1)
-                    )
-                else:
-                    init_val = probe_sig.initial_value
+                    init_val = np.tile(init_val[None, :], (self.minibatch_size, 1))
+
                 probe_tensors.append(tf.constant(init_val, dtype=self.dtype))
 
         logger.debug("=" * 30)
@@ -463,7 +446,6 @@ class TensorGraph(tf.keras.layers.Layer):
         def loop_body(loop_i, n_steps, probe_arrays, base_params, saved_state):
             # fill in signals.bases (note: we need to do this here because we
             # need to use the tensors from inside the loop, not the source variables)
-            # TODO: test that rebuilding multiple times works properly
             for key, val in zip(self.saved_state.keys(), saved_state):
                 # eager while loops pass in the variable directly,
                 # so we add the tf.identity so that when we write we're not updating
@@ -542,12 +524,11 @@ class TensorGraph(tf.keras.layers.Layer):
             tuple(self.saved_state.values()),
         )
 
-        # TODO: try out parallel_iterations again with tensors?
         loop_vars = tf.while_loop(
             cond=loop_condition,
             body=loop_body,
             loop_vars=loop_vars,
-            parallel_iterations=1,
+            parallel_iterations=10,
             back_prop=not self.inference_only,
         )
 
@@ -556,7 +537,8 @@ class TensorGraph(tf.keras.layers.Layer):
             tf.expand_dims(loop_vars[0], 0), (self.minibatch_size,)
         )
 
-        self.probe_arrays = OrderedDict()
+        with trackable.no_automatic_dependency_tracking_scope(self):
+            self.probe_arrays = OrderedDict()
         for p, a in zip(self.model.probes, loop_vars[2]):
             x = a.stack()
 
