@@ -424,7 +424,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         )
 
     @require_open
-    def predict_generator(self, x=None, update_state=False, **kwargs):
+    def predict_generator(self, generator, update_state=False, **kwargs):
         """
         Generate output predictions for the input samples.
 
@@ -438,7 +438,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         Parameters
         ----------
-        x
+        generator
             A generator or ``tf.data.Dataset`` that produces inputs in one of the forms
             supported by `.predict_on_batch`.
 
@@ -464,7 +464,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             Output values from all the Probes in the network.
         """
         return self._predict(
-            "predict_generator", x=x, update_state=update_state, **kwargs
+            "predict_generator", x=generator, update_state=update_state, **kwargs
         )
 
     @with_self
@@ -479,17 +479,17 @@ class Simulator:  # pylint: disable=too-many-public-methods
         predict_type : "predict" or "predict_on_batch" or "predict_generator"
             The underlying function to call on the Keras model.
         x
-            See description in documentation of ``<predict_type>`` function.
+            See description in documentation of ``<predict_type>`` method.
         n_steps
-            See description in documentation of ``<predict_type>`` function.
+            See description in documentation of ``<predict_type>`` method.
         update_state
-            See description in documentation of ``<predict_type>`` function.
+            See description in documentation of ``<predict_type>`` method.
         kwargs
-            See description in documentation of ``<predict_type>`` function.
+            See description in documentation of ``<predict_type>`` method.
 
         Returns
         -------
-            See description in documentation of ``<predict_type>`` function.
+            See description in documentation of ``<predict_type>`` method.
         """
 
         # batch size is determined from data in `predict`; others are single batch so
@@ -637,60 +637,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
             (e.g., "loss") containing a list of values of those metrics from each epoch.
         """
 
-        if "batch_size" in kwargs:
-            warnings.warn(
-                "Batch size is determined statically via Simulator.minibatch_size; "
-                "ignoring value passed to `fit`"
-            )
-            kwargs["batch_size"] = None
-
-        # TODO: factor out common logic between this and evaluate
-        x = self._generate_inputs(x, n_steps=n_steps)
-        self._check_data(x, n_steps=n_steps, batch_size=None)
-
-        y = self._standardize_data(y, self.model.probes)
-
-        # check that y is consistent with x (rather than only being
-        # internally consistent)
-        if isinstance(x, dict):
-            # not a generator, so can determine target y shapes from x shapes
-            steps = x["n_steps"]
-            input_steps = steps[0, 0]
-            input_batch = steps.shape[0]
-
-            target_probes = [
-                p
-                for p, e in zip(
-                    self.model.probes,
-                    getattr(self.keras_model, "_training_endpoints", []),
-                )
-                if not e.should_skip_target()
-            ]
-
-            if y is None:
-                # if no targets were provided, fill in some defaults
-                y = {
-                    self.get_name(p): np.zeros((input_batch, input_steps, p.size_in))
-                    for p in target_probes
-                }
-
-            # warn for synapses with n_steps=1
-            synapses = [
-                x.synapse is not None
-                for x in (self.model.toplevel.all_connections + target_probes)
-            ]
-            if input_steps == 1 and self.model.toplevel is not None and any(synapses):
-                warnings.warn(
-                    "Training for one timestep, but the network contains "
-                    "synaptic filters (which will introduce at least a "
-                    "one-timestep delay); did you mean to set synapse=None?"
-                )
-        else:
-            input_steps = None
-            input_batch = None
-        self._check_data(y, n_steps=input_steps, batch_size=input_batch, nodes=False)
-
-        return self._fit("fit", x=x, y=y, update_state=update_state, **kwargs)
+        return self._fit_evaluate(
+            "fit", x=x, y=y, n_steps=n_steps, update_state=update_state, **kwargs
+        )
 
     @require_open
     def fit_generator(self, generator, update_state=False, **kwargs):
@@ -704,7 +653,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         Parameters
         ----------
-        x
+        generator
             A generator or ``tf.data.Dataset`` that produces inputs in one of the forms
             supported by `.Simulator.fit`.
 
@@ -737,39 +686,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
             numbers and ``history.history`` is a dictionary keyed by metric names
             (e.g., "loss") containing a list of values of those metrics from each epoch.
         """
-        # TODO: apply standardize/generate/check data to generator somehow
-        # maybe move it into a callback where the generated data is available?
-        return self._fit(
-            "fit_generator", generator=generator, update_state=update_state, **kwargs
+
+        return self._fit_evaluate(
+            "fit_generator", x=generator, update_state=update_state, **kwargs
         )
-
-    @with_self
-    def _fit(self, fit_type, update_state=False, **kwargs):
-        """
-        Internal base function for all the fit functions.
-
-        Parameters
-        ----------
-        fit_type : "fit" or "fit_generator"
-            The underlying function to call on the Keras model.
-        update_state : bool
-            See description in documentation of ``<fit_type>`` function.
-        kwargs
-            See description in documentation of ``<fit_type>`` function.
-
-        Returns
-        -------
-            See description in documentation of ``<fit_type>`` function.
-        """
-
-        if self.tensor_graph.inference_only:
-            raise SimulationError(
-                "Network was created with inference_only=True, cannot "
-                "be run in training mode"
-            )
-
-        model = self.keras_model_stateful if update_state else self.keras_model
-        return getattr(model, fit_type)(**kwargs)
 
     @require_open
     def evaluate(self, x=None, y=None, n_steps=None, update_state=False, **kwargs):
@@ -835,46 +755,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
             ``outputs["probe_name_loss"]`` or ``outputs["probe_name_metric_name"]``.
         """
 
-        if "batch_size" in kwargs:
-            warnings.warn(
-                "Batch size is determined statically via Simulator.minibatch_size; "
-                "ignoring value passed to `evaluate`"
-            )
-            kwargs["batch_size"] = None
-
-        x = self._generate_inputs(x, n_steps=n_steps)
-        self._check_data(x, n_steps=n_steps, batch_size=None)
-
-        y = self._standardize_data(y, self.model.probes)
-
-        # check that y is consistent with x (rather than only being
-        # internally consistent)
-        if isinstance(x, dict):
-            # not a generator, so can determine target y shapes from x shapes
-            steps = x["n_steps"]
-            input_steps = steps[0, 0]
-            input_batch = steps.shape[0]
-
-            if y is None:
-                # if no targets were provided, fill in some defaults
-                target_probes = [
-                    p
-                    for p, e in zip(
-                        self.model.probes,
-                        getattr(self.keras_model, "_training_endpoints", []),
-                    )
-                    if not e.should_skip_target()
-                ]
-                y = {
-                    self.get_name(p): np.zeros((input_batch, input_steps, p.size_in))
-                    for p in target_probes
-                }
-        else:
-            input_steps = None
-            input_batch = None
-        self._check_data(y, n_steps=input_steps, batch_size=input_batch, nodes=False)
-
-        return self._evaluate("evaluate", x=x, y=y, update_state=update_state, **kwargs)
+        return self._fit_evaluate(
+            "evaluate", x=x, y=y, n_steps=n_steps, update_state=update_state, **kwargs
+        )
 
     @require_open
     def evaluate_generator(self, generator, update_state=False, **kwargs):
@@ -889,7 +772,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         Parameters
         ----------
-        x
+        generator
             A generator or ``tf.data.Dataset`` that produces inputs in one of the forms
             supported by `.Simulator.evaluate`.
 
@@ -924,37 +807,104 @@ class Simulator:  # pylint: disable=too-many-public-methods
             ``outputs["probe_name_loss"]`` or ``outputs["probe_name_metric_name"]``.
         """
 
-        return self._evaluate(
-            "evaluate_generator",
-            generator=generator,
-            update_state=update_state,
-            **kwargs,
+        return self._fit_evaluate(
+            "evaluate_generator", x=generator, update_state=update_state, **kwargs
         )
 
     @with_self
-    def _evaluate(self, evaluate_type, update_state=False, **kwargs):
+    def _fit_evaluate(
+        self, func_type, x=None, y=None, n_steps=None, update_state=False, **kwargs
+    ):
         """
-        Internal base function for all the evaluate functions.
+        Internal base function for all the fit and evaluate functions.
 
         Parameters
         ----------
-        evaluate_type : "evaluate" or "evaluate_generator"
+        func_type : "fit" or "fit_generator" or "evaluate" or "evaluate_generator"
             The underlying function to call on the Keras model.
+        x
+            See description in documentation of ``<func_type>`` method.
+        y
+            See description in documentation of ``<func_type>`` method.
+        n_steps : int
+            See description in documentation of ``<func_type>`` method.
         update_state : bool
-            See description in documentation of ``<evaluate_type>`` function.
-        kwargs
-            See description in documentation of ``<evaluate_type>`` function.
+            See description in documentation of ``<func_type>`` method.
+        kwargs : dict
+            See description in documentation of ``<func_type>`` method.
 
         Returns
         -------
-            See description in documentation of ``<evaluate_type>`` function.
+            See description in documentation of ``<func_type>`` method.
         """
 
-        model = self.keras_model_stateful if update_state else self.keras_model
-        outputs = getattr(model, evaluate_type)(**kwargs)
+        if func_type.startswith("fit") and self.tensor_graph.inference_only:
+            raise SimulationError(
+                "Network was created with inference_only=True, cannot "
+                "be run in training mode"
+            )
 
-        # return outputs as named dict
-        return dict(zip(model.metrics_names, outputs))
+        if "batch_size" in kwargs:
+            warnings.warn(
+                "Batch size is determined statically via Simulator.minibatch_size; "
+                "ignoring value passed to `%s`" % func_type
+            )
+            kwargs["batch_size"] = None
+
+        # TODO: apply standardize/generate/check data to generator somehow
+        # maybe move it into a callback where the generated data is available?
+
+        x = self._generate_inputs(x, n_steps=n_steps)
+        self._check_data(x, n_steps=n_steps, batch_size=None)
+
+        y = self._standardize_data(y, self.model.probes)
+
+        # check that y is consistent with x (rather than only being
+        # internally consistent)
+        if isinstance(x, dict):
+            # not a generator, so can determine target y shapes from x shapes
+            steps = x["n_steps"]
+            input_steps = steps[0, 0]
+            input_batch = steps.shape[0]
+
+            target_probes = [
+                p
+                for p, e in zip(
+                    self.model.probes,
+                    getattr(self.keras_model, "_training_endpoints", []),
+                )
+                if not e.should_skip_target()
+            ]
+
+            # warn for synapses with n_steps=1
+            synapses = [
+                x.synapse is not None
+                for x in (self.model.toplevel.all_connections + target_probes)
+            ]
+            if input_steps == 1 and self.model.toplevel is not None and any(synapses):
+                warnings.warn(
+                    "Running '%s' for one timestep, but the network contains "
+                    "synaptic filters (which will introduce at least a "
+                    "one-timestep delay); did you mean to set synapse=None?" % func_type
+                )
+        else:
+            input_steps = None
+            input_batch = None
+        self._check_data(y, n_steps=input_steps, batch_size=input_batch, nodes=False)
+
+        model = self.keras_model_stateful if update_state else self.keras_model
+        func = getattr(model, func_type)
+        if "generator" in func_type:
+            outputs = func(generator=x, **kwargs)
+        else:
+            outputs = func(x=x, y=y, **kwargs)
+
+        if func_type.startswith("evaluate"):
+            # return outputs as named dict
+            return dict(zip(model.metrics_names, outputs))
+        else:
+            # return training history
+            return outputs
 
     def step(self, **kwargs):
         """
@@ -1684,6 +1634,14 @@ class Simulator:  # pylint: disable=too-many-public-methods
                     ]
 
             input_vals[name] = node_val
+
+        for name in data:
+            if name not in input_vals:
+                raise ValidationError(
+                    "Input contained entry for '%s', which is not a valid input name"
+                    % name,
+                    "data",
+                )
 
         # fill in n_steps
         input_vals["n_steps"] = np.resize(n_steps, (batch_size, 1)).astype(np.int32)
