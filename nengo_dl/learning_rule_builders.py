@@ -13,6 +13,7 @@ from nengo.builder.learning_rules import (
 from nengo.builder.operator import Reset, DotInc, Copy
 from nengo.learning_rules import PES
 import numpy as np
+import tensorflow as tf
 
 from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
 from nengo_dl.compat import SimPES
@@ -146,7 +147,7 @@ class SimVojaBuilder(OpBuilder):
         self.encoder_data = signals.combine([op.scaled_encoders for op in ops])
         self.output_data = signals.combine([op.delta for op in ops])
 
-        self.scale = signals.constant(
+        self.scale = tf.constant(
             np.concatenate([op.scale[None, :, None] for op in ops], axis=1),
             dtype=signals.dtype,
         )

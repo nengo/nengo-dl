@@ -70,7 +70,7 @@ class ConvIncBuilder(OpBuilder):
             perm_x[1:-1] = perm_x[2:]
             perm_x[-1] = 1
 
-            self.perm_x = signals.constant(perm_x)
+            self.perm_x = tf.constant(perm_x)
         else:
             self.perm_x = None
 
@@ -105,8 +105,8 @@ class ConvIncBuilder(OpBuilder):
                 perm_y = np.arange(self.conv.dimensions + 3)
                 perm_y[[1, 2]] = perm_y[[2, 1]]
 
-            self.reshape_y = signals.constant(reshape_y)
-            self.perm_y = signals.constant(perm_y)
+            self.reshape_y = tf.constant(reshape_y)
+            self.perm_y = tf.constant(perm_y)
         else:
             self.reshape_y = None
 
@@ -115,7 +115,7 @@ class ConvIncBuilder(OpBuilder):
                 perm_y = np.arange(self.conv.dimensions + 2)
                 perm_y[-2:] = perm_y[1:-1]
                 perm_y[1] = len(perm_y) - 1
-                self.perm_y = signals.constant(perm_y)
+                self.perm_y = tf.constant(perm_y)
             else:
                 self.perm_y = None
 
@@ -123,12 +123,10 @@ class ConvIncBuilder(OpBuilder):
         if len(ops) > 1:
             # move ops to end
             self.W_data = self.W_data.reshape((len(ops),) + self.conv.kernel_shape)
-            self.perm_w = signals.constant(
-                np.roll(np.arange(self.conv.dimensions + 3), -1)
-            )
+            self.perm_w = tf.constant(np.roll(np.arange(self.conv.dimensions + 3), -1))
 
             # concatenate weights for each op along output channel dimension
-            self.reshape_w = signals.constant(
+            self.reshape_w = tf.constant(
                 self.conv.kernel_size + (self.conv.input_shape.n_channels, -1)
             )
         else:
