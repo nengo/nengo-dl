@@ -110,7 +110,7 @@ def test_tensor_signal_load_indices():
 def test_signal_dict_scatter(minibatched):
     minibatch_size = 2
     var_size = 19
-    signals = SignalDict(tf.float32, minibatch_size, False)
+    signals = SignalDict(tf.float32, minibatch_size)
 
     key = object()
     var_key = object()
@@ -177,7 +177,7 @@ def test_signal_dict_scatter(minibatched):
 def test_signal_dict_gather(minibatched):
     minibatch_size = 3
     var_size = 19
-    signals = SignalDict(tf.float32, minibatch_size, False)
+    signals = SignalDict(tf.float32, minibatch_size)
 
     key = object()
     val = np.random.random(
@@ -230,7 +230,7 @@ def test_signal_dict_gather(minibatched):
 
 def test_signal_dict_combine():
     minibatch_size = 1
-    signals = SignalDict(tf.float32, minibatch_size, False)
+    signals = SignalDict(tf.float32, minibatch_size)
 
     key = object()
 
@@ -296,7 +296,7 @@ def test_op_constant(dtype, diff):
         SimNeurons(LIF(tau_rc=2 if diff else 1), Signal(np.zeros(10)), None),
     )
 
-    signals = SignalDict(tf.float32, 1, False)
+    signals = SignalDict(tf.float32, 1)
     const = signals.op_constant(
         [op.neurons for op in ops], [op.J.shape[0] for op in ops], "tau_rc", dtype
     )
@@ -328,7 +328,7 @@ def test_op_constant(dtype, diff):
 
 
 def test_get_tensor_signal():
-    signals = SignalDict(tf.float32, 3, False)
+    signals = SignalDict(tf.float32, 3)
 
     # check that tensor_signal is created correctly
     key = object()
@@ -381,7 +381,7 @@ def test_get_tensor_signal():
 
 @pytest.mark.parametrize("ndims", (1, 2, 3))
 def test_tf_indices_nd(ndims):
-    signals = SignalDict(tf.float32, 10, False)
+    signals = SignalDict(tf.float32, 10)
     shape = (3, 4, 5)[:ndims]
     x = tf.ones(shape) * tf.reshape(
         tf.range(0, 3, dtype=tf.float32), (-1,) + (1,) * (ndims - 1)
