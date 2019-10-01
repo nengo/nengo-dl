@@ -56,10 +56,10 @@ jobs:
     python: 3.5
   -
     env:
-      TEST_ARGS="--dtype float64 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator --boxed"
+      TEST_ARGS="--unroll-simulation 5 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator --boxed"
   -
     env:
-      TEST_ARGS="--unroll-simulation 5 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator --boxed"
+      TEST_ARGS="--dtype float64 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator --boxed"
   -
     env:
       TEST_ARGS="--inference-only --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator --boxed"

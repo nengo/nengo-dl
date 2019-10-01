@@ -57,7 +57,6 @@ def test_predict(Simulator, seed):
 
         sim.run_steps(n_steps, data={a: a_vals[:4]})
         data_tile = np.tile(sim.data[p], (n_batches, 1, 1))
-
         sim.soft_reset()
 
         # no input (also checking batch_size is ignored)
@@ -74,9 +73,8 @@ def test_predict(Simulator, seed):
         assert np.allclose(output[p], data_tile)
 
         # tf input
-        # TODO: get this working
-        # output = sim.predict(tf.constant(a_vals), steps=n_batches)
-        # assert np.allclose(output[p], data_tile)
+        output = sim.predict(tf.constant(a_vals))
+        assert np.allclose(output[p], data_tile)
 
         # dict input
         for key in [a, "a"]:
@@ -97,9 +95,7 @@ def test_predict(Simulator, seed):
             )
             assert np.allclose(output[p], data_tile)
 
-    # dataset input
-    # TODO: why does this crash if placed on gpu?
-    with Simulator(net, minibatch_size=4, device="/cpu:0") as sim:
+        # dataset input
         dataset = tf.data.Dataset.from_tensor_slices(
             {
                 "a": tf.constant(a_vals),
@@ -149,6 +145,15 @@ def test_evaluate(Simulator):
         inputs = np.ones((minibatch_size * n_batches, n_steps, 1))
         targets = inputs.copy()
         loss = sim.evaluate(x=[inputs, inputs * 2], y={p0: targets, p1: targets})
+        assert np.allclose(loss["loss"], 1)
+        assert np.allclose(loss["probe_loss"], 0)
+        assert np.allclose(loss["probe_1_loss"], 1)
+
+        # tensor inputs
+        loss = sim.evaluate(
+            x=[tf.constant(inputs), tf.constant(inputs * 2)],
+            y={p0: tf.constant(targets), p1: tf.constant(targets)},
+        )
         assert np.allclose(loss["loss"], 1)
         assert np.allclose(loss["probe_loss"], 0)
         assert np.allclose(loss["probe_1_loss"], 1)
@@ -249,6 +254,15 @@ def test_fit(Simulator, seed):
         assert history.history["loss"][-1] < 5e-4
 
         sim.reset()
+        history = sim.fit(
+            [tf.constant(x[..., [0]]), tf.constant(x[..., [1]])],
+            tf.constant(y),
+            epochs=200,
+            verbose=0,
+        )
+        assert history.history["loss"][-1] < 5e-4
+
+        sim.reset()
         history = sim.fit_generator(
             (
                 ((x[..., [0]], x[..., [1]], np.ones((4, 1), dtype=np.int32)), y)
@@ -259,16 +273,6 @@ def test_fit(Simulator, seed):
             verbose=0,
         )
         assert history.history["loss"][-1] < 5e-4
-
-    # TODO: why does this crash if placed on gpu?
-    with Simulator(
-        net,
-        minibatch_size=minibatch_size,
-        unroll_simulation=1,
-        seed=seed,
-        device="/cpu:0",
-    ) as sim:
-        sim.compile(optimizer=tf.optimizers.Adam(0.01), loss=tf.losses.mse)
 
         history = sim.fit(
             tf.data.Dataset.from_tensors(

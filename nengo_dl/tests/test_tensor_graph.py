@@ -232,15 +232,13 @@ def test_signal_order_deterministic(Simulator, seed):
         nengo.Connection(inp, ens1, synapse=None)
 
     with Simulator(net, seed=seed) as sim1:
-        pass
-
-    with Simulator(net, seed=seed) as sim2:
-        for trainable in (True, False):
-            for v, v2 in zip(
-                sim1.tensor_graph.base_arrays_init[trainable].values(),
-                sim2.tensor_graph.base_arrays_init[trainable].values(),
-            ):
-                assert np.allclose(v[0], v2[0])
+        with Simulator(net, seed=seed) as sim2:
+            for trainable in (True, False):
+                for v, v2 in zip(
+                    sim1.tensor_graph.base_arrays_init[trainable].values(),
+                    sim2.tensor_graph.base_arrays_init[trainable].values(),
+                ):
+                    assert np.allclose(v[0], v2[0])
 
 
 def test_create_signals():

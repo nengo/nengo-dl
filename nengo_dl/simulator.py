@@ -90,9 +90,23 @@ class Simulator:  # pylint: disable=too-many-public-methods
         network
     progress_bar : bool
         If True (default), display progress information when building a model
-    """
 
-    # TODO: document important attributes (e.g. keras_model)
+    Attributes
+    ----------
+    data : `.SimulationData`
+        Stores simulation data and parameter values (in particular, the recorded output
+        from probes after `.Simulator.run` can be accessed through
+        ``sim.data[my_probe]``.
+    model : `nengo.builder.Model`
+        Built Nengo model, containing the data that defines the network to be simulated.
+    keras_model : ``tf.keras.Model``
+        Keras Model underlying the simulation (implements the inference/training loops).
+    keras_model_stateful : ``tf.Keras.Model``
+        The same as ``keras_model``, but calling ``predict``/``evaluate``/``fit`` on
+        this model will also update the simulation's internal state.
+    tensor_graph : `.tensor_graph.TensorGraph`
+        Keras Layer implementing the Nengo simulation (built into ``keras_model``).
+    """
 
     def __init__(
         self,
@@ -207,8 +221,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 self.tensor_graph.io_names[p] for p in self.model.probes
             ] + ["steps_run"]
 
-    @with_self
     @require_open
+    @with_self
     def reset(self, seed=None):
         """
         Resets the simulator to initial conditions.
@@ -242,8 +256,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
         # execute post-build processes
         self.tensor_graph.build_post()
 
-    @with_self
     @require_open
+    @with_self
     def soft_reset(self, include_params=False, include_probes=False):
         """
         Resets the internal state of the simulation, but doesn't
@@ -477,8 +491,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
         -------
             See description in documentation of ``<predict_type>`` function.
         """
-        # TODO: double check this doesn't rebuild the graph each time it is called
-        #  (e.g. with different values for n_steps)
 
         # batch size is determined from data in `predict`; others are single batch so
         # we know the size should be minibatch_size
@@ -500,8 +512,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         return output_dict
 
-    @with_self
     @require_open
+    @with_self
     def compile(self, *args, loss=None, metrics=None, loss_weights=None, **kwargs):
         """
         Configure the model for training/evaluation.
@@ -1073,9 +1085,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             if probe.sample_every is not None:
                 # downsample probe according to `sample_every`
                 period = probe.sample_every / self.dt
-                steps = np.arange(
-                    self.n_steps - actual_steps, self.n_steps
-                )  # TODO: off by 1?
+                steps = np.arange(self.n_steps - actual_steps, self.n_steps)
                 val = val[:, (steps + 1) % period < 1]
 
             self.model.params[probe].append(val)
@@ -1505,7 +1515,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
         """
 
         if not self.closed:
-            # TODO: delete some data structures to free up memory?
+            del self.keras_model
+            del self.keras_model_stateful
+            del self.tensor_graph
 
             self.closed = True
 
@@ -1614,12 +1626,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
         if data is None:
             data = {}
 
-        if not isinstance(data, (list, tuple, dict, np.ndarray)):
+        if not isinstance(data, (list, tuple, dict, np.ndarray, tf.Tensor)):
             # data is some kind of generator, so we don't try to modify it (too many
             # different types of generators this could be)
-            # TODO: basically what we'd like to do is map _generate_inputs to each
-            #  item returned from the generator. is there a general way to do that?
-
             if n_steps is not None:
                 raise SimulationError(
                     "Cannot automatically add n_steps to generator with type %s; "
@@ -1701,11 +1710,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
             data is associated with Probes.
         """
 
-        # TODO: which of this data checking is redundant with keras?
-
         if not isinstance(data, dict):
             # data is a generator, so don't perform validation
-            # TODO: could map this into the generator process as well?
             return
 
         if nodes:

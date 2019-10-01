@@ -165,8 +165,8 @@ travis_yml:
         NUMPY_VERSION: numpy==1.14.5
       test_args: -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator --boxed
       python: 3.5
-    - test_args: --dtype float64 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator --boxed
     - test_args: --unroll-simulation 5 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator --boxed
+    - test_args: --dtype float64 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator --boxed
     - test_args: --inference-only --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator --boxed
 #    - script: examples
 #      env:
