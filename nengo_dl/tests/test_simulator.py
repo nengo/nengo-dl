@@ -19,7 +19,7 @@ import pytest
 import tensorflow as tf
 from tensorflow.python.summary.summary_iterator import summary_iterator
 
-from nengo_dl import configure_settings, tensor_layer, dists, callbacks, TensorNode
+from nengo_dl import Layer, configure_settings, dists, callbacks, TensorNode
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
 from nengo_dl.utils import tf_gpu_installed
@@ -843,7 +843,7 @@ def test_check_gradients_error(Simulator):
     # check_gradients detects nans in gradient
     with nengo.Network() as net:
         x = nengo.Node([0])
-        y = tensor_layer(x, lambda x: 1 / x)
+        y = Layer(lambda x: 1 / x)(x)
         nengo.Probe(y)
 
     with Simulator(net) as sim:

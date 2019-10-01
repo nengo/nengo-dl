@@ -3,6 +3,8 @@ TensorNodes allow parts of a model to be defined using TensorFlow and smoothly
 integrated with the rest of a Nengo model.
 """
 
+import warnings
+
 from nengo import Node, Connection, Ensemble, builder
 from nengo.base import NengoObject
 from nengo.builder.operator import Reset
@@ -350,73 +352,103 @@ class SimTensorNodeBuilder(OpBuilder):
         signals.scatter(self.dst_data, output)
 
 
-def tensor_layer(
-    input,
-    layer_func,
-    shape_in=None,
-    synapse=None,
-    transform=1,
-    return_conn=False,
-    # TODO: remove once there is a black release with this
-    #  bugfix https://github.com/psf/black/pull/763
-    # fmt: off
-    **layer_args
-    # fmt: on
-):
-    """A utility function to construct TensorNodes that apply some function
-    to their input (analogous to the ``tf.layers`` syntax).
+class Layer:
+    """
+    A wrapper for constructing TensorNodes.
+
+    This is designed to mimic and integrate with the ``tf.keras.layers.Layer`` API, e.g.
+
+    .. code-block:: python
+
+        a = ...
+        b = nengo_dl.Layer(tf.keras.layers.Dense(units=10))(a)
+        c = nengo_dl.Layer(lambda x: x + 1)(b)
+        d = nengo_dl.Layer(nengo.LIF())(c)
 
     Parameters
     ----------
-    input : ``NengoObject``
-        Object providing input to the layer.
     layer_func : callable or ``keras.Layer`` or `~nengo.neurons.NeuronType`
-        A function that takes the value from ``input`` (represented as a
-        ``tf.Tensor``) and maps it to some output value,
-        or a Keras layer type (which will be instantiated and applied
-        to ``input``), or a Nengo neuron type (which will be instantiated in
-        a Nengo Ensemble and applied to ``input``).
-    shape_in : tuple of int
-        If not None, reshape the input to the given shape.
-    synapse : float or `~nengo.synapses.Synapse`
-        Synapse to apply on connection from ``input`` to this layer.
-    transform : `~numpy.ndarray`
-        Transform matrix to apply on connection from ``input`` to this layer.
-    return_conn : bool
-        If True, also return the connection linking this layer to ``input``.
-    layer_args : dict
-        These arguments will be passed to `.TensorNode` if ``layer_func`` is a callable
-        or Keras Layer, or `~nengo.Ensemble` if ``layer_func`` is a
-        `~nengo.neurons.NeuronType`.
-
-    Returns
-    -------
-    node : `.TensorNode` or `~nengo.ensemble.Neurons`
-        A TensorNode that implements the given layer function (if
-        ``layer_func`` was a callable), or a Neuron object with the given
-        neuron type, connected to ``input``.
-    conn : `~nengo.Connection`
-        If ``return_conn`` is True, also returns the connection object linking
-        ``input`` and ``node``.
+        A function or Keras Layer that takes the value from an input (represented
+        as a ``tf.Tensor``) and maps it to some output value, or a Nengo neuron type
+        (which will be instantiated in a Nengo Ensemble and applied to the input).
     """
 
-    if isinstance(transform, np.ndarray) and transform.ndim == 2:
-        size_in = transform.shape[0]
-    elif shape_in is not None:
-        size_in = np.prod(shape_in)
-    else:
-        size_in = input.size_out
+    def __init__(self, layer_func):
+        self.layer_func = layer_func
 
-    if isinstance(layer_func, NeuronType):
-        node = Ensemble(size_in, 1, neuron_type=layer_func, **layer_args).neurons
-    else:
-        node = TensorNode(
-            layer_func,
-            shape_in=(size_in,) if shape_in is None else shape_in,
-            pass_time=False,
-            **layer_args,
-        )
+    def __call__(
+        self,
+        input,
+        transform=1,
+        shape_in=None,
+        synapse=None,
+        return_conn=False,
+        # TODO: remove once there is a black release with this
+        #  bugfix https://github.com/psf/black/pull/763
+        # fmt: off
+        **layer_args
+        # fmt: on
+    ):
+        """
+        Apply the TensorNode layer to the given input object.
 
-    conn = Connection(input, node, synapse=synapse, transform=transform)
+        Parameters
+        ----------
+        input : ``NengoObject``
+            Object providing input to the layer.
+        transform : `~numpy.ndarray`
+            Transform matrix to apply on connection from ``input`` to this layer.
+        shape_in : tuple of int
+            If not None, reshape the input to the given shape.
+        synapse : float or `~nengo.synapses.Synapse`
+            Synapse to apply on connection from ``input`` to this layer.
+        return_conn : bool
+            If True, also return the connection linking this layer to ``input``.
+        layer_args : dict
+            These arguments will be passed to `.TensorNode` if ``layer_func`` is a
+            callable or Keras Layer, or `~nengo.Ensemble` if ``layer_func`` is a
+            `~nengo.neurons.NeuronType`.
 
-    return (node, conn) if return_conn else node
+        Returns
+        -------
+        obj : `.TensorNode` or `~nengo.ensemble.Neurons`
+            A TensorNode that implements the given layer function (if
+            ``layer_func`` was a callable), or a Neuron object with the given
+            neuron type, connected to ``input``.
+        conn : `~nengo.Connection`
+            If ``return_conn`` is True, also returns the connection object linking
+            ``input`` and ``node``.
+        """
+
+        if isinstance(transform, np.ndarray) and transform.ndim == 2:
+            size_in = transform.shape[0]
+        elif shape_in is not None:
+            size_in = np.prod(shape_in)
+        else:
+            size_in = input.size_out
+
+        if isinstance(self.layer_func, NeuronType):
+            obj = Ensemble(
+                size_in, 1, neuron_type=self.layer_func, **layer_args
+            ).neurons
+        else:
+            obj = TensorNode(
+                self.layer_func,
+                shape_in=(size_in,) if shape_in is None else shape_in,
+                pass_time=False,
+                **layer_args,
+            )
+
+        conn = Connection(input, obj, synapse=synapse, transform=transform)
+
+        return (obj, conn) if return_conn else obj
+
+
+def tensor_layer(input, layer_func, **kwargs):
+    """Deprecated, use `.Layer` instead."""
+
+    warnings.warn(
+        "nengo_dl.tensor_layer is deprecated; use nengo_dl.Layer instead",
+        DeprecationWarning,
+    )
+    return Layer(layer_func)(input, **kwargs)
