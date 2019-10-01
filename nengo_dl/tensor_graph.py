@@ -83,9 +83,7 @@ class TensorGraph(tf.keras.layers.Layer):
         self.device = device
         self.seed = seed
         self.inference_only = not self.trainable
-        self.signals = signals.SignalDict(
-            dtype, self.minibatch_size, self.inference_only
-        )
+        self.signals = signals.SignalDict(dtype, self.minibatch_size)
 
         # find invariant inputs (nodes that don't receive any input other
         # than the simulation time). we'll compute these outside the simulation

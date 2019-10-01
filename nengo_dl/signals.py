@@ -307,15 +307,11 @@ class SignalDict(Mapping):
         Floating point precision used in signals (e.g. "float32")
     minibatch_size : int
         Number of items in each minibatch
-    inference_only : bool
-        If True the network should be constructed in "inference only" mode
-        (not including any support for training operations).
     """
 
-    def __init__(self, dtype, minibatch_size, inference_only):
+    def __init__(self, dtype, minibatch_size):
         self.dtype = tf.as_dtype(dtype)
         self.minibatch_size = minibatch_size
-        self.inference_only = inference_only
         self.sig_map = {}
 
         self.reset()
@@ -434,14 +430,6 @@ class SignalDict(Mapping):
         # we prefer to get the data via `strided_slice` or `identity` if
         # possible, as it is more efficient
         if force_copy or src.tf_slice is None:
-            if isinstance(var, tf.Variable) and not self.inference_only:
-                # TensorFlow gets confused if we apply an optimizer to gathered
-                # variables, so we add the + 0 so the gather is applied
-                # to a separate tensor instead.
-                # See https://github.com/tensorflow/tensorflow/issues/30537
-                # TODO: check if this is fixed
-                var = var + 0
-
             result = tf.gather(var, src.tf_indices, axis=1 if src.minibatched else 0)
             self.read_types["gather"] += 1
         elif (

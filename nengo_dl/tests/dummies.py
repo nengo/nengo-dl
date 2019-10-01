@@ -145,7 +145,7 @@ class TensorGraph(tensor_graph.TensorGraph):
         self.plan = plan
         self.minibatch_size = minibatch_size
 
-        self.signals = signals.SignalDict(self.dtype, self.minibatch_size, False)
+        self.signals = signals.SignalDict(self.dtype, self.minibatch_size)
 
 
 def linear_net():
