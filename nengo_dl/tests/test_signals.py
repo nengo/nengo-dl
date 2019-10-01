@@ -14,19 +14,19 @@ from nengo_dl.signals import TensorSignal, SignalDict
 
 def test_tensor_signal_basic():
     # check that indices are read-only
-    sig = TensorSignal([0, 1, 2], None, None, None, None, None)
+    sig = TensorSignal([0, 1, 2], None, None, None, None)
     with pytest.raises(BuildError):
         sig.indices = [2, 3, 4]
     with pytest.raises(ValueError):
         sig.indices[0] = 1
 
     # check ndim
-    sig = TensorSignal([0, 1, 2], None, None, (1, 2), 1, None)
+    sig = TensorSignal([0, 1, 2], None, None, (1, 2), 1)
     assert sig.ndim == 2
 
 
 def test_tensor_signal_getitem():
-    sig = TensorSignal([1, 2, 3, 4], object(), None, (4, 3), None, None)
+    sig = TensorSignal([1, 2, 3, 4], object(), None, (4, 3), None)
     sig_slice = sig[:2]
     assert np.all(sig_slice.indices == (1, 2))
     assert sig_slice.key == sig.key
@@ -40,7 +40,7 @@ def test_tensor_signal_getitem():
 
 
 def test_tensor_signal_reshape():
-    sig = TensorSignal([1, 2, 3, 4], object(), None, (4, 3), None, None)
+    sig = TensorSignal([1, 2, 3, 4], object(), None, (4, 3), None)
 
     with pytest.raises(BuildError):
         sig.reshape((100,))
@@ -72,7 +72,7 @@ def test_tensor_signal_reshape():
 
 
 def test_tensor_signal_broadcast():
-    sig = TensorSignal([0, 1, 2, 3], object(), None, (4,), None, None)
+    sig = TensorSignal([0, 1, 2, 3], object(), None, (4,), None)
     base = np.random.randn(4)
 
     sig_broad = sig.broadcast(-1, 2)
@@ -87,21 +87,21 @@ def test_tensor_signal_broadcast():
 
 
 def test_tensor_signal_load_indices():
-    sig = TensorSignal([2, 3, 4, 5], object(), None, (4,), None, tf.constant)
+    sig = TensorSignal([2, 3, 4, 5], object(), None, (4,), None)
     assert np.all(sig.tf_indices == sig.indices)
     start, stop, step = sig.tf_slice
     assert start == 2
     assert stop == 6
     assert step == 1
 
-    sig = TensorSignal([2, 4, 6, 8], object(), None, (4,), None, tf.constant)
+    sig = TensorSignal([2, 4, 6, 8], object(), None, (4,), None)
     assert np.all(sig.tf_indices == sig.indices)
     start, stop, step = sig.tf_slice
     assert start == 2
     assert stop == 9
     assert step == 2
 
-    sig = TensorSignal([2, 2, 3, 3], object(), None, (4,), None, tf.constant)
+    sig = TensorSignal([2, 2, 3, 3], object(), None, (4,), None)
     assert np.all(sig.tf_indices == sig.indices)
     assert sig.tf_slice is None
 
@@ -250,44 +250,6 @@ def test_signal_dict_combine():
     assert np.all(y.indices == [0, 1, 2, 4, 5, 6])
 
 
-@pytest.mark.xfail(reason="TODO: support constant phs")
-@pytest.mark.parametrize("dtype", (None, tf.float32))
-def test_constant(dtype, sess):
-    val = np.random.randn(10, 10).astype(np.float64)
-
-    signals = SignalDict(tf.float32, 1, False)
-    const0 = signals.constant(val, dtype=dtype)
-    const1 = signals.constant(val, dtype=dtype, cutoff=0)
-
-    assert const0.op.type == "Const"
-    assert const1.op.type == "Placeholder"
-
-    assert const0.dtype == (dtype if dtype else tf.as_dtype(val.dtype))
-    assert const1.dtype == (dtype if dtype else tf.as_dtype(val.dtype))
-
-    c0, c1 = sess.run([const0, const1], feed_dict=signals.constant_phs)
-
-    assert np.allclose(c0, val)
-    assert np.allclose(c1, val)
-
-
-@pytest.mark.xfail(reason="TODO: support constant phs")
-@pytest.mark.gpu
-def test_constant_gpu(sess):
-    val = np.random.randn(10, 10).astype(np.int32)
-
-    with tf.device("/gpu:0"):
-        signals = SignalDict(tf.float32, 1, False)
-        const = signals.constant(val, cutoff=0)
-
-        assert const.dtype == tf.int32
-        assert "GPU" in const.device.upper()
-
-    c = sess.run(const, feed_dict=signals.constant_phs)
-
-    assert np.allclose(val, c)
-
-
 @pytest.mark.parametrize("dtype", (np.float32, np.float64))
 @pytest.mark.parametrize("diff", (True, False))
 def test_op_constant(dtype, diff):
@@ -340,7 +302,6 @@ def test_get_tensor_signal():
     assert tensor_signal.dtype == np.float64
     assert tensor_signal.shape == (3, 4)
     assert tensor_signal.minibatch_size == 3
-    assert tensor_signal.constant == signals.constant
     assert len(signals) == 0
 
     # check adding signal to sig_map

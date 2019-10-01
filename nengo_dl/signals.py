@@ -33,15 +33,12 @@ class TensorSignal:
     minibatch_size : int
         If not None then this signal contains a minibatch dimension with the
         given size
-    constant : callable
-        A function that returns a TensorFlow constant (will be provided
-        by `.signals.SignalDict.get_tensor_signal`)
     label : str
         Name for this signal, used to make debugging easier
     """
 
     def __init__(
-        self, indices, key, dtype, shape, minibatch_size, constant, label="TensorSignal"
+        self, indices, key, dtype, shape, minibatch_size, label="TensorSignal"
     ):
         # make indices read-only
         assert isinstance(indices, (tuple, list, np.ndarray))
@@ -51,7 +48,6 @@ class TensorSignal:
         self.dtype = dtype
         self.shape = shape
         self.minibatch_size = minibatch_size
-        self.constant = constant
         self.label = label
 
         self.reset()
@@ -116,7 +112,6 @@ class TensorSignal:
             self.dtype,
             (len(new_indices),) + self.shape[1:],
             self.minibatch_size,
-            self.constant,
             label=self.label + ".slice",
         )
 
@@ -158,7 +153,6 @@ class TensorSignal:
             self.dtype,
             shape,
             self.minibatch_size,
-            self.constant,
             label=self.label + ".reshape(%s)" % (shape,),
         )
 
@@ -201,7 +195,6 @@ class TensorSignal:
             self.dtype,
             display_shape,
             self.minibatch_size,
-            self.constant,
             label=self.label + ".broadcast(%d, %d)" % (axis, length),
         )
 
@@ -221,7 +214,7 @@ class TensorSignal:
         A ``tf.Tensor`` representing the indices of this signal.
         """
         if self._tf_indices is None:
-            self._tf_indices = self.constant(self.indices, dtype=tf.int32)
+            self._tf_indices = tf.constant(self.indices, dtype=tf.int32)
 
         return self._tf_indices
 
@@ -240,7 +233,7 @@ class TensorSignal:
                     ),
                     axis=-1,
                 )
-                self._tf_indices_nd = self.constant(idxs, dtype=tf.int32)
+                self._tf_indices_nd = tf.constant(idxs, dtype=tf.int32)
             else:
                 self._tf_indices_nd = tf.expand_dims(self.tf_indices, -1)
 
@@ -504,8 +497,7 @@ class SignalDict(Mapping):
         Creates a new ``TensorSignal`` with the given properties.
 
         This should be used rather than instantiating a new TensorSignal
-        directly, as it handles some extra book-keeping (e.g., using the
-        custom `.constant` function).
+        directly, as it handles some extra book-keeping.
 
         Parameters
         ----------
@@ -539,7 +531,6 @@ class SignalDict(Mapping):
             dtype,
             shape,
             self.minibatch_size if minibatched else None,
-            self.constant,
             label=label,
         )
 
@@ -556,50 +547,6 @@ class SignalDict(Mapping):
             self[signal] = tensor_sig
 
         return tensor_sig
-
-    def constant(self, value, dtype=None, cutoff=1 << 25):
-        """
-        Returns a constant Tensor containing the given value.
-
-        The returned Tensor may be underpinned by a ``tf.constant`` op, or
-        a ``tf.placeholder`` that will be initialized to the constant value.
-        We use the latter in order to avoid storing large constant values in
-        the TensorFlow GraphDef, which has a hard-coded limit of 2GB at the
-        moment.
-
-        Parameters
-        ----------
-        value : `~numpy.ndarray`
-            Array containing the value of the constant
-        dtype : `~numpy.dtype` or ``tf.DType``
-            The type for the constant (if ``None``, the dtype of ``value``
-            will be used)
-        cutoff : int
-            The size of constant (in bytes) for which we will switch from
-            ``tf.constant`` to ``tf.placeholder``
-
-        Returns
-        -------
-        constant : ``tf.Tensor``
-            A tensor representing the given value
-        """
-        value = np.asarray(value)
-
-        if dtype is None:
-            dtype = value.dtype
-
-        if not isinstance(dtype, tf.DType):
-            dtype = tf.as_dtype(dtype)
-
-        # TODO: is there a way to do this in keras w/ TF 2.0?
-        # if value.nbytes > cutoff:
-        #     ph = tf_compat.placeholder(
-        #         dtype, value.shape, name="constant_phs/%d" % len(self.constant_phs)
-        #     )
-        #     self.constant_phs[ph] = value
-        #     return ph
-        # else:
-        return tf.constant(value, dtype=dtype)
 
     def op_constant(self, ops, op_sizes, attr, dtype, shape=(1, -1)):
         """
@@ -644,7 +591,7 @@ class SignalDict(Mapping):
         if shape is not None:
             v = np.reshape(v, shape)
 
-        return self.constant(v, dtype=dtype)
+        return tf.constant(v, dtype=dtype)
 
     def __getitem__(self, sig):
         return self.sig_map[sig]

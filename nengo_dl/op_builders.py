@@ -74,7 +74,7 @@ class ResetBuilder(OpBuilder):
                 (signals.minibatch_size,) + tuple(1 for _ in value.shape),
             )
             self.scatters += [
-                (signals.combine([x.dst for x in group]), signals.constant(value))
+                (signals.combine([x.dst for x in group]), tf.constant(value))
             ]
 
         logger.debug("scatters")
@@ -330,7 +330,7 @@ class DotIncBuilder(OpBuilder):
                 sparse_indices += [idxs]
 
             sparse_indices = np.concatenate(sparse_indices, axis=0)
-            self.sparse_indices = signals.constant(
+            self.sparse_indices = tf.constant(
                 sparse_indices,
                 dtype=(
                     tf.int32
@@ -516,7 +516,7 @@ class SparseDotIncBuilder(OpBuilder):
             sparse_indices += [idxs]
 
         sparse_indices = np.concatenate(sparse_indices, axis=0)
-        self.sparse_indices = signals.constant(
+        self.sparse_indices = tf.constant(
             sparse_indices,
             dtype=(
                 tf.int32

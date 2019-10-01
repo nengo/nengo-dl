@@ -248,9 +248,6 @@ class TensorGraph(tf.keras.layers.Layer):
         with tf.device("/cpu:0"):
             for k, v in self.base_arrays_init[False].items():
                 self.saved_state[k] = self.add_weight(
-                    # TODO: don't make these a constant initializer because we
-                    #  don't want to store those large arrays in the graph def
-                    #  (double check that this is still a problem in TF2.0)
                     initializer=tf.initializers.constant(v),
                     shape=v.shape,
                     dtype=v.dtype,

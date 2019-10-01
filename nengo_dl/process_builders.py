@@ -229,8 +229,8 @@ class LowpassBuilder(OpBuilder):
         # apply the negative here
         dens = -np.asarray(dens)
 
-        self.nums = signals.constant(nums, dtype=self.output_data.dtype)
-        self.dens = signals.constant(dens, dtype=self.output_data.dtype)
+        self.nums = tf.constant(nums, dtype=self.output_data.dtype)
+        self.dens = tf.constant(dens, dtype=self.output_data.dtype)
 
         # create a variable to represent the internal state of the filter
         # self.state_sig = signals.make_internal(
@@ -299,7 +299,7 @@ class LinearFilterBuilder(OpBuilder):
             self.C = None
             # combine D scalars for each op, and broadcast along minibatch and
             # signal dimensions
-            self.D = signals.constant(
+            self.D = tf.constant(
                 np.concatenate([step.D[None, :, None] for step in steps], axis=1),
                 dtype=signals.dtype,
             )
@@ -307,11 +307,11 @@ class LinearFilterBuilder(OpBuilder):
             assert self.D.shape == (1, self.n_ops, 1)
         elif self.step_type == OneX:
             # combine A scalars for each op, and broadcast along batch/state
-            self.A = signals.constant(
+            self.A = tf.constant(
                 np.concatenate([step.A for step in steps])[None, :], dtype=signals.dtype
             )
             # combine B and C scalars for each op, and broadcast along batch/state
-            self.B = signals.constant(
+            self.B = tf.constant(
                 np.concatenate([step.B * step.C for step in steps])[None, :],
                 dtype=signals.dtype,
             )
@@ -321,20 +321,20 @@ class LinearFilterBuilder(OpBuilder):
             assert self.A.shape == (1, self.n_ops, 1)
             assert self.B.shape == (1, self.n_ops, 1)
         else:
-            self.A = signals.constant(
+            self.A = tf.constant(
                 np.stack([step.A for step in steps], axis=0), dtype=signals.dtype
             )
-            self.B = signals.constant(
+            self.B = tf.constant(
                 np.stack([step.B for step in steps], axis=0), dtype=signals.dtype
             )
-            self.C = signals.constant(
+            self.C = tf.constant(
                 np.stack([step.C for step in steps], axis=0), dtype=signals.dtype
             )
 
             if self.step_type == NoD:
                 self.D = None
             else:
-                self.D = signals.constant(
+                self.D = tf.constant(
                     np.concatenate([step.D[:, None, None] for step in steps]),
                     dtype=signals.dtype,
                 )
