@@ -40,8 +40,6 @@ class GenericNeuronBuilder(OpBuilder):
             for i in range(len(ops[0].states))
         ]
 
-        self.prev_result = []
-
         def neuron_step_math(dt, J, *states):  # pragma: no cover (runs in TF)
             output = None
             J_offset = 0
@@ -90,10 +88,7 @@ class GenericNeuronBuilder(OpBuilder):
         states = [signals.gather(x) for x in self.state_data]
         states_dtype = [x.dtype for x in self.state_data]
 
-        # note: we need to make sure that the previous call to this function
-        # has completed before the next starts, since we don't know that the
-        # functions are thread safe
-        with tf.control_dependencies(self.prev_result), tf.device("/cpu:0"):
+        with tf.device("/cpu:0"):
             ret = tf.numpy_function(
                 self.neuron_step_math,
                 [signals.dt, J] + states,
@@ -101,7 +96,6 @@ class GenericNeuronBuilder(OpBuilder):
                 name=self.neuron_step_math.__name__,
             )
             neuron_out, state_out = ret[0], ret[1:]
-        self.prev_result = [neuron_out]
 
         neuron_out.set_shape((signals.minibatch_size,) + self.output_data.shape)
         signals.scatter(self.output_data, neuron_out)

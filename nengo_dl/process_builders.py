@@ -53,7 +53,6 @@ class GenericProcessBuilder(OpBuilder):
             for i in range(len(ops[0].state))
         ]
         self.mode = "inc" if ops[0].mode == "inc" else "update"
-        self.prev_result = []
 
         # build the step function for each process
         self.step_fs = [[None for _ in range(signals.minibatch_size)] for _ in ops]
@@ -106,10 +105,7 @@ class GenericProcessBuilder(OpBuilder):
         input = [] if self.input_data is None else [signals.gather(self.input_data)]
         state = [signals.gather(s) for s in self.state_data]
 
-        # note: we need to make sure that the previous call to this function
-        # has completed before the next starts, since we don't know that the
-        # functions are thread safe
-        with tf.control_dependencies(self.prev_result), tf.device("/cpu:0"):
+        with tf.device("/cpu:0"):
             result = tf.numpy_function(
                 self.merged_func,
                 time + input + state,
@@ -118,7 +114,6 @@ class GenericProcessBuilder(OpBuilder):
             )
             output = result[0]
             state = result[1:]
-        self.prev_result = [output]
 
         output.set_shape(self.output_data.full_shape)
         signals.scatter(self.output_data, output, mode=self.mode)

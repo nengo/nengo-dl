@@ -347,7 +347,13 @@ class TensorGraph(tf.keras.layers.Layer):
 
         # build stage
         with progress.sub("build stage", max_value=len(self.plan) * self.unroll) as sub:
-            self._build_loop(sub)
+            steps_run, probe_arrays, final_internal_state = self._build_loop(sub)
+
+        # store these so that they can be accessed after the initial build
+        with trackable.no_automatic_dependency_tracking_scope(self):
+            self.steps_run = steps_run
+            self.probe_arrays = probe_arrays
+            self.final_internal_state = final_internal_state
 
         # logging
         logger.info(
@@ -363,18 +369,12 @@ class TensorGraph(tf.keras.layers.Layer):
 
         # note: always return steps_run so that the simulation will run for the given
         # number of steps, even if there are no output probes
-        outputs = list(self.probe_arrays.values()) + [self.steps_run]
+        outputs = list(probe_arrays.values()) + [steps_run]
 
         if stateful:
             # update saved state
-            state_updates = [
+            for var, val in zip(self.saved_state.values(), final_internal_state):
                 var.assign(val)
-                for var, val in zip(
-                    self.saved_state.values(), self.final_internal_state
-                )
-            ]
-            with tf.control_dependencies(state_updates), tf.name_scope("save"):
-                outputs = [tf.identity(x) for x in outputs]
 
         return outputs
 
@@ -435,12 +435,23 @@ class TensorGraph(tf.keras.layers.Layer):
         ----------
         progress : `.utils.ProgressBar`
             Progress bar for loop construction
+
+        Returns
+        -------
+        steps_run : ``tf.Tensor``
+            The number of simulation steps that were executed.
+        probe_arrays : dict of {`nengo.Probe`: ``tf.Tensor``}
+            Arrays containing the output values for each Probe.
+        final_internal_state: list of ``tf.Tensor``
+            Tensors representing the value of all internal state at the end of the run.
         """
 
         def loop_condition(loop_i, n_steps, *_):
             return loop_i < n_steps
 
         def loop_body(loop_i, n_steps, probe_arrays, base_params, saved_state):
+            # TODO: avoid passing these variables into the loop
+            #  (should just be able to pull them in control flow v2 I think?)
             # fill in signals.bases (note: we need to do this here because we
             # need to use the tensors from inside the loop, not the source variables)
             for key, val in zip(self.saved_state.keys(), saved_state):
@@ -530,12 +541,9 @@ class TensorGraph(tf.keras.layers.Layer):
         )
 
         # change to shape (minibatch_size,) (required by keras) instead of a scalar
-        self.steps_run = tf.tile(
-            tf.expand_dims(loop_vars[0], 0), (self.minibatch_size,)
-        )
+        steps_run = tf.tile(tf.expand_dims(loop_vars[0], 0), (self.minibatch_size,))
 
-        with trackable.no_automatic_dependency_tracking_scope(self):
-            self.probe_arrays = OrderedDict()
+        probe_arrays = OrderedDict()
         for p, a in zip(self.model.probes, loop_vars[2]):
             x = a.stack()
 
@@ -548,9 +556,11 @@ class TensorGraph(tf.keras.layers.Layer):
                 # add minibatch dimension for consistency
                 x = tf.expand_dims(x, 0)
 
-            self.probe_arrays[p] = x
+            probe_arrays[p] = x
 
-        self.final_internal_state = loop_vars[4]
+        final_internal_state = loop_vars[4]
+
+        return steps_run, probe_arrays, final_internal_state
 
     @trackable.no_automatic_dependency_tracking
     def build_post(self):
