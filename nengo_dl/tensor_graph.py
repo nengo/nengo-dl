@@ -287,7 +287,7 @@ class TensorGraph(tf.keras.layers.Layer):
         Parameters
         ----------
         inputs : list of ``tf.Tensor``
-            Input placeholders for the network (must match the order defined in
+            Input layers/tensors for the network (must match the order defined in
             `.build_inputs`).
         training : bool
             Whether the network is being run in training or inference mode.

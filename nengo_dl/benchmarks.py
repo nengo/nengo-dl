@@ -3,13 +3,10 @@ Benchmark networks and utilities for evaluating NengoDL's performance.
 """
 
 import inspect
-import itertools
-import os
 import random
 import time
 
 import click
-import matplotlib.pyplot as plt
 import nengo
 import numpy as np
 import tensorflow as tf
@@ -553,97 +550,6 @@ def profile(obj, train, n_steps, batch_size, device, unroll, time_only):
         device=device,
         unroll_simulation=unroll,
     )
-
-
-@main.command()
-def matmul_vs_reduce():  # pragma: no cover
-    """
-    Compares two different approaches to batched matrix multiplication
-    (tf.matmul vs tf.multiply+tf.reduce_sum).
-
-    This is relevant for figuring out which approach is more efficient
-    on a given system for different matrix shapes (determining which method
-    we use in DotIncBuilder).
-    """
-
-    # a_shape = (n_ops, s0, s1, 1)
-    # x_shape = (n_ops, 1, s1, mini)
-    # for matmul we omit the 1 dimensions
-
-    a_c = tf_compat.placeholder(tf.float64, shape=(None, None, None), name="a_c")
-    x_c = tf_compat.placeholder(tf.float64, shape=(None, None, None), name="b_c")
-    a_d = tf_compat.placeholder(tf.float64, shape=(None, None, None, 1), name="a_d")
-    x_d = tf_compat.placeholder(tf.float64, shape=(None, 1, None, None), name="b_d")
-    c = tf.matmul(a_c, x_c)
-    d = tf.reduce_sum(input_tensor=tf.multiply(a_d, x_d), axis=-2)
-
-    reps = 100
-    n_ops_range = [1, 4, 8, 16, 32, 64]
-    mini_range = [1, 16, 32, 64, 128]
-    s0_range = [1, 64, 128, 192, 256]
-    s1_range = [1, 64, 128, 192, 256]
-
-    matmul_times = np.zeros(
-        (len(n_ops_range), len(mini_range), len(s0_range), len(s1_range))
-    )
-    reduce_times = np.zeros_like(matmul_times)
-
-    params = itertools.product(
-        enumerate(n_ops_range),
-        enumerate(mini_range),
-        enumerate(s0_range),
-        enumerate(s1_range),
-    )
-
-    with tf_compat.Session() as sess:
-        for (i, n_ops), (j, mini), (k, s0), (l, s1) in params:
-            print(n_ops, mini, s0, s1)
-
-            a_val = np.random.randn(n_ops, s0, s1, 1)
-            x_val = np.random.randn(n_ops, 1, s1, mini)
-
-            for r in range(reps + 3):
-                if r == 3:
-                    start = time.time()
-                c_val = sess.run(c, feed_dict={a_c: a_val[..., 0], x_c: x_val[:, 0]})
-            matmul_times[i, j, k, l] = (time.time() - start) / reps
-
-            for r in range(reps + 3):
-                if r == 3:
-                    start = time.time()
-                d_val = sess.run(d, feed_dict={a_d: a_val, x_d: x_val})
-            reduce_times[i, j, k, l] = (time.time() - start) / reps
-
-            assert np.allclose(c_val, d_val)
-
-    fig, ax = plt.subplots(len(n_ops_range), len(mini_range), sharex=True, sharey=True)
-
-    X, Y = np.meshgrid(s0_range, s1_range)
-    Z = matmul_times - reduce_times
-    v = np.sort(np.concatenate((np.linspace(np.min(Z), np.max(Z), 10), [0])))
-    for i, n_ops in enumerate(n_ops_range):
-        for j, mini in enumerate(mini_range):
-            cs = ax[i][j].contourf(X, Y, Z[i, j], v)
-            if i == 0:
-                ax[i][j].set_title("mini %d" % mini)
-            if j == 0:
-                ax[i][j].set_ylabel("ops %d" % n_ops)
-
-    DATA_DIR = os.path.join(os.path.dirname(nengo_dl.__file__), "..", "data")
-    np.savez(
-        os.path.join(DATA_DIR, "matmul_benchmarks"),
-        n_ops_range,
-        mini_range,
-        s0_range,
-        s1_range,
-        Z,
-    )
-
-    fig.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-    fig.colorbar(cs, cax=cbar_ax)
-
-    plt.show()
 
 
 if __name__ == "__main__":

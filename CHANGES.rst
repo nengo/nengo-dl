@@ -139,6 +139,8 @@ Release History
   https://github.com/tensorflow/tensorflow/issues/7397), but we no longer use this
   operation within NengoDL so we leave it up to the user to fix it in their own code
   if needed.
+- Removed ``benchmarks.matmul_vs_reduce``. We use matmul for everything now, so this
+  comparison is no longer necessary.
 
 2.2.2 (unreleased)
 ==================
