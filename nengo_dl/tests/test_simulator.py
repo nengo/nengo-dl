@@ -407,7 +407,7 @@ def test_train_no_data(Simulator):
         sim.compile(
             tf.optimizers.SGD(0.1), loss={p: lambda y_true, y_pred: abs(2.0 - y_pred)}
         )
-        sim.fit(n_steps=5, epochs=10)
+        sim.fit(n_steps=5, y=np.zeros((1, 5, 1)), epochs=10)
 
         sim.step()
         assert np.allclose(sim.data[p], 2)
@@ -505,6 +505,9 @@ def test_generate_inputs(Simulator, seed):
 
         with pytest.raises(SimulationError, match="automatically add n_steps"):
             sim._generate_inputs(data=range(5), n_steps=1)
+
+        with pytest.raises(ValidationError, match="not a valid input"):
+            sim._generate_inputs(data={p[0]: np.zeros((minibatch_size, n_steps, 1))})
 
 
 @pytest.mark.parametrize("include_internal", (True, False))
@@ -773,7 +776,7 @@ def test_profile(Simulator, mode, tmpdir):
         else:
             sim.compile(tf.optimizers.SGD(1), loss=tf.losses.mse)
             sim.fit(
-                {a: np.zeros((1, 5, 1)), p: np.zeros((1, 5, 1))}, callbacks=[callback]
+                {a: np.zeros((1, 5, 1))}, {p: np.zeros((1, 5, 1))}, callbacks=[callback]
             )
 
         assert os.path.exists(str(tmpdir.join("profile", "train")))
@@ -1462,7 +1465,7 @@ def test_synapse_warning(Simulator):
                     )
                 else:
                     sim.fit(n_steps=n_steps)
-        return any(str(w.message).startswith("Training for one timestep") for w in rec)
+        return any("contains synaptic filters" in str(w.message) for w in rec)
 
     # warning from connection
     assert does_warn()

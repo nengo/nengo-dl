@@ -63,7 +63,14 @@ def test_regularize_train(Simulator, mode, seed):
             tf.optimizers.RMSprop(0.01 if mode == "weights" else 0.1),
             loss={p: losses.Regularize(), default_p: lambda y_true, y_pred: 0 * y_pred},
         )
-        sim.fit(n_steps=5, epochs=100)
+        sim.fit(
+            n_steps=5,
+            y={
+                p: np.zeros((1, 5, p.size_in)),
+                default_p: np.zeros((1, 5, default_p.size_in)),
+            },
+            epochs=100,
+        )
 
         sim.step()
         assert np.allclose(sim.data[p], 0, atol=1e-2)

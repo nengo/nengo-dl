@@ -135,8 +135,14 @@ def test_evaluate(Simulator):
         assert np.allclose(loss["probe_loss"], 1)
         assert np.allclose(loss["probe_1_loss"], 1)
 
-        # default inputs/targets
-        loss = sim.evaluate(n_steps=n_steps)
+        # default inputs
+        loss = sim.evaluate(
+            y={
+                p0: np.zeros((minibatch_size, n_steps, 1)),
+                p1: np.zeros((minibatch_size, n_steps, 1)),
+            },
+            n_steps=n_steps,
+        )
         assert np.allclose(loss["loss"], 0)
         assert np.allclose(loss["probe_loss"], 0)
         assert np.allclose(loss["probe_1_loss"], 0)
