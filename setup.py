@@ -81,6 +81,7 @@ docs_req = [
 ]
 optional_req = []
 tests_req = [
+    "attrs<19.2.0",
     "click>=6.7",
     "codespell>=1.12.0",
     "matplotlib>=2.0.0,<3.1.0",
