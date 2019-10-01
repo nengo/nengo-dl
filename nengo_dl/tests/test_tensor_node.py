@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import TensorNode, configure_settings, tensor_layer
+from nengo_dl import TensorNode, Layer, configure_settings, tensor_layer
 from nengo_dl.compat import tf_compat
 
 
@@ -166,16 +166,14 @@ def test_tensor_layer(Simulator):
         inp = nengo.Node(np.arange(12))
 
         # check that connection arguments work
-        layer0 = tensor_layer(inp, tf.identity, transform=2)
+        layer0 = Layer(tf.identity)(inp, transform=2)
 
         assert isinstance(layer0, TensorNode)
         p0 = nengo.Probe(layer0)
 
         # check that arguments can be passed to layer function
-        layer1 = tensor_layer(
-            layer0,
-            partial(lambda x, axis: tf.reduce_sum(x, axis=axis), axis=1),
-            shape_in=(2, 6),
+        layer1 = Layer(partial(lambda x, axis: tf.reduce_sum(x, axis=axis), axis=1))(
+            layer0, shape_in=(2, 6)
         )
         assert layer1.size_out == 6
         p1 = nengo.Probe(layer1)
@@ -187,25 +185,23 @@ def test_tensor_layer(Simulator):
             def __call__(self, x):
                 return tf.reduce_sum(x, axis=self.axis)
 
-        layer1b = tensor_layer(layer0, TestFunc(axis=1), shape_in=(2, 6))
+        layer1b = Layer(TestFunc(axis=1))(layer0, shape_in=(2, 6))
         assert layer1b.size_out == 6
 
         # check that ensemble layers work
-        layer2 = tensor_layer(
-            layer1, nengo.RectifiedLinear(), gain=[1] * 6, bias=[-20] * 6
-        )
+        layer2 = Layer(nengo.RectifiedLinear())(layer1, gain=[1] * 6, bias=[-20] * 6)
         assert isinstance(layer2, nengo.ensemble.Neurons)
         assert np.allclose(layer2.ensemble.gain, 1)
         assert np.allclose(layer2.ensemble.bias, -20)
         p2 = nengo.Probe(layer2)
 
         # check that size_in can be inferred from transform
-        layer3 = tensor_layer(layer2, lambda x: x, transform=np.ones((1, 6)))
+        layer3 = Layer(lambda x: x)(layer2, transform=np.ones((1, 6)))
         assert layer3.size_in == 1
 
         # check that size_in can be inferred from shape_in
-        layer4 = tensor_layer(
-            layer3, lambda x: x, transform=nengo.dists.Uniform(-1, 1), shape_in=(2,)
+        layer4 = Layer(lambda x: x)(
+            layer3, transform=nengo.dists.Uniform(-1, 1), shape_in=(2,)
         )
         assert layer4.size_in == 2
 
@@ -239,15 +235,14 @@ def test_reuse_vars(Simulator, pytestconfig):
         node = TensorNode(MyLayer(), shape_in=(1,), pass_time=False)
         nengo.Connection(inp, node, synapse=None)
 
-        node2 = tensor_layer(
-            inp,
+        node2 = Layer(
             tf.keras.layers.Dense(
                 units=10,
                 use_bias=False,
                 kernel_initializer=tf_compat.initializers.constant(3),
                 dtype=pytestconfig.getoption("--dtype"),
-            ),
-        )
+            )
+        )(inp)
 
         p = nengo.Probe(node)
         p2 = nengo.Probe(node2)
@@ -272,3 +267,16 @@ def test_reuse_vars(Simulator, pytestconfig):
         assert tf.keras.backend.get_value(vars[0]) == 2
         assert vars[1].shape == (1, 10)
         assert np.allclose(tf.keras.backend.get_value(vars[1]), 3)
+
+
+def test_tensor_layer_deprecation(Simulator):
+    with nengo.Network() as net:
+        inp = nengo.Node([0])
+        with pytest.warns(DeprecationWarning, match="nengo_dl.Layer instead"):
+            out = tensor_layer(inp, lambda x: x + 1)
+        p = nengo.Probe(out)
+
+    with Simulator(net) as sim:
+        sim.run_steps(5)
+
+    assert np.allclose(sim.data[p], 1)

@@ -24,7 +24,7 @@ Release History
 
 **Added**
 
-- Keras ``Layer`` classes can now be used with ``nengo_dl.tensor_layer``.
+- Keras ``Layer`` classes can now be used with ``nengo_dl.Layer/tensor_layer``.
 - ``TensorGraph`` can now be used as a Keras ``Layer``.
 - Added ``Simulator.predict/evaluate/fit`` functions, which
   implement the Keras
@@ -101,6 +101,14 @@ Release History
   parameter Variables inside the Layer ``build`` method.
 - ``TensorNode`` now has an optional ``pass_time`` parameter which can be set to
   ``False`` to disable passing the current simulation time to the TensorNode function.
+- Added ``nengo_dl.Layer``. Similar to the old ``nengo_dl.tensor_layer``, this is a
+  wrapper for constructing TensorNodes, but it mimics the new ``tf.keras.layers.Layer``
+  API rather than the old ``tf.layers``.
+
+**Deprecated**
+
+- ``nengo_dl.tensor_layer`` has been deprecated. Use ``nengo_dl.Layer`` instead;
+  ``tensor_layer(x, func, **kwargs)`` is equivalent to ``Layer(func)(x, **kwargs)``.
 
 **Removed**
 

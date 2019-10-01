@@ -185,37 +185,28 @@ def mnist(use_tensor_layer=True):
             amplitude = 1
             synapse = None
 
-            x = nengo_dl.tensor_layer(
-                net.inp,
-                tf.keras.layers.Conv2D(filters=32, kernel_size=3),
-                shape_in=(28, 28, 1),
+            x = nengo_dl.Layer(tf.keras.layers.Conv2D(filters=32, kernel_size=3))(
+                net.inp, shape_in=(28, 28, 1)
             )
-            x = nengo_dl.tensor_layer(x, nengo_nl, **ensemble_params)
+            x = nengo_dl.Layer(nengo_nl)(x, **ensemble_params)
 
-            x = nengo_dl.tensor_layer(
-                x,
-                tf.keras.layers.Conv2D(filters=32, kernel_size=3),
-                shape_in=(26, 26, 32),
-                transform=amplitude,
+            x = nengo_dl.Layer(tf.keras.layers.Conv2D(filters=32, kernel_size=3))(
+                x, shape_in=(26, 26, 32), transform=amplitude
             )
-            x = nengo_dl.tensor_layer(x, nengo_nl, **ensemble_params)
+            x = nengo_dl.Layer(nengo_nl)(x, **ensemble_params)
 
-            x = nengo_dl.tensor_layer(
-                x,
-                tf.keras.layers.AveragePooling2D(pool_size=2, strides=2),
-                shape_in=(24, 24, 32),
-                synapse=synapse,
-                transform=amplitude,
+            x = nengo_dl.Layer(
+                tf.keras.layers.AveragePooling2D(pool_size=2, strides=2)
+            )(x, shape_in=(24, 24, 32), synapse=synapse, transform=amplitude)
+
+            x = nengo_dl.Layer(tf.keras.layers.Dense(units=128))(x)
+            x = nengo_dl.Layer(nengo_nl)(x, **ensemble_params)
+
+            x = nengo_dl.Layer(tf.keras.layers.Dropout(rate=0.4))(
+                x, transform=amplitude
             )
 
-            x = nengo_dl.tensor_layer(x, tf.keras.layers.Dense(units=128))
-            x = nengo_dl.tensor_layer(x, nengo_nl, **ensemble_params)
-
-            x = nengo_dl.tensor_layer(
-                x, tf.keras.layers.Dropout(rate=0.4), transform=amplitude
-            )
-
-            x = nengo_dl.tensor_layer(x, tf.keras.layers.Dense(units=10))
+            x = nengo_dl.Layer(tf.keras.layers.Dense(units=10))(x)
         else:
             nl = tf.nn.relu
 
