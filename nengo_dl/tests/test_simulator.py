@@ -241,6 +241,7 @@ def test_train_recurrent(Simulator, truncation, seed):
             #     verbose=2,
             # )
 
+            # TODO: why does this produce non-deterministic results?
             for _ in range(200):
                 for j in range(truncation_steps):
                     sim.fit(

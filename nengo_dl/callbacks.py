@@ -109,3 +109,53 @@ class TensorBoard(tf.keras.callbacks.TensorBoard):
     def on_predict_end(self, *args, **kwargs):
         """Redirect to training function."""
         self.on_train_end(*args, **kwargs)
+
+
+class IsolateState(tf.keras.callbacks.Callback):
+    """
+    Isolate the internal state of the simulation from any other stateful operations.
+
+    This will cause every batch to begin from the same initial state (the state of
+    the simulation whenever this callback is created). And when this operation
+    completes, the simulation state will be returned to that initial state.
+
+    Parameters
+    ----------
+    sim : `.Simulator`
+        The Simulator containing the state we want to control.
+    """
+
+    def __init__(self, sim):
+        super().__init__()
+
+        self.sim = sim
+        self.saved_state = (
+            None
+            if sim.n_steps == 0
+            else tf.keras.backend.batch_get_value(
+                list(sim.tensor_graph.saved_state.values())
+            )
+        )
+
+    def reset(self):
+        """Resets the simulation state to the saved state."""
+
+        if self.saved_state is None:
+            self.sim.soft_reset()
+        else:
+            tf.keras.backend.batch_set_value(
+                list(zip(self.sim.tensor_graph.saved_state.values(), self.saved_state))
+            )
+            self.sim._update_steps()
+
+    def on_train_batch_end(self, batch, logs=None):
+        """Reset state at the end of each batch."""
+        self.reset()
+
+    def on_predict_batch_end(self, batch, logs=None):
+        """Reset state at the end of each batch."""
+        self.reset()
+
+    def on_test_batch_end(self, batch, logs=None):
+        """Reset state at the end of each batch."""
+        self.reset()

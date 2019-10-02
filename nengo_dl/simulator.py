@@ -27,7 +27,7 @@ from nengo.version import version_info as nengo_version
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl import utils, config
+from nengo_dl import utils, config, callbacks
 from nengo_dl.builder import NengoBuilder, NengoModel
 from nengo_dl.compat import Convolution, add_state_signal
 from nengo_dl.tensor_graph import TensorGraph
@@ -101,9 +101,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
         Built Nengo model, containing the data that defines the network to be simulated.
     keras_model : ``tf.keras.Model``
         Keras Model underlying the simulation (implements the inference/training loops).
-    keras_model_stateful : ``tf.Keras.Model``
-        The same as ``keras_model``, but calling ``predict``/``evaluate``/``fit`` on
-        this model will also update the simulation's internal state.
     tensor_graph : `.tensor_graph.TensorGraph`
         Keras Layer implementing the Nengo simulation (built into ``keras_model``).
     """
@@ -204,22 +201,17 @@ class Simulator:  # pylint: disable=too-many-public-methods
         inputs = list(self.node_inputs.values()) + [n_steps]
 
         self.keras_model = tf.keras.Model(
-            inputs=inputs, outputs=self.tensor_graph(inputs), name="keras_model"
-        )
-
-        self.keras_model_stateful = tf.keras.Model(
             inputs=inputs,
             outputs=self.tensor_graph(inputs, stateful=True),
-            name="keras_model_stateful",
+            name="keras_model",
         )
 
         # set more informative output names
         # keras names them like LayerName_i, whereas we would like to have the names
         # associated with the probes
-        for model in (self.keras_model, self.keras_model_stateful):
-            model.output_names = [
-                self.tensor_graph.io_names[p] for p in self.model.probes
-            ] + ["steps_run"]
+        self.keras_model.output_names = [
+            self.tensor_graph.io_names[p] for p in self.model.probes
+        ] + ["steps_run"]
 
     @require_open
     @with_self
@@ -415,13 +407,19 @@ class Simulator:  # pylint: disable=too-many-public-methods
         probe_values : dict of {`nengo.Probe`: `numpy.ndarray`}
             Output values from all the Probes in the network.
         """
-        return self._predict(
-            "predict_on_batch",
-            x=x,
-            n_steps=n_steps,
-            update_state=update_state,
-            **kwargs,
+
+        # predict_on_batch doesn't support callbacks, so we do it manually
+        if not update_state:
+            cbk = callbacks.IsolateState(self)
+
+        output = self._predict(
+            "predict_on_batch", x=x, n_steps=n_steps, update_state=True, **kwargs
         )
+
+        if not update_state:
+            cbk.reset()
+
+        return output
 
     @require_open
     def predict_generator(self, generator, update_state=False, **kwargs):
@@ -501,9 +499,13 @@ class Simulator:  # pylint: disable=too-many-public-methods
             batch_size=None if predict_type == "predict" else self.minibatch_size,
         )
 
+        if not update_state:
+            kwargs["callbacks"] = (kwargs.get("callbacks", None) or []) + [
+                callbacks.IsolateState(self)
+            ]
+
         # call predict function
-        model = self.keras_model_stateful if update_state else self.keras_model
-        outputs = getattr(model, predict_type)(inputs, **kwargs)
+        outputs = getattr(self.keras_model, predict_type)(inputs, **kwargs)
 
         # reorganize results (will be flattened) back into dict
         if not isinstance(outputs, list):
@@ -568,10 +570,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
         )
         loss_weights = self._standardize_data(loss_weights, self.model.probes)
 
-        for model in (self.keras_model, self.keras_model_stateful):
-            model.compile(
-                *args, loss=loss, metrics=metrics, loss_weights=loss_weights, **kwargs
-            )
+        self.keras_model.compile(
+            *args, loss=loss, metrics=metrics, loss_weights=loss_weights, **kwargs
+        )
 
     @require_open
     def fit(self, x=None, y=None, n_steps=None, update_state=False, **kwargs):
@@ -892,8 +893,12 @@ class Simulator:  # pylint: disable=too-many-public-methods
             input_batch = None
         self._check_data(y, n_steps=input_steps, batch_size=input_batch, nodes=False)
 
-        model = self.keras_model_stateful if update_state else self.keras_model
-        func = getattr(model, func_type)
+        if not update_state:
+            kwargs["callbacks"] = (kwargs.get("callbacks", None) or []) + [
+                callbacks.IsolateState(self)
+            ]
+
+        func = getattr(self.keras_model, func_type)
         if "generator" in func_type:
             outputs = func(generator=x, **kwargs)
         else:
@@ -901,7 +906,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         if func_type.startswith("evaluate"):
             # return outputs as named dict
-            return dict(zip(model.metrics_names, outputs))
+            return dict(zip(self.keras_model.metrics_names, outputs))
         else:
             # return training history
             return outputs
@@ -1359,6 +1364,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
             Absolute error tolerance
         rtol : float
             Relative (to numeric grad) error tolerance
+
+        Notes
+        -----
+        Calling this method will reset the internal simulation state.
         """
 
         if self.tensor_graph.inference_only:
@@ -1392,6 +1401,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
             out = self.keras_model(args, training=True)
             self.tensor_graph.build_post()
 
+            # reset state
+            for key, var in self.tensor_graph.saved_state.items():
+                var.assign(self.tensor_graph.base_arrays_init[False][key])
+
             # drop steps_run
             out = out[:-1]
 
@@ -1399,6 +1412,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
             out = out[self.model.probes.index(output)]
 
             return out
+
+        self.soft_reset()
 
         grads = dict()
         for output in outputs:
@@ -1466,7 +1481,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         if not self.closed:
             del self.keras_model
-            del self.keras_model_stateful
             del self.tensor_graph
 
             self.closed = True
