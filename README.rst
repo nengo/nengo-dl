@@ -61,7 +61,7 @@ adds a number of unique features, such as:
   training methods
 - faster simulation speed, on both CPU and GPU
 - inserting networks defined using TensorFlow (such as
-  convolutional neural networks) directly into a Nengo model
+  deep learning architectures) directly into a Nengo model
 
 **Documentation**
 
