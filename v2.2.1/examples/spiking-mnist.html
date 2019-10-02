@@ -1,0 +1,1320 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Optimizing spiking neural networks &#8212; NengoDL 2.2.1 docs</title>
+    <link rel="stylesheet" href="../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+<link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,400i,600|Rajdhani:700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
+<link rel="stylesheet" href="https://www.nengo.ai/css/bootstrap.css" type="text/css">
+<style>
+  body .title-bar,
+  body .documentation-source h1:after {
+    background-color: #ff6600;
+  }
+</style>
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-41658423-2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'UA-41658423-2');
+</script>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/scrollreveal"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stickyfill/2.1.0/stickyfill.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+<!-- From basic/layout.html -->
+<script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+  
+  
+<script type="text/javascript" src="../_static/underscore.js"></script>
+  
+  
+<script type="text/javascript" src="../_static/doctools.js"></script>
+  
+  
+<script type="text/javascript" src="../_static/language_data.js"></script>
+  
+  
+<script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+  
+  
+<script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+  
+<script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+  
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Optimizing a cognitive model" href="spa-retrieval.html" />
+    <link rel="prev" title="Inserting a TensorFlow/Keras network into a Nengo model" href="tensorflow-models.html" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  </head><body class="bg-dark">
+
+<header class="fixed-top header-top shadow-sm">
+  <nav class="navbar navbar-expand-md navbar-light bg-white">
+    <a class="navbar-brand" href="https://www.nengo.ai/">
+      <img
+        src="https://www.nengo.ai/design/_images/general-full-light.svg"
+        alt="Nengo"
+        class="logo"
+      />
+    </a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-toggle="collapse"
+      data-target="#navbar-collapse"
+      aria-controls="navbar-collapse"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-collapse">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/">What is Nengo?</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/examples/">Examples</a>
+        </li>
+        <li class="nav-item dropdown active">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-docs"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Documentation</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-docs"
+          >
+            
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo/">Nengo Core</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-gui/">Nengo GUI</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-dl/">Nengo DL</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-spa/">Nengo SPA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-extras/">Nengo Extras</a>
+            <a class="dropdown-item" href="https://arvoelke.github.io/nengolib-docs/">Nengolib</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-fpga/">Nengo FPGA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-loihi/">Nengo Loihi</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-ocl">Nengo OpenCL</a>
+            <a class="dropdown-item" href="https://github.com/project-rig/nengo_spinnaker">Nengo SpiNNaker</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-mpi">Nengo MPI</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/documentation/"
+              >All documentation</a
+            >
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-community"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Community</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-community"
+          >
+            <a class="dropdown-item" href="https://forum.nengo.ai">Forum</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/people/"
+              >People</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/summer-school/"
+              >Summer school</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/contributing/"
+              >Contributing</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/publications/"
+              >Publications</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/videos/"
+              >Videos</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/conduct/"
+              >Code of conduct</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/caa/">CAA</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link btn btn-success btn-sm text-white"
+            href="https://www.nengo.ai/getting-started/"
+            >Getting started</a
+          >
+        </li>
+      </ul>
+    </div>
+  </nav>
+</header>
+<div class="main-content gradient-top">
+  <div class="container-fluid">
+    <div class="row"><a class="toggle-sidenav d-block d-md-none" href="#"
+  ><i class="icon-close fa fa-fw fa-arrow-left"></i
+  ><i class="icon-open fa fa-fw fa-arrow-right"></i
+></a>
+<div role="complementary" class="sidenav col-4 col-xl-3 p-0 border-right">
+  <h3 class="pt-5 px-5">
+    <a href="../index.html">
+      <img
+        class="img-fluid documentation-image"
+        src="https://www.nengo.ai/design/_images/nengo-dl-full-light.svg"
+        alt="NengoDL"
+      />
+    </a>
+  </h3>
+  
+  <form class="px-5 pb-5 mb-0 mt-3 border-bottom">
+    <div class="form-group">
+      <label class="text-gray">Version:</label>
+      <select class="custom-select" onchange="switchVersion(this);">
+        
+        
+        <option value="../../examples/spiking-mnist.html">latest</option>
+        
+        
+          
+        <option selected>v2.2.1</option>
+          
+        
+          
+        <option value="../../v2.2.0/examples/spiking-mnist.html">
+          v2.2.0
+        </option>
+          
+        
+          
+        <option value="../../v2.1.1/examples/spiking-mnist.html">
+          v2.1.1
+        </option>
+          
+        
+          
+        <option value="../../v2.1.0/examples/spiking-mnist.html">
+          v2.1.0
+        </option>
+          
+        
+          
+        <option value="../../v2.0.0/examples/spiking-mnist.html">
+          v2.0.0
+        </option>
+          
+        
+          
+        <option value="../../v1.2.1/examples/spiking-mnist.html">
+          v1.2.1
+        </option>
+          
+        
+          
+        <option value="../../v1.2.0/examples/spiking-mnist.html">
+          v1.2.0
+        </option>
+          
+        
+          
+        <option value="../../v1.1.0/examples/spiking-mnist.html">
+          v1.1.0
+        </option>
+          
+        
+          
+        <option value="../../v1.0.0/examples/spiking-mnist.html">
+          v1.0.0
+        </option>
+          
+        
+          
+        <option value="../../v0.6.2/examples/spiking-mnist.html">
+          v0.6.2
+        </option>
+          
+        
+          
+        <option value="../../v0.6.1/examples/spiking-mnist.html">
+          v0.6.1
+        </option>
+          
+        
+          
+        <option value="../../v0.6.0/examples/spiking-mnist.html">
+          v0.6.0
+        </option>
+          
+        
+          
+        <option value="../../v0.5.2/examples/spiking-mnist.html">
+          v0.5.2
+        </option>
+          
+        
+          
+        <option value="../../v0.5.1/examples/spiking-mnist.html">
+          v0.5.1
+        </option>
+          
+        
+          
+        <option value="../../v0.5.0/examples/spiking-mnist.html">
+          v0.5.0
+        </option>
+          
+        
+          
+        <option value="../../v0.4.0/examples/spiking-mnist.html">
+          v0.4.0
+        </option>
+          
+        
+          
+        <option value="../../v0.3.1/examples/spiking-mnist.html">
+          v0.3.1
+        </option>
+          
+        
+          
+        <option value="../../v0.3.0/examples/spiking-mnist.html">
+          v0.3.0
+        </option>
+          
+        
+          
+        <option value="../../v0.2.0/examples/spiking-mnist.html">
+          v0.2.0
+        </option>
+          
+        
+      </select>
+    </div>
+  </form>
+  
+  <div class="p-5 toctree">
+    <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user-guide.html">User guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference.html">API reference</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="from-nengo.html">Coming from Nengo to NengoDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="from-tensorflow.html">Coming from TensorFlow to NengoDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tensorflow-models.html">Inserting a TensorFlow/Keras network into a Nengo model</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Optimizing spiking neural networks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spa-retrieval.html">Optimizing a cognitive model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spa-memory.html">Optimizing a cognitive model with temporal dynamics</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../project.html">Project information</a></li>
+</ul>
+
+  </div>
+<form class="p-5 my-0 border-top" action="../search.html" method="get">
+  <div class="form-group form-group-single">
+    <input type="text" name="q" class="form-control" placeholder="Search" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+    <button type="submit" class="btn btn-link">
+      <img src="https://www.nengo.ai/img/icon-search.svg" alt="Go" />
+    </button>
+  </div>
+</form></div>
+      
+
+      <div class="col-12 col-md-8 col-xl-9">
+        <div class="container">
+          <div class="row">
+            <div class="col-10 offset-1 pb-5 documentation-source" role="main">
+              
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
+div.nboutput,
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput div.prompt pre {
+    color: #307FC1;
+}
+
+/* output prompt */
+div.nboutput div.prompt pre {
+    color: #BF5B3D;
+}
+
+/* all prompts */
+div.nbinput div.prompt,
+div.nboutput div.prompt {
+    min-width: 7ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput div.input_area,
+div.nboutput div.output_area {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput div.input_area {
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    background: #f5f5f5;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+div.rendered_html th {
+  font-weight: bold;
+}
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+</style>
+<div class="section" id="Optimizing-spiking-neural-networks">
+<h1>Optimizing spiking neural networks<a class="headerlink" href="#Optimizing-spiking-neural-networks" title="Permalink to this headline">¶</a></h1>
+<p>Almost all deep learning methods are based on <a class="reference external" href="https://en.wikipedia.org/wiki/Gradient_descent">gradient descent</a>, which means that the network being optimized needs to be differentiable. Deep neural networks are usually built using rectified linear or sigmoid neurons, as these are differentiable nonlinearities. However, in biological neural modelling we often want to use spiking neurons, which are not differentiable. So the challenge is how to apply deep learning methods to spiking neural
+networks.</p>
+<p>A method for accomplishing this is presented in <a class="reference external" href="https://arxiv.org/abs/1611.05141">Hunsberger and Eliasmith (2016)</a>. The basic idea is to use a differentiable approximation of the spiking neurons during the training process, and the actual spiking neurons during inference. NengoDL will perform these transformations automatically if the user tries to optimize a model containing a spiking neuron model that has an equivalent, differentiable rate-based implementation. In this example we will use
+these techniques to develop a network to classify handwritten digits (<a class="reference external" href="http://yann.lecun.com/exdb/mnist/">MNIST</a>) in a spiking convolutional network.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+
+<span class="kn">import</span> <span class="nn">gzip</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">from</span> <span class="nn">urllib.request</span> <span class="k">import</span> <span class="n">urlretrieve</span>
+<span class="kn">import</span> <span class="nn">zipfile</span>
+
+<span class="kn">import</span> <span class="nn">nengo</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="kn">import</span> <span class="nn">nengo_dl</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorflow/python/framework/dtypes.py:516: FutureWarning: Passing (type, 1) or &#39;1type&#39; as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / &#39;(1,)type&#39;.
+  _np_qint8 = np.dtype([(&#34;qint8&#34;, np.int8, 1)])
+/home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorflow/python/framework/dtypes.py:517: FutureWarning: Passing (type, 1) or &#39;1type&#39; as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / &#39;(1,)type&#39;.
+  _np_quint8 = np.dtype([(&#34;quint8&#34;, np.uint8, 1)])
+/home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorflow/python/framework/dtypes.py:518: FutureWarning: Passing (type, 1) or &#39;1type&#39; as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / &#39;(1,)type&#39;.
+  _np_qint16 = np.dtype([(&#34;qint16&#34;, np.int16, 1)])
+/home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorflow/python/framework/dtypes.py:519: FutureWarning: Passing (type, 1) or &#39;1type&#39; as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / &#39;(1,)type&#39;.
+  _np_quint16 = np.dtype([(&#34;quint16&#34;, np.uint16, 1)])
+/home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorflow/python/framework/dtypes.py:520: FutureWarning: Passing (type, 1) or &#39;1type&#39; as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / &#39;(1,)type&#39;.
+  _np_qint32 = np.dtype([(&#34;qint32&#34;, np.int32, 1)])
+/home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorflow/python/framework/dtypes.py:525: FutureWarning: Passing (type, 1) or &#39;1type&#39; as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / &#39;(1,)type&#39;.
+  np_resource = np.dtype([(&#34;resource&#34;, np.ubyte, 1)])
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/compat.py:26: The name tf.random_uniform is deprecated. Please use tf.random.uniform instead.
+
+WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/__init__.py:38: The name tf.logging.set_verbosity is deprecated. Please use tf.compat.v1.logging.set_verbosity instead.
+
+WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/__init__.py:38: The name tf.logging.WARN is deprecated. Please use tf.compat.v1.logging.WARN instead.
+
+WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/__init__.py:43: The name tf.disable_v2_behavior is deprecated. Please use tf.compat.v1.disable_v2_behavior instead.
+
+WARNING:tensorflow:From /home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorflow/python/compat/v2_compat.py:61: disable_resource_variables (from tensorflow.python.ops.variable_scope) is deprecated and will be removed in a future version.
+Instructions for updating:
+non-resource variables are not supported in the long term
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorboard/compat/tensorflow_stub/dtypes.py:541: FutureWarning: Passing (type, 1) or &#39;1type&#39; as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / &#39;(1,)type&#39;.
+  _np_qint8 = np.dtype([(&#34;qint8&#34;, np.int8, 1)])
+/home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorboard/compat/tensorflow_stub/dtypes.py:542: FutureWarning: Passing (type, 1) or &#39;1type&#39; as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / &#39;(1,)type&#39;.
+  _np_quint8 = np.dtype([(&#34;quint8&#34;, np.uint8, 1)])
+/home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorboard/compat/tensorflow_stub/dtypes.py:543: FutureWarning: Passing (type, 1) or &#39;1type&#39; as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / &#39;(1,)type&#39;.
+  _np_qint16 = np.dtype([(&#34;qint16&#34;, np.int16, 1)])
+/home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorboard/compat/tensorflow_stub/dtypes.py:544: FutureWarning: Passing (type, 1) or &#39;1type&#39; as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / &#39;(1,)type&#39;.
+  _np_quint16 = np.dtype([(&#34;quint16&#34;, np.uint16, 1)])
+/home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorboard/compat/tensorflow_stub/dtypes.py:545: FutureWarning: Passing (type, 1) or &#39;1type&#39; as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / &#39;(1,)type&#39;.
+  _np_qint32 = np.dtype([(&#34;qint32&#34;, np.int32, 1)])
+/home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorboard/compat/tensorflow_stub/dtypes.py:550: FutureWarning: Passing (type, 1) or &#39;1type&#39; as a synonym of type is deprecated; in a future version of numpy, it will be understood as (type, (1,)) / &#39;(1,)type&#39;.
+  np_resource = np.dtype([(&#34;resource&#34;, np.ubyte, 1)])
+</pre></div></div>
+</div>
+<p>First we’ll load the training data, the MNIST digits/labels.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">urlretrieve</span><span class="p">(</span><span class="s2">&quot;http://deeplearning.net/data/mnist/mnist.pkl.gz&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;mnist.pkl.gz&quot;</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;mnist.pkl.gz&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">train_data</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">test_data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;latin1&quot;</span><span class="p">)</span>
+<span class="n">train_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span>
+<span class="n">test_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">test_data</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="p">(</span><span class="n">train_data</span><span class="p">,</span> <span class="n">test_data</span><span class="p">):</span>
+    <span class="n">one_hot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">10</span><span class="p">))</span>
+    <span class="n">one_hot</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">one_hot</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">],</span> <span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)),</span>
+               <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;gray&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">i</span><span class="p">])));</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking-mnist_3_0.png" src="../_images/examples_spiking-mnist_3_0.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking-mnist_3_1.png" src="../_images/examples_spiking-mnist_3_1.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking-mnist_3_2.png" src="../_images/examples_spiking-mnist_3_2.png" />
+</div>
+</div>
+<p>We will use <a class="reference external" href="https://www.nengo.ai/nengo-dl/tensor_node.html">TensorNodes</a> to construct the network, as they allow us to easily include features such as convolutional connections. To make things even easier, we’ll use <code class="docutils literal notranslate"><span class="pre">nengo_dl.tensor_layer</span></code>. This is a utility function for constructing <code class="docutils literal notranslate"><span class="pre">TensorNodes</span></code> that mimics the layer-based syntax of many deep learning packages (e.g. <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/layers">tf.layers</a>). The full documentation for this function can be
+found <a class="reference external" href="https://www.nengo.ai/nengo-dl/tensor_node.html">here</a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> is used to build a sequence of layers, where each layer takes the output of the previous layer and applies some transformation to it. So when we build a <code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> we pass it the input to the layer, the transformation we want to apply (expressed as a function that accepts a <code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> as input and produces a <code class="docutils literal notranslate"><span class="pre">tf.Tensor</span></code> as output), and any arguments to that transformation function. <code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> also has optional <code class="docutils literal notranslate"><span class="pre">transform</span></code> and <code class="docutils literal notranslate"><span class="pre">synapse</span></code> parameters that set
+those respective values on the Connection from the previous layer to the one being constructed.</p>
+<p>Normally all signals in a Nengo model are (batched) vectors. However, certain layer functions, such as convolutional layers, may expect a different shape for their inputs. If the <code class="docutils literal notranslate"><span class="pre">shape_in</span></code> argument is specified for a <code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> then the inputs to the layer will automatically be reshaped to the given shape. Note that this shape does not include the batch dimension on the first axis, as that will be automatically set by the simulation.</p>
+<p><code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> can also be passed a Nengo NeuronType, instead of a Tensor function. In this case <code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> will construct an Ensemble implementing the given neuron nonlinearity (the rest of the arguments work the same).</p>
+<p>Note that <code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> is just a syntactic wrapper for constructing <code class="docutils literal notranslate"><span class="pre">TensorNodes</span></code> or <code class="docutils literal notranslate"><span class="pre">Ensembles</span></code>; anything we build with a <code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> we could instead construct directly using those underlying components. <code class="docutils literal notranslate"><span class="pre">tensor_layer</span></code> just simplifies the construction of this common layer-based pattern.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="c1"># set some default parameters for the neurons that will make</span>
+    <span class="c1"># the training progress more smoothly</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">max_rates</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">dists</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span><span class="mi">100</span><span class="p">])</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">intercepts</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">dists</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">neuron_type</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">LIF</span><span class="p">(</span><span class="n">amplitude</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+
+    <span class="c1"># we&#39;ll make all the nengo objects in the network</span>
+    <span class="c1"># non-trainable. we could train them if we wanted, but they don&#39;t</span>
+    <span class="c1"># add any representational power. note that this doesn&#39;t affect</span>
+    <span class="c1"># the internal components of tensornodes, which will always be</span>
+    <span class="c1"># trainable or non-trainable depending on the code written in</span>
+    <span class="c1"># the tensornode.</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># the input node that will be used to feed in input images</span>
+    <span class="n">inp</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">28</span> <span class="o">*</span> <span class="mi">28</span><span class="p">)</span>
+
+    <span class="c1"># add the first convolutional layer</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span>
+        <span class="n">inp</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">,</span> <span class="n">shape_in</span><span class="o">=</span><span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">filters</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+        <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+    <span class="c1"># apply the neural nonlinearity</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">neuron_type</span><span class="p">)</span>
+
+    <span class="c1"># add another convolutional layer</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">,</span> <span class="n">shape_in</span><span class="o">=</span><span class="p">(</span><span class="mi">26</span><span class="p">,</span> <span class="mi">26</span><span class="p">,</span> <span class="mi">32</span><span class="p">),</span>
+        <span class="n">filters</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">neuron_type</span><span class="p">)</span>
+
+    <span class="c1"># add a pooling layer</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">average_pooling2d</span><span class="p">,</span> <span class="n">shape_in</span><span class="o">=</span><span class="p">(</span><span class="mi">24</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">64</span><span class="p">),</span>
+        <span class="n">pool_size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">strides</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># another convolutional layer</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">,</span> <span class="n">shape_in</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">64</span><span class="p">),</span>
+        <span class="n">filters</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">neuron_type</span><span class="p">)</span>
+
+    <span class="c1"># another pooling layer</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">average_pooling2d</span><span class="p">,</span> <span class="n">shape_in</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span>
+        <span class="n">pool_size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">strides</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># linear readout</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+    <span class="c1"># we&#39;ll create two different output probes, one with a filter</span>
+    <span class="c1"># (for when we&#39;re simulating the network over time and</span>
+    <span class="c1"># accumulating spikes), and one without (for when we&#39;re</span>
+    <span class="c1"># training the network using a rate-based approximation)</span>
+    <span class="n">out_p</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">out_p_filt</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">synapse</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/tensor_node.py:366: conv2d (from tensorflow.python.layers.convolutional) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use `tf.keras.layers.Conv2D` instead.
+WARNING:tensorflow:From /home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorflow/python/ops/init_ops.py:1251: calling VarianceScaling.__init__ (from tensorflow.python.ops.init_ops) with dtype is deprecated and will be removed in a future version.
+Instructions for updating:
+Call initializer instance with the dtype argument instead of passing it to the constructor
+WARNING:tensorflow:Entity &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baafdf60&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baafdf60&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+WARNING: Entity &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baafdf60&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baafdf60&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+WARNING:tensorflow:Entity &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baa37978&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baa37978&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+WARNING: Entity &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baa37978&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baa37978&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/tensor_node.py:366: average_pooling2d (from tensorflow.python.layers.pooling) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use keras.layers.AveragePooling2D instead.
+WARNING:tensorflow:Entity &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8ba9e6c88&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8ba9e6c88&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+WARNING: Entity &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8ba9e6c88&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8ba9e6c88&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+WARNING:tensorflow:Entity &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baafda58&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baafda58&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+WARNING: Entity &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baafda58&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baafda58&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+WARNING:tensorflow:Entity &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8baa542e8&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8baa542e8&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+WARNING: Entity &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8baa542e8&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8baa542e8&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/tensor_node.py:366: dense (from tensorflow.python.layers.core) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use keras.layers.dense instead.
+WARNING:tensorflow:Entity &lt;bound method Dense.call of &lt;tensorflow.python.layers.core.Dense object at 0x7fd8baa9fd30&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Dense.call of &lt;tensorflow.python.layers.core.Dense object at 0x7fd8baa9fd30&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+WARNING: Entity &lt;bound method Dense.call of &lt;tensorflow.python.layers.core.Dense object at 0x7fd8baa9fd30&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Dense.call of &lt;tensorflow.python.layers.core.Dense object at 0x7fd8baa9fd30&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+</pre></div></div>
+</div>
+<p>Next we can construct a Simulator for that network.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">200</span>
+<span class="n">sim</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Build finished in 0:00:00
+| #               Optimizing graph: creating signals                  | 0:00:00
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/home/travis/build/nengo/nengo-dl/nengo_dl/simulator.py:102: UserWarning: No GPU support detected. It is recommended that you install tensorflow-gpu (`pip install tensorflow-gpu`).
+  &#34;No GPU support detected. It is recommended that you &#34;
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Optimization finished in 0:00:01
+WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/simulator.py:160: The name tf.set_random_seed is deprecated. Please use tf.compat.v1.set_random_seed instead.
+
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/simulator.py:160: The name tf.set_random_seed is deprecated. Please use tf.compat.v1.set_random_seed instead.
+
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+|#                        Constructing graph                          | 0:00:00WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/tensor_graph.py:200: The name tf.placeholder is deprecated. Please use tf.compat.v1.placeholder instead.
+
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/tensor_graph.py:200: The name tf.placeholder is deprecated. Please use tf.compat.v1.placeholder instead.
+
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/tensor_graph.py:205: The name tf.train.get_or_create_global_step is deprecated. Please use tf.compat.v1.train.get_or_create_global_step instead.
+
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/tensor_graph.py:205: The name tf.train.get_or_create_global_step is deprecated. Please use tf.compat.v1.train.get_or_create_global_step instead.
+
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+|         Constructing graph: creating base arrays (0%)        | ETA:  --:--:--WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/tensor_graph.py:234: The name tf.variable_scope is deprecated. Please use tf.compat.v1.variable_scope instead.
+
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/tensor_graph.py:234: The name tf.variable_scope is deprecated. Please use tf.compat.v1.variable_scope instead.
+
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+|######        Constructing graph: build stage (9%)              | ETA: 0:00:03WARNING:tensorflow:Entity &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8b94d5a90&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8b94d5a90&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:Entity &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8b94d5a90&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8b94d5a90&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING: Entity &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8b94d5a90&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8b94d5a90&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+|############  Constructing graph: build stage (19%)             | ETA: 0:00:01WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/neuron_builders.py:348: add_dispatch_support.&lt;locals&gt;.wrapper (from tensorflow.python.ops.array_ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use tf.where in 2.0, which has the same broadcast rule as np.where
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/neuron_builders.py:348: add_dispatch_support.&lt;locals&gt;.wrapper (from tensorflow.python.ops.array_ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use tf.where in 2.0, which has the same broadcast rule as np.where
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+|##############Constructing graph: build stage (29%)             | ETA: 0:00:02
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:Entity &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8b9399e10&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8b9399e10&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING: Entity &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8b9399e10&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8b9399e10&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+|##############Constructing graph: build stage (48%)             | ETA: 0:00:01WARNING:tensorflow:Entity &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8d930ba20&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8d930ba20&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:Entity &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8d930ba20&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8d930ba20&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING: Entity &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8d930ba20&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8d930ba20&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+|##############Constructing graph: build stage (58%)             | ETA: 0:00:00WARNING:tensorflow:Entity &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baf95b70&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baf95b70&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:Entity &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baf95b70&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baf95b70&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING: Entity &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baf95b70&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Conv.call of &lt;tensorflow.python.layers.convolutional.Conv2D object at 0x7fd8baf95b70&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+|##############Constructing graph: build stage (77%)             | ETA: 0:00:00WARNING:tensorflow:Entity &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8b9215ef0&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8b9215ef0&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:Entity &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8b9215ef0&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8b9215ef0&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING: Entity &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8b9215ef0&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Pooling2D.call of &lt;tensorflow.python.layers.pooling.AveragePooling2D object at 0x7fd8b9215ef0&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+|##############Constructing graph: build stage (87%)####         | ETA: 0:00:00WARNING:tensorflow:Entity &lt;bound method Dense.call of &lt;tensorflow.python.layers.core.Dense object at 0x7fd8b91b9240&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Dense.call of &lt;tensorflow.python.layers.core.Dense object at 0x7fd8b91b9240&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:Entity &lt;bound method Dense.call of &lt;tensorflow.python.layers.core.Dense object at 0x7fd8b91b9240&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Dense.call of &lt;tensorflow.python.layers.core.Dense object at 0x7fd8b91b9240&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING: Entity &lt;bound method Dense.call of &lt;tensorflow.python.layers.core.Dense object at 0x7fd8b91b9240&gt;&gt; could not be transformed and will be executed as-is. Please report this to the AutgoGraph team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output. Cause: converting &lt;bound method Dense.call of &lt;tensorflow.python.layers.core.Dense object at 0x7fd8b91b9240&gt;&gt;: AssertionError: Bad argument number for Name: 3, expecting 4
+Construction finished in 0:00:02
+</pre></div></div>
+</div>
+<p>Now we need to train this network to classify MNIST digits. First we load our input images and target labels.</p>
+<p>We need to incorporate time into this data, since Nengo models (and spiking neural networks in general) always run over time. When training the model we’ll be using a rate-based approximation, so we can run that for a single timestep. But when testing the model we’ll be using the spiking neuron models, so we need to run the model for multiple timesteps in order to collect the spike data over time.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># add the single timestep to the training data</span>
+<span class="n">train_data</span> <span class="o">=</span> <span class="p">{</span><span class="n">inp</span><span class="p">:</span> <span class="n">train_data</span><span class="p">[</span><span class="mi">0</span><span class="p">][:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:],</span>
+              <span class="n">out_p</span><span class="p">:</span> <span class="n">train_data</span><span class="p">[</span><span class="mi">1</span><span class="p">][:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]}</span>
+
+<span class="c1"># when testing our network with spiking neurons we will need to run it</span>
+<span class="c1"># over time, so we repeat the input/target data for a number of</span>
+<span class="c1"># timesteps. we&#39;re also going to reduce the number of test images, just</span>
+<span class="c1"># to speed up this example.</span>
+<span class="n">n_steps</span> <span class="o">=</span> <span class="mi">30</span>
+<span class="n">test_data</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">inp</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">test_data</span><span class="p">[</span><span class="mi">0</span><span class="p">][:</span><span class="n">minibatch_size</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:],</span>
+                 <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>
+    <span class="n">out_p_filt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">test_data</span><span class="p">[</span><span class="mi">1</span><span class="p">][:</span><span class="n">minibatch_size</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:],</span>
+                        <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="mi">1</span><span class="p">))}</span>
+</pre></div>
+</div>
+</div>
+<p>Next we need to define our objective (error) function. Because this is a classification task we’ll use categorical cross entropy, instead of the default mean squared error.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">objective</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">softmax_cross_entropy_with_logits_v2</span><span class="p">(</span>
+        <span class="n">logits</span><span class="o">=</span><span class="n">outputs</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">targets</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The last thing we need to specify is the optimizer. For this example we’ll use RMSProp.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">opt</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">RMSPropOptimizer</span><span class="p">(</span><span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.001</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>In order to quantify the network’s performance we will also define a classification error function (the percentage of test images classified incorrectly). We could use the cross entropy objective, but classification error is easier to interpret. Note that we use the output from the network on the final timestep (as we are simulating the network over time).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">classification_error</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mi">100</span> <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span>
+        <span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">not_equal</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">outputs</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span>
+                             <span class="n">tf</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">targets</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)),</span>
+                <span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;error before training: </span><span class="si">%.2f%%</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">sim</span><span class="o">.</span><span class="n">loss</span><span class="p">(</span>
+    <span class="n">test_data</span><span class="p">,</span> <span class="p">{</span><span class="n">out_p_filt</span><span class="p">:</span> <span class="n">classification_error</span><span class="p">}))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+|                     Calculating loss (0%)                    | ETA:  --:--:--WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/simulator.py:1071: The name tf.train.Saver is deprecated. Please use tf.compat.v1.train.Saver instead.
+
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:From /home/travis/build/nengo/nengo-dl/nengo_dl/simulator.py:1071: The name tf.train.Saver is deprecated. Please use tf.compat.v1.train.Saver instead.
+
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+|####################Calculating loss (100%)###################| ETA:  00:00:00WARNING:tensorflow:From /home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorflow/python/training/saver.py:1276: checkpoint_exists (from tensorflow.python.training.checkpoint_management) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use standard file APIs to check for files with this prefix.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+WARNING:tensorflow:From /home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/tensorflow/python/training/saver.py:1276: checkpoint_exists (from tensorflow.python.training.checkpoint_management) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use standard file APIs to check for files with this prefix.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Calculation finished in 0:01:22
+error before training: 89.75%
+</pre></div></div>
+</div>
+<p>Now we are ready to train the network. In order to keep this example relatively quick we are going to download some pretrained weights. However, if you’d like to run the training yourself set <code class="docutils literal notranslate"><span class="pre">do_training=True</span></code> below.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">do_training</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="k">if</span> <span class="n">do_training</span><span class="p">:</span>
+    <span class="c1"># run training</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">train_data</span><span class="p">,</span> <span class="n">opt</span><span class="p">,</span> <span class="n">objective</span><span class="o">=</span><span class="p">{</span><span class="n">out_p</span><span class="p">:</span> <span class="n">objective</span><span class="p">},</span> <span class="n">n_epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+    <span class="c1"># save the parameters to file</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">save_params</span><span class="p">(</span><span class="s2">&quot;./mnist_params&quot;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="c1"># download pretrained weights</span>
+    <span class="n">urlretrieve</span><span class="p">(</span>
+        <span class="s2">&quot;https://drive.google.com/uc?export=download&amp;&quot;</span>
+        <span class="s2">&quot;id=1u9JyNuRxQDUcFgkRnI1qfJVFMdnGRsjI&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;mnist_params.zip&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="s2">&quot;mnist_params.zip&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">extractall</span><span class="p">()</span>
+
+    <span class="c1"># load parameters</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">load_params</span><span class="p">(</span><span class="s2">&quot;./mnist_params&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Now we can check the classification error again, with the trained parameters.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;error after training: </span><span class="si">%.2f%%</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">sim</span><span class="o">.</span><span class="n">loss</span><span class="p">(</span>
+    <span class="n">test_data</span><span class="p">,</span> <span class="p">{</span><span class="n">out_p_filt</span><span class="p">:</span> <span class="n">classification_error</span><span class="p">}))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Calculation finished in 0:01:14
+error after training: 0.75%
+</pre></div></div>
+</div>
+<p>We can see that the spiking neural network is achieving ~1% error, which is what we would expect for MNIST. <code class="docutils literal notranslate"><span class="pre">n_steps</span></code> could be increased to further improve performance, since we would get a more accurate measure of each spiking neuron’s output.</p>
+<p>We can also plot some example outputs from the network, to see how it is performing over time.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">sim</span><span class="o">.</span><span class="n">run_steps</span><span class="p">(</span><span class="n">n_steps</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="n">inp</span><span class="p">:</span> <span class="n">test_data</span><span class="p">[</span><span class="n">inp</span><span class="p">][:</span><span class="n">minibatch_size</span><span class="p">]})</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">test_data</span><span class="p">[</span><span class="n">inp</span><span class="p">][</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)),</span>
+               <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;gray&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">trange</span><span class="p">(),</span> <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">out_p_filt</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)],</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Simulation finished in 0:00:38
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking-mnist_21_1.png" src="../_images/examples_spiking-mnist_21_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking-mnist_21_2.png" src="../_images/examples_spiking-mnist_21_2.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking-mnist_21_3.png" src="../_images/examples_spiking-mnist_21_3.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking-mnist_21_4.png" src="../_images/examples_spiking-mnist_21_4.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spiking-mnist_21_5.png" src="../_images/examples_spiking-mnist_21_5.png" />
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">sim</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div><footer class="text-light footer-main gradient-bottom">
+  <p class="small text-center mb-0">
+    <a class="no-hover-line" href="https://appliedbrainresearch.com">
+      <img
+        src="https://appliedbrainresearch.com/img/logo-blue-notext.svg"
+        height="48"
+      />
+    </a>
+    <a href="https://www.nengo.ai/">What is Nengo?</a>
+    <a href="https://www.nengo.ai/examples/">Examples</a>
+    <a href="https://www.nengo.ai/documentation/">Documentation</a>
+    <a href="https://www.nengo.ai/getting-started/">Getting started</a>
+    <a href="https://www.nengo.ai/privacy/">Privacy</a>
+  </p>
+  <p class="small text-center mb-0">&copy; Applied Brain Research</p>
+</footer>
+<script>
+  function switchVersion(select) {
+    var option = select.selectedOptions[0];
+    if (option.hasAttribute("value")) {
+      window.location = option.value;
+    }
+  }
+</script>
+
+<script>
+  var elements = document.querySelectorAll('.sidenav');
+  Stickyfill.add(elements);
+</script>
+<script>
+  ScrollReveal().reveal(".fade-in", {
+      scale: 0.85,
+      duration: 1000,
+      delay: 250,
+      interval: 50
+  });
+</script>
+<script>
+  $('a.toggle-sidenav').on('click', function(e) {
+    e.preventDefault();
+    if ( $(this).hasClass('active') ) {
+      $(this).removeClass('active');
+      $('.sidenav').removeClass('open');
+    } else {
+      $(this).addClass('active');
+      $('.sidenav').addClass('open');
+    }
+  });
+</script>
+<script>
+  var lists = document.querySelectorAll('.toctree ul');
+  lists.forEach((ul) => {
+      ul.classList.add("nav");
+  });
+  var links = document.querySelectorAll('.toctree a');
+  links.forEach((link) => {
+      link.classList.add("nav-link");
+  });
+  $("body").scrollspy({target: ".sidenav"});
+</script>
+  </body>
+</html>
