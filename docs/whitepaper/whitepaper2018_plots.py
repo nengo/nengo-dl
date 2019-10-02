@@ -20,14 +20,18 @@ from nengo_dl import graph_optimizer, benchmarks
 
 
 def filter_results(results, **kwargs):
-    return [x["relative_time"] if "relative_time" in x else x["times"]
-            for x in results if all(x[k] == v for k, v in kwargs.items())]
+    return [
+        x["relative_time"] if "relative_time" in x else x["times"]
+        for x in results
+        if all(x[k] == v for k, v in kwargs.items())
+    ]
 
 
 def bootstrap_ci(data, alpha=0.95, n_samples=1000, func=np.mean):
     samples = sorted(
         func(np.random.choice(data, replace=True, size=len(data)))
-        for _ in range(n_samples))
+        for _ in range(n_samples)
+    )
     lower = int(n_samples * (1 - alpha) / 2)
     upper = int(n_samples * (alpha + (1 - alpha) / 2))
     return func(data), samples[lower], samples[upper]
@@ -38,10 +42,10 @@ def bootstrap_ci(data, alpha=0.95, n_samples=1000, func=np.mean):
 @click.option("--load/--no-load", default=False, help="Load results from file")
 @click.option("--reps", default=5, help="Number of data points to collect")
 @click.option("--show/--no-show", default=True, help="Show plots")
-@click.option("--device", default="/gpu:0",
-              help="TensorFlow device to use for NengoDL")
-@click.option("--save", default=None, type=str,
-              help="Save figures with given file format")
+@click.option("--device", default="/gpu:0", help="TensorFlow device to use for NengoDL")
+@click.option(
+    "--save", default=None, type=str, help="Save figures with given file format"
+)
 def main(ctx, load, reps, show, device, save):
     ctx.obj["load"] = load
     ctx.obj["reps"] = reps
@@ -58,8 +62,7 @@ def main_callback(_, show, **kwargs):
 @main.command()
 @click.pass_context
 @click.option("--batch", default=1, help="Number of batch elements")
-@click.option("--n-neurons", default=9984,
-              help="Number of neurons per ensemble")
+@click.option("--n-neurons", default=9984, help="Number of neurons per ensemble")
 def compare_backends(ctx, batch, n_neurons):
     load = ctx.obj["load"]
     reps = ctx.obj["reps"]
@@ -73,42 +76,65 @@ def compare_backends(ctx, batch, n_neurons):
     backends = ["nengo_dl", "nengo_ocl", "nengo"]
     sim_time = 5.0
 
-    params = list(itertools.product(
-        bench_names, n_range, d_range, neuron_types, backends))
+    params = list(
+        itertools.product(bench_names, n_range, d_range, neuron_types, backends)
+    )
 
     if load:
         with open("compare_backends_%d_data_saved.pkl" % batch, "rb") as f:
             results = pickle.load(f)
     else:
-        results = [{"times": [], "benchmark": bench, "n_neurons": n_neurons,
-                    "dimensions": dimensions, "neuron_type": neuron_type,
-                    "backend": backend}
-                   for bench, n_neurons, dimensions, neuron_type, backend
-                   in params]
+        results = [
+            {
+                "times": [],
+                "benchmark": bench,
+                "n_neurons": n_neurons,
+                "dimensions": dimensions,
+                "neuron_type": neuron_type,
+                "backend": backend,
+            }
+            for bench, n_neurons, dimensions, neuron_type, backend in params
+        ]
 
     if reps > 0:
-        for i, (bench, neurons_per_ens, dimensions, neuron_type,
-                backend) in enumerate(params):
-            print("%d/%d: %s %s %s %s %s" % (
-                i + 1, len(params), bench, neurons_per_ens, dimensions,
-                neuron_type, backend))
+        for i, (bench, neurons_per_ens, dimensions, neuron_type, backend) in enumerate(
+            params
+        ):
+            print(
+                "%d/%d: %s %s %s %s %s"
+                % (
+                    i + 1,
+                    len(params),
+                    bench,
+                    neurons_per_ens,
+                    dimensions,
+                    neuron_type,
+                    backend,
+                )
+            )
 
             net = getattr(benchmarks, bench)(
                 dimensions=dimensions,
                 neurons_per_d=neurons_per_ens // dimensions,
-                neuron_type=neuron_type)
+                neuron_type=neuron_type,
+            )
 
             with net:
                 nengo_dl.configure_settings(inference_only=True)
 
             if "nengo_dl" in backend:
                 sim = nengo_dl.Simulator(
-                    net, unroll_simulation=25, minibatch_size=batch,
-                    device=device, progress_bar=False)
+                    net,
+                    unroll_simulation=25,
+                    minibatch_size=batch,
+                    device=device,
+                    progress_bar=False,
+                )
             elif backend == "nengo":
                 sim = nengo.Simulator(net, progress_bar=False, optimize=True)
             elif backend == "nengo_ocl":
                 import nengo_ocl
+
                 sim = nengo_ocl.Simulator(net, progress_bar=False)
 
             with sim:
@@ -121,22 +147,34 @@ def compare_backends(ctx, batch, n_neurons):
                         if b > 0:
                             sim.reset()
                         sim.run(sim_time, progress_bar=False)
-                    results[i]["times"].append(
-                        (time.time() - start) / sim_time)
+                    results[i]["times"].append((time.time() - start) / sim_time)
 
-            print("   ", min(results[i]["times"]), max(results[i]["times"]),
-                  np.mean(results[i]["times"]))
+            print(
+                "   ",
+                min(results[i]["times"]),
+                max(results[i]["times"]),
+                np.mean(results[i]["times"]),
+            )
 
         with open("compare_backends_%d_data.pkl" % batch, "wb") as f:
             pickle.dump(results, f)
 
     # plotting
     subplots = int(np.ceil(np.sqrt(len(bench_names))))
-    f, axes = plt.subplots(subplots, subplots, sharey=True, sharex=False,
-                           figsize=(5 * subplots, 5 * subplots),
-                           gridspec_kw={
-                               "hspace": 0.2, "top": 0.95, "bottom": 0.05,
-                               "left": 0.07, "right": 0.95})
+    f, axes = plt.subplots(
+        subplots,
+        subplots,
+        sharey=True,
+        sharex=False,
+        figsize=(5 * subplots, 5 * subplots),
+        gridspec_kw={
+            "hspace": 0.2,
+            "top": 0.95,
+            "bottom": 0.05,
+            "left": 0.07,
+            "right": 0.95,
+        },
+    )
     n_bars = len(d_range)
     neuron_type = nengo.RectifiedLinear()
     colours = plt.rcParams["axes.prop_cycle"].by_key()["color"]
@@ -148,22 +186,38 @@ def compare_backends(ctx, batch, n_neurons):
             bottoms = np.zeros(n_bars)
             c = 0
             for n in n_range:
-                data = np.asarray([bootstrap_ci(t) for t in filter_results(
-                    results, benchmark=m, neuron_type=neuron_type,
-                    n_neurons=n, backend=b)])
+                data = np.asarray(
+                    [
+                        bootstrap_ci(t)
+                        for t in filter_results(
+                            results,
+                            benchmark=m,
+                            neuron_type=neuron_type,
+                            n_neurons=n,
+                            backend=b,
+                        )
+                    ]
+                )
 
-                axes[subplot_idx].bar(x_pos, data[:, 0],
-                                      yerr=abs(np.transpose(
-                                          data[:, 1:] - data[:, [0]])),
-                                      width=0.5, bottom=bottoms,
-                                      color=colours[(j + 1) % len(backends)])
+                axes[subplot_idx].bar(
+                    x_pos,
+                    data[:, 0],
+                    yerr=abs(np.transpose(data[:, 1:] - data[:, [0]])),
+                    width=0.5,
+                    bottom=bottoms,
+                    color=colours[(j + 1) % len(backends)],
+                )
 
                 for i, d in enumerate(data[:, 0]):
                     if d > y_max:
                         axes[subplot_idx].annotate(
-                            "%.1f" % d, (x_pos[i], y_max * 0.9),
-                            ha="center", va="center", rotation="vertical",
-                            color="white")
+                            "%.1f" % d,
+                            (x_pos[i], y_max * 0.9),
+                            ha="center",
+                            va="center",
+                            rotation="vertical",
+                            color="white",
+                        )
 
                 bottoms += data[:, 0]
                 c += 1
@@ -172,17 +226,28 @@ def compare_backends(ctx, batch, n_neurons):
         axes[subplot_idx].set_title("%s" % m)
         if k == 0 and len(n_range) > 1:
             axes[subplot_idx].legend(["N=%d" % n for n in n_range])
-        axes[subplot_idx].set_xticks(np.concatenate(
-            [np.arange(i * (n_bars + 1), i * (n_bars + 1) + n_bars)
-             for i in range(len(backends))]))
-        axes[subplot_idx].set_xticklabels([t for _ in range(len(backends))
-                                           for t in d_range])
+        axes[subplot_idx].set_xticks(
+            np.concatenate(
+                [
+                    np.arange(i * (n_bars + 1), i * (n_bars + 1) + n_bars)
+                    for i in range(len(backends))
+                ]
+            )
+        )
+        axes[subplot_idx].set_xticklabels(
+            [t for _ in range(len(backends)) for t in d_range]
+        )
         for i, b in enumerate(backends):
             axes[subplot_idx].annotate(
-                b, (((n_bars - 1) / 2 + (n_bars + 1) * i + 1)
+                b,
+                (
+                    ((n_bars - 1) / 2 + (n_bars + 1) * i + 1)
                     / ((n_bars + 1) * len(backends)),
-                    -0.1),
-                xycoords="axes fraction", ha="center")
+                    -0.1,
+                ),
+                xycoords="axes fraction",
+                ha="center",
+            )
 
         axes[subplot_idx].set_ylim([0, y_max])
         axes[subplot_idx].set_xlim([-1, (n_bars + 1) * len(backends) - 1])
@@ -196,10 +261,8 @@ def compare_backends(ctx, batch, n_neurons):
 
 @main.command()
 @click.pass_context
-@click.option("--dimensions", default=128,
-              help="Dimensionality of spaun model")
-@click.option("--unroll", default=25,
-              help="Number of iterations to unroll simulation")
+@click.option("--dimensions", default=128, help="Dimensionality of spaun model")
+@click.option("--unroll", default=25, help="Number of iterations to unroll simulation")
 def compare_optimizations(ctx, dimensions, unroll):
     load = ctx.obj["load"]
     reps = ctx.obj["reps"]
@@ -217,19 +280,24 @@ def compare_optimizations(ctx, dimensions, unroll):
     # params = list(itertools.product((False, True), repeat=4))
 
     if load:
-        with open("compare_optimizations_%d_data_saved.pkl" % dimensions,
-                  "rb") as f:
+        with open("compare_optimizations_%d_data_saved.pkl" % dimensions, "rb") as f:
             results = pickle.load(f)
     else:
-        results = [{"times": [], "simplifications": simp, "planner": plan,
-                    "sorting": sort, "unroll": unro}
-                   for simp, plan, sort, unro in params]
+        results = [
+            {
+                "times": [],
+                "simplifications": simp,
+                "planner": plan,
+                "sorting": sort,
+                "unroll": unro,
+            }
+            for simp, plan, sort, unro in params
+        ]
 
     if reps > 0:
         with benchmarks.spaun(dimensions) as net:
             nengo_dl.configure_settings(inference_only=True)
-        model = nengo.builder.Model(
-            dt=0.001, builder=nengo_dl.builder.NengoBuilder())
+        model = nengo.builder.Model(dt=0.001, builder=nengo_dl.builder.NengoBuilder())
         model.build(net)
 
         print("neurons", net.n_neurons)
@@ -237,28 +305,40 @@ def compare_optimizations(ctx, dimensions, unroll):
         print("connections", len(net.all_connections))
 
         for i, (simp, plan, sort, unro) in enumerate(params):
-            print("%d/%d: %s %s %s %s" % (i + 1, len(params), simp, plan, sort,
-                                          unro))
+            print("%d/%d: %s %s %s %s" % (i + 1, len(params), simp, plan, sort, unro))
             with net:
                 config = dict()
                 config["simplifications"] = (
-                    [graph_optimizer.remove_constant_copies,
-                     graph_optimizer.remove_unmodified_resets,
-                     # graph_optimizer.remove_zero_incs,
-                     graph_optimizer.remove_identity_muls] if simp else
-                    [])
+                    [
+                        graph_optimizer.remove_constant_copies,
+                        graph_optimizer.remove_unmodified_resets,
+                        # graph_optimizer.remove_zero_incs,
+                        graph_optimizer.remove_identity_muls,
+                    ]
+                    if simp
+                    else []
+                )
 
-                config["planner"] = (graph_optimizer.tree_planner if plan else
-                                     graph_optimizer.greedy_planner)
+                config["planner"] = (
+                    graph_optimizer.tree_planner
+                    if plan
+                    else graph_optimizer.greedy_planner
+                )
 
-                config["sorter"] = (graph_optimizer.order_signals if sort else
-                                    graph_optimizer.noop_order_signals)
+                config["sorter"] = (
+                    graph_optimizer.order_signals
+                    if sort
+                    else graph_optimizer.noop_order_signals
+                )
 
                 nengo_dl.configure_settings(**config)
 
             with nengo_dl.Simulator(
-                    None, model=model, unroll_simulation=unroll if unro else 1,
-                    device=device) as sim:
+                None,
+                model=model,
+                unroll_simulation=unroll if unro else 1,
+                device=device,
+            ) as sim:
                 sim.run(0.1)
 
                 sim_time = 1.0
@@ -266,11 +346,14 @@ def compare_optimizations(ctx, dimensions, unroll):
                 for _ in range(reps):
                     start = time.time()
                     sim.run(sim_time)
-                    results[i]["times"].append(
-                        (time.time() - start) / sim_time)
+                    results[i]["times"].append((time.time() - start) / sim_time)
 
-            print("   ", min(results[i]["times"]), max(results[i]["times"]),
-                  np.mean(results[i]["times"]))
+            print(
+                "   ",
+                min(results[i]["times"]),
+                max(results[i]["times"]),
+                np.mean(results[i]["times"]),
+            )
 
         with open("compare_optimizations_%d_data.pkl" % dimensions, "wb") as f:
             pickle.dump(results, f)
@@ -282,9 +365,14 @@ def compare_optimizations(ctx, dimensions, unroll):
     alphas = np.linspace(0.5, 1, len(results))
     colour = plt.rcParams["axes.prop_cycle"].by_key()["color"][0]
     for i in range(len(results)):
-        plt.bar([i], [data[i, 0]],
-                yerr=abs(data[i, 1:] - data[i, [0]])[:, None],
-                log=True, alpha=alphas[i], color=colour)
+        plt.bar(
+            [i],
+            [data[i, 0]],
+            yerr=abs(data[i, 1:] - data[i, [0]])[:, None],
+            log=True,
+            alpha=alphas[i],
+            color=colour,
+        )
 
     labels = []
     for r in results:
@@ -320,34 +408,35 @@ def compare_simplifications(ctx, dimensions):
         graph_optimizer.remove_constant_copies,
         graph_optimizer.remove_unmodified_resets,
         graph_optimizer.remove_zero_incs,
-        graph_optimizer.remove_identity_muls
+        graph_optimizer.remove_identity_muls,
     ]
 
-    params = list(
-        itertools.product((False, True), repeat=len(simplifications)))
+    params = list(itertools.product((False, True), repeat=len(simplifications)))
 
     if load:
         with open("compare_simplifications_data.pkl", "rb") as f:
             results = pickle.load(f)
     else:
         results = [
-            dict([("times", [])] + [
-                (s.__name__, p[i]) for i, s in enumerate(simplifications)])
-            for j, p in enumerate(params)]
+            dict(
+                [("times", [])]
+                + [(s.__name__, p[i]) for i, s in enumerate(simplifications)]
+            )
+            for j, p in enumerate(params)
+        ]
 
     # net = build_spaun(dimensions)
-    net = benchmarks.random_network(dimensions, 32, nengo.RectifiedLinear(),
-                                    1000, 100)
+    net = benchmarks.random_network(dimensions, 32, nengo.RectifiedLinear(), 1000, 100)
     with net:
         nengo_dl.configure_settings(inference_only=True)
-    model = nengo.builder.Model(
-        dt=0.001, builder=nengo_dl.builder.NengoBuilder())
+    model = nengo.builder.Model(dt=0.001, builder=nengo_dl.builder.NengoBuilder())
     model.build(net)
 
     if reps > 0:
         # pre-heat
-        with nengo_dl.Simulator(None, model=model, device=device,
-                                progress_bar=False) as sim:
+        with nengo_dl.Simulator(
+            None, model=model, device=device, progress_bar=False
+        ) as sim:
             sim.run(reps, progress_bar=False)
 
         for j, p in enumerate(params):
@@ -362,19 +451,26 @@ def compare_simplifications(ctx, dimensions):
             print("%d/%d" % (j + 1, len(params)), [x.__name__ for x in simps])
 
             with nengo_dl.Simulator(
-                    None, model=model, unroll_simulation=10, device=device,
-                    progress_bar=False) as sim:
+                None,
+                model=model,
+                unroll_simulation=10,
+                device=device,
+                progress_bar=False,
+            ) as sim:
                 sim.run(0.1, progress_bar=False)
 
                 sim_time = 1.0
                 for _ in range(reps):
                     start = time.time()
                     sim.run(sim_time, progress_bar=False)
-                    results[j]["times"].append(
-                        (time.time() - start) / sim_time)
+                    results[j]["times"].append((time.time() - start) / sim_time)
 
-            print("   ", min(results[j]["times"]), max(results[j]["times"]),
-                  np.mean(results[j]["times"]))
+            print(
+                "   ",
+                min(results[j]["times"]),
+                max(results[j]["times"]),
+                np.mean(results[j]["times"]),
+            )
 
         with open("compare_simplifications_data.pkl", "wb") as f:
             pickle.dump(results, f)
@@ -388,8 +484,9 @@ def spiking_mnist(ctx, n_epochs):
     reps = ctx.obj["reps"]
 
     neuron_type = nengo.LIF(amplitude=0.01)
-    ens_params = dict(max_rates=nengo.dists.Choice([100]),
-                      intercepts=nengo.dists.Choice([0]))
+    ens_params = dict(
+        max_rates=nengo.dists.Choice([100]), intercepts=nengo.dists.Choice([0])
+    )
     minibatch_size = 200
     n_steps = 50
 
@@ -399,27 +496,35 @@ def spiking_mnist(ctx, n_epochs):
         inp = nengo.Node([0] * 28 * 28)
 
         x = nengo_dl.tensor_layer(
-            inp, tf.layers.conv2d, shape_in=(28, 28, 1), filters=32,
-            kernel_size=3)
+            inp, tf.layers.conv2d, shape_in=(28, 28, 1), filters=32, kernel_size=3
+        )
         x = nengo_dl.tensor_layer(x, neuron_type, **ens_params)
 
         x = nengo_dl.tensor_layer(
-            x, tf.layers.conv2d, shape_in=(26, 26, 32),
-            filters=64, kernel_size=3)
+            x, tf.layers.conv2d, shape_in=(26, 26, 32), filters=64, kernel_size=3
+        )
         x = nengo_dl.tensor_layer(x, neuron_type, **ens_params)
 
         x = nengo_dl.tensor_layer(
-            x, tf.layers.average_pooling2d, shape_in=(24, 24, 64),
-            pool_size=2, strides=2)
+            x,
+            tf.layers.average_pooling2d,
+            shape_in=(24, 24, 64),
+            pool_size=2,
+            strides=2,
+        )
 
         x = nengo_dl.tensor_layer(
-            x, tf.layers.conv2d, shape_in=(12, 12, 64),
-            filters=128, kernel_size=3)
+            x, tf.layers.conv2d, shape_in=(12, 12, 64), filters=128, kernel_size=3
+        )
         x = nengo_dl.tensor_layer(x, neuron_type, **ens_params)
 
         x = nengo_dl.tensor_layer(
-            x, tf.layers.average_pooling2d, shape_in=(10, 10, 128),
-            pool_size=2, strides=2)
+            x,
+            tf.layers.average_pooling2d,
+            shape_in=(10, 10, 128),
+            pool_size=2,
+            strides=2,
+        )
 
         out = nengo_dl.tensor_layer(x, tf.layers.dense, units=10)
 
@@ -432,8 +537,7 @@ def spiking_mnist(ctx, n_epochs):
     else:
         results = {"pre": [], "post": [], "spiking": []}
 
-    urlretrieve("http://deeplearning.net/data/mnist/mnist.pkl.gz",
-                "mnist.pkl.gz")
+    urlretrieve("http://deeplearning.net/data/mnist/mnist.pkl.gz", "mnist.pkl.gz")
     with gzip.open("mnist.pkl.gz") as f:
         train_data, _, test_data = pickle.load(f, encoding="latin1")
     train_data = list(train_data)
@@ -443,47 +547,54 @@ def spiking_mnist(ctx, n_epochs):
         one_hot[np.arange(data[0].shape[0]), data[1]] = 1
         data[1] = one_hot
 
-    train_data = {inp: train_data[0][:, None, :],
-                  out_p: train_data[1][:, None, :]}
-    test_data = {inp: test_data[0][:, None, :],
-                 out_p: test_data[1][:, None, :]}
+    train_data = {inp: train_data[0][:, None, :], out_p: train_data[1][:, None, :]}
+    test_data = {inp: test_data[0][:, None, :], out_p: test_data[1][:, None, :]}
     test_data_time = {
         inp: np.tile(test_data[inp], (1, n_steps, 1)),
-        spk_out_p: np.tile(test_data[out_p], (1, n_steps, 1))}
+        spk_out_p: np.tile(test_data[out_p], (1, n_steps, 1)),
+    }
 
     for _ in range(reps):
         # construct the simulator
         with nengo_dl.Simulator(net, minibatch_size=minibatch_size) as sim:
+
             def objective(x, y):
-                return tf.nn.softmax_cross_entropy_with_logits_v2(
-                    logits=x, labels=y)
+                return tf.nn.softmax_cross_entropy_with_logits_v2(logits=x, labels=y)
 
             opt = tf.train.RMSPropOptimizer(learning_rate=0.001)
 
             def classification_error(outputs, targets):
                 return 100 * tf.reduce_mean(
-                    tf.cast(tf.not_equal(tf.argmax(outputs[:, -1], axis=-1),
-                                         tf.argmax(targets[:, -1], axis=-1)),
-                            tf.float32))
+                    tf.cast(
+                        tf.not_equal(
+                            tf.argmax(outputs[:, -1], axis=-1),
+                            tf.argmax(targets[:, -1], axis=-1),
+                        ),
+                        tf.float32,
+                    )
+                )
 
             # collect error before training
-            results["pre"].append(sim.loss(
-                test_data, {out_p: classification_error}, training=True))
+            results["pre"].append(
+                sim.loss(test_data, {out_p: classification_error}, training=True)
+            )
             print("error before training: %.2f%%" % results["pre"][-1])
 
             # run training
-            sim.train(train_data, opt, objective={out_p: objective},
-                      n_epochs=n_epochs)
+            sim.train(train_data, opt, objective={out_p: objective}, n_epochs=n_epochs)
 
             # collect error after training
-            results["post"].append(sim.loss(
-                test_data, {out_p: classification_error}, training=True))
+            results["post"].append(
+                sim.loss(test_data, {out_p: classification_error}, training=True)
+            )
             print("error after training: %.2f%%" % results["post"][-1])
 
             # collect spiking error
-            results["spiking"].append(sim.loss(
-                test_data_time, {spk_out_p: classification_error},
-                training=False))
+            results["spiking"].append(
+                sim.loss(
+                    test_data_time, {spk_out_p: classification_error}, training=False
+                )
+            )
             print("spiking neuron error: %.2f%%" % results["spiking"][-1])
 
         with open("spiking_mnist_data.pkl", "wb") as f:
@@ -503,8 +614,7 @@ def spa_optimization(ctx, dimensions, n_epochs):
     reps = ctx.obj["reps"]
     save = ctx.obj["save"]
 
-    def get_binding_data(n_inputs, n_pairs, dims, seed, t_int, t_mem,
-                         dt=0.001):
+    def get_binding_data(n_inputs, n_pairs, dims, seed, t_int, t_mem, dt=0.001):
         int_steps = int(t_int / dt)
         mem_steps = int(t_mem / dt)
         n_steps = int_steps * n_pairs + mem_steps
@@ -527,12 +637,15 @@ def spa_optimization(ctx, dimensions, n_epochs):
 
             # each role/filler pair is presented for t_int seconds
             for i in range(n_pairs):
-                roles[n, i * int_steps:(i + 1) * int_steps] = vocab.parse(
-                    role_names[i]).v
-                fills[n, i * int_steps:(i + 1) * int_steps] = vocab.parse(
-                    filler_names[i]).v
-                binding[n, i * int_steps:(i + 1) * int_steps] = vocab.parse(
-                    "%s*%s" % (role_names[i], filler_names[i])).v
+                roles[n, i * int_steps : (i + 1) * int_steps] = vocab.parse(
+                    role_names[i]
+                ).v
+                fills[n, i * int_steps : (i + 1) * int_steps] = vocab.parse(
+                    filler_names[i]
+                ).v
+                binding[n, i * int_steps : (i + 1) * int_steps] = vocab.parse(
+                    "%s*%s" % (role_names[i], filler_names[i])
+                ).v
 
             # randomly select a cue
             cue_idx = rng.randint(n_pairs)
@@ -557,8 +670,8 @@ def spa_optimization(ctx, dimensions, n_epochs):
         sims = tf.matmul(vocab_vectors, tf.transpose(output))
         idxs = tf.argmax(sims, axis=0)
         match = tf.reduce_all(
-            tf.equal(tf.gather(vocab_vectors, idxs), targets[:, -1]),
-            axis=1)
+            tf.equal(tf.gather(vocab_vectors, idxs), targets[:, -1]), axis=1
+        )
 
         return tf.reduce_mean(tf.cast(match, tf.float32))
 
@@ -581,13 +694,13 @@ def spa_optimization(ctx, dimensions, n_epochs):
             # memory network to store the role/filler pairs
             memory = nengo.Ensemble(neurons_per_d * dims, dims)
             tau = 0.01
-            nengo.Connection(cconv.output, memory, transform=tau / t_int,
-                             synapse=tau)
+            nengo.Connection(cconv.output, memory, transform=tau / t_int, synapse=tau)
             nengo.Connection(memory, memory, transform=1, synapse=tau)
 
             # another circular convolution network to extract the cued filler
-            ccorr = nengo.networks.CircularConvolution(neurons_per_d, dims,
-                                                       invert_b=True)
+            ccorr = nengo.networks.CircularConvolution(
+                neurons_per_d, dims, invert_b=True
+            )
             nengo.Connection(memory, ccorr.input_a)
             nengo.Connection(net.cue_inp, ccorr.input_b)
 
@@ -617,8 +730,16 @@ def spa_optimization(ctx, dimensions, n_epochs):
         with open("spa_optimization_data_saved.pkl", "rb") as f:
             results = pickle.load(f)
     else:
-        results = [{"pre_retrieval": [], "post_retrieval": [], "pre_mse": [],
-                    "post_mse": [], "neurons_per_d": n} for n in params]
+        results = [
+            {
+                "pre_retrieval": [],
+                "post_retrieval": [],
+                "pre_mse": [],
+                "post_mse": [],
+                "neurons_per_d": n,
+            }
+            for n in params
+        ]
 
     n_results = len(results[0]["pre_retrieval"])
     for r in range(n_results, n_results + reps):
@@ -628,13 +749,25 @@ def spa_optimization(ctx, dimensions, n_epochs):
         seed = r
 
         # generate training data
-        (train_roles, train_fills, train_cues, train_binding, train_memory,
-         train_targets, _) = get_binding_data(8000, n_pairs, dims, seed, t_int,
-                                              t_mem)
+        (
+            train_roles,
+            train_fills,
+            train_cues,
+            train_binding,
+            train_memory,
+            train_targets,
+            _,
+        ) = get_binding_data(8000, n_pairs, dims, seed, t_int, t_mem)
         # generate test data
-        (test_roles, test_fills, test_cues, _, _, test_targets,
-         test_vocab) = get_binding_data(1024, n_pairs, dims, seed + 1, t_int,
-                                        t_mem)
+        (
+            test_roles,
+            test_fills,
+            test_cues,
+            _,
+            _,
+            test_targets,
+            test_vocab,
+        ) = get_binding_data(1024, n_pairs, dims, seed + 1, t_int, t_mem)
 
         acc = partial(accuracy, vocab=test_vocab)
 
@@ -643,39 +776,50 @@ def spa_optimization(ctx, dimensions, n_epochs):
 
             net = build_network(n, seed)
             train_data = {
-                net.role_inp: train_roles, net.fill_inp: train_fills,
+                net.role_inp: train_roles,
+                net.fill_inp: train_fills,
                 net.cue_inp: train_cues,
-                net.output_probe: train_targets, net.conv_probe: train_binding,
-                net.memory_probe: train_memory}
+                net.output_probe: train_targets,
+                net.conv_probe: train_binding,
+                net.memory_probe: train_memory,
+            }
 
             test_data = {
-                net.role_inp: test_roles, net.fill_inp: test_fills,
+                net.role_inp: test_roles,
+                net.fill_inp: test_fills,
                 net.cue_inp: test_cues,
-                net.output_probe: test_targets}
+                net.output_probe: test_targets,
+            }
 
             with nengo_dl.Simulator(
-                    net, seed=seed, minibatch_size=minibatch_size,
-                    progress_bar=False) as sim:
-                results[i]["pre_retrieval"].append(sim.loss(
-                    test_data, {net.output_probe: acc}))
-                print('pre retrieval:', results[i]["pre_retrieval"][-1])
+                net, seed=seed, minibatch_size=minibatch_size, progress_bar=False
+            ) as sim:
+                results[i]["pre_retrieval"].append(
+                    sim.loss(test_data, {net.output_probe: acc})
+                )
+                print("pre retrieval:", results[i]["pre_retrieval"][-1])
 
                 results[i]["pre_mse"].append(sim.loss(test_data))
-                print('pre mse:', results[i]["pre_mse"][-1])
+                print("pre mse:", results[i]["pre_mse"][-1])
 
-                sim.train(train_data, optimizer, n_epochs=n_epochs,
-                          objective={net.output_probe: weighted_mse,
-                                     net.conv_probe: partial(weighted_mse,
-                                                             weight=0.25),
-                                     net.memory_probe: partial(weighted_mse,
-                                                               weight=0.25)})
+                sim.train(
+                    train_data,
+                    optimizer,
+                    n_epochs=n_epochs,
+                    objective={
+                        net.output_probe: weighted_mse,
+                        net.conv_probe: partial(weighted_mse, weight=0.25),
+                        net.memory_probe: partial(weighted_mse, weight=0.25),
+                    },
+                )
 
                 results[i]["post_mse"].append(sim.loss(test_data))
-                print('post mse:', results[i]["post_mse"][-1])
+                print("post mse:", results[i]["post_mse"][-1])
 
-                results[i]["post_retrieval"].append(sim.loss(
-                    test_data, {net.output_probe: acc}))
-                print('post retrieval:', results[i]["post_retrieval"][-1])
+                results[i]["post_retrieval"].append(
+                    sim.loss(test_data, {net.output_probe: acc})
+                )
+                print("post retrieval:", results[i]["post_retrieval"][-1])
 
         with open("spa_optimization_data.pkl", "wb") as f:
             pickle.dump(results, f)
