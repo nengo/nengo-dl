@@ -43,7 +43,7 @@ def configure_settings(**kwargs):
     session_config: dict
         Config options passed to ``tf.Session`` initialization (e.g., to change
         the `GPU memory allocation method
-        <https://www.tensorflow.org/guide/using_gpu#allowing_gpu_memory_growth>`_
+        <https://github.com/tensorflow/docs/blob/master/site/en/r1/guide/using_gpu.md>`_
         pass ``{"gpu_options.allow_growth": True}``).
     inference_only : bool
         Set to True if the network will only be run in inference mode (i.e.,

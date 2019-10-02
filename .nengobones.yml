@@ -108,9 +108,13 @@ ci_scripts:
       - git+https://github.com/drasmuss/spaun2.0.git
     nengo_tests: true
   - template: examples
+    pip_install:
+      - $TF_VERSION
     post_commands:
       - python docs/whitepaper/whitepaper2018_code.py > /dev/null
   - template: docs
+    pip_install:
+      - $TF_VERSION
   - template: deploy
   - template: gpu
 
@@ -124,6 +128,8 @@ travis_yml:
   jobs:
     - script: static
     - script: docs
+      env:
+        TF_VERSION: tensorflow<2.0.0
     - cache: false
       test_args: -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
     - script: gpu
@@ -149,6 +155,8 @@ travis_yml:
     - test_args: --unroll-simulation 5 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
     - test_args: --inference-only --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
     - script: examples
+      env:
+        TF_VERSION: tensorflow<2.0.0
   pypi_user: drasmuss
   deploy_dists:
     - sdist
