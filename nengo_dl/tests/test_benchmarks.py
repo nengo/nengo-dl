@@ -100,7 +100,6 @@ def _test_random(
     assert all(net.inp in x for x in post_conns.values())
 
 
-@pytest.mark.xfail(reason="TODO: support profile")
 @pytest.mark.parametrize("train", (True, False))
 def test_run_profile(train, pytestconfig):
     net = benchmarks.integrator(3, 2, nengo.RectifiedLinear())
@@ -118,7 +117,6 @@ def test_run_profile(train, pytestconfig):
     assert net.config[net].inference_only == (not train)
 
 
-@pytest.mark.xfail(reason="TODO: support profile")
 def test_cli():
     dimensions = 2
     neurons_per_d = 1
@@ -151,7 +149,6 @@ def test_cli():
     sys.argv = old_argv
 
 
-@pytest.mark.xfail(reason="TODO: support profile")
 @pytest.mark.performance
 @pytest.mark.parametrize(
     "net, train, minibatch_size, min, max",
@@ -159,7 +156,7 @@ def test_cli():
         (benchmarks.cconv(128, 64, nengo.RectifiedLinear()), False, 64, 0.7, 0.85),
         (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, 1.5, 1.7),
         (benchmarks.integrator(128, 32, nengo.RectifiedLinear()), True, 64, 0.8, 1.0),
-        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 1.1, 1.4),
+        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 0.6, 0.7),
         (
             benchmarks.random_network(
                 64,
@@ -182,9 +179,9 @@ def test_performance(net, train, minibatch_size, min, max):
     # CPU: Intel Xeon E5-1650 v3 @ 3.50GHz
     # GPU: GeForce GTX Titan X
     # Python version: 3.6.8
-    # TensorFlow GPU version: 1.13.1
+    # TensorFlow GPU version: 2.0.0
     # Nengo version: 2.8.0
-    # NengoDL version: 2.1.2
+    # NengoDL version: 3.0.0
 
     time = benchmarks.run_profile(
         net,

@@ -409,33 +409,28 @@ def run_profile(
 
     with nengo_dl.Simulator(net, **kwargs) as sim:
         if train:
-            opt = tf_compat.train.GradientDescentOptimizer(0.001)
+            sim.compile(
+                tf_compat.train.GradientDescentOptimizer(0.001), loss=tf.losses.mse
+            )
             x = np.random.randn(sim.minibatch_size, n_steps, net.inp.size_out)
             y = np.random.randn(sim.minibatch_size, n_steps, net.p.size_in)
 
             # run once to eliminate startup overhead
-            sim.train(
-                {net.inp: x, net.p: y}, optimizer=opt, n_epochs=1, profile=do_profile
-            )
+            sim.fit(x, y, epochs=1)
 
             for _ in range(reps):
                 start = time.time()
-                sim.train(
-                    {net.inp: x, net.p: y},
-                    optimizer=opt,
-                    n_epochs=1,
-                    profile=do_profile,
-                )
+                sim.fit(x, y, epochs=1)
                 exec_time = min(time.time() - start, exec_time)
             print("Execution time:", exec_time)
 
         else:
             # run once to eliminate startup overhead
-            sim.run_steps(n_steps, profile=do_profile)
+            sim.run_steps(n_steps)
 
             for _ in range(reps):
                 start = time.time()
-                sim.run_steps(n_steps, profile=do_profile)
+                sim.run_steps(n_steps)
                 exec_time = min(time.time() - start, exec_time)
             print("Execution time:", exec_time)
 
