@@ -115,6 +115,7 @@ ci_scripts:
   - template: docs
     pip_install:
       - $TF_VERSION
+      - $NUMPY_VERSION
   - template: deploy
   - template: gpu
 
@@ -129,7 +130,8 @@ travis_yml:
     - script: static
     - script: docs
       env:
-        TF_VERSION: tensorflow<2.0.0
+        TF_VERSION: tensorflow<1.13
+        NUMPY_VERSION: numpy>=1.14.5,<1.16
     - cache: false
       test_args: -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
     - script: gpu

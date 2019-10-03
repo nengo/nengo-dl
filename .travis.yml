@@ -30,7 +30,8 @@ jobs:
       SCRIPT="static"
   -
     env:
-      TF_VERSION="tensorflow<2.0.0"
+      TF_VERSION="tensorflow<1.13"
+      NUMPY_VERSION="numpy>=1.14.5,<1.16"
       SCRIPT="docs"
     addons:
       apt:
