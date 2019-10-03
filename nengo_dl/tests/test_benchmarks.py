@@ -160,8 +160,8 @@ def test_cli():
     [
         (benchmarks.cconv(128, 64, nengo.RectifiedLinear()), False, 64, 0.7, 0.85),
         (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, 1.5, 1.7),
-        (benchmarks.integrator(128, 32, nengo.RectifiedLinear()), True, 64, 0.65, 0.9),
-        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 1.05, 1.25),
+        (benchmarks.integrator(128, 32, nengo.RectifiedLinear()), True, 64, 0.6, 0.8),
+        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 1.0, 1.2),
         (
             benchmarks.random_network(
                 64,
@@ -198,4 +198,5 @@ def test_performance(net, train, minibatch_size, min, max):
         do_profile=False,
         reps=5,
     )
-    assert min < time < max
+    assert time > min
+    assert time < max

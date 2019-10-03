@@ -39,6 +39,12 @@ from nengo_dl.compat import tf_compat
 
 tf_compat.logging.set_verbosity(tf_compat.logging.WARN)
 
+
+# disable control flow v2 for performance reasons
+# (see https://github.com/tensorflow/tensorflow/issues/33052)
+tf_compat.disable_control_flow_v2()
+
+
 del os
 del tf_compat
 
