@@ -4,12 +4,13 @@ Benchmark networks and utilities for evaluating NengoDL's performance.
 
 import inspect
 import random
-import time
+import timeit
 
 import click
 import nengo
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.eager import profiler
 
 import nengo_dl
 from nengo_dl.compat import tf_compat
@@ -386,21 +387,12 @@ def run_profile(
     """
 
     exec_time = 1e10
-    n_batches = 3 if do_profile else 1
+    n_batches = 1
 
     with net:
         nengo_dl.configure_settings(inference_only=not train, dtype=dtype)
 
     with nengo_dl.Simulator(net, **kwargs) as sim:
-        if do_profile:
-            callback = [
-                nengo_dl.callbacks.TensorBoard(
-                    log_dir="profile", profile_batch=n_batches
-                )
-            ]
-        else:
-            callback = None
-
         if hasattr(net, "inp"):
             x = {
                 net.inp: np.random.randn(
@@ -429,25 +421,37 @@ def run_profile(
             )
 
             # run once to eliminate startup overhead
+            start = timeit.default_timer()
             sim.fit(x, y, epochs=1)
+            print("Warmup time:", timeit.default_timer() - start)
 
             for _ in range(reps):
-                start = time.time()
-                sim.fit(x, y, epochs=1, callbacks=callback)
-                exec_time = min(time.time() - start, exec_time)
-            print("Execution time:", exec_time)
+                if do_profile:
+                    profiler.start()
+                start = timeit.default_timer()
+                sim.fit(x, y, epochs=1)
+                exec_time = min(timeit.default_timer() - start, exec_time)
+                if do_profile:
+                    profiler.save("profile", profiler.stop())
 
         else:
             # run once to eliminate startup overhead
+            start = timeit.default_timer()
             sim.predict(x, n_steps=n_steps)
+            print("Warmup time:", timeit.default_timer() - start)
 
             for _ in range(reps):
-                start = time.time()
-                sim.predict(x, n_steps=n_steps, callbacks=callback)
-                exec_time = min(time.time() - start, exec_time)
-            print("Execution time:", exec_time)
+                if do_profile:
+                    profiler.start()
+                start = timeit.default_timer()
+                sim.predict(x, n_steps=n_steps)
+                exec_time = min(timeit.default_timer() - start, exec_time)
+                if do_profile:
+                    profiler.save("profile", profiler.stop())
 
     exec_time /= n_batches
+
+    print("Execution time:", exec_time)
 
     return exec_time
 

@@ -75,8 +75,9 @@ Release History
   configuration option.
 - ``Simulator.check_gradients`` now only accepts an optional list of Probes (no longer
   accepts arbitrary Tensors).
-- All TensorFlow 2 behaviour is now enabled by default (e.g. eager execution,
-  control flow v2, etc.).
+- Eager execution is no longer disabled on import (it is still disabled within the
+  Simulator context, for performance reasons; see
+  https://github.com/tensorflow/tensorflow/issues/33052).
 - ``nengo_dl.tensor_layer(x, func, ...)`` now passes any extra kwargs to the
   ``nengo_dl.TensorNode`` constructor (rather than to ``func``). If you need to pass
   information to ``func`` consider using partial functions (e.g.
@@ -86,7 +87,7 @@ Release History
   object should be passed rather than a Layer class (e.g., use
   ``tensor_layer(x, tf.keras.layers.Dense(units=10), ...)`` instead of
   ``tensor_layer(x, tf.keras.layers.Dense, units=10)``).
-- ``benchmarks.run_profile`` now uses Keras' TensorBoard callback to do the profiling,
+- ``benchmarks.run_profile`` now uses the TensorBoard format when profiling,
   see `the documentation
   <https://www.tensorflow.org/tensorboard/r2/tensorboard_profiling_keras>`_ for
   instructions on how to view this information (the information is the same, it is
@@ -104,6 +105,8 @@ Release History
 - Added ``nengo_dl.Layer``. Similar to the old ``nengo_dl.tensor_layer``, this is a
   wrapper for constructing TensorNodes, but it mimics the new ``tf.keras.layers.Layer``
   API rather than the old ``tf.layers``.
+- TensorFlow's "control flow v2" is disabled on import, for performance reasons; see
+  https://github.com/tensorflow/tensorflow/issues/33052.
 
 **Deprecated**
 

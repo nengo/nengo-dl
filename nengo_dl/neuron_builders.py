@@ -39,6 +39,8 @@ class GenericNeuronBuilder(OpBuilder):
             for i in range(len(ops[0].states))
         ]
 
+        self.prev_result = []
+
         def neuron_step_math(dt, J, *states):  # pragma: no cover (runs in TF)
             output = None
             J_offset = 0
@@ -87,7 +89,11 @@ class GenericNeuronBuilder(OpBuilder):
         states = [signals.gather(x) for x in self.state_data]
         states_dtype = [x.dtype for x in self.state_data]
 
-        with tf.device("/cpu:0"):
+        # note: we need to make sure that the previous call to this function
+        # has completed before the next starts, since we don't know that the
+        # functions are thread safe
+        # TODO: this isn't necessary in eager mode
+        with tf.control_dependencies(self.prev_result), tf.device("/cpu:0"):
             ret = tf.numpy_function(
                 self.neuron_step_math,
                 [signals.dt, J] + states,
@@ -95,6 +101,7 @@ class GenericNeuronBuilder(OpBuilder):
                 name=self.neuron_step_math.__name__,
             )
             neuron_out, state_out = ret[0], ret[1:]
+        self.prev_result = [neuron_out]
 
         neuron_out.set_shape((signals.minibatch_size,) + self.output_data.shape)
         signals.scatter(self.output_data, neuron_out)
@@ -161,23 +168,17 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
 
     def build_step(self, signals):
         J = signals.gather(self.J_data)
-        voltage = signals.gather(self.voltage_data)
 
-        spike_out, spike_voltage = self._step(J, voltage, signals.dt)
-
-        if self.config.inference_only:
-            out, voltage = spike_out, spike_voltage
+        if self.config.training:
+            out = super(SpikingRectifiedLinearBuilder, self)._step(J)
+            signals.scatter(self.output_data, out)
         else:
-            rate_out = super(SpikingRectifiedLinearBuilder, self)._step(J)
+            voltage = signals.gather(self.voltage_data)
 
-            out, voltage = tf.cond(
-                pred=self.config.training,
-                true_fn=lambda: (rate_out, voltage),
-                false_fn=lambda: (spike_out, spike_voltage),
-            )
+            out, voltage = self._step(J, voltage, signals.dt)
 
-        signals.scatter(self.output_data, out)
-        signals.scatter(self.voltage_data, voltage)
+            signals.scatter(self.output_data, out)
+            signals.scatter(self.voltage_data, voltage)
 
 
 class SigmoidBuilder(OpBuilder):
@@ -353,31 +354,24 @@ class LIFBuilder(SoftLIFRateBuilder):
 
     def build_step(self, signals):
         J = signals.gather(self.J_data)
-        voltage = signals.gather(self.voltage_data)
-        refractory = signals.gather(self.refractory_data)
 
-        spike_out, spike_voltage, spike_ref = self._step(
-            J, voltage, refractory, signals.dt
-        )
-
-        if self.config.inference_only:
-            spikes, voltage, refractory = spike_out, spike_voltage, spike_ref
-        else:
-            rate_out = (
+        if self.config.training:
+            output = (
                 LIFRateBuilder._step(self, J)
                 if self.config.lif_smoothing is None
                 else SoftLIFRateBuilder._step(self, J)
             )
 
-            spikes, voltage, refractory = tf.cond(
-                pred=self.config.training,
-                true_fn=lambda: (rate_out, voltage, refractory),
-                false_fn=lambda: (spike_out, spike_voltage, spike_ref),
-            )
+            signals.scatter(self.output_data, output)
+        else:
+            voltage = signals.gather(self.voltage_data)
+            refractory = signals.gather(self.refractory_data)
 
-        signals.scatter(self.output_data, spikes)
-        signals.scatter(self.refractory_data, refractory)
-        signals.scatter(self.voltage_data, voltage)
+            output, voltage, refractory = self._step(J, voltage, refractory, signals.dt)
+
+            signals.scatter(self.output_data, output)
+            signals.scatter(self.refractory_data, refractory)
+            signals.scatter(self.voltage_data, voltage)
 
 
 @Builder.register(SimNeurons)

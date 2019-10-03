@@ -43,7 +43,9 @@ def with_self(wrapped, instance, args, kwargs):
 
     keras_dtype = tf.keras.backend.floatx()
     tf.keras.backend.set_floatx(instance.tensor_graph.dtype)
-    with tf.device(instance.tensor_graph.device):
+    with instance.graph.as_default(), instance.graph.device(
+        instance.tensor_graph.device
+    ):
         output = wrapped(*args, **kwargs)
     tf.keras.backend.set_floatx(keras_dtype)
 
@@ -187,6 +189,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             )
 
         # build keras models
+        self.graph = tf.Graph()
         self._build_keras()
 
         self.closed = False
@@ -1417,9 +1420,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         grads = dict()
         for output in outputs:
-            analytic, numeric = tf.test.compute_gradient(
-                partial(arg_func, output=output), inputs
-            )
+            # TODO: switch to eager evaluation
+            with tf.compat.v1.keras.backend.get_session().as_default():
+                analytic, numeric = tf.test.compute_gradient(
+                    partial(arg_func, output=output), inputs
+                )
             grads[output] = dict()
             grads[output]["analytic"] = analytic
             grads[output]["numeric"] = numeric
@@ -1482,6 +1487,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         if not self.closed:
             del self.keras_model
             del self.tensor_graph
+            del self.graph
 
             self.closed = True
 
@@ -1795,14 +1801,15 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
     @with_self
     def _update_steps(self):
+        if not hasattr(self, "_step_tensors"):
+            # cache these so we aren't adding new ops every time we call this function
+            self._step_tensors = [
+                self.tensor_graph.get_tensor(self.model.step),
+                self.tensor_graph.get_tensor(self.model.time),
+            ]
+
         self._n_steps, self._time = [
-            x.item()
-            for x in tf.keras.backend.batch_get_value(
-                (
-                    self.tensor_graph.get_tensor(self.model.step),
-                    self.tensor_graph.get_tensor(self.model.time),
-                )
-            )
+            x.item() for x in tf.keras.backend.batch_get_value(self._step_tensors)
         ]
 
     @property
@@ -1830,7 +1837,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
         return self.tensor_graph.seed
 
     def __enter__(self):
-        self._device_context = tf.device(self.tensor_graph.device)
+        self._graph_context = self.graph.as_default()
+        self._device_context = self.graph.device(self.tensor_graph.device)
+
+        self._graph_context.__enter__()
         self._device_context.__enter__()
 
         self._keras_dtype = tf.keras.backend.floatx()
@@ -1842,6 +1852,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         tf.keras.backend.set_floatx(self._keras_dtype)
 
         self._device_context.__exit__(*args)
+        self._graph_context.__exit__(*args)
 
         self.close()
 

@@ -224,6 +224,8 @@ class TensorGraph(tf.keras.layers.Layer):
 
         super().build(input_shape)
 
+        tf.random.set_seed(self.seed)
+
         # variables for model parameters
         with trackable.no_automatic_dependency_tracking_scope(self):
             self.base_params = OrderedDict()
@@ -335,7 +337,7 @@ class TensorGraph(tf.keras.layers.Layer):
             lif_smoothing=config.get_setting(self.model, "lif_smoothing"),
             cpu_only=self.device == "/cpu:0" or not utils.tf_gpu_installed,
             rng=np.random.RandomState(self.seed),
-            training=tf.convert_to_tensor(training),
+            training=training,
         )
         self.op_builder = builder.Builder(self.plan, self.signals, build_config)
 
@@ -371,8 +373,12 @@ class TensorGraph(tf.keras.layers.Layer):
 
         if stateful:
             # update saved state
-            for var, val in zip(self.saved_state.values(), final_internal_state):
+            state_updates = [
                 var.assign(val)
+                for var, val in zip(self.saved_state.values(), final_internal_state)
+            ]
+            with tf.control_dependencies(state_updates):
+                outputs = [tf.identity(x) for x in outputs]
 
         return outputs
 
@@ -447,19 +453,17 @@ class TensorGraph(tf.keras.layers.Layer):
         def loop_condition(loop_i, n_steps, *_):
             return loop_i < n_steps
 
-        def loop_body(loop_i, n_steps, probe_arrays, base_params, saved_state):
-            # TODO: avoid passing these variables into the loop
-            #  (should just be able to pull them in control flow v2 I think?)
-            # fill in signals.bases (note: we need to do this here because we
+        def loop_body(loop_i, n_steps, probe_arrays, saved_state, base_params):
+            # fill in signals.bases
+            # note: we need to do this here because we
             # need to use the tensors from inside the loop, not the source variables)
+            # note2: eager while loops pass in the variable directly,
+            # so we add the tf.identity so that when we write we're not updating
+            # the base variable
             for key, val in zip(self.saved_state.keys(), saved_state):
-                # eager while loops pass in the variable directly,
-                # so we add the tf.identity so that when we write we're not updating
-                # the saved state
                 self.signals.bases[key] = tf.identity(val)
             for key, val in zip(self.base_params.keys(), base_params):
-                # we never write to base_params, so don't need identity
-                self.signals.bases[key] = val
+                self.signals.bases[key] = tf.identity(val)
 
             for iter in range(self.unroll):
                 logger.debug("BUILDING ITERATION %d", iter)
@@ -509,10 +513,10 @@ class TensorGraph(tf.keras.layers.Layer):
                     with tf.control_dependencies(side_effects + probe_tensors):
                         loop_i += 1
 
-            base_arrays = tuple(self.signals.bases[key] for key in self.base_params)
             state_arrays = tuple(self.signals.bases[key] for key in self.saved_state)
+            base_arrays = tuple(self.signals.bases[key] for key in self.base_params)
 
-            return loop_i, n_steps, probe_arrays, base_arrays, state_arrays
+            return loop_i, n_steps, probe_arrays, state_arrays, base_arrays
 
         loop_i = tf.constant(0)
 
@@ -526,15 +530,15 @@ class TensorGraph(tf.keras.layers.Layer):
             loop_i,
             self.steps_to_run,
             probe_arrays,
-            tuple(self.base_params.values()),
             tuple(self.saved_state.values()),
+            tuple(self.base_params.values()),
         )
 
         loop_vars = tf.while_loop(
             cond=loop_condition,
             body=loop_body,
             loop_vars=loop_vars,
-            parallel_iterations=10,
+            parallel_iterations=1,  # TODO: parallel iterations work in eager mode
             back_prop=not self.inference_only,
         )
 
@@ -556,7 +560,7 @@ class TensorGraph(tf.keras.layers.Layer):
 
             probe_arrays[p] = x
 
-        final_internal_state = loop_vars[4]
+        final_internal_state = loop_vars[3]
 
         return steps_run, probe_arrays, final_internal_state
 

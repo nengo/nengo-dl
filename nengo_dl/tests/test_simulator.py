@@ -1459,7 +1459,9 @@ def test_synapse_warning(Simulator):
     def does_warn(n_steps=1, as_dict=True):
         with Simulator(net, unroll_simulation=1) as sim:
             sim.compile(tf.optimizers.SGD(0), loss={p: tf.losses.mse})
-            with pytest.warns(None) as rec:
+            with pytest.warns(None) as rec, pytest.raises(
+                ValueError, match="has `None` for gradient"
+            ):
                 if as_dict:
                     sim.fit(
                         {a: np.zeros((1, n_steps, 1))}, {p: np.zeros((1, n_steps, 1))}
