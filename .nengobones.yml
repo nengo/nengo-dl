@@ -147,7 +147,7 @@ travis_yml:
     - cache: false
       test_args: -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator --boxed
     - script: gpu
-      test_args: --device /gpu:3 --performance
+      test_args: --device /gpu:0 --performance
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
         TF_VERSION: tensorflow-gpu
