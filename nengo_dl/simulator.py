@@ -342,17 +342,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             Output values from all the Probes in the network.
         """
 
-        if "batch_size" in kwargs:
-            # note: the keras "batch size" parameter refers to minibatch size
-            # (i.e., the number of elements passed to the network in each iteration,
-            # rather than the total number of elements in the data)
-            warnings.warn(
-                "Batch size is determined statically via Simulator.minibatch_size; "
-                "ignoring value passed to `predict`"
-            )
-            kwargs["batch_size"] = None
-
-        return self._predict(
+        return self._call_keras(
             "predict", x=x, n_steps=n_steps, update_state=update_state, **kwargs
         )
 
@@ -415,7 +405,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         if not update_state:
             cbk = callbacks.IsolateState(self)
 
-        output = self._predict(
+        output = self._call_keras(
             "predict_on_batch", x=x, n_steps=n_steps, update_state=True, **kwargs
         )
 
@@ -464,58 +454,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
         probe_values : dict of {`nengo.Probe`: `numpy.ndarray`}
             Output values from all the Probes in the network.
         """
-        return self._predict(
+        return self._call_keras(
             "predict_generator", x=generator, update_state=update_state, **kwargs
         )
-
-    @with_self
-    def _predict(
-        self, predict_type, x=None, n_steps=None, update_state=False, **kwargs
-    ):
-        """
-        Internal base function for all the predict functions.
-
-        Parameters
-        ----------
-        predict_type : "predict" or "predict_on_batch" or "predict_generator"
-            The underlying function to call on the Keras model.
-        x
-            See description in documentation of ``<predict_type>`` method.
-        n_steps
-            See description in documentation of ``<predict_type>`` method.
-        update_state
-            See description in documentation of ``<predict_type>`` method.
-        kwargs
-            See description in documentation of ``<predict_type>`` method.
-
-        Returns
-        -------
-            See description in documentation of ``<predict_type>`` method.
-        """
-
-        # batch size is determined from data in `predict`; others are single batch so
-        # we know the size should be minibatch_size
-        inputs = self._generate_inputs(data=x, n_steps=n_steps)
-        self._check_data(
-            inputs,
-            n_steps=n_steps,
-            batch_size=None if predict_type == "predict" else self.minibatch_size,
-        )
-
-        if not update_state:
-            kwargs["callbacks"] = (kwargs.get("callbacks", None) or []) + [
-                callbacks.IsolateState(self)
-            ]
-
-        # call predict function
-        outputs = getattr(self.keras_model, predict_type)(inputs, **kwargs)
-
-        # reorganize results (will be flattened) back into dict
-        if not isinstance(outputs, list):
-            outputs = [outputs]
-        output_dict = dict(zip(self.model.probes, outputs))
-
-        return output_dict
 
     @require_open
     @with_self
@@ -641,7 +582,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             (e.g., "loss") containing a list of values of those metrics from each epoch.
         """
 
-        return self._fit_evaluate(
+        return self._call_keras(
             "fit", x=x, y=y, n_steps=n_steps, update_state=update_state, **kwargs
         )
 
@@ -691,7 +632,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             (e.g., "loss") containing a list of values of those metrics from each epoch.
         """
 
-        return self._fit_evaluate(
+        return self._call_keras(
             "fit_generator", x=generator, update_state=update_state, **kwargs
         )
 
@@ -759,7 +700,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             ``outputs["probe_name_loss"]`` or ``outputs["probe_name_metric_name"]``.
         """
 
-        return self._fit_evaluate(
+        return self._call_keras(
             "evaluate", x=x, y=y, n_steps=n_steps, update_state=update_state, **kwargs
         )
 
@@ -811,12 +752,12 @@ class Simulator:  # pylint: disable=too-many-public-methods
             ``outputs["probe_name_loss"]`` or ``outputs["probe_name_metric_name"]``.
         """
 
-        return self._fit_evaluate(
+        return self._call_keras(
             "evaluate_generator", x=generator, update_state=update_state, **kwargs
         )
 
     @with_self
-    def _fit_evaluate(
+    def _call_keras(
         self, func_type, x=None, y=None, n_steps=None, update_state=False, **kwargs
     ):
         """
@@ -824,7 +765,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         Parameters
         ----------
-        func_type : "fit" or "fit_generator" or "evaluate" or "evaluate_generator"
+        func_type : str
             The underlying function to call on the Keras model.
         x
             See description in documentation of ``<func_type>`` method.
@@ -849,6 +790,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
             )
 
         if "batch_size" in kwargs:
+            # note: the keras "batch size" parameter refers to minibatch size
+            # (i.e., the number of elements passed to the network in each iteration,
+            # rather than the total number of elements in the data)
             warnings.warn(
                 "Batch size is determined statically via Simulator.minibatch_size; "
                 "ignoring value passed to `%s`" % func_type
@@ -859,18 +803,30 @@ class Simulator:  # pylint: disable=too-many-public-methods
         # maybe move it into a callback where the generated data is available?
 
         x = self._generate_inputs(x, n_steps=n_steps)
-        self._check_data(x, n_steps=n_steps, batch_size=None)
+        self._check_data(
+            x,
+            n_steps=n_steps,
+            batch_size=self.minibatch_size if "on_batch" in func_type else None,
+        )
 
-        y = self._standardize_data(y, self.model.probes)
-
-        # check that y is consistent with x (rather than only being
-        # internally consistent)
         if isinstance(x, dict):
-            # not a generator, so can determine target y shapes from x shapes
-            steps = x["n_steps"]
-            input_steps = steps[0, 0]
-            input_batch = steps.shape[0]
+            input_steps = x["n_steps"][0, 0]
+            input_batch = x["n_steps"].shape[0]
+        else:
+            input_steps = None
+            input_batch = None
 
+        if y is not None:
+            # check that y is consistent with x (rather than only being
+            # internally consistent)
+            y = self._standardize_data(y, self.model.probes)
+            self._check_data(
+                y, n_steps=input_steps, batch_size=input_batch, nodes=False
+            )
+
+        # warn for synapses with n_steps=1
+        # note: we don't warn if update_state, since there could be effects across runs
+        if not update_state:
             target_probes = [
                 p
                 for p, e in zip(
@@ -880,7 +836,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 if not e.should_skip_target()
             ]
 
-            # warn for synapses with n_steps=1
             synapses = [
                 x.synapse is not None
                 for x in (self.model.toplevel.all_connections + target_probes)
@@ -891,23 +846,33 @@ class Simulator:  # pylint: disable=too-many-public-methods
                     "synaptic filters (which will introduce at least a "
                     "one-timestep delay); did you mean to set synapse=None?" % func_type
                 )
-        else:
-            input_steps = None
-            input_batch = None
-        self._check_data(y, n_steps=input_steps, batch_size=input_batch, nodes=False)
 
+        # set up callback to handle statefulness
         if not update_state:
             kwargs["callbacks"] = (kwargs.get("callbacks", None) or []) + [
                 callbacks.IsolateState(self)
             ]
 
-        func = getattr(self.keras_model, func_type)
+        # call underlying keras function
         if "generator" in func_type:
-            outputs = func(generator=x, **kwargs)
+            func_args = dict(generator=x, **kwargs)
+        elif "fit" in func_type or "evaluate" in func_type:
+            func_args = dict(x=x, y=y, **kwargs)
         else:
-            outputs = func(x=x, y=y, **kwargs)
+            func_args = dict(x=x, **kwargs)
+        outputs = getattr(self.keras_model, func_type)(**func_args)
 
-        if func_type.startswith("evaluate"):
+        # update n_steps/time
+        if stateful:
+            self._update_steps()
+
+        # process keras outputs
+        if func_type.startswith("predict"):
+            # reorganize results (will be flattened) back into dict
+            if not isinstance(outputs, list):
+                outputs = [outputs]
+            return dict(zip(self.model.probes, outputs))
+        elif func_type.startswith("evaluate"):
             # return outputs as named dict
             return dict(zip(self.keras_model.metrics_names, outputs))
         else:
@@ -1033,10 +998,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
                     )
                 else:
                     raise e  # pragma: no cover (unknown errors)
-
-        # update n_steps/time
-        # note: we only need to do this here, because only run_steps updates the state
-        self._update_steps()
 
         # update stored probe data
         for probe, val in output.items():
