@@ -194,9 +194,12 @@ class Simulator:  # pylint: disable=too-many-public-methods
         self.graph = tf.Graph()
         self._build_keras()
 
-        self.closed = False
+        # initialize sim attributes
+        self._n_steps = self._time = 0
+        for p in self.model.probes:
+            self.model.params[p] = []
 
-        self.reset()
+        self.closed = False
 
     @with_self
     def _build_keras(self):
@@ -217,6 +220,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
         self.keras_model.output_names = [
             self.tensor_graph.io_names[p] for p in self.model.probes
         ] + ["steps_run"]
+
+        self.tensor_graph.build_post()
 
     @require_open
     @with_self
