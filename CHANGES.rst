@@ -37,6 +37,11 @@ Release History
 - Added ``nengo_dl.callbacks.TensorBoard``. This is identical to
   ``tf.keras.callbacks.TensorBoard``, except it will also perform profiling during
   inference (rather than only during training).
+- Added ``stateful`` option to ``Simulator.run`` which can be set to False to avoid
+  updating the saved simulation state at the end of a run.
+- Added ``nengo_dl.configure_settings(stateful=False)`` option to avoid building the
+  parts of the model responsible for preserving state between executions (this will
+  override any ``stateful=True`` arguments in individual functions).
 
 **Changed**
 

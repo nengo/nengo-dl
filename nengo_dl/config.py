@@ -56,6 +56,12 @@ def configure_settings(**kwargs):
         will keep the history from all simulation timesteps or only the last
         simulation step.  This can be further configured on a per-probe basis
         (e.g., ``net.config[my_probe].keep_history = False``).
+    stateful : bool
+        If True (default), the Simulator will be built to support stateful execution
+        (where internal simulation state is preserved between simulator functions such
+        as `.Simulator.predict`).  Otherwise all operations will be stateless. Note that
+        this can also be configured individually through the ``stateful`` parameter on
+        individual functions.
     """
 
     # get the toplevel network
@@ -94,6 +100,7 @@ def configure_settings(**kwargs):
             "inference_only",
             "lif_smoothing",
             "dtype",
+            "stateful",
         ):
             params.set_param(attr, Parameter(attr, val))
         else:

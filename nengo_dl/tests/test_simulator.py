@@ -248,7 +248,7 @@ def test_train_recurrent(Simulator, truncation, seed):
                         {inp: x[:, j * truncation : (j + 1) * truncation]},
                         {p: y[:, j * truncation : (j + 1) * truncation]},
                         epochs=1,
-                        update_state=True,
+                        stateful=True,
                         verbose=0,
                     )
 
