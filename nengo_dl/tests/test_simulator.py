@@ -179,8 +179,6 @@ def test_train_ff(Simulator, neurons, seed):
         sim.compile(tf.optimizers.Adam(0.01), loss=tf.losses.mse)
         sim.fit({inp_a: x[..., [0]], inp_b: x[..., [1]]}, {p: y}, epochs=500, verbose=0)
 
-        sim.check_gradients(atol=5e-5)
-
         sim.step(data={inp_a: x[..., [0]], inp_b: x[..., [1]]})
 
         assert np.allclose(sim.data[p], y, atol=2e-3)
