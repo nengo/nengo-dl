@@ -163,10 +163,7 @@ class Builder:
 
 
 class BuildConfig(
-    namedtuple(
-        "BuildConfig",
-        ("inference_only", "lif_smoothing", "cpu_only", "rng", "training"),
-    )
+    namedtuple("BuildConfig", ("inference_only", "lif_smoothing", "cpu_only", "rng"))
 ):
     """
     Stores configuration parameters that may be relevant to parts of the
@@ -184,8 +181,6 @@ class BuildConfig(
         specified by the user or because tensorflow-gpu is not installed).
     rng : `~numpy.random.mtrand.RandomState`
         Seeded random number generator.
-    training : ``tf.Tensor`` (bool)
-        True if building in training mode, False for inference mode.
     """
 
     __slots__ = ()

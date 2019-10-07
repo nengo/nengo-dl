@@ -43,7 +43,7 @@ class GenericProcessBuilder(OpBuilder):
     def __init__(self, ops, signals, config):
         super(GenericProcessBuilder, self).__init__(ops, signals, config)
 
-        self.time_data = signals[ops[0].t].reshape(())
+        self.time_data = signals[ops[0].t]
         self.input_data = (
             None if ops[0].input is None else signals.combine([op.input for op in ops])
         )
@@ -102,7 +102,7 @@ class GenericProcessBuilder(OpBuilder):
         )
 
     def build_step(self, signals):
-        time = [signals.gather(self.time_data)]
+        time = [signals.gather(self.time_data)[0, 0]]
         input = [] if self.input_data is None else [signals.gather(self.input_data)]
         state = [signals.gather(s) for s in self.state_data]
 

@@ -88,7 +88,7 @@ def test_predict(Simulator, seed):
                 (
                     [
                         a_vals[i * sim.minibatch_size : (i + 1) * sim.minibatch_size],
-                        np.ones((sim.minibatch_size, 1), dtype=np.int32) * n_steps,
+                        np.zeros((sim.minibatch_size, n_steps, 1)),
                     ]
                     for i in range(n_batches)
                 ),
@@ -100,10 +100,7 @@ def test_predict(Simulator, seed):
     # TODO: this crashes if placed on GPU (but not in eager mode)
     with Simulator(net, minibatch_size=4, device="/cpu:0") as sim:
         dataset = tf.data.Dataset.from_tensor_slices(
-            {
-                "a": tf.constant(a_vals),
-                "n_steps": tf.ones((12, 1), dtype=np.int32) * n_steps,
-            }
+            {"a": tf.constant(a_vals), "filler": tf.zeros((12, n_steps, 1))}
         ).batch(sim.minibatch_size)
 
         output = sim.predict(dataset)
@@ -174,7 +171,7 @@ def test_evaluate(Simulator):
                     {
                         "node": np.ones((minibatch_size, n_steps, 1)),
                         "node_1": np.ones((minibatch_size, n_steps, 1)) * 2,
-                        "n_steps": np.ones((minibatch_size, 1)) * n_steps,
+                        "filler": np.ones((minibatch_size, n_steps, 1)),
                     },
                     {
                         "probe": np.ones((minibatch_size, n_steps, 1)),
@@ -275,10 +272,7 @@ def test_fit(Simulator, seed):
 
         sim.reset()
         history = sim.fit_generator(
-            (
-                ((x[..., [0]], x[..., [1]], np.ones((4, 1), dtype=np.int32)), y)
-                for _ in range(200)
-            ),
+            (((x[..., [0]], x[..., [1]], np.zeros((4, 1, 1))), y) for _ in range(200)),
             epochs=20,
             steps_per_epoch=10,
             verbose=0,
@@ -297,7 +291,7 @@ def test_fit(Simulator, seed):
 
         history = sim.fit(
             tf.data.Dataset.from_tensors(
-                ((x[..., [0]], x[..., [1]], np.ones((4, 1), dtype=np.int32)), y)
+                ((x[..., [0]], x[..., [1]], np.zeros((4, 1, 1))), y)
             ),
             epochs=200,
             verbose=0,

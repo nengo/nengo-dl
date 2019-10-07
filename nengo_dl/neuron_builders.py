@@ -169,7 +169,7 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
     def build_step(self, signals):
         J = signals.gather(self.J_data)
 
-        if self.config.training:
+        if signals.training:
             out = super(SpikingRectifiedLinearBuilder, self)._step(J)
             signals.scatter(self.output_data, out)
         else:
@@ -355,7 +355,7 @@ class LIFBuilder(SoftLIFRateBuilder):
     def build_step(self, signals):
         J = signals.gather(self.J_data)
 
-        if self.config.training:
+        if signals.training:
             output = (
                 LIFRateBuilder._step(self, J)
                 if self.config.lif_smoothing is None

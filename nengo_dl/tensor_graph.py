@@ -78,7 +78,9 @@ class TensorGraph(tf.keras.layers.Layer):
 
         self.model = model
         self.dt = dt
-        self.unroll = unroll_simulation
+        self.partial_unroll = (
+            1 if isinstance(unroll_simulation, bool) else unroll_simulation
+        )
         self.minibatch_size = minibatch_size
         self.device = device
         self.seed = seed
@@ -181,9 +183,18 @@ class TensorGraph(tf.keras.layers.Layer):
             self.io_names[obj] = name
             name_count[key] += 1
 
+        # RNN shape info
+        self.state_size = list(
+            tf.TensorShape(v.shape[1:]) for v in self.base_arrays_init["state"].values()
+        )
+        self.output_size = list(
+            tf.TensorShape((self.partial_unroll,) + self.model.sig[p]["in"].shape)
+            for p in self.model.probes
+        ) + [tf.TensorShape((1,))]
+
         logger.info("Optimized plan length: %d", len(self.plan))
         logger.info(
-            "Number of base arrays: %d, %d",
+            "Number of base arrays: %d, %d, %d",
             *tuple(len(x) for x in self.base_arrays_init),
         )
 
@@ -194,10 +205,10 @@ class TensorGraph(tf.keras.layers.Layer):
 
         Returns
         -------
-        n_steps : ``tf.keras.layers.Input``
-            Input layer for specifying the number of simulation timesteps.
         inputs : dict of {`nengo.Node`: ``tf.keras.layers.Input``}
             Input layers for each of the Nodes in the network.
+        filler : ``tf.keras.layers.Input``
+            Input layer for specifying the number of simulation timesteps.
         """
 
         # input placeholders
@@ -211,11 +222,17 @@ class TensorGraph(tf.keras.layers.Layer):
             )
 
         # number of steps to run
-        n_steps = tf.keras.layers.Input(
-            shape=(1,), batch_size=self.minibatch_size, dtype="int32", name="n_steps"
+        # this isn't actually needed/used, but the keras RNN code requires at least one
+        # input to a model, so we always add this in as a filler
+        # TODO: only add filler if needed (when there are no other inputs)
+        filler = tf.keras.layers.Input(
+            shape=(None, 1),
+            batch_size=self.minibatch_size,
+            dtype=self.dtype,
+            name="filler",
         )
 
-        return inputs, n_steps
+        return inputs, filler
 
     def build(self, input_shape=None):
         """
@@ -230,7 +247,7 @@ class TensorGraph(tf.keras.layers.Layer):
         with trackable.no_automatic_dependency_tracking_scope(self):
             self.base_params = OrderedDict()
         assert len(self.base_params) == 0
-        for k, v in self.base_arrays_init[True].items():
+        for k, v in self.base_arrays_init["trainable"].items():
             self.base_params[k] = self.add_weight(
                 initializer=tf.initializers.constant(v),
                 shape=v.shape,
@@ -241,25 +258,6 @@ class TensorGraph(tf.keras.layers.Layer):
 
         logger.debug("created base param variables")
         logger.debug([str(x) for x in self.base_params.values()])
-
-        # variables to save the internal state of simulation between runs
-        # note: place these on CPU because they'll only be accessed once at the
-        # beginning of the simulation loop, and they can be quite large
-        with trackable.no_automatic_dependency_tracking_scope(self):
-            self.saved_state = OrderedDict()
-        with tf.device("/cpu:0"):
-            for k, v in self.base_arrays_init[False].items():
-                self.saved_state[k] = self.add_weight(
-                    initializer=tf.initializers.constant(v),
-                    shape=v.shape,
-                    dtype=v.dtype,
-                    trainable=False,
-                    name="saved_state/%s_%s"
-                    % (v.dtype, "_".join(str(x) for x in v.shape)),
-                )
-
-        logger.debug("created saved state variables")
-        logger.debug([str(x) for x in self.saved_state.values()])
 
         # call build on any TensorNode Layers
         for ops in self.plan:
@@ -280,38 +278,17 @@ class TensorGraph(tf.keras.layers.Layer):
                         # add op func to _layers so that any weights are collected
                         self._layers.append(op.func)
 
-    # @tf.function  # TODO: get this working? does this help?
-    @tf.autograph.experimental.do_not_convert
-    def call(self, inputs, training=False, progress=None, stateful=False):
-        """
-        Constructs a new graph to simulate the model.
-
-        Parameters
-        ----------
-        inputs : list of ``tf.Tensor``
-            Input layers/tensors for the network (must match the order defined in
-            `.build_inputs`).
-        training : bool
-            Whether the network is being run in training or inference mode.
-        progress : `.utils.ProgressBar`
-            Progress bar for construction stage
-
-        Returns
-        -------
-        probe_arrays : list of ``tf.Tensor``
-            Tensors representing the output of all the Probes in the network (order
-            corresponding to ``self.model.probes``, which is the order the Probes were
-            instantiated).
-        """
-
-        super().call(inputs, training=training)
-
-        tf.random.set_seed(self.seed)
-
-        if progress is None:
-            progress = utils.NullProgressBar()
+        # initialize op builder
+        build_config = builder.BuildConfig(
+            inference_only=self.inference_only,
+            lif_smoothing=config.get_setting(self.model, "lif_smoothing"),
+            cpu_only=self.device == "/cpu:0" or not utils.tf_gpu_installed,
+            rng=np.random.RandomState(self.seed),
+        )
+        self.op_builder = builder.Builder(self.plan, self.signals, build_config)
 
         # reset signaldict
+        # TODO: is this reset behaviour still necessary?
         self.signals.reset()
 
         # create these constants once here for reuse in different operators
@@ -320,39 +297,87 @@ class TensorGraph(tf.keras.layers.Layer):
         self.signals.zero = tf.constant(0, self.dtype)
         self.signals.one = tf.constant(1, self.dtype)
 
+        # pre-build stage
+        # TODO: will this be called inside or outside the while loop context?
+        self.op_builder.build_pre()
+
+    def get_initial_state(self, **kwargs):
+        # note: keras requires that all states be the default float type
+        return [
+            tf.constant(v, dtype=self.dtype)
+            for v in self.base_arrays_init["state"].values()
+        ]
+
+    # @tf.function  # TODO: get this working? does this help?
+    # @tf.autograph.experimental.do_not_convert
+    def call(self, inputs, states, constants=None, training=False, progress=None):
+        """
+        Constructs an RNN cell to implement simulation timesteps.
+
+        Parameters
+        ----------
+        inputs : list of ``tf.Tensor``
+            Input tensors for the current timestep (must match the order defined in
+            `.build_inputs`).
+        states : list of ``tf.Tensor``
+            State tensors from the previous timestep.
+        training : bool
+            Whether the network is being run in training or inference mode.
+        progress : `.utils.ProgressBar`
+            Progress bar for construction stage.
+
+        Returns
+        -------
+        probe_arrays : list of ``tf.Tensor``
+            Tensors representing the output of all the Probes in the network (order
+            corresponding to ``self.model.probes``, which is the order the Probes were
+            instantiated).
+        new_states : list of ``tf.Tensor``
+            Final values of all the internal states after execution.
+        """
+
+        super().call(inputs, training=training)
+
+        tf.random.set_seed(self.seed)
+
+        self.signals.training = training
+
+        if progress is None:
+            progress = utils.NullProgressBar()
+
         # set up invariant inputs
         with trackable.no_automatic_dependency_tracking_scope(self):
             self.node_inputs = {}
         for n, inp in zip(self.invariant_inputs, inputs):
             # specify shape of inputs (keras sometimes loses this shape information)
-            inp.set_shape([self.minibatch_size, inp.shape[1], n.size_out])
+            # inp.set_shape([self.minibatch_size, inp.shape[1], n.size_out])
 
-            self.node_inputs[n] = inp
+            self.node_inputs[n] = tf.reshape(
+                inp, (self.minibatch_size, self.partial_unroll, -1)
+            )
 
-        self.steps_to_run = inputs[-1][0, 0]
-
-        # initialize op builder
-        build_config = builder.BuildConfig(
-            inference_only=self.inference_only,
-            lif_smoothing=config.get_setting(self.model, "lif_smoothing"),
-            cpu_only=self.device == "/cpu:0" or not utils.tf_gpu_installed,
-            rng=np.random.RandomState(self.seed),
-            training=training,
-        )
-        self.op_builder = builder.Builder(self.plan, self.signals, build_config)
-
-        # pre-build stage
-        with progress.sub("pre-build stage", max_value=len(self.plan)) as sub:
-            self.op_builder.build_pre(sub)
+        # fill in signals.bases
+        # note: we need to do this here because we
+        # need to use the tensors from inside the loop, not the source variables)
+        # note2: eager while loops pass in the variable directly,
+        # so we add the tf.identity so that when we write we're not updating
+        # the base variable
+        for i, key in enumerate(self.base_arrays_init["trainable"]):
+            self.signals.bases[key] = self.base_params[key]
+        for i, key in enumerate(self.base_arrays_init["state"]):
+            self.signals.bases[key] = states[i]
+        for i, key in enumerate(self.base_arrays_init["constant"]):
+            self.signals.bases[key] = constants[i]
 
         # build stage
-        with progress.sub("build stage", max_value=len(self.plan) * self.unroll) as sub:
+        with progress.sub(
+            "build stage", max_value=len(self.plan) * self.partial_unroll
+        ) as sub:
             steps_run, probe_arrays, final_internal_state = self._build_loop(sub)
 
         # store these so that they can be accessed after the initial build
         with trackable.no_automatic_dependency_tracking_scope(self):
-            self.steps_run = steps_run
-            self.probe_arrays = probe_arrays
+            self.probe_arrays = dict(zip(self.model.probes, probe_arrays))
             self.final_internal_state = final_internal_state
 
         # logging
@@ -367,18 +392,7 @@ class TensorGraph(tf.keras.layers.Layer):
         for x in self.signals.write_types.items():
             logger.info("    %s: %d", *x)
 
-        # note: always return steps_run so that the simulation will run for the given
-        # number of steps, even if there are no output probes
-        outputs = list(probe_arrays.values()) + [steps_run]
-
-        if stateful:
-            # update saved state
-            state_updates = [
-                var.assign(val)
-                for var, val in zip(self.saved_state.values(), final_internal_state)
-            ]
-            with tf.control_dependencies(state_updates):
-                outputs = [tf.identity(x) for x in outputs]
+        outputs = probe_arrays + [steps_run], final_internal_state
 
         return outputs
 
@@ -450,119 +464,54 @@ class TensorGraph(tf.keras.layers.Layer):
             Tensors representing the value of all internal state at the end of the run.
         """
 
-        def loop_condition(loop_i, n_steps, *_):
-            return loop_i < n_steps
-
-        def loop_body(loop_i, n_steps, probe_arrays, saved_state, base_params):
-            # fill in signals.bases
-            # note: we need to do this here because we
-            # need to use the tensors from inside the loop, not the source variables)
-            # note2: eager while loops pass in the variable directly,
-            # so we add the tf.identity so that when we write we're not updating
-            # the base variable
-            for key, val in zip(self.saved_state.keys(), saved_state):
-                self.signals.bases[key] = tf.identity(val)
-            for key, val in zip(self.base_params.keys(), base_params):
-                self.signals.bases[key] = tf.identity(val)
-
-            for iter in range(self.unroll):
-                logger.debug("BUILDING ITERATION %d", iter)
-                with tf.name_scope("iteration_%d" % iter):
-                    # fill in invariant input data
-                    for n in self.node_inputs:
-                        if self.model.sig[n]["out"] in self.signals:
-                            # if the out signal doesn't exist then that means that
-                            # the node output isn't actually used anywhere, so we can
-                            # ignore it
-
-                            self.signals.scatter(
-                                self.signals[self.model.sig[n]["out"]],
-                                self.node_inputs[n][:, loop_i],
-                            )
-
-                    # build the operators for a single step
-                    # note: we tie things to the `loop_i` variable so that we
-                    # can be sure the other things we're tying to the
-                    # simulation step (side effects and probes) from the
-                    # previous timestep are executed before the next step
-                    # starts
-                    with tf.control_dependencies([loop_i]):
-                        probe_tensors, side_effects = self._build_step(progress)
-
-                    # copy probe data to array
-                    for i, p in enumerate(probe_tensors):
-                        if config.get_setting(
-                            self.model,
-                            "keep_history",
-                            default=True,
-                            obj=self.model.probes[i],
-                        ):
-                            probe_arrays[i] = probe_arrays[i].write(loop_i, p)
-                        else:
-                            probe_arrays[i] = tf.cond(
-                                pred=tf.equal(loop_i + 1, n_steps),
-                                true_fn=lambda p=p, i=i: probe_arrays[i].write(0, p),
-                                false_fn=lambda i=i: probe_arrays[i],
-                            )
-
-                    # need to make sure that any operators that could have side
-                    # effects run each timestep, so we tie them to the loop
-                    # increment. we also need to make sure that all the probe
-                    # reads happen before those values get overwritten on the
-                    # next timestep
-                    with tf.control_dependencies(side_effects + probe_tensors):
-                        loop_i += 1
-
-            state_arrays = tuple(self.signals.bases[key] for key in self.saved_state)
-            base_arrays = tuple(self.signals.bases[key] for key in self.base_params)
-
-            return loop_i, n_steps, probe_arrays, state_arrays, base_arrays
-
+        # TODO: do we still need the loop_i control_dependencies?
         loop_i = tf.constant(0)
 
-        probe_arrays = [
-            tf.TensorArray(self.dtype, clear_after_read=True, size=0, dynamic_size=True)
-            for _ in self.model.probes
-        ]
+        probe_arrays = []
+        for iter in range(self.partial_unroll):
+            logger.debug("BUILDING ITERATION %d", iter)
+            with tf.name_scope("iteration_%d" % iter):
+                # fill in input data
+                for n in self.node_inputs:
+                    if self.model.sig[n]["out"] in self.signals:
+                        # if the out signal doesn't exist then that means that
+                        # the node output isn't actually used anywhere, so we can
+                        # ignore it
 
-        # build simulation loop
-        loop_vars = (
-            loop_i,
-            self.steps_to_run,
-            probe_arrays,
-            tuple(self.saved_state.values()),
-            tuple(self.base_params.values()),
+                        self.signals.scatter(
+                            self.signals[self.model.sig[n]["out"]],
+                            self.node_inputs[n][:, loop_i],
+                        )
+
+                # build the operators for a single step
+                # note: we tie things to the `loop_i` variable so that we
+                # can be sure the other things we're tying to the
+                # simulation step (side effects and probes) from the
+                # previous timestep are executed before the next step
+                # starts
+                with tf.control_dependencies([loop_i]):
+                    probe_tensors, side_effects = self._build_step(progress)
+
+                # TODO: support keep_history
+                probe_arrays.append(probe_tensors)
+
+                # need to make sure that any operators that could have side
+                # effects run each timestep, so we tie them to the loop
+                # increment. we also need to make sure that all the probe
+                # reads happen before those values get overwritten on the
+                # next timestep
+                with tf.control_dependencies(side_effects + probe_tensors):
+                    loop_i += 1
+
+        # change to shape (minibatch_size, 1) (required by keras) instead of a scalar
+        steps_run = tf.tile(tf.reshape(loop_i, (1, 1)), (self.minibatch_size, 1))
+
+        probe_arrays = [tf.stack(a, axis=1) for a in zip(*probe_arrays)]
+        state_arrays = tuple(
+            self.signals.bases[key] for key in self.base_arrays_init["state"]
         )
 
-        loop_vars = tf.while_loop(
-            cond=loop_condition,
-            body=loop_body,
-            loop_vars=loop_vars,
-            parallel_iterations=1,  # TODO: parallel iterations work in eager mode
-            back_prop=not self.inference_only,
-        )
-
-        # change to shape (minibatch_size,) (required by keras) instead of a scalar
-        steps_run = tf.tile(tf.expand_dims(loop_vars[0], 0), (self.minibatch_size,))
-
-        probe_arrays = OrderedDict()
-        for p, a in zip(self.model.probes, loop_vars[2]):
-            x = a.stack()
-
-            if self.model.sig[p]["in"].minibatched:
-                # change from tensorarray's (steps, batch, d) to (batch, steps, d)
-                perm = np.arange(x.shape.ndims)
-                perm[[0, 1]] = perm[[1, 0]]
-                x = tf.transpose(x, perm=perm)
-            else:
-                # add minibatch dimension for consistency
-                x = tf.expand_dims(x, 0)
-
-            probe_arrays[p] = x
-
-        final_internal_state = loop_vars[3]
-
-        return steps_run, probe_arrays, final_internal_state
+        return steps_run, probe_arrays, state_arrays
 
     @trackable.no_automatic_dependency_tracking
     def build_post(self):
@@ -603,34 +552,6 @@ class TensorGraph(tf.keras.layers.Layer):
 
         # execute build_post on all the op builders
         self.op_builder.build_post()
-
-    def get_tensor(self, sig):
-        """
-        Returns a Tensor corresponding to the given Signal.
-
-        Parameters
-        ----------
-        sig : `~nengo.builder.Signal`
-            A signal in the model
-
-        Returns
-        -------
-        tensor : ``tf.Tensor``
-            Tensor containing the value of the given Signal
-        """
-
-        tensor_sig = self.signals[sig]
-
-        try:
-            base = self.base_params[tensor_sig.key]
-        except KeyError:
-            base = self.saved_state[tensor_sig.key]
-
-        return tf.gather(
-            base,
-            tf.constant(tensor_sig.indices),
-            axis=1 if tensor_sig.minibatched else 0,
-        )
 
     def mark_signals(self):
         """
@@ -766,11 +687,11 @@ class TensorGraph(tf.keras.layers.Layer):
                     self.model.sig[obj]["weights"].trainable = False
                     self.model.sig[obj]["weights"].minibatched = False
 
-        # time/step are not minibatched and not trainable
+        # time/step are not trainable
+        # technically they don't need to be minibatched either, but in the current
+        # setup all state signals are minibatched.
         self.model.step.trainable = False
-        self.model.step.minibatched = False
         self.model.time.trainable = False
-        self.model.time.minibatched = False
 
         # fill in defaults for all other signals
         # signals are not trainable by default, and views take on the
@@ -803,7 +724,11 @@ class TensorGraph(tf.keras.layers.Layer):
         """
 
         float_type = np.dtype(self.dtype)
-        base_arrays = [OrderedDict(), OrderedDict()]
+        base_arrays = {
+            "trainable": OrderedDict(),
+            "state": OrderedDict(),
+            "constant": OrderedDict(),
+        }
         curr_keys = {}
         sig_idxs = {s: i for i, s in enumerate(sigs)}
 
@@ -890,17 +815,20 @@ class TensorGraph(tf.keras.layers.Layer):
                     (self.minibatch_size,) + tuple(1 for _ in shape),
                 )
 
-            if key in base_arrays[sig.trainable]:
-                base_arrays[sig.trainable][key][0].append(initial_value)
-                base_arrays[sig.trainable][key][1] += shape[0]
+            if sig.trainable:
+                type = "trainable"
+            elif sig.minibatched:
+                type = "state"
             else:
-                base_arrays[sig.trainable][key] = [
-                    [initial_value],
-                    shape[0],
-                    sig.minibatched,
-                ]
+                type = "constant"
 
-            n = base_arrays[sig.trainable][key][1]
+            if key in base_arrays[type]:
+                base_arrays[type][key][0].append(initial_value)
+                base_arrays[type][key][1] += shape[0]
+            else:
+                base_arrays[type][key] = [[initial_value], shape[0], sig.minibatched]
+
+            n = base_arrays[type][key][1]
             indices = np.arange(n - shape[0], n)
 
             tensor_sig = self.signals.get_tensor_signal(
@@ -912,11 +840,11 @@ class TensorGraph(tf.keras.layers.Layer):
             logger.debug(tensor_sig)
 
         # concatenate all the signal initial values into full base arrays
-        for trainable in (True, False):
-            for key in base_arrays[trainable]:
-                minibatched = base_arrays[trainable][key][2]
-                base_arrays[trainable][key] = np.concatenate(
-                    base_arrays[trainable][key][0], axis=1 if minibatched else 0
+        for type in ("trainable", "state", "constant"):
+            for key in base_arrays[type]:
+                minibatched = base_arrays[type][key][2]
+                base_arrays[type][key] = np.concatenate(
+                    base_arrays[type][key][0], axis=1 if minibatched else 0
                 )
 
         # add any signal views to the sig_map
@@ -949,6 +877,13 @@ class TensorGraph(tf.keras.layers.Layer):
 
         # error checking
         for sig, tensor_sig in self.signals.items():
+            if sig.trainable:
+                type = "trainable"
+            elif sig.minibatched:
+                type = "state"
+            else:
+                type = "constant"
+
             # tensorsignal shapes should match signal shapes
             assert (
                 tensor_sig.shape == (sig.size,)
@@ -964,7 +899,7 @@ class TensorGraph(tf.keras.layers.Layer):
                 else:
                     initial_value = initial_value.tocoo().data
 
-            base_value = base_arrays[sig.trainable][tensor_sig.key]
+            base_value = base_arrays[type][tensor_sig.key]
             if sig.minibatched:
                 initial_value = initial_value[None, ...]
                 base_value = base_value[:, tensor_sig.indices]
@@ -976,9 +911,9 @@ class TensorGraph(tf.keras.layers.Layer):
         logger.debug(
             "\n".join(
                 [
-                    str((k, v.dtype, v.shape, trainable))
-                    for trainable in [True, False]
-                    for k, v in base_arrays[trainable].items()
+                    str((k, v.dtype, v.shape, type))
+                    for type in ("trainable", "state", "constant")
+                    for k, v in base_arrays[type].items()
                 ]
             )
         )

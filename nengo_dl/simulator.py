@@ -114,7 +114,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         seed=None,
         model=None,
         device=None,
-        unroll_simulation=1,
+        unroll_simulation=False,
         minibatch_size=None,
         progress_bar=True,
     ):
@@ -205,14 +205,40 @@ class Simulator:  # pylint: disable=too-many-public-methods
     def _build_keras(self):
         tf.config.set_soft_device_placement(False)
 
-        self.node_inputs, n_steps = self.tensor_graph.build_inputs()
-        inputs = list(self.node_inputs.values()) + [n_steps]
+        self.node_inputs, filler = self.tensor_graph.build_inputs()
+        inputs = list(self.node_inputs.values()) + [filler]
 
-        self.keras_model = tf.keras.Model(
-            inputs=inputs,
-            outputs=self.tensor_graph(inputs, stateful=self.stateful),
-            name="keras_model",
+        # combine data into partial_unroll sized chunks
+        partial_inputs = tuple(
+            tf.reshape(
+                x, (x.shape[0], -1, x.shape[2] * self.tensor_graph.partial_unroll)
+            )
+            for x in inputs
         )
+
+        self.rnn_layer = tf.keras.layers.RNN(
+            self.tensor_graph,
+            return_sequences=True,
+            stateful=config.get_setting(self.model, "stateful", True),
+            unroll=True if self.unroll is True else False,
+        )
+        partial_outputs = self.rnn_layer(
+            partial_inputs,
+            initial_state=self.tensor_graph.get_initial_state(),
+            constants=[
+                tf.constant(v)
+                for v in self.tensor_graph.base_arrays_init["constant"].values()
+            ],
+        )
+
+        # undo partial unrolling
+        # (batch, unroll_steps, partial_unroll, ...) --> (batch, steps, ...)
+        outputs = [
+            tf.reshape(x, [x.shape[0], -1] + x.shape[3:].as_list())
+            for x in partial_outputs
+        ]
+
+        self.keras_model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
         # set more informative output names
         # keras names them like LayerName_i, whereas we would like to have the names
@@ -275,10 +301,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         """
 
         # reset saved state
-        var_vals = []
-        for key, var in self.tensor_graph.saved_state.items():
-            var_vals.append((var, self.tensor_graph.base_arrays_init[False][key]))
-        tf.keras.backend.batch_set_value(var_vals)
+        self.keras_model.reset_states()
 
         if include_params:
             # reset base params
@@ -286,7 +309,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 list(
                     zip(
                         self.tensor_graph.base_params.values(),
-                        self.tensor_graph.base_arrays_init[True].values(),
+                        self.tensor_graph.base_arrays_init["trainable"].values(),
                     )
                 )
             )
@@ -823,8 +846,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         )
 
         if isinstance(x, dict):
-            input_steps = x["n_steps"][0, 0]
-            input_batch = x["n_steps"].shape[0]
+            input_batch, input_steps = x["filler"].shape[:2]
         else:
             input_steps = None
             input_batch = (self.minibatch_size if "on_batch" in func_type else None,)
@@ -1377,14 +1399,17 @@ class Simulator:  # pylint: disable=too-many-public-methods
             for i, x in enumerate(args):
                 x.set_shape(inputs[i].shape)
 
-            args += (tf.ones((self.minibatch_size, 1), dtype=np.int32) * n_steps,)
+            args += (
+                tf.zeros(
+                    (self.minibatch_size, n_steps, 1), dtype=self.tensor_graph.dtype
+                ),
+            )
 
             out = self.keras_model(args, training=True)
             self.tensor_graph.build_post()
 
             # reset state
-            for key, var in self.tensor_graph.saved_state.items():
-                var.assign(self.tensor_graph.base_arrays_init[False][key])
+            self.keras_model.reset_states()
 
             # drop steps_run
             out = out[:-1]
@@ -1641,8 +1666,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
                     "data",
                 )
 
-        # fill in n_steps
-        input_vals["n_steps"] = np.resize(n_steps, (batch_size, 1)).astype(np.int32)
+        # fill in filler
+        input_vals["filler"] = np.zeros((batch_size, n_steps, 1))
 
         return input_vals
 
@@ -1670,32 +1695,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
             # data is a generator, so don't perform validation
             return
 
-        if nodes:
-            # validate special n_steps input
+        if nodes and "filler" not in data:
+            raise ValidationError("Missing filler input", "data")
 
-            if "n_steps" not in data:
-                raise ValidationError("Must specify 'n_steps' in input data", "data")
-            if (
-                batch_size is None
-                and (data["n_steps"].ndim != 2 or data["n_steps"].shape[1] != 1)
-            ) or (batch_size is not None and data["n_steps"].shape != (batch_size, 1)):
-                raise ValidationError(
-                    "'n_steps' has wrong shape; should be %s (note that this is just "
-                    "the integer n_steps value repeated)" % ((batch_size, 1),),
-                    "data",
-                )
-            if not np.all(data["n_steps"] == data["n_steps"][0, 0]):
-                raise ValidationError(
-                    "'n_steps' should all have the same value", "data"
-                )
-            if n_steps is not None and not np.all(data["n_steps"] == n_steps):
-                raise ValidationError(
-                    "`n_steps` input does not match the requested number of steps",
-                    "data",
-                )
-
-        # exclude n_steps from further data checking
-        data = {k: val for k, val in data.items() if k != "n_steps"}
+        # exclude filler from data checking
+        data = {k: val for k, val in data.items() if k != "filler"}
 
         for name, x in data.items():
             # check that name is valid
@@ -1783,13 +1787,52 @@ class Simulator:  # pylint: disable=too-many-public-methods
         if not hasattr(self, "_step_tensors"):
             # cache these so we aren't adding new ops every time we call this function
             self._step_tensors = [
-                self.tensor_graph.get_tensor(self.model.step),
-                self.tensor_graph.get_tensor(self.model.time),
+                self.get_tensor(self.model.step)[0],
+                self.get_tensor(self.model.time)[0],
             ]
 
         self._n_steps, self._time = [
             x.item() for x in tf.keras.backend.batch_get_value(self._step_tensors)
         ]
+
+    def get_tensor(self, sig):
+        """
+        Returns a Tensor corresponding to the given Signal.
+
+        Parameters
+        ----------
+        sig : `~nengo.builder.Signal`
+            A signal in the model
+
+        Returns
+        -------
+        tensor : ``tf.Tensor``
+            Tensor containing the value of the given Signal
+        """
+
+        tensor_sig = self.tensor_graph.signals[sig]
+
+        try:
+            base = self.tensor_graph.base_params[tensor_sig.key]
+        except KeyError:
+            if self.rnn_layer.stateful:
+                base = self.rnn_layer.states[
+                    list(self.tensor_graph.base_arrays_init["state"].keys()).index(
+                        tensor_sig.key
+                    )
+                ]
+            else:
+                # the model is not stateful, which means the states never change from
+                # their initial values, so we just return the initial value
+                return tf.constant(
+                    self.tensor_graph.base_arrays_init["state"][tensor_sig.key]
+                )
+
+        return tf.gather(
+            base,
+            tf.constant(tensor_sig.indices),
+            axis=1 if tensor_sig.minibatched else 0,
+        )
 
     @property
     def dt(self):
@@ -2018,7 +2061,7 @@ class SimulationData(collections.Mapping):
                 # simulation. we queue them up and fetch them all at once to
                 # be more efficient
                 placeholder = object()
-                fetches[placeholder] = self.sim.tensor_graph.get_tensor(sig)
+                fetches[placeholder] = self.sim.get_tensor(sig)
                 params.append(placeholder)
 
         # get the live parameter values

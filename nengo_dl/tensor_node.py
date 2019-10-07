@@ -312,7 +312,7 @@ class SimTensorNodeBuilder(OpBuilder):
         if op.time is None:
             self.time_data = None
         else:
-            self.time_data = signals[op.time].reshape(())
+            self.time_data = signals[op.time]
 
         if op.input is None:
             self.src_data = None
@@ -330,7 +330,7 @@ class SimTensorNodeBuilder(OpBuilder):
         if self.time_data is None:
             inputs = []
         else:
-            inputs = [signals.gather(self.time_data)]
+            inputs = [signals.gather(self.time_data)[0, 0]]
 
         if self.src_data is not None:
             inputs += [signals.gather(self.src_data)]
