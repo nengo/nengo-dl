@@ -170,6 +170,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
             p = ProgressBar("Building network", "Build")
             self.model.build(network, progress=p)
 
+        self.stateful = config.get_setting(self.model, "stateful", True)
+
         # add in state signal for linearfilters in nengo<3.0.0
         add_state_signal(self.model)
 
@@ -205,7 +207,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         self.keras_model = tf.keras.Model(
             inputs=inputs,
-            outputs=self.tensor_graph(inputs, stateful=True),
+            outputs=self.tensor_graph(inputs, stateful=self.stateful),
             name="keras_model",
         )
 
@@ -291,7 +293,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         self._update_steps()
 
     @require_open
-    def predict(self, x=None, n_steps=None, update_state=False, **kwargs):
+    def predict(self, x=None, n_steps=None, stateful=False, **kwargs):
         """
         Generate output predictions for the input samples.
 
@@ -329,7 +331,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             types must explicitly specify values for all the input nodes.
         n_steps : int
             Number of simulation timesteps
-        update_state : bool
+        stateful : bool
             If True, update the saved simulation state at the end of the run, so that
             future operations will resume from the terminal state of this run.
         kwargs: dict
@@ -343,11 +345,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
         """
 
         return self._call_keras(
-            "predict", x=x, n_steps=n_steps, update_state=update_state, **kwargs
+            "predict", x=x, n_steps=n_steps, stateful=stateful, **kwargs
         )
 
     @require_open
-    def predict_on_batch(self, x=None, n_steps=None, update_state=False, **kwargs):
+    def predict_on_batch(self, x=None, n_steps=None, stateful=False, **kwargs):
         """
         Generate output predictions for the input samples.
 
@@ -388,7 +390,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             types must explicitly specify values for all the input nodes.
         n_steps : int
             Number of simulation timesteps
-        update_state : bool
+        stateful : bool
             If True, update the saved simulation state at the end of the run, so that
             future operations will resume from the terminal state of this run.
         kwargs: dict
@@ -401,21 +403,27 @@ class Simulator:  # pylint: disable=too-many-public-methods
             Output values from all the Probes in the network.
         """
 
+        # need to reset if simulator is stateful but this call is not stateful
+        need_reset = not stateful and self.stateful
+
         # predict_on_batch doesn't support callbacks, so we do it manually
-        if not update_state:
+        if need_reset:
             cbk = callbacks.IsolateState(self)
 
+        # note: setting stateful to self.stateful so that the inner _call_keras won't
+        # try to do any resetting
         output = self._call_keras(
-            "predict_on_batch", x=x, n_steps=n_steps, update_state=True, **kwargs
+            "predict_on_batch", x=x, n_steps=n_steps, stateful=self.stateful, **kwargs
         )
 
-        if not update_state:
+        if need_reset:
             cbk.reset()
+            self._update_steps()
 
         return output
 
     @require_open
-    def predict_generator(self, generator, update_state=False, **kwargs):
+    def predict_generator(self, generator, stateful=False, **kwargs):
         """
         Generate output predictions for the input samples.
 
@@ -442,7 +450,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             ``(sim.minibatch_size, n_steps, node.size_out)``.
 
             Inputs must be explicitly specified for all input Nodes in the network.
-        update_state : bool
+        stateful : bool
             If True, update the saved simulation state at the end of the run, so that
             future operations will resume from the terminal state of this run.
         kwargs: dict
@@ -455,7 +463,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             Output values from all the Probes in the network.
         """
         return self._call_keras(
-            "predict_generator", x=generator, update_state=update_state, **kwargs
+            "predict_generator", x=generator, stateful=stateful, **kwargs
         )
 
     @require_open
@@ -519,7 +527,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         )
 
     @require_open
-    def fit(self, x=None, y=None, n_steps=None, update_state=False, **kwargs):
+    def fit(self, x=None, y=None, n_steps=None, stateful=False, **kwargs):
         """
         Trains the model on some dataset.
 
@@ -567,7 +575,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             ``x` should yield ``(x, y)`` tuples).
         n_steps : int
             Number of simulation timesteps.
-        update_state : bool
+        stateful : bool
             If True, update the saved simulation state at the end of the run, so that
             future operations will resume from the terminal state of this run.
         kwargs: dict
@@ -583,11 +591,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
         """
 
         return self._call_keras(
-            "fit", x=x, y=y, n_steps=n_steps, update_state=update_state, **kwargs
+            "fit", x=x, y=y, n_steps=n_steps, stateful=stateful, **kwargs
         )
 
     @require_open
-    def fit_generator(self, generator, update_state=False, **kwargs):
+    def fit_generator(self, generator, stateful=False, **kwargs):
         """
         Trains the model on some dataset.
 
@@ -617,7 +625,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             ``(sim.minibatch_size, n_steps, node.size_out)``.
             All targets should have shape
             ``(sim.minibatch_size, n_steps, probe.size_in)``.
-        update_state : bool
+        stateful : bool
             If True, update the saved simulation state at the end of the run, so that
             future operations will resume from the terminal state of this run.
         kwargs: dict
@@ -633,11 +641,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
         """
 
         return self._call_keras(
-            "fit_generator", x=generator, update_state=update_state, **kwargs
+            "fit_generator", x=generator, stateful=stateful, **kwargs
         )
 
     @require_open
-    def evaluate(self, x=None, y=None, n_steps=None, update_state=False, **kwargs):
+    def evaluate(self, x=None, y=None, n_steps=None, stateful=False, **kwargs):
         """
         Compute the loss and metric values for the network.
 
@@ -685,7 +693,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             ``x` should yield ``(x, y)`` tuples).
         n_steps : int
             Number of simulation timesteps.
-        update_state : bool
+        stateful : bool
             If True, update the saved simulation state at the end of the run, so that
             future operations will resume from the terminal state of this run.
         kwargs: dict
@@ -701,11 +709,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
         """
 
         return self._call_keras(
-            "evaluate", x=x, y=y, n_steps=n_steps, update_state=update_state, **kwargs
+            "evaluate", x=x, y=y, n_steps=n_steps, stateful=stateful, **kwargs
         )
 
     @require_open
-    def evaluate_generator(self, generator, update_state=False, **kwargs):
+    def evaluate_generator(self, generator, stateful=False, **kwargs):
         """
         Compute the loss and metric values for the network.
 
@@ -736,7 +744,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             ``(sim.minibatch_size, n_steps, node.size_out)``.
             All targets should have shape
             ``(sim.minibatch_size, n_steps, probe.size_in)``.
-        update_state : bool
+        stateful : bool
             If True, update the saved simulation state at the end of the run, so that
             future operations will resume from the terminal state of this run.
         kwargs: dict
@@ -753,15 +761,15 @@ class Simulator:  # pylint: disable=too-many-public-methods
         """
 
         return self._call_keras(
-            "evaluate_generator", x=generator, update_state=update_state, **kwargs
+            "evaluate_generator", x=generator, stateful=stateful, **kwargs
         )
 
     @with_self
     def _call_keras(
-        self, func_type, x=None, y=None, n_steps=None, update_state=False, **kwargs
+        self, func_type, x=None, y=None, n_steps=None, stateful=False, **kwargs
     ):
         """
-        Internal base function for all the fit and evaluate functions.
+        Internal base function for all the predict, fit, and evaluate functions.
 
         Parameters
         ----------
@@ -773,7 +781,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             See description in documentation of ``<func_type>`` method.
         n_steps : int
             See description in documentation of ``<func_type>`` method.
-        update_state : bool
+        stateful : bool
             See description in documentation of ``<func_type>`` method.
         kwargs : dict
             See description in documentation of ``<func_type>`` method.
@@ -814,7 +822,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             input_batch = x["n_steps"].shape[0]
         else:
             input_steps = None
-            input_batch = None
+            input_batch = (self.minibatch_size if "on_batch" in func_type else None,)
 
         if y is not None:
             # check that y is consistent with x (rather than only being
@@ -825,8 +833,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
             )
 
         # warn for synapses with n_steps=1
-        # note: we don't warn if update_state, since there could be effects across runs
-        if not update_state:
+        # note: we don't warn if stateful, since there could be effects across runs
+        if not stateful:
             target_probes = [
                 p
                 for p, e in zip(
@@ -847,8 +855,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
                     "one-timestep delay); did you mean to set synapse=None?" % func_type
                 )
 
-        # set up callback to handle statefulness
-        if not update_state:
+        # set up callback to reset state after execution.
+        # only necessary if simulator is stateful but this call is not stateful
+        if not stateful and self.stateful:
             kwargs["callbacks"] = (kwargs.get("callbacks", None) or []) + [
                 callbacks.IsolateState(self)
             ]
@@ -925,7 +934,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             self.run_steps(steps, **kwargs)
 
     @require_open
-    def run_steps(self, n_steps, data=None, progress_bar=True):
+    def run_steps(self, n_steps, data=None, progress_bar=True, stateful=True):
         """
         Simulate for the given number of steps.
 
@@ -939,6 +948,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
         progress_bar : bool
             If True, print information about the simulation status to standard
             output.
+        stateful : bool
+            If True, update the saved simulation state at the end of the run, so that
+            future operations will resume from the terminal state of this run.
 
         Notes
         -----
@@ -987,7 +999,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             # run the simulation
             try:
                 output = self.predict_on_batch(
-                    data, n_steps=actual_steps, update_state=True
+                    data, n_steps=actual_steps, stateful=stateful
                 )
             except (tf.errors.InternalError, tf.errors.UnknownError) as e:
                 if "nengo.exceptions.SimulationError" in e.message:
@@ -1730,7 +1742,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         for i in range(2):
             if args[i] is None:
-                val = next(iter(data.values())).shape[i]
+                if len(data) > 0:
+                    val = next(iter(data.values())).shape[i]
                 for n, x in data.items():
                     if x.shape[i] != val:
                         raise ValidationError(

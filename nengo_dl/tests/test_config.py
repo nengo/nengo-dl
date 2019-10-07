@@ -66,3 +66,23 @@ def test_keep_history(Simulator, seed):
     assert sim.data[p].shape == (10, 30)
     assert sim2.data[p].shape == (1, 30)
     assert np.allclose(sim.data[p][[-1]], sim2.data[p])
+
+
+@pytest.mark.parametrize(
+    "sim_stateful, func_stateful", [(True, True), (True, False), (False, True)]
+)
+@pytest.mark.parametrize("func", ("predict_on_batch", "predict", "run_steps"))
+def test_stateful(Simulator, sim_stateful, func_stateful, func):
+    with Network() as net:
+        config.configure_settings(stateful=sim_stateful)
+
+        Ensemble(30, 1)
+
+    with Simulator(net) as sim:
+        kwargs = dict(n_steps=5, stateful=func_stateful)
+
+        getattr(sim, func)(**kwargs)
+        assert sim.n_steps == (5 if func_stateful and sim_stateful else 0)
+
+        getattr(sim, func)(**kwargs)
+        assert sim.n_steps == (10 if func_stateful and sim_stateful else 0)
