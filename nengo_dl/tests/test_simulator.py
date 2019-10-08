@@ -50,6 +50,15 @@ def test_persistent_state(Simulator, seed):
     assert np.allclose(data, data2)
     assert np.allclose(data2, data3)
 
+    with net:
+        configure_settings(use_loop=False)
+    with Simulator(net) as sim:
+        for _ in range(100 // sim.unroll):
+            sim.run_steps(sim.unroll)
+        data4 = sim.data[p]
+
+    assert np.allclose(data3, data4)
+
 
 def test_step_blocks(Simulator, seed):
     with nengo.Network(seed=seed) as net:
@@ -140,9 +149,11 @@ def test_input_feeds(Simulator):
             sim.run_steps(10, data={inp: np.zeros((minibatch_size, 11, 3))})
 
 
-@pytest.mark.parametrize("neurons", (True, False))
+@pytest.mark.parametrize(
+    "neurons, use_loop", [(True, False), (False, False), (True, True)]
+)
 @pytest.mark.training
-def test_train_ff(Simulator, neurons, seed):
+def test_train_ff(Simulator, neurons, use_loop, seed):
     minibatch_size = 4
     n_hidden = 20
 
@@ -185,8 +196,9 @@ def test_train_ff(Simulator, neurons, seed):
 
 
 @pytest.mark.parametrize("truncation", (None, 5))
+@pytest.mark.parametrize("use_loop", (True, False))
 @pytest.mark.training
-def test_train_recurrent(Simulator, truncation, seed):
+def test_train_recurrent(Simulator, truncation, use_loop, seed):
     batch_size = 100
     minibatch_size = 100
     n_hidden = 30
@@ -209,7 +221,9 @@ def test_train_recurrent(Simulator, truncation, seed):
 
         p = nengo.Probe(out)
 
-    with Simulator(net, minibatch_size=minibatch_size, seed=seed) as sim:
+    kwargs = dict(unroll_simulation=truncation or n_steps) if use_loop else dict()
+
+    with Simulator(net, minibatch_size=minibatch_size, seed=seed, **kwargs) as sim:
         x = np.outer(np.linspace(0, 1, batch_size), np.ones(n_steps))[:, :, None]
         y = np.outer(np.linspace(0, 1, batch_size), np.linspace(0, 1, n_steps))[
             :, :, None
@@ -953,6 +967,14 @@ def test_check_data(Simulator):
         # n_steps mismatch
         with pytest.raises(ValidationError, match="does not match"):
             sim._check_data({"n_steps": np.asarray([[10], [10], [10]])}, n_steps=5)
+
+    with net:
+        configure_settings(use_loop=False)
+
+    with Simulator(net, unroll_simulation=1) as sim:
+        # n_steps doesn't match loop length
+        with pytest.raises(ValidationError, match="use_loop=False"):
+            sim._check_data({"n_steps": np.asarray([[2]])}, n_steps=2)
 
 
 def test_matching_node_out(Simulator):

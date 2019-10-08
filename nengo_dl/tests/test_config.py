@@ -48,19 +48,21 @@ def test_configure_trainable():
             config.configure_settings(troinable=None)
 
 
-def test_keep_history(Simulator, seed):
+@pytest.mark.parametrize("use_loop", (True, False))
+def test_keep_history(Simulator, use_loop, seed):
     with Network(seed=seed) as net:
-        config.configure_settings(keep_history=True)
+        config.configure_settings(keep_history=True, use_loop=use_loop)
         a = Ensemble(30, 1)
         p = Probe(a.neurons, synapse=0.1)
 
-    with Simulator(net) as sim:
+    kwargs = dict() if use_loop else dict(unroll_simulation=10)
+    with Simulator(net, **kwargs) as sim:
         sim.run_steps(10)
 
     with net:
         net.config[p].keep_history = False
 
-    with Simulator(net) as sim2:
+    with Simulator(net, **kwargs) as sim2:
         sim2.run_steps(10)
 
     assert sim.data[p].shape == (10, 30)

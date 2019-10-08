@@ -42,6 +42,9 @@ Release History
 - Added ``nengo_dl.configure_settings(stateful=False)`` option to avoid building the
   parts of the model responsible for preserving state between executions (this will
   override any ``stateful=True`` arguments in individual functions).
+- Added ``nengo_dl.configure_settings(use_loop=False)`` option to avoid building the
+  simulation inside a symbolic TensorFlow loop. This may improve simulation speed,
+  but the simulation can only run for exactly ``unroll_simulation`` timesteps.
 
 **Changed**
 

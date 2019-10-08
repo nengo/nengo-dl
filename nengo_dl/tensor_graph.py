@@ -42,8 +42,6 @@ class TensorGraph(tf.keras.layers.Layer):
     unroll_simulation : int
         Unroll simulation loop by explicitly building ``unroll_simulation``
         iterations into the computation graph
-    dtype : str
-        Floating point precision to use for simulation (e.g. "float32")
     minibatch_size : int
         The number of simultaneous inputs that will be passed through the
         network
@@ -58,32 +56,25 @@ class TensorGraph(tf.keras.layers.Layer):
 
     @trackable.no_automatic_dependency_tracking
     def __init__(
-        self,
-        model,
-        dt,
-        unroll_simulation,
-        dtype,
-        minibatch_size,
-        device,
-        progress,
-        seed,
+        self, model, dt, unroll_simulation, minibatch_size, device, progress, seed
     ):
         super().__init__(
             name="TensorGraph",
             dynamic=False,
             trainable=not config.get_setting(model, "inference_only", False),
-            dtype=dtype,
+            dtype=config.get_setting(model, "dtype", "float32"),
             batch_size=minibatch_size,
         )
 
         self.model = model
         self.dt = dt
         self.unroll = unroll_simulation
+        self.use_loop = config.get_setting(model, "use_loop", True)
         self.minibatch_size = minibatch_size
         self.device = device
         self.seed = seed
         self.inference_only = not self.trainable
-        self.signals = signals.SignalDict(dtype, self.minibatch_size)
+        self.signals = signals.SignalDict(self.dtype, self.minibatch_size)
 
         # find invariant inputs (nodes that don't receive any input other
         # than the simulation time). we'll compute these outside the simulation
@@ -349,7 +340,9 @@ class TensorGraph(tf.keras.layers.Layer):
 
         # build stage
         with progress.sub("build stage", max_value=len(self.plan) * self.unroll) as sub:
-            steps_run, probe_arrays, final_internal_state = self._build_loop(sub)
+            steps_run, probe_arrays, final_internal_state = (
+                self._build_loop(sub) if self.use_loop else self._build_no_loop(sub)
+            )
 
         # store these so that they can be accessed after the initial build
         with trackable.no_automatic_dependency_tracking_scope(self):
@@ -384,58 +377,9 @@ class TensorGraph(tf.keras.layers.Layer):
 
         return outputs
 
-    def _build_step(self, progress):
-        """
-        Build the operators that execute a single simulation timestep
-        into the graph.
-
-        Parameters
-        ----------
-        progress : `.utils.ProgressBar`
-            Progress bar for loop construction
-
-        Returns
-        -------
-        probe_tensors : list of ``tf.Tensor``
-            The Tensor objects representing the data required for each model
-            Probe
-        side_effects : list of ``tf.Tensor``
-            The output Tensors of computations that may have side-effects
-            (e.g., `~nengo.Node` functions), meaning that they
-            must be executed each time step even if their output doesn't appear
-            to be used in the simulation
-        """
-
-        # build operators
-        side_effects = self.op_builder.build(progress)
-
-        logger.debug("collecting probe tensors")
-        probe_tensors = []
-        for p in self.model.probes:
-            probe_sig = self.model.sig[p]["in"]
-            if probe_sig in self.signals:
-                probe_tensors.append(self.signals.gather(self.signals[probe_sig]))
-            else:
-                # if a probe signal isn't in sig_map, that means that it isn't
-                # involved in any simulator ops.  so we know its value never
-                # changes, and we'll just return a constant containing the
-                # initial value.
-                init_val = probe_sig.initial_value
-                if probe_sig.minibatched:
-                    init_val = np.tile(init_val[None, :], (self.minibatch_size, 1))
-
-                probe_tensors.append(tf.constant(init_val, dtype=self.dtype))
-
-        logger.debug("=" * 30)
-        logger.debug("build_step complete")
-        logger.debug("probe_tensors %s", [str(x) for x in probe_tensors])
-        logger.debug("side_effects %s", [str(x) for x in side_effects])
-
-        return probe_tensors, side_effects
-
     def _build_loop(self, progress):
         """
-        Build simulation loop.
+        Build simulation loop using symbolic while loop.
 
         Parameters
         ----------
@@ -467,53 +411,23 @@ class TensorGraph(tf.keras.layers.Layer):
             for key, val in zip(self.base_params.keys(), base_params):
                 self.signals.bases[key] = tf.identity(val)
 
-            for iter in range(self.unroll):
-                logger.debug("BUILDING ITERATION %d", iter)
-                with tf.name_scope("iteration_%d" % iter):
-                    # fill in invariant input data
-                    for n in self.node_inputs:
-                        if self.model.sig[n]["out"] in self.signals:
-                            # if the out signal doesn't exist then that means that
-                            # the node output isn't actually used anywhere, so we can
-                            # ignore it
+            def update_probes(probe_tensors, loop_i):
+                for i, p in enumerate(probe_tensors):
+                    if config.get_setting(
+                        self.model,
+                        "keep_history",
+                        default=True,
+                        obj=self.model.probes[i],
+                    ):
+                        probe_arrays[i] = probe_arrays[i].write(loop_i, p)
+                    else:
+                        probe_arrays[i] = tf.cond(
+                            pred=tf.equal(loop_i + 1, n_steps),
+                            true_fn=lambda p=p, i=i: probe_arrays[i].write(0, p),
+                            false_fn=lambda i=i: probe_arrays[i],
+                        )
 
-                            self.signals.scatter(
-                                self.signals[self.model.sig[n]["out"]],
-                                self.node_inputs[n][:, loop_i],
-                            )
-
-                    # build the operators for a single step
-                    # note: we tie things to the `loop_i` variable so that we
-                    # can be sure the other things we're tying to the
-                    # simulation step (side effects and probes) from the
-                    # previous timestep are executed before the next step
-                    # starts
-                    with tf.control_dependencies([loop_i]):
-                        probe_tensors, side_effects = self._build_step(progress)
-
-                    # copy probe data to array
-                    for i, p in enumerate(probe_tensors):
-                        if config.get_setting(
-                            self.model,
-                            "keep_history",
-                            default=True,
-                            obj=self.model.probes[i],
-                        ):
-                            probe_arrays[i] = probe_arrays[i].write(loop_i, p)
-                        else:
-                            probe_arrays[i] = tf.cond(
-                                pred=tf.equal(loop_i + 1, n_steps),
-                                true_fn=lambda p=p, i=i: probe_arrays[i].write(0, p),
-                                false_fn=lambda i=i: probe_arrays[i],
-                            )
-
-                    # need to make sure that any operators that could have side
-                    # effects run each timestep, so we tie them to the loop
-                    # increment. we also need to make sure that all the probe
-                    # reads happen before those values get overwritten on the
-                    # next timestep
-                    with tf.control_dependencies(side_effects + probe_tensors):
-                        loop_i += 1
+            loop_i = self._build_inner_loop(loop_i, update_probes, progress)
 
             state_arrays = tuple(self.signals.bases[key] for key in self.saved_state)
             base_arrays = tuple(self.signals.bases[key] for key in self.base_params)
@@ -565,6 +479,157 @@ class TensorGraph(tf.keras.layers.Layer):
         final_internal_state = loop_vars[3]
 
         return steps_run, probe_arrays, final_internal_state
+
+    def _build_no_loop(self, progress):
+        """
+        Build simulation loop through explicit unrolling.
+
+        Parameters
+        ----------
+        progress : `.utils.ProgressBar`
+            Progress bar for loop construction
+
+        Returns
+        -------
+        steps_run : ``tf.Tensor``
+            The number of simulation steps that were executed.
+        probe_arrays : dict of {`nengo.Probe`: ``tf.Tensor``}
+            Arrays containing the output values for each Probe.
+        final_internal_state: list of ``tf.Tensor``
+            Tensors representing the value of all internal state at the end of the run.
+        """
+
+        for key, val in self.saved_state.items():
+            self.signals.bases[key] = tf.identity(val)
+        for key, val in self.base_params.items():
+            self.signals.bases[key] = tf.identity(val)
+
+        loop_i = tf.constant(0)  # symbolic loop variable
+        loop_iter = 0  # non-symbolic loop variable
+        probe_data = [[] for _ in self.model.probes]
+
+        def update_probes(probe_tensors, _):
+            nonlocal loop_iter
+
+            for i, p in enumerate(probe_tensors):
+                if config.get_setting(
+                    self.model, "keep_history", default=True, obj=self.model.probes[i]
+                ):
+                    probe_data[i].append(p)
+                elif loop_iter == self.unroll - 1:
+                    probe_data[i].append(p)
+
+            loop_iter += 1
+
+        loop_i = self._build_inner_loop(loop_i, update_probes, progress)
+
+        # change to shape (minibatch_size,) (required by keras) instead of a scalar
+        steps_run = tf.tile(tf.expand_dims(loop_i, 0), (self.minibatch_size,))
+
+        probe_arrays = OrderedDict()
+        for p, a in zip(self.model.probes, probe_data):
+            if self.model.sig[p]["in"].minibatched:
+                x = tf.stack(a, axis=1)
+            else:
+                x = tf.stack(a, axis=0)
+
+                # add minibatch dimension for consistency
+                x = tf.expand_dims(x, 0)
+
+            probe_arrays[p] = x
+
+        final_internal_state = tuple(
+            self.signals.bases[key] for key in self.saved_state
+        )
+
+        return steps_run, probe_arrays, final_internal_state
+
+    def _build_inner_loop(self, loop_i, update_probes, progress):
+        """
+
+        Parameters
+        ----------
+        loop_i : ``tf.Tensor``
+            Loop iteration variable.
+        update_probes : callable
+            Function that will update some stored probe data in each iteration.
+        progress
+            Progress bar for loop construction.
+
+        Returns
+        -------
+        loop_i : ``tf.Tensor``
+            Updated loop iteration variable.
+        """
+
+        constant_probes = {}
+        for p in self.model.probes:
+            probe_sig = self.model.sig[p]["in"]
+            if probe_sig not in self.signals:
+                # if a probe signal isn't in sig_map, that means that it
+                # isn't involved in any simulator ops.  so we know its value
+                # never changes, and we'll just return a constant containing
+                # the initial value.
+                init_val = probe_sig.initial_value
+                if probe_sig.minibatched:
+                    init_val = np.tile(init_val[None, :], (self.minibatch_size, 1))
+
+                constant_probes[p] = tf.constant(init_val, dtype=self.dtype)
+
+        for unroll_iter in range(self.unroll):
+            logger.debug("BUILDING ITERATION %d", unroll_iter)
+            with tf.name_scope("iteration_%d" % unroll_iter):
+                # fill in invariant input data
+                for n in self.node_inputs:
+                    if self.model.sig[n]["out"] in self.signals:
+                        # if the out signal doesn't exist then that means that
+                        # the node output isn't actually used anywhere, so we can
+                        # ignore it
+
+                        self.signals.scatter(
+                            self.signals[self.model.sig[n]["out"]],
+                            self.node_inputs[n][:, loop_i],
+                        )
+
+                # build the operators for a single step
+                # note: we tie things to the `loop_i` variable so that we
+                # can be sure the other things we're tying to the
+                # simulation step (side effects and probes) from the
+                # previous timestep are executed before the next step
+                # starts
+                with tf.control_dependencies([loop_i]):
+                    # build operators
+                    side_effects = self.op_builder.build(progress)
+
+                    logger.debug("collecting probe tensors")
+                    probe_tensors = []
+                    for p in self.model.probes:
+                        if p in constant_probes:
+                            probe_tensors.append(constant_probes[p])
+                        else:
+                            probe_tensors.append(
+                                self.signals.gather(
+                                    self.signals[self.model.sig[p]["in"]]
+                                )
+                            )
+
+                    logger.debug("=" * 30)
+                    logger.debug("build_step complete")
+                    logger.debug("probe_tensors %s", [str(x) for x in probe_tensors])
+                    logger.debug("side_effects %s", [str(x) for x in side_effects])
+
+                # update probe data
+                update_probes(probe_tensors, loop_i)
+
+                # need to make sure that any operators that could have side
+                # effects run each timestep, so we tie them to the loop
+                # increment. we also need to make sure that all the probe
+                # reads happen before those values get overwritten on the
+                # next timestep
+                with tf.control_dependencies(side_effects + probe_tensors):
+                    loop_i += 1
+
+        return loop_i
 
     @trackable.no_automatic_dependency_tracking
     def build_post(self):

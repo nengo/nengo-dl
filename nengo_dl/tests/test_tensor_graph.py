@@ -66,7 +66,7 @@ def test_mark_signals():
     model.build(net)
 
     tg = tensor_graph.TensorGraph(
-        model, None, None, tf.float32, 1, None, utils.NullProgressBar(), None
+        model, None, None, 1, None, utils.NullProgressBar(), None
     )
     tg.mark_signals()
 
@@ -129,9 +129,7 @@ def test_mark_signals_config():
 
     progress = utils.NullProgressBar()
 
-    tg = tensor_graph.TensorGraph(
-        model, None, None, tf.float32, 1, None, progress, None
-    )
+    tg = tensor_graph.TensorGraph(model, None, None, 1, None, progress, None)
     tg.mark_signals()
 
     assert not model.sig[ens0]["encoders"].trainable
@@ -155,9 +153,7 @@ def test_mark_signals_config():
     model = nengo.builder.Model()
     model.build(net)
 
-    tg = tensor_graph.TensorGraph(
-        model, None, None, tf.float32, 1, None, progress, None
-    )
+    tg = tensor_graph.TensorGraph(model, None, None, 1, None, progress, None)
     with pytest.warns(UserWarning):
         tg.mark_signals()
 
@@ -174,9 +170,7 @@ def test_mark_signals_config():
     model = nengo.builder.Model()
     model.build(net)
 
-    tg = tensor_graph.TensorGraph(
-        model, None, None, tf.float32, 1, None, progress, None
-    )
+    tg = tensor_graph.TensorGraph(model, None, None, 1, None, progress, None)
     with pytest.warns(UserWarning):
         tg.mark_signals()
 
@@ -188,9 +182,7 @@ def test_mark_signals_config():
     model = nengo.builder.Model()
     model.add_op(op)
 
-    tg = tensor_graph.TensorGraph(
-        model, None, None, tf.float32, 1, None, progress, None
-    )
+    tg = tensor_graph.TensorGraph(model, None, None, 1, None, progress, None)
     with pytest.warns(UserWarning):
         tg.mark_signals()
 
@@ -217,7 +209,7 @@ def test_planner_config(config_planner):
     model.add_op(nengo.builder.operator.DotInc(sig, sig2, sig3))
 
     tg = tensor_graph.TensorGraph(
-        model, None, None, tf.float32, 1, None, utils.NullProgressBar(), None
+        model, None, None, 1, None, utils.NullProgressBar(), None
     )
 
     assert len(tg.plan) == (3 if config_planner else 2)
@@ -395,8 +387,11 @@ def test_create_signals_partition():
     assert len(graph.base_arrays_init[False]) == 4
 
 
-def test_get_tensor(Simulator):
+@pytest.mark.parametrize("use_loop", (True, False))
+def test_get_tensor(Simulator, use_loop):
     with nengo.Network() as net:
+        config.configure_settings(use_loop=use_loop)
+
         a = nengo.Node([1])
         b = nengo.Ensemble(10, 1)
         c = nengo.Connection(
@@ -408,7 +403,8 @@ def test_get_tensor(Simulator):
         # (checks that the indices reloading works properly)
         nengo.Probe(c, "weights")
 
-    with Simulator(net) as sim:
+    kwargs = dict() if use_loop else dict(unroll_simulation=10)
+    with Simulator(net, **kwargs) as sim:
         tensor = sim.tensor_graph.get_tensor(sim.model.sig[c]["weights"])
 
         assert np.allclose(tf.keras.backend.get_value(tensor), np.arange(10)[:, None])

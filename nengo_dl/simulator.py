@@ -183,7 +183,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 self.model,
                 self.dt,
                 unroll_simulation,
-                config.get_setting(self.model, "dtype", "float32"),
                 self.minibatch_size,
                 device,
                 progress,
@@ -1777,6 +1776,17 @@ class Simulator:  # pylint: disable=too-many-public-methods
                     "dimensionality of %s (%s)" % (x.shape[2], obj, size),
                     "data",
                 )
+
+        if (
+            n_steps is not None
+            and not self.tensor_graph.use_loop
+            and n_steps != self.unroll
+        ):
+            raise ValidationError(
+                "When use_loop=False, n_steps (%d) must exactly match "
+                "unroll_simulation (%d)" % (n_steps, self.unroll),
+                "n_steps",
+            )
 
     @with_self
     def _update_steps(self):

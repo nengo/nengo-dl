@@ -62,6 +62,11 @@ def configure_settings(**kwargs):
         as `.Simulator.predict`).  Otherwise all operations will be stateless. Note that
         this can also be configured individually through the ``stateful`` parameter on
         individual functions.
+    use_loop : bool
+        If True (default), use a symbolic while loop to run the simulation. Otherwise,
+        simulation iterations are explicitly built into the model, avoiding the
+        while loop. This can improve performance, but the simulation can only run
+        for exactly ``Simulator.unroll_simulation`` iterations.
     """
 
     # get the toplevel network
@@ -101,6 +106,7 @@ def configure_settings(**kwargs):
             "lif_smoothing",
             "dtype",
             "stateful",
+            "use_loop",
         ):
             params.set_param(attr, Parameter(attr, val))
         else:
