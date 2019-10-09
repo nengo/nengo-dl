@@ -13,7 +13,6 @@ import tensorflow as tf
 from tensorflow.python.eager import profiler
 
 import nengo_dl
-from nengo_dl.compat import tf_compat
 
 
 def cconv(dimensions, neurons_per_d, neuron_type):
@@ -417,9 +416,7 @@ def run_profile(
                 )
             }
 
-            sim.compile(
-                tf_compat.train.GradientDescentOptimizer(0.001), loss=tf.losses.mse
-            )
+            sim.compile(tf.optimizers.SGD(0.001), loss=tf.losses.mse)
 
             # run once to eliminate startup overhead
             start = timeit.default_timer()

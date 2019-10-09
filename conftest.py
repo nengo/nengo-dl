@@ -8,7 +8,6 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import simulator, utils
-from nengo_dl.compat import tf_compat
 from nengo_dl.tests import make_test_sim
 
 

@@ -9,10 +9,6 @@ from distutils.version import LooseVersion
 
 import nengo
 import numpy as np
-import tensorflow as tf
-
-
-tf_compat = tf.compat.v1
 
 
 if LooseVersion(nengo.__version__) <= "2.8.0":

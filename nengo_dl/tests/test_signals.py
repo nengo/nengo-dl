@@ -8,7 +8,6 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl.compat import tf_compat
 from nengo_dl.signals import TensorSignal, SignalDict
 
 
@@ -121,10 +120,7 @@ def test_signal_dict_scatter(minibatched):
     pre_slice = np.index_exp[:, :4] if minibatched else np.index_exp[:4]
     post_slice = np.index_exp[:, 4:] if minibatched else np.index_exp[4:]
 
-    signals.bases = {
-        key: tf.constant(val),
-        var_key: tf_compat.assign(tf.Variable(val), val),
-    }
+    signals.bases = {key: tf.constant(val), var_key: tf.Variable(val)}
 
     x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), minibatched)
     with pytest.raises(BuildError, match="wrong dtype"):

@@ -9,7 +9,6 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import TensorNode, Layer, configure_settings, tensor_layer
-from nengo_dl.compat import tf_compat
 
 
 def test_validation(Simulator):
@@ -239,7 +238,7 @@ def test_reuse_vars(Simulator, pytestconfig):
             tf.keras.layers.Dense(
                 units=10,
                 use_bias=False,
-                kernel_initializer=tf_compat.initializers.constant(3),
+                kernel_initializer=tf.initializers.constant(3),
                 dtype=pytestconfig.getoption("--dtype"),
             )
         )(inp)

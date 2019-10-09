@@ -15,7 +15,6 @@ import numpy as np
 import progressbar
 import tensorflow as tf
 
-from nengo_dl.compat import tf_compat
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +180,7 @@ def print_op(input, message):
         return x
 
     with tf.device("/cpu:0"):
-        output = tf_compat.py_func(print_func, [input], input.dtype)
+        output = tf.numpy_function(print_func, [input], input.dtype)
     output.set_shape(input.shape)
 
     return output
