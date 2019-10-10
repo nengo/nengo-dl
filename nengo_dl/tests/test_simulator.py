@@ -17,9 +17,9 @@ from nengo.exceptions import (
 import numpy as np
 import pytest
 import tensorflow as tf
-from tensorflow.python.summary.summary_iterator import summary_iterator
+from tensorflow.core.util import event_pb2
 
-from nengo_dl import Layer, configure_settings, dists, callbacks, TensorNode
+from nengo_dl import Layer, TensorNode, configure_settings, dists, callbacks, compat
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
 from nengo_dl.utils import tf_gpu_installed
@@ -733,7 +733,9 @@ def test_tensorboard(Simulator, tmpdir):
     assert os.path.exists(event_file)
 
     summaries = ["epoch_loss", "epoch_probe_loss", "epoch_probe_1_loss"]
-    for i, event in enumerate(summary_iterator(event_file)):
+    for i, record in enumerate(tf.data.TFRecordDataset(event_file)):
+        event = event_pb2.Event.FromString(record.numpy())
+
         if i < 2:
             # metadata stuff
             continue
@@ -758,7 +760,9 @@ def test_tensorboard(Simulator, tmpdir):
         "Ensemble.neurons_None_bias",
         "Connection_None_weights",
     ]
-    for i, event in enumerate(summary_iterator(event_file)):
+    for i, record in enumerate(tf.data.TFRecordDataset(event_file)):
+        event = event_pb2.Event.FromString(record.numpy())
+
         if i < 1:
             # metadata stuff
             continue
@@ -1631,3 +1635,30 @@ def test_io_names(Simulator):
 
         with pytest.raises(ValidationError, match="unknown type"):
             sim.get_name(nengo.Ensemble(10, 1, add_to_container=False))
+
+
+def test_log_filter(Simulator, caplog):
+    with nengo.Network() as net:
+        a = nengo.Node([0])
+        p = nengo.Probe(a)
+
+    with Simulator(net) as sim:
+        sim.compile(loss={p: "mse"})
+        assert "missing from loss dictionary" not in caplog.text
+
+        sim.tensor_graph.add_weight()
+        assert "constraint is deprecated" not in caplog.text
+
+        tf.compat.v1.keras.backend.get_session()
+        assert "tf.keras.backend.get_session" not in caplog.text
+
+        # make sure there were no other deprecation warnings
+        filt = compat.TFLogFilter(err_on_deprecation=True)
+        for rec in caplog.records:
+            filt.filter(rec)
+
+    # make sure the deprecation checking works
+    logger = logging.getLogger("test")
+    logger.addFilter(filt)
+    with pytest.raises(Exception, match="Deprecation warning"):
+        logger.warning("a thing is deprecated")

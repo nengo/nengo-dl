@@ -43,8 +43,8 @@ def cconv(dimensions, neurons_per_d, neuron_type):
 
         net.inp_a = nengo.Node([0] * dimensions)
         net.inp_b = nengo.Node([1] * dimensions)
-        nengo.Connection(net.inp_a, net.cconv.A)
-        nengo.Connection(net.inp_b, net.cconv.B)
+        nengo.Connection(net.inp_a, net.cconv.input_a)
+        nengo.Connection(net.inp_b, net.cconv.input_b)
 
         net.p = nengo.Probe(net.cconv.output)
 

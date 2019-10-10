@@ -27,6 +27,13 @@ def pytest_configure(config):
 
         simulator.Simulator.unsupported = unsupported
 
+    config.addinivalue_line(
+        "markers", "training: mark test as requiring training functionality"
+    )
+    config.addinivalue_line(
+        "markers", "performance: mark tests that depend on a specific benchmark machine"
+    )
+
 
 def pytest_runtest_setup(item):
     if item.get_closest_marker("gpu", False) and not utils.tf_gpu_installed:
