@@ -1,8 +1,6 @@
 """
-Manages all the data and build processes associated with the TensorFlow graph.
-
-The TensorFlow graph is the symbolic description of the computations in the
-network, which will be executed by the simulator.
+Manages the data and build processes associated with implementing a Nengo simulation
+in TensorFlow.
 """
 
 from collections import OrderedDict, defaultdict
@@ -31,25 +29,25 @@ logger = logging.getLogger(__name__)
 
 class TensorGraph(tf.keras.layers.Layer):
     """
-    Manages the construction of the TensorFlow symbolic computation graph.
+    Implement the Nengo simulation as a Keras Layer.
 
     Parameters
     ----------
     model : `~nengo.builder.Model`
-        Pre-built Nengo model describing the network to be simulated
+        Pre-built Nengo model describing the network to be simulated.
     dt : float
-        Length of a simulator timestep, in seconds
+        Length of a simulator timestep, in seconds.
     unroll_simulation : int
         Unroll simulation loop by explicitly building ``unroll_simulation``
-        iterations into the computation graph
+        iterations into the computation graph.
     minibatch_size : int
         The number of simultaneous inputs that will be passed through the
-        network
+        network.
     device : None or ``"/cpu:0"`` or ``"/gpu:[0-n]"``
         Device on which to execute computations (if None then uses the
-        default device as determined by TensorFlow)
+        default device as determined by TensorFlow).
     progress : `.utils.ProgressBar`
-        Progress bar for optimization stage
+        Progress bar for optimization stage.
     seed : int
         Seed for random number generation.
     """
@@ -211,6 +209,11 @@ class TensorGraph(tf.keras.layers.Layer):
     def build(self, input_shape=None):
         """
         Create any Variables used in the model.
+
+        Parameters
+        ----------
+        input_shape : list of tuple of int
+            Shapes of all the inputs to this layer.
         """
 
         super().build(input_shape)
@@ -275,17 +278,18 @@ class TensorGraph(tf.keras.layers.Layer):
     @tf.autograph.experimental.do_not_convert
     def call(self, inputs, training=None, progress=None, stateful=False):
         """
-        Constructs a new graph to simulate the model.
+        Constructs the graph elements to simulate the model.
 
         Parameters
         ----------
         inputs : list of ``tf.Tensor``
-            Input layers/tensors for the network (must match the order defined in
+            Input layers/tensors for the network (must match the structure defined in
             `.build_inputs`).
         training : bool
-            Whether the network is being run in training or inference mode.
+            Whether the network is being run in training or inference mode.  If None,
+            uses the symbolic Keras learning phase variable.
         progress : `.utils.ProgressBar`
-            Progress bar for construction stage
+            Progress bar for construction stage.
 
         Returns
         -------
@@ -678,12 +682,12 @@ class TensorGraph(tf.keras.layers.Layer):
         Parameters
         ----------
         sig : `~nengo.builder.Signal`
-            A signal in the model
+            A signal in the Nengo model.
 
         Returns
         -------
         tensor : ``tf.Tensor``
-            Tensor containing the value of the given Signal
+            Tensor containing the value of the given Signal.
         """
 
         tensor_sig = self.signals[sig]

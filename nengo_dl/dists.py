@@ -17,9 +17,9 @@ class TruncatedNormal(Distribution):
     Parameters
     ----------
     mean : float
-        Mean of the normal distribution
+        Mean of the normal distribution.
     stddev : float
-        Standard deviation of the normal distribution
+        Standard deviation of the normal distribution.
     limit : float
         Resample any values more than this distance from the mean. If None,
         then limit will be set to 2 standard deviations.
@@ -74,17 +74,17 @@ class TruncatedNormal(Distribution):
 
 class VarianceScaling(Distribution):
     """Variance scaling distribution for weight initialization (analogous to
-    TensorFlow ``init_ops.VarianceScaling``).
+    ``tf.initializers.VarianceScaling``).
 
     Parameters
     ----------
     scale : float
-        Overall scale on values
+        Overall scale on values.
     mode : "fan_in" or "fan_out" or "fan_avg"
         Whether to scale based on input or output dimensionality, or average of
-        the two
+        the two.
     distribution: "uniform" or "normal"
-        Whether to use a uniform or normal distribution for weights
+        Whether to use a uniform or truncated normal distribution for weights.
     """
 
     scale = NumberParam("scale", low=0)

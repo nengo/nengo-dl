@@ -1,6 +1,8 @@
 """
 The configuration system is used to change NengoDL's default behaviour in
 various ways.
+
+See `the documentation <https://www.nengo.ai/nengo-dl/config.html>`__ for more details.
 """
 
 from nengo import Connection, Ensemble, Network, Probe, ensemble
@@ -21,12 +23,12 @@ def configure_settings(**kwargs):
     ----------
     trainable : bool or None
         Adds a parameter to Nengo Ensembles/Connections/Networks that controls
-        whether or not they will be optimized by `.Simulator.train`.
+        whether or not they will be optimized by `.Simulator.fit`.
         Passing ``None`` will use the default ``nengo_dl`` trainable settings,
         or True/False will override the default for all objects.  In either
         case trainability can be further configured on a per-object basis (e.g.
         ``net.config[my_ensemble].trainable = True``.  See `the documentation
-        <https://www.nengo.ai/nengo-dl/training.html#choosing-which-elements-to-optimize>`_
+        <https://www.nengo.ai/nengo-dl/training.html#choosing-which-elements-to-optimize>`__
         for more details.
     planner : graph planning algorithm
         Pass one of the `graph planners
@@ -42,7 +44,7 @@ def configure_settings(**kwargs):
         default simplifications applied.
     inference_only : bool
         Set to True if the network will only be run in inference mode (i.e.,
-        no calls to `.Simulator.train`).  This may result in a small
+        no calls to `.Simulator.fit`).  This may result in a small
         increase in the inference speed.
     lif_smoothing : float
         If specified, use the smoothed `~.neurons.SoftLIFRate` neuron

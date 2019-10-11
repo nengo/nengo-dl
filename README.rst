@@ -58,7 +58,7 @@ However, NengoDL is not simply a duplicate of the Nengo simulator.  It also
 adds a number of unique features, such as:
 
 - optimizing the parameters of a model through deep learning
-  training methods
+  training methods (using the Keras API)
 - faster simulation speed, on both CPU and GPU
 - inserting networks defined using TensorFlow (such as
   deep learning architectures) directly into a Nengo model

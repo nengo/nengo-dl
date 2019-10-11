@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 def mergeable(op, chosen_ops):
     """
-    Check if the given op can be merged with the candidate group
+    Check if the given op can be merged with the candidate group.
 
     Parameters
     ----------
@@ -97,8 +97,10 @@ def mergeable(op, chosen_ops):
 
 def greedy_planner(operators):
     """
-    Combine mergeable operators into groups that will be executed as a
-    single computation.
+    Create merged execution plan through greedy selection.
+
+    Always selects the largest available group of operators as the next to be
+    executed.
 
     Parameters
     ----------

@@ -69,8 +69,7 @@ Release History
 - ``Simulator.time/n_steps`` are now read-only.
 - ``Simulator.n_steps/time`` are now managed as part of the op graph, rather than
   manually in the Simulator.
-- Renamed ``nengo_dl.objectives`` to ``nengo_dl.losses`` (to align with
-  ``tf.keras.losses``).
+- Renamed ``nengo_dl.objectives`` to ``nengo_dl.losses`` (to align with ``tf.losses``).
 - ``nengo_dl.objectives.Regularize`` now takes two arguments (``y_true`` and ``y_pred``)
   in order to be compatible with the ``tf.losses.Loss`` API (``y_true`` is ignored).
 - The `remove_constant_copies
@@ -97,7 +96,7 @@ Release History
   ``tensor_layer(x, tf.keras.layers.Dense, units=10)``).
 - ``benchmarks.run_profile`` now uses the TensorBoard format when profiling,
   see `the documentation
-  <https://www.tensorflow.org/tensorboard/r2/tensorboard_profiling_keras>`_ for
+  <https://www.tensorflow.org/tensorboard/tensorboard_profiling_keras>`_ for
   instructions on how to view this information (the information is the same, it is
   just accessed through TensorBoard rather than requiring that it be loaded directly
   in a Chrome browser).
@@ -119,6 +118,11 @@ Release History
   the special logic it provides for ``nan`` targets).
 - Connections created by ``nengo_dl.Layer/tensor_layer`` will be marked as
   non-trainable by default.
+- Updated all documentation and examples for the new syntax (in particular, see the
+  updated `Coming from TensorFlow
+  <https://www.nengo.ai/nengo-dl/examples/from-tensorflow.html#>`_ tutorial and
+  `TensorFlow/Keras integration
+  <https://www.nengo.ai/nengo-dl/examples/tensorflow-models.html>`_ example).
 
 **Deprecated**
 
@@ -130,7 +134,7 @@ Release History
 - Removed the `session_config
   <https://www.nengo.ai/nengo-dl/config.html#session-config>`_ configuration option.
   Use the `updated TensorFlow config system
-  <https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/config>`_ instead.
+  <https://www.tensorflow.org/api_docs/python/tf/config>`_ instead.
 - Removed the deprecated ``nengo_dl.Simulator(..., dtype=...)`` argument. Use
   ``nengo_dl.configure_settings(dtype=...)`` instead.
 - Removed the deprecated ``Simulator.run(..., input_feeds=...)`` argument. Use
@@ -476,7 +480,7 @@ Release History
   reuse in different Simulators.
 - Added `documentation on saving and loading model parameters
   <https://www.nengo.ai/nengo-dl/training.html#saving-and-loading-parameters>`_.
-- Added `Spaun <http://science.sciencemag.org/content/338/6111/1202.full>`_
+- Added `Spaun <https://science.sciencemag.org/content/338/6111/1202.full>`_
   example in ``benchmarks.py``
 
 **Changed**
@@ -645,7 +649,7 @@ Release History
 - Changed the default ``tensorboard`` argument in ``Simulator`` from ``False``
   to ``None``
 - Use the new `tf.profiler
-  <https://www.tensorflow.org/api_docs/python/tf/profiler/profile>`_
+  <https://www.tensorflow.org/versions/r1.14/api_docs/python/tf/profiler/profile>`_
   tool to collect profiling data in ``sim.run_steps`` and ``sim.train`` when
   ``profile=True``.
 - Minor improvements to efficiency of build process.

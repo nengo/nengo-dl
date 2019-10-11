@@ -26,7 +26,7 @@ Simulator
     :no-members:
 
     .. autoclass:: nengo_dl.simulator.Simulator
-        :exclude-members: unsupported, dt
+        :exclude-members: unsupported, dt, train, loss
 
     .. autoclass:: nengo_dl.simulator.SimulationData
         :special-members:
@@ -63,10 +63,10 @@ Distributions
 
 .. _objective-api:
 
-Objectives
-^^^^^^^^^^
+Loss functions
+^^^^^^^^^^^^^^
 
-.. automodule:: nengo_dl.objectives
+.. automodule:: nengo_dl.losses
 
 Callbacks
 ^^^^^^^^^

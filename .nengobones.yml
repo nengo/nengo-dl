@@ -142,9 +142,6 @@ travis_yml:
   jobs:
     - script: static
     - script: docs
-      env:
-        TF_VERSION: tensorflow<1.13
-        NUMPY_VERSION: numpy>=1.14.5,<1.16
     - cache: false
       test_args: -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator --boxed
     - script: gpu
@@ -170,8 +167,6 @@ travis_yml:
     - test_args: --dtype float64 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator --boxed
     - test_args: --inference-only --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator --boxed
     - script: examples
-      env:
-        TF_VERSION: tensorflow<2.0.0
   pypi_user: drasmuss
   deploy_dists:
     - sdist

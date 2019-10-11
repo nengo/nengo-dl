@@ -182,7 +182,10 @@ class SimVojaBuilder(OpBuilder):
 @NengoBuilder.register(PES)
 def build_pes(model, pes, rule):
     """
-    Builds a `nengo.PES` object into a model.
+    Builds a `nengo.PES` object into a Nengo model.
+
+    Overrides the standard Nengo PES builder in order to avoid slicing on axes > 0
+    (not currently supported in NengoDL).
 
     Parameters
     ----------

@@ -1,6 +1,9 @@
 """
 TensorNodes allow parts of a model to be defined using TensorFlow and smoothly
 integrated with the rest of a Nengo model.
+
+See `the documentation <https://www.nengo.ai/nengo-dl/tensor-node.html>`_ for more
+details.
 """
 
 import warnings
@@ -196,9 +199,9 @@ class TensorNode(Node):
     @property
     def output(self):
         """
-        Ensure that nothing tries to evaluate the `output` attribute
+        Ensures that nothing tries to evaluate the `output` attribute
         (indicating that something is trying to simulate this as a regular
-        `nengo.Node` rather than a TensorNode.
+        `nengo.Node` rather than a TensorNode).
         """
 
         def output_func(*_):
@@ -258,13 +261,14 @@ class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
     Parameters
     ----------
     func : callable
-        The TensorNode function (``tensor_func``)
-    time : `~nengo.builder.Signal`
-        Signal representing the current simulation time (or None if pass_time is False)
+        The TensorNode function (``tensor_func``).
+    time : `~nengo.builder.Signal` or None
+        Signal representing the current simulation time (or None if ``pass_time`` is
+        False).
     input : `~nengo.builder.Signal` or None
-        Input Signal for the TensorNode (or None if no inputs)
+        Input Signal for the TensorNode (or None if no inputs).
     output : `~nengo.builder.Signal`
-        Output Signal for the TensorNode
+        Output Signal for the TensorNode.
     shape_in : tuple of int or None
         Shape of input to TensorNode (if None, will leave the shape of input signal
         unchanged).
@@ -275,7 +279,7 @@ class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
     -----
     1. sets ``[output]``
     2. incs ``[]``
-    3. reads ``[time] if input is None else [time, input]``
+    3. reads ``[time]`` (if ``pass_time=True``) + ``[input]`` (if ``input`` is not None)
     4. updates ``[]``
     """
 
@@ -369,7 +373,7 @@ class Layer:
 
     Parameters
     ----------
-    layer_func : callable or ``keras.Layer`` or `~nengo.neurons.NeuronType`
+    layer_func : callable or ``tf.keras.Layer`` or `~nengo.neurons.NeuronType`
         A function or Keras Layer that takes the value from an input (represented
         as a ``tf.Tensor``) and maps it to some output value, or a Nengo neuron type
         (which will be instantiated in a Nengo Ensemble and applied to the input).
@@ -411,11 +415,11 @@ class Layer:
         -------
         obj : `.TensorNode` or `~nengo.ensemble.Neurons`
             A TensorNode that implements the given layer function (if
-            ``layer_func`` was a callable), or a Neuron object with the given
-            neuron type, connected to ``input``.
+            ``layer_func`` was a callable/Keras layer), or a Neuron object with the
+            given neuron type, connected to ``input``.
         conn : `~nengo.Connection`
             If ``return_conn`` is True, also returns the connection object linking
-            ``input`` and ``node``.
+            ``input`` and ``obj``.
 
         Notes
         -----

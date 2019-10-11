@@ -201,7 +201,7 @@ def sparse_matmul(A_indices, A_data, A_shape, X, transpose_x=False):
     Parameters
     ----------
     A_indices : ``tf.Tensor``
-        N, 2) rray of [row,col] non-zero entries
+        (N, 2) array of [row,col] non-zero entries
     A_data : ``tf.Tensor``
         (N,) array of data in the nonzero entries specified in ``A_indices``
     A_shape : tuple of int
@@ -253,6 +253,11 @@ def sparse_matmul(A_indices, A_data, A_shape, X, transpose_x=False):
 class DotIncBuilder(OpBuilder):
     """
     Build a group of `~nengo.builder.operator.DotInc` operators.
+
+    Notes
+    -----
+    This also builds `~nengo.builder.operator.SparseDotInc` operators (which are a
+    subclass of DotInc).
     """
 
     def __init__(self, ops, signals, config):

@@ -8,225 +8,153 @@ backend.  This can be used as a drop-in replacement for ``nengo.Simulator``
 normal).
 
 In addition, the Simulator exposes features unique to the
-NengoDL backend, such as `.Simulator.train`.
+NengoDL backend.  In many cases these features are accessed through something very
+similar to the `Keras API <https://www.tensorflow.org/guide/keras/overview>`_, which
+will be familiar to many deep learning practitioners.  For example,
+the Simulator has `~.Simulator.predict`, `~.Simulator.fit`, `~.Simulator.compile`, and
+`~.Simulator.evaluate` functions, which work in the same way as the corresponding
+functions of a `Keras Model
+<https://www.tensorflow.org/api_docs/python/tf/keras/Model>`_.
 
 The full class documentation can be viewed in the
-:ref:`API Reference <sim-api>`; here we will explain the practical usage of
-the Simulator in more depth.
+:ref:`API Reference <sim-api>`.
 
-Simulator arguments
--------------------
+Keras integration
+-----------------
 
-The NengoDL `.Simulator` has a number of optional arguments, beyond
-those in `nengo.Simulator`, which control features specific to
-the ``nengo_dl`` backend.
+Under the hood, the NengoDL Simulator is using a Keras model to perform the simulation.
+That means that most things that you would do with a Keras Model
+will also work with a NengoDL Simulator.  For example, you can set up a complex
+input pipeline using `tf.data <https://www.tensorflow.org/guide/data>`_, and feed those
+inputs to the Nengo model through `.Simulator.predict`. Or you could follow all the
+steps in `this TensorBoard tutorial
+<https://www.tensorflow.org/tensorboard/get_started>`_
+(simply replacing the Keras Model with a NengoDL Simulator) in order to view training
+metrics from `.Simulator.fit` in TensorBoard.
 
-device
-^^^^^^
+In general, if you are wondering how to access some functionality in NengoDL, look up
+how you would do that thing in Keras, and it probably works the same way! If you find
+something that works in Keras but not NengoDL, consider
+`asking a question on the forums <https://forum.nengo.ai/>`_ or
+`opening a feature request <https://github.com/nengo/nengo-dl/issues>`_.
 
-This specifies the computational device on which the simulation will
-run.  The default is ``None``, which means that operations will be assigned
-according to TensorFlow's internal logic (generally speaking, this means that
-things will be assigned to the GPU if ``tensorflow-gpu`` is installed,
-otherwise everything will be assigned to the CPU).  The device can be set
-manually by passing the `TensorFlow device specification
-<https://www.tensorflow.org/api_docs/python/tf/Graph#device>`_ to this
-parameter.  For example, setting ``device="/cpu:0"`` will force everything
-to run on the CPU.  This may be worthwhile for small models, where the extra
-overhead of communicating with the GPU outweighs the actual computations.  On
-systems with multiple GPUs, ``device="/gpu:0"``/``"/gpu:1"``/etc. will select
-which one to use.
+Choosing which elements to optimize
+-----------------------------------
 
-unroll_simulation
-^^^^^^^^^^^^^^^^^
+By default, NengoDL will optimize the following elements in a model:
 
-This controls how many simulation iterations are executed each time through
-the outer simulation loop.  That is, we could run 20 timesteps as
+1. Connection weights (neuron--neuron weight matrices or decoders)
+2. Ensemble encoders
+3. Neuron biases
 
-.. code-block:: python
+These elements will *not* be optimized if they are targeted by an online
+learning rule.  For example, `nengo.PES` modifies connection
+weights as a model is running.  If we also tried to optimize those weights with
+some offline training method then those two processes would conflict
+with each other, likely resulting in unintended effects.  So NengoDL will
+assume that those elements should not be optimized.
 
-    for i in range(20):
-        <run 1 step>
+Any of these default behaviours can be overridden using the
+:ref:`"trainable" config option <config-trainable>`.
 
-or
+Saving and loading parameters
+-----------------------------
 
-.. code-block:: python
+After optimizing a model we often want to do something with the trained
+parameters (e.g., inspect their values, save them to file, reuse them in a
+different model).  NengoDL provides a number of methods to access model
+parameters, in order to support different use cases.
 
-    for i in range(5):
-        <run 1 step>
-        <run 1 step>
-        <run 1 step>
-        <run 1 step>
+sim.data
+^^^^^^^^
 
-This is an optimization process known as "loop unrolling", and
-``unroll_simulation`` controls how many simulation steps are unrolled.  The
-first example above would correspond to ``unroll_simulation=1``, and the
-second would be ``unroll_simulation=4``.
-
-Unrolling the simulation will result in faster simulation speed, but increased
-build time and memory usage.
-
-In general, unrolling the simulation will have no impact on the output of a
-simulation.  The only case in which unrolling may have an impact is if
-the number of simulation steps is not evenly divisible by
-``unroll_simulation``.  In that case extra simulation steps will be executed,
-and then data will be truncated to the correct number of steps.  However, those
-extra steps could still change the internal state of the simulation, which
-will affect any subsequent calls to ``sim.run``.  So it is recommended that the
-number of steps always be evenly divisible by ``unroll_simulation``.
-
-.. _minibatch_size:
-
-minibatch_size
-^^^^^^^^^^^^^^
-
-``nengo_dl`` allows a model to be simulated with multiple simultaneous inputs,
-processing those values in parallel through the network.  For example, instead
-of executing a model three times with three different inputs, the model can
-be executed once with those three inputs in parallel.  ``minibatch_size``
-specifies how many inputs will be processed at a time.  The default is
-``None``, meaning that this feature is not used and only one input will be
-processed at a time (as in standard Nengo simulators).
-
-In order to take advantage of the parallel inputs, multiple inputs need to
-be passed to `.Simulator.run` via the ``data`` argument.  This
-is discussed in more detail :ref:`below <sim-run>`.
-
-When using `.Simulator.train`, this parameter controls how many items
-from the training data will be used for each optimization iteration.
-
-tensorboard
-^^^^^^^^^^^
-
-This can be used to specify an output directory if you would like to export
-data from the simulation in a format that can be visualized in
-`TensorBoard <https://www.tensorflow.org/guide/summaries_and_tensorboard>`_.
-
-To view the collected data, run the command
-
-.. code-block:: bash
-
-    tensorboard --logdir <tensorboard_dir>
-
-(where ``tensorboard_dir`` is the directory name passed to ``tensorboard``),
-then open a web browser and navigate to http://localhost:6006.
-
-By default the TensorBoard output will only contain a `visualization of the
-TensorFlow graph <https://www.tensorflow.org/guide/graph_viz>`_
-constructed for this Simulator.  However, TensorBoard can also be used to track
-various aspects of the simulation throughout the training process; see
-:ref:`the sim.train documentation <summaries>` for details.
-
-Repeated Simulator calls with the same output directory will be organized into
-subfolders according to run number (e.g., ``<tensorboard_dir>/run_0``).
-
-.. _sim-run:
-
-Simulator.run arguments
------------------------
-
-`.Simulator.run` (and its variations `.Simulator.step`/
-`.Simulator.run_steps`) also have some optional parameters beyond those
-in the standard Nengo simulator.
-
-data
-^^^^
-
-This parameter can be used to override the value of any
-input `~nengo.Node` in a model (an input node is defined as
-a node with no incoming connections).  For example
+The most basic way to access model parameters is through the
+`sim.data <.simulator.SimulationData>`
+data structure.  This provides access to the parameters of any Nengo object,
+returning them as ``numpy`` arrays.  For example:
 
 .. code-block:: python
-
-    n_steps = 5
 
     with nengo.Network() as net:
         node = nengo.Node([0])
-        p = nengo.Probe(node)
+        ens = nengo.Ensemble(10, 1)
+        conn = nengo.Connection(node, ens)
+        probe = nengo.Probe(ens)
 
     with nengo_dl.Simulator(net) as sim:
-        sim.run_steps(n_steps)
+        # < run training >
 
-will execute the model in the standard way, and if we check the output of
-``node``
+        print(sim.data[conn].weights)  # connection weights
+        print(sim.data[ens].bias)  # bias values
+        print(sim.data[ens].encoders)  # encoder values
+        print(sim.data[ens])  # to see all the parameters for an object
 
-.. code-block:: python
+Once we have the parameters as ``numpy`` arrays we can then do whatever
+we want with them (e.g., save them to file, or use them as arguments in a
+different model).  Thus this method is the most general and flexible, but also
+somewhat labour intensive as the user needs to handle all of that processing
+themselves for each parameter.
 
-    print(sim.data[p])
-    >>> [[ 0.] [ 0.] [ 0.] [ 0.] [ 0.]]
+sim.save_params/sim.load_params
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-we see that it is all zero, as defined.
-
-
-``data`` is specified as a
-dictionary of ``{my_node: override_value}`` pairs, where ``my_node`` is the
-Node to be overridden and ``override_value`` is a numpy array with shape
-``(minibatch_size, n_steps, my_node.size_out)`` that gives the Node output
-value on each simulation step. For example, if we instead run the model via
-
-.. code-block:: python
-
-    sim.run_steps(n_steps, data={node: np.ones((1, n_steps, 1))})
-    print(sim.data[p])
-    >>> [[ 1.] [ 1.] [ 1.] [ 1.] [ 1.]]
-
-we see that the output of ``node`` is all ones, which is the override
-value we specified.
-
-``data`` is usually used in concert with the minibatching feature of
-``nengo_dl`` (:ref:`see above <minibatch_size>`).  ``nengo_dl`` allows multiple
-inputs to be processed simultaneously, but when we construct a
-`~nengo.Node` we can only specify one value.  For example, if we
-use minibatching on the above network
+On the opposite end of the spectrum, `~.Simulator.save_params`/
+`~.Simulator.load_params` can be used to save all the parameters of a
+model to file.  This is
+convenient if we want to save and resume the state of a model (e.g., run some
+training, do some analysis, and then run more training):
 
 .. code-block:: python
 
-    mini = 3
-    with nengo_dl.Simulator(net, minibatch_size=mini) as sim:
-        sim.run_steps(n_steps)
-        print(sim.data[p])
-    >>> [[[ 0.] [ 0.] [ 0.] [ 0.] [ 0.]]
-         [[ 0.] [ 0.] [ 0.] [ 0.] [ 0.]]
-         [[ 0.] [ 0.] [ 0.] [ 0.] [ 0.]]]
+    with nengo_dl.Simulator(net) as sim:
+        # < run training >
 
-we see that the output is an array of zeros with size
-``(mini, n_steps, 1)``.  That is, we simulated 3 inputs
-simultaneously, but those inputs all had the same value (the one we defined
-when the Node was constructed) so it wasn't very
-useful.  To take full advantage of the minibatching we need to override the
-node values, so that we can specify a different value for each item in the
-minibatch:
+        sim.save_params("./my_saved_params")
+
+    # < do something else >
+
+    with nengo_dl.Simulator(net) as sim2:
+        sim2.load_params("./my_saved_params")
+        # sim2 will now match the parameters from sim
+
+We can also use ``save/load_params`` to reuse parameters between models, as
+long as the structure of the two models match exactly (for example,
+reusing parameters from a rate version of a model in a spiking version).
+
+This method is quick and convenient, but not as flexible as other options.
+
+sim.freeze_params
+^^^^^^^^^^^^^^^^^
+
+Rather than saving model parameters to file,
+we can store live parameters back into the model definition using
+`~.Simulator.freeze_params`.  We can freeze the parameters of individual
+Ensembles and Connections, or pass a Network to freeze all the Ensembles and
+Connections in that Network.
+
+The main advantage of this approach is
+that it makes it easy to reuse a NengoDL model in different Nengo simulators.
+For example, we could optimize a model in NengoDL, save the result as a
+Nengo network, and then run that model in another Simulator (e.g., one running
+on custom neuromorphic hardware).
 
 .. code-block:: python
 
-    with nengo_dl.Simulator(net, minibatch_size=mini) as sim:
-        sim.run_steps(n_steps, data={
-            node: np.zeros((mini, n_steps, 1)) + np.arange(mini)[:, None, None]})
-        print(sim.data[p])
-    >>> [[[ 0.] [ 0.] [ 0.] [ 0.] [ 0.]]
-         [[ 1.] [ 1.] [ 1.] [ 1.] [ 1.]]
-         [[ 2.] [ 2.] [ 2.] [ 2.] [ 2.]]]
+    with nengo_dl.Simulator(net) as sim:
+        # < run training >
 
-Here we can see that 3 independent inputs have been processed during the
-simulation. In a simple network such as this, minibatching will not make much
-difference. But for larger models it will be much more efficient to process
-multiple inputs in parallel rather than one at a time.
+        sim.freeze_params(net)
 
-.. _sim-profile:
+    # load our optimized network in a different simulator
+    with nengo.Simulator(net) as sim2:
+        # sim2 will now simulate a model in the default Nengo simulator, but
+        # with the same parameters as our optimized Nengo DL model
+        sim2.run(1.0)
 
-profile
-^^^^^^^
 
-If set to ``True``, profiling data will be collected while the simulation
-runs.  This will significantly slow down the simulation, so it should be left
-on ``False`` (the default) in most cases.  It is mainly used by developers,
-in order to help identify performance bottlenecks.
+Examples
+--------
 
-Profiling data will be saved to a file named ``nengo_dl_profile.json``.  It
-can be viewed by opening a Chrome browser, navigating to
-`<chrome://tracing>`_ and loading the ``nengo_dl_profile.json`` file.  A
-filename can be passed instead of ``True``, to change the output filename.
-
-Note that in order for GPU profiling to work, you need to manually add
-``<cuda>/extras/CUPTI/libx64`` to the ``LD_LIBRARY_PATH`` environment variable
-(where ``<cuda>`` is your CUDA installation directory).
+* :doc:`examples/from-nengo`
+* :doc:`examples/from-tensorflow`
+* :doc:`examples/spiking-mnist`

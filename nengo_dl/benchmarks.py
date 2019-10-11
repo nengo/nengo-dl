@@ -306,7 +306,7 @@ def random_network(
     seed=0,
 ):
     """
-    Basal ganglia network benchmark.
+    A randomly interconnected network of ensembles.
 
     Parameters
     ----------
@@ -363,8 +363,8 @@ def run_profile(
     net : `~nengo.Network`
         The nengo Network to be profiled.
     train : bool
-        If True, profile the ``sim.train`` function. Otherwise, profile the
-        ``sim.run`` function.
+        If True, profile the `.Simulator.fit` function. Otherwise, profile the
+        `.Simulator.run` function.
     n_steps : int
         The number of timesteps to run the simulation.
     do_profile : bool

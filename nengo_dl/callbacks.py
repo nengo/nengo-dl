@@ -1,7 +1,7 @@
 """
 Objects to be used with the Keras callback functionality.
 
-See https://www.tensorflow.org/beta/guide/keras/custom_callback for more information
+See https://www.tensorflow.org/guide/keras/custom_callback for more information
 on how to use Keras callbacks.
 
 The short answer is that these can be passed to, e.g., `.Simulator.fit` like
@@ -24,7 +24,7 @@ class NengoSummaries(tf.keras.callbacks.Callback):
     """
     Logs the values of Nengo object parameters, to be displayed in TensorBoard.
 
-    See https://www.tensorflow.org/tensorboard/r2/get_started for general instructions
+    See https://www.tensorflow.org/tensorboard/get_started for general instructions
     on using TensorBoard.
 
     Parameters

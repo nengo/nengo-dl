@@ -86,7 +86,7 @@ class Regularize(tf.losses.Loss):
         ----------
         y_true : ``tf.Tensor``
             Ignored
-        y_pure : ``tf.Tensor``
+        y_pred : ``tf.Tensor``
             The value to be regularized
 
         Returns

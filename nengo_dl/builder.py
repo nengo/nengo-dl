@@ -176,12 +176,12 @@ class BuildConfig(
     ----------
     inference_only : bool
         If True the network should be constructed in "inference only" mode
-        (not including any support for training operations).
+        (omitting any support for training operations).
     lif_smoothing : float
         Smoothing parameter for `~nengo.LIF` gradient approximation.
     cpu_only : bool
         True if TensorFlow is only running on the CPU (because that was
-        specified by the user or because tensorflow-gpu is not installed).
+        specified by the user or because ``tensorflow-gpu`` is not installed).
     rng : `~numpy.random.mtrand.RandomState`
         Seeded random number generator.
     training : ``tf.Tensor`` (bool)
@@ -193,6 +193,9 @@ class BuildConfig(
 
 class OpBuilder:
     """
+    Base class for build classes, which implement the logic for building a group of
+    Nengo Operators into TensorFlow.
+
     The constructor should set up any computations that are fixed for
     this op (i.e., things that do not need to be recomputed each timestep).
 

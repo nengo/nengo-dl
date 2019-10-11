@@ -1,6 +1,6 @@
 """
 The Simulator class is the access point for the main features of NengoDL,
-including `running <.Simulator.run_steps>` and `training <.Simulator.train>`
+including `running <.Simulator.run_steps>` and `training <.Simulator.fit>`
 a model.
 """
 
@@ -8,6 +8,7 @@ import collections
 import copy
 from functools import partial
 import logging
+import textwrap
 import warnings
 
 from nengo import Ensemble, Connection, Probe, Network, Direct, Node
@@ -65,40 +66,272 @@ def require_open(wrapped, instance, args, kwargs):
     return wrapped(*args, **kwargs)
 
 
+def fill_docs(*args, **kwargs):
+    """Stores documentation for common arguments in one place, to avoid  duplication,
+    and then fills them in automatically in the docstring."""
+
+    docs = {
+        "x": """
+        Data for input Nodes in the model. This argument is optional; if
+        it is not specified, then data will automatically be generated
+        according to the inputs specified in the Node definitions (e.g., by calling
+        the output function associated with that Node).
+
+        ``{param_name}`` can be specified as:
+
+        - A dictionary of {`nengo.Node` or str: `numpy.ndarray`}
+          indicating the input values for the given nodes. Nodes can be referred
+          to by the Node object itself or by a string name, which will be
+          ``Node.label`` if one was specified or ``"node"``
+          (duplicate names will have a number appended, corresponding to the order
+          found in `nengo.Network.all_nodes`).
+        - A list of `numpy.ndarray` indicating the input values for each
+          input Node, ordered according to the order in which the Nodes were
+          added to the model (this corresponds to the order found in
+          `nengo.Network.all_nodes`).
+        - A `numpy.ndarray` indicating the input value for a single input Node.
+        - A generator or ``tf.data.Dataset`` that produces one of the above.
+
+        All inputs should have shape ``(batch_size, n_steps, node.size_out)``.
+
+        For example, if the model only has a single input Node, then ``{param_name}``
+        can simply be an ndarray of data for that Node.
+
+        .. code-block:: python
+
+            with nengo.Network() as net:
+                a = nengo.Node([0])
+                ...
+
+            with nengo_dl.Simulator(net) as sim:
+                sim.{func_name}({param_name}=np.ones((50, 10, 1)), ...)
+
+        If the network has multiple inputs, then ``{param_name}`` can be specified as a
+        dictionary mapping `nengo.Node` objects to arrays, e.g.
+
+        .. code-block:: python
+
+            with nengo.Network() as net:
+                a = nengo.Node([0])
+                b = nengo.Node([0, 0])
+                ...
+
+            with nengo_dl.Simulator(net) as sim:
+                sim.{func_name}(
+                    {param_name}={
+                        a: np.ones((50, 10, 1)),
+                        b: np.ones((50, 10, 2))},
+                    ...)
+
+        If an input value is not specified for one of the Nodes in the model then
+        data will be filled in automatically according to the Node definition.
+
+        For dynamic input types (e.g., ``tf.data`` pipelines or generators), NengoDL
+        tries to avoid introspecting/altering the data before the
+        simulation starts, as this may have unintended side-effects. So data must be
+        specified via one of the standard Keras methods (arrays, list of arrays, or
+        string name dictionary; using a dictionary of Node objects is not supported).
+        In addition, data must be explicitly provided for all input nodes (it will not
+        be automatically generated if data is not specified).
+
+        In addition, when using dynamic inputs, data must be provided for the
+        special ``"n_steps"`` input. This specifies the number of timesteps that the
+        simulation will run for. Technically this is just a single scalar value
+        (e.g., ``10``). But Keras requires that all input data be batched, so that
+        input value needs to be duplicated into an array with size
+        ``(batch_size, 1)`` (where all entries have the same value, e.g. ``10``).
+
+        .. code-block:: python
+
+            with nengo.Network() as net:
+                a = nengo.Node([0], label="a")
+                ...
+
+            with nengo_dl.Simulator(net) as sim:
+                dataset = tf.data.Dataset.from_tensor_slices(
+                    {"a": tf.ones((50, 10, 1)),
+                     "n_steps": tf.ones((50, 1), dtype=tf.int32) * 10}
+                ).batch(sim.minibatch_size)
+
+                sim.{func_name}({param_name}=dataset, ...)
+
+        """,
+        "y": """
+        Target values for Probes in the model. These can be specified in the same
+        ways as the input values in ``x``, except using Probes instead of Nodes.
+        All targets should have shape ``(batch_size, n_steps, probe.size_in)``.
+
+        For example,
+
+        .. code-block:: python
+
+            with nengo.Network() as net:
+                a = nengo.Node([0])
+                p = nengo.Probe(a)
+
+            with nengo_dl.Simulator(net) as sim:
+                ...
+                sim.{func_name}(
+                    x=..., y={p: np.zeros((50, 10, 1))})
+
+        Note that data is only specified for the probes used in the loss function
+        (specified when calling `.Simulator.compile`).  For example, if we have two
+        probes, but only one is used during training (the other is used for data
+        collection during inference), we could set this up like:
+
+        .. code-block:: python
+
+            with nengo.Network() as net:
+                ...
+                p0 = nengo.Probe(a)
+                p1 = nengo.Probe(b)
+
+            with nengo_dl.Simulator(net) as sim:
+                # compiled loss function only depends on p_a
+                sim.compile(loss={p0: "mse"})
+
+                # only specify data for p0
+                sim.{func_name}(
+                    x=..., y={p0: np.zeros((50, 10, 1))})
+
+        ``y`` is not used if ``x`` is a generator. Instead, the generator passed to
+        ``x` should yield ``(x, y)`` tuples, where ``y`` is in one of the formats
+        described above.
+        """,
+        "n_steps": """
+        The number of simulation steps to be executed.  This parameter is optional;
+        if not specified, the number of simulation steps will be inferred from the
+        input data. However, this parameter can be useful if you don't want to
+        specify input data (you just want to use the inputs defined by the Nengo
+        Nodes), or if your model does not have any input Nodes (so there is no data
+        to be passed in).
+        """,
+        "stateful": """
+        This parameter controls whether or not the saved internal stimulation state
+        will be updated after a run completes. If ``stateful=False`` then the initial
+        state of future runs will be unaffected by this run. With ``stateful=True``,
+        future runs will begin from the terminal state of this run.
+
+        For example,
+
+        .. code-block:: python
+
+            # begins in state0, terminates in state1
+            sim.{func_name}(..., stateful=False)
+            # begins in state0, terminates in state2
+            sim.{func_name}(..., stateful=True)
+            # begins in state2, terminates in state3
+            sim.{func_name}(..., stateful=False)
+            # begins in state2, terminates in state4
+            sim.{func_name}(..., stateful=True)
+
+        Note that `.Simulator.soft_reset` can be used to reset the state to initial
+        conditions at any point.
+        """,
+    }
+
+    # use default name for args
+    for arg in args:
+        kwargs[arg] = arg
+
+    def fill_documentation(func):
+        for name, arg in kwargs.items():
+            doc = docs[arg]
+
+            # fill in variables
+            # note: we use .replace instead of .format so that we don't
+            # have to escape all the brackets in the docstrings
+            doc = doc.replace("{param_name}", name)
+            doc = doc.replace("{func_name}", func.__name__)
+
+            # correct indentation
+            doc = textwrap.indent(doc, " " * 4)
+            doc = doc.strip()
+
+            # insert result into docstring
+            func.__doc__ = func.__doc__.replace("{%s}" % name, doc)
+
+        return func
+
+    return fill_documentation
+
+
 class Simulator:  # pylint: disable=too-many-public-methods
     """
     Simulate network using the ``nengo_dl`` backend.
 
     Parameters
     ----------
-    network : `~nengo.Network` or None
-        A network object to be built and then simulated. If None,
-        then a built model must be passed to ``model`` instead
+    network : `nengo.Network`
+        A network object to be built and then simulated.
     dt : float
-        Length of a simulator timestep, in seconds
+        Length of a simulator timestep, in seconds.
     seed : int
-        Seed for all stochastic operators used in this simulator
+        Seed for all stochastic operators used in this simulator.
     model : `~nengo.builder.Model`
-        Pre-built model object
+        Pre-built model object (mainly used for debugging).
     device : None or ``"/cpu:0"`` or ``"/gpu:[0-n]"``
-        Device on which to execute computations (if None then uses the
-        default device as determined by TensorFlow)
+        This specifies the computational device on which the simulation will
+        run.  The default is ``None``, which means that operations will be assigned
+        according to TensorFlow's internal logic (generally speaking, this means that
+        things will be assigned to the GPU if ``tensorflow-gpu`` is installed,
+        otherwise everything will be assigned to the CPU).  The device can be set
+        manually by passing the `TensorFlow device specification
+        <https://www.tensorflow.org/api_docs/python/tf/Graph#device>`_ to this
+        parameter.  For example, setting ``device="/cpu:0"`` will force everything
+        to run on the CPU.  This may be worthwhile for small models, where the extra
+        overhead of communicating with the GPU outweighs the actual computations.  On
+        systems with multiple GPUs, ``device="/gpu:0"``/``"/gpu:1"``/etc. will select
+        which one to use.
     unroll_simulation : int
-        Unroll simulation loop by explicitly building the given number of
-        iterations into the computation graph (improves simulation speed
-        but increases build time)
+        This controls how many simulation iterations are executed each time through
+        the outer simulation loop.  That is, we could run 20 timesteps as
+
+        .. code-block:: python
+
+            for i in range(20):
+                <run 1 step>
+
+        or
+
+        .. code-block:: python
+
+            for i in range(5):
+                <run 1 step>
+                <run 1 step>
+                <run 1 step>
+                <run 1 step>
+
+        This is an optimization process known as "loop unrolling", and
+        ``unroll_simulation`` controls how many simulation steps are unrolled.  The
+        first example above would correspond to ``unroll_simulation=1``, and the
+        second would be ``unroll_simulation=4``.
+
+        Unrolling the simulation will result in faster simulation speed, but increased
+        build time and memory usage.
+
+        In general, unrolling the simulation will have no impact on the output of a
+        simulation.  The only case in which unrolling may have an impact is if
+        the number of simulation steps is not evenly divisible by
+        ``unroll_simulation``.  In that case extra simulation steps will be executed,
+        which could change the internal state of the simulation and
+        will affect any subsequent calls to ``sim.run``.  So it is recommended that the
+        number of steps always be evenly divisible by ``unroll_simulation``.
     minibatch_size : int
         The number of simultaneous inputs that will be passed through the
-        network
+        network. For example, a single call to `.Simulator.run` will process
+        ``minibatch_size`` input instances in parallel. Or when calling
+        `.Simulator.predict`/`.Simulator.fit` with a batch of data, that data will be
+        divided up into ``minibatch_size`` chunks.
     progress_bar : bool
-        If True (default), display progress information when building a model
+        If True (default), display progress information when building a model.
 
     Attributes
     ----------
     data : `.SimulationData`
         Stores simulation data and parameter values (in particular, the recorded output
-        from probes after `.Simulator.run` can be accessed through
-        ``sim.data[my_probe]``.
+        from probes after calling `.Simulator.run` can be accessed through
+        ``sim.data[my_probe]``).
     model : `nengo.builder.Model`
         Built Nengo model, containing the data that defines the network to be simulated.
     keras_model : ``tf.keras.Model``
@@ -128,8 +361,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 seed = network.seed + 1
             else:
                 seed = np.random.randint(np.iinfo(np.int32).max)
-
-        # TODO: multi-GPU support
 
         if device is None and not utils.tf_gpu_installed:
             warnings.warn(
@@ -202,6 +433,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
     @with_self
     def _build_keras(self):
+        """Build the underlying Keras model that drives the simulation."""
+
         tf.config.set_soft_device_placement(False)
 
         self.node_inputs, n_steps = self.tensor_graph.build_inputs()
@@ -232,15 +465,15 @@ class Simulator:  # pylint: disable=too-many-public-methods
         ----------
         seed : int
             If not None, overwrite the default simulator seed with this value
-            (note: this becomes the new default simulator seed)
+            (note: this becomes the new default simulator seed).
 
         Notes
         -----
         Changing the TensorFlow seed only affects ops created from then on; it has
         no impact on existing ops (either changing their seed or resetting their random
         state). So calling `.reset` will likely have no impact on any TensorFlow
-        randomness (it will still affect numpy randomness, such as in
-        `nengo.Processes`, as normal).
+        randomness (it will still affect numpy randomness, such as in a
+        `nengo.Process`, as normal).
         """
 
         # initialize variables and internal simulation state
@@ -268,9 +501,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
         ----------
         include_params : bool
             If True, also reset any training that has been performed on
-            network parameters (e.g., connection weights)
+            network parameters (e.g., connection weights).
         include_probes : bool
-            If True, also clear probe data
+            If True, also clear probe data.
         """
 
         # reset saved state
@@ -297,6 +530,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         self._update_steps()
 
     @require_open
+    @fill_docs("x", "n_steps", "stateful")
     def predict(self, x=None, n_steps=None, stateful=False, **kwargs):
         """
         Generate output predictions for the input samples.
@@ -309,35 +543,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
         Parameters
         ----------
         x
-            Inputs can be specified as:
-            - A dictionary of {`nengo.Node` or str: `numpy.ndarray`}
-              indicating the input values for the given nodes. Nodes can be referred
-              to by the Node object itself or by a string name, which will be
-              ``Node.label`` if one was specified or ``"node"``
-              (duplicate names will have a number appended, corresponding to the order
-              found in `nengo.Network.all_nodes`).
-            - A list of `numpy.ndarray` indicating the input values for each
-              input Node, ordered according to the order in which the Nodes were
-              added to the model (this corresponds to the order found in
-              `nengo.Network.all_nodes`).
-            - An `numpy.ndarray` indicating the input value for a single input
-              Node.
-            - A generator or ``tf.data.Dataset`` that produces one of the above. These
-              input types must also explicitly pass a value for the ``n_steps`` input,
-              which should have shape ``(batch_size, 1)``. This input should come first
-              in the input list or use the string name "n_steps" (if passing a dict).
-
-            All inputs should have shape ``(batch_size, n_steps, node.size_out)``.
-
-            If an input value is not specified for one of the Nodes in the model then
-            data will be filled in according to the Node definition (e.g., by calling
-            the output function associated with that Node).  However, generator input
-            types must explicitly specify values for all the input nodes.
+            {x}
         n_steps : int
-            Number of simulation timesteps
+            {n_steps}
         stateful : bool
-            If True, update the saved simulation state at the end of the run, so that
-            future operations will resume from the terminal state of this run.
+            {stateful}
         kwargs: dict
             Will be passed on to `tf.keras.Model.predict
             <https://www.tensorflow.org/api_docs/python/tf/keras/Model#predict>`_.
@@ -353,11 +563,12 @@ class Simulator:  # pylint: disable=too-many-public-methods
         )
 
     @require_open
+    @fill_docs("x", "n_steps", "stateful")
     def predict_on_batch(self, x=None, n_steps=None, stateful=False, **kwargs):
         """
-        Generate output predictions for the input samples.
+        Generate output predictions for a single minibatch of input samples.
 
-        Computation is done on a single minibatch of inputs (i.e., inputs must have
+        Batch size is determined by ``sim.minibatch_size`` (i.e., inputs must have
         shape ``(sim.minibatch_size, n_steps, node.size_in)``.
 
         This function implements the `tf.keras.Model.predict_on_batch
@@ -367,36 +578,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
         Parameters
         ----------
         x
-            Inputs can be specified as:
-            - A dictionary of {`nengo.Node` or str: `numpy.ndarray`}
-              indicating the input values for the given nodes. Nodes can be referred
-              to by the Node object itself or by a string name, which will be
-              ``Node.label`` if one was specified or ``"node"``
-              (duplicate names will have a number appended, corresponding to the order
-              found in `nengo.Network.all_nodes`).
-            - A list of `numpy.ndarray` indicating the input values for each
-              input Node, ordered according to the order in which the Nodes were
-              added to the model (this corresponds to the order found in
-              `nengo.Network.all_nodes`).
-            - An `numpy.ndarray` indicating the input value for a single input
-              Node.
-            - A generator or ``tf.data.Dataset`` that produces one of the above. These
-              input types must also explicitly pass a value for the ``n_steps`` input,
-              which should have shape ``(batch_size, 1)``. This input should come first
-              in the input list or use the string name "n_steps" (if passing a dict).
-
-            All inputs should have shape
-            ``(sim.minibatch_size, n_steps, node.size_out)``.
-
-            If an input value is not specified for one of the Nodes in the model then
-            data will be filled in according to the Node definition (e.g., by calling
-            the output function associated with that Node).  However, generator input
-            types must explicitly specify values for all the input nodes.
+            {x}
         n_steps : int
-            Number of simulation timesteps
+            {n_steps}
         stateful : bool
-            If True, update the saved simulation state at the end of the run, so that
-            future operations will resume from the terminal state of this run.
+            {stateful}
         kwargs: dict
             Will be passed on to `tf.keras.Model.predict_on_batch
             <https://www.tensorflow.org/api_docs/python/tf/keras/Model#predict_on_batch>`_.
@@ -442,11 +628,12 @@ class Simulator:  # pylint: disable=too-many-public-methods
             training.
 
             Losses can be specified as:
-            - A ``tf.losses.Loss`` instance (see
-              https://www.tensorflow.org/api_docs/python/tf/losses).
+
+            - A `tf.losses.Loss <https://www.tensorflow.org/api_docs/python/tf/losses>`_
+              instance.
             - A string matching the name of one of the loss functions above.
             - A function that accepts two arguments (``y_true, y_pred``) and returns
-              a loss value.
+              a loss value (represented as a ``tf.Tensor``).
             - A list of some combination of the above, indicating different loss
               functions for each output Probe (ordered according to the order in
               which Probes were added to the model, which corresponds to the order
@@ -455,6 +642,22 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
             The total loss minimized during training will be the sum over the loss
             computed on each Probe (possibly weighted by ``loss_weights``).
+
+            For example,
+
+            .. code-block:: python
+
+                with nengo.Network() as net:
+                    ...
+                    probe0 = nengo.Probe(...)
+                    probe1 = nengo.Probe(...)
+
+                with nengo_dl.Simulator(net) as sim:
+                    sim.compile(loss={probe0: "mse", probe1: tf.losses.mae})
+
+            would compile ``probe0`` to use mean squared error and ``probe1`` to use
+            mean absolute error.
+
         metrics
             Metrics are additional values (generally different kinds of losses) that
             will be computed during training for tracking purposes, but do not affect
@@ -487,6 +690,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         )
 
     @require_open
+    @fill_docs("x", "y", "n_steps", "stateful")
     def fit(self, x=None, y=None, n_steps=None, stateful=False, **kwargs):
         """
         Trains the model on some dataset.
@@ -499,45 +703,13 @@ class Simulator:  # pylint: disable=too-many-public-methods
         Parameters
         ----------
         x
-            Input values for Nodes in the model. Inputs can be specified as:
-            - A dictionary of {`nengo.Node` or str: `numpy.ndarray`}
-              indicating the input values for the given nodes. Nodes can be referred
-              to by the Node object itself or by a string name, which will be
-              ``Node.label`` if one was specified or ``"node"``
-              (duplicate names will have a number appended, corresponding to the order
-              found in `nengo.Network.all_nodes`).
-            - A list of `numpy.ndarray` indicating the input values for each
-              input Node, ordered according to the order in which the Nodes were
-              added to the model (this corresponds to the order found in
-              `nengo.Network.all_nodes`).
-            - An `numpy.ndarray` indicating the input value for a single input
-              Node.
-            - A generator or ``tf.data.Dataset`` that produces one of the above. These
-              input types must also explicitly pass a value for the ``n_steps`` input,
-              which should have shape ``(batch_size, 1)``. This input should come first
-              in the input list or use the string name "n_steps" (if passing a dict).
-
-            All inputs should have shape ``(batch_size, n_steps, node.size_out)``.
-
-            If an input value is not specified for one of the Nodes in the model then
-            data will be filled in according to the Node definition (e.g., by calling
-            the output function associated with that Node).  However, generator input
-            types must explicitly specify values for all the input nodes.
+            {x}
         y
-            Target values for Probes in the model. These can be specified in the same
-            ways as the input values in ``x``.  However, targets should only be
-            specified for the probes used in the loss function (specified when calling
-            `Simulator.compile`).
-
-            All targets should have shape ``(batch_size, n_steps, probe.size_in)``.
-
-            This parameter is not used if ``x`` is a generator (the generator passed to
-            ``x` should yield ``(x, y)`` tuples).
+            {y}
         n_steps : int
-            Number of simulation timesteps.
+            {n_steps}
         stateful : bool
-            If True, update the saved simulation state at the end of the run, so that
-            future operations will resume from the terminal state of this run.
+            {stateful}
         kwargs: dict
             Will be passed on to `tf.keras.Model.evaluate
             <https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate>`_.
@@ -545,8 +717,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
         Returns
         -------
         history : ``tf.keras.callbacks.History``
-            The history has two attributes, ``history.epoch`` is the list of epoch
-            numbers and ``history.history`` is a dictionary keyed by metric names
+            The history has two attributes: ``history.epoch`` is the list of epoch
+            numbers, and ``history.history`` is a dictionary keyed by metric names
             (e.g., "loss") containing a list of values of those metrics from each epoch.
         """
 
@@ -555,6 +727,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         )
 
     @require_open
+    @fill_docs("x", "y", "n_steps", "stateful")
     def evaluate(self, x=None, y=None, n_steps=None, stateful=False, **kwargs):
         """
         Compute the loss and metric values for the network.
@@ -567,45 +740,13 @@ class Simulator:  # pylint: disable=too-many-public-methods
         Parameters
         ----------
         x
-            Input values for Nodes in the model. Inputs can be specified as:
-            - A dictionary of {`nengo.Node` or str: `numpy.ndarray`}
-              indicating the input values for the given nodes. Nodes can be referred
-              to by the Node object itself or by a string name, which will be
-              ``Node.label`` if one was specified or ``"node"``
-              (duplicate names will have a number appended, corresponding to the order
-              found in `nengo.Network.all_nodes`).
-            - A list of `numpy.ndarray` indicating the input values for each
-              input Node, ordered according to the order in which the Nodes were
-              added to the model (this corresponds to the order found in
-              `nengo.Network.all_nodes`).
-            - An `numpy.ndarray` indicating the input value for a single input
-              Node.
-            - A generator or ``tf.data.Dataset`` that produces one of the above. These
-              input types must also explicitly pass a value for the ``n_steps`` input,
-              which should have shape ``(batch_size, 1)``. This input should come first
-              in the input list or use the string name "n_steps" (if passing a dict).
-
-            All inputs should have shape ``(batch_size, n_steps, node.size_out)``.
-
-            If an input value is not specified for one of the Nodes in the model then
-            data will be filled in according to the Node definition (e.g., by calling
-            the output function associated with that Node).  However, generator input
-            types must explicitly specify values for all the input nodes.
+            {x}
         y
-            Target values for Probes in the model. These can be specified in the same
-            ways as the input values in ``x``.  However, targets should only be
-            specified for the probes used in the loss function (specified when calling
-            `Simulator.compile`).
-
-            All targets should have shape ``(batch_size, n_steps, probe.size_in)``.
-
-            This parameter is not used if ``x`` is a generator (the generator passed to
-            ``x` should yield ``(x, y)`` tuples).
+            {y}
         n_steps : int
-            Number of simulation timesteps.
+            {n_steps}
         stateful : bool
-            If True, update the saved simulation state at the end of the run, so that
-            future operations will resume from the terminal state of this run.
+            {stateful}
         kwargs: dict
             Will be passed on to `tf.keras.Model.evaluate
             <https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate>`_.
@@ -623,6 +764,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         )
 
     @with_self
+    @fill_docs("x", "y", "n_steps", "stateful")
     def _call_keras(
         self, func_type, x=None, y=None, n_steps=None, stateful=False, **kwargs
     ):
@@ -631,18 +773,18 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         Parameters
         ----------
-        func_type : str
+        func_type : "predict" or "predict_on_batch" or "fit" or "evaluate"
             The underlying function to call on the Keras model.
         x
-            See description in documentation of ``<func_type>`` method.
+            {x}
         y
-            See description in documentation of ``<func_type>`` method.
+            {y}
         n_steps : int
-            See description in documentation of ``<func_type>`` method.
+            {n_steps}
         stateful : bool
-            See description in documentation of ``<func_type>`` method.
+            {stateful}
         kwargs : dict
-            See description in documentation of ``<func_type>`` method.
+            Will be passed to the underlying Keras function.
 
         Returns
         -------
@@ -765,12 +907,12 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
     def run(self, time_in_seconds, **kwargs):
         """
-        Simulate for the given length of time.
+        Run the simulation for the given length of time.
 
         Parameters
         ----------
         time_in_seconds : float
-            Run the simulator for the given number of simulated seconds
+            Run the simulator for the given number of simulated seconds.
         kwargs : dict
             See `.run_steps`
         """
@@ -791,23 +933,22 @@ class Simulator:  # pylint: disable=too-many-public-methods
             self.run_steps(steps, **kwargs)
 
     @require_open
+    @fill_docs("stateful", data="x")
     def run_steps(self, n_steps, data=None, progress_bar=True, stateful=True):
         """
-        Simulate for the given number of steps.
+        Run the simulation for the given number of steps.
 
         Parameters
         ----------
         n_steps : int
-            The number of simulation steps to be executed
-        data : dict of {`~nengo.Node`: `~numpy.ndarray`}
-            Override the values of input Nodes with the given data.  Arrays
-            should have shape ``(sim.minibatch_size, n_steps, node.size_out)``.
+            The number of simulation steps to be executed.
+        data :
+            {data}
         progress_bar : bool
             If True, print information about the simulation status to standard
             output.
         stateful : bool
-            If True, update the saved simulation state at the end of the run, so that
-            future operations will resume from the terminal state of this run.
+            {stateful}
 
         Notes
         -----
@@ -883,7 +1024,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         Parameters
         ----------
         path : str
-            Filepath of parameter output file
+            Filepath of parameter output file.
         include_internal : bool
             If True (default False) also save information representing
             internal simulation state.
@@ -914,7 +1055,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         Parameters
         ----------
         path : str
-            Filepath of parameter input file
+            Filepath of parameter input file.
         include_internal : bool
             If True (default False) also load information representing
             internal simulation state.
@@ -1174,11 +1315,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
         ----------
         outputs : list of `~nengo.Probe`
             Compute gradients wrt this output (if None, computes wrt each
-            output probe)
+            output probe).
         atol : float
-            Absolute error tolerance
+            Absolute error tolerance.
         rtol : float
-            Relative (to numeric grad) error tolerance
+            Relative (to numeric grad) error tolerance.
 
         Notes
         -----
@@ -1258,7 +1399,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
     def trange(self, sample_every=None, dt=None):
         """
-        Create a vector of times matching probed data.
+        Create a vector of simulation step times matching probed data.
 
         Note that the range does not start at 0 as one might expect, but at
         the first timestep (i.e., ``dt``).
@@ -1291,9 +1432,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         Notes
         -----
-        The simulation cannot be restarted after it is closed.  This is not a
-        technical limitation, just a design decision made for all Nengo
-        simulators.
+        The simulation cannot be restarted after it is closed.
         """
 
         if not self.closed:
@@ -1697,7 +1836,7 @@ class SimulationData(collections.Mapping):
     The main use case for this is to access Probe data; for example,
     ``probe_data = sim.data[my_probe]``.  However, it is also
     used to access the parameters of objects in the model; for example, after
-    the model has been optimized via `.Simulator.train`, the updated
+    the model has been optimized via `.Simulator.fit`, the updated
     encoder values for an ensemble can be accessed via
     ``trained_encoders = sim.data[my_ens].encoders``.
 
@@ -1815,7 +1954,7 @@ class SimulationData(collections.Mapping):
 
         Notes
         -----
-        Parameter values should be accessed through ``sim.data``
+        Parameter values should be accessed through ``sim.data[my_obj]``
         (which will call this function if necessary), rather than directly
         through this function.
         """
@@ -1905,6 +2044,3 @@ class SimulationData(collections.Mapping):
 
     def __iter__(self):
         return iter(self.sim.model.params)
-
-    # def __contains__(self, x):
-    #     return any(type(x) == type(y) and x == y for y in self)
