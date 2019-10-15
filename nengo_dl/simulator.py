@@ -427,50 +427,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
         return output
 
     @require_open
-    def predict_generator(self, generator, stateful=False, **kwargs):
-        """
-        Generate output predictions for the input samples.
-
-        Uses a generator or ``tf.data.Dataset`` as input. Generator must produce inputs
-        as expected by `.predict_on_batch` (i.e., with shape
-        ``(sim.minibatch_size, n_steps, node.size_in)``).
-
-        This function implements the `tf.keras.Model.predict_generator
-        <https://www.tensorflow.org/api_docs/python/tf/keras/Model#predict_generator>`_
-        API.
-
-        Parameters
-        ----------
-        generator
-            A generator or ``tf.data.Dataset`` that produces inputs in one of the forms
-            supported by `.predict_on_batch`.
-
-            These generators must also explicitly pass a value for the ``n_steps``
-            input, which should have shape ``(batch_size, 1)``. This input should come
-            first in the input list or use the string name "n_steps"
-            (if generating a dict).
-
-            All generated inputs should have shape
-            ``(sim.minibatch_size, n_steps, node.size_out)``.
-
-            Inputs must be explicitly specified for all input Nodes in the network.
-        stateful : bool
-            If True, update the saved simulation state at the end of the run, so that
-            future operations will resume from the terminal state of this run.
-        kwargs: dict
-            Will be passed on to `tf.keras.Model.predict_generator
-            <https://www.tensorflow.org/api_docs/python/tf/keras/Model#predict_generator>`_.
-
-        Returns
-        -------
-        probe_values : dict of {`nengo.Probe`: `numpy.ndarray`}
-            Output values from all the Probes in the network.
-        """
-        return self._call_keras(
-            "predict_generator", x=generator, stateful=stateful, **kwargs
-        )
-
-    @require_open
     @with_self
     def compile(self, *args, loss=None, metrics=None, loss_weights=None, **kwargs):
         """
@@ -599,56 +555,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
         )
 
     @require_open
-    def fit_generator(self, generator, stateful=False, **kwargs):
-        """
-        Trains the model on some dataset.
-
-        Optimizer and loss functions are defined separately in `.Simulator.compile`.
-
-        This function implements the `tf.keras.Model.fit_generator
-        <https://www.tensorflow.org/api_docs/python/tf/keras/Model#fit_generator>`_ API.
-
-        Parameters
-        ----------
-        generator
-            A generator or ``tf.data.Dataset`` that produces inputs in one of the forms
-            supported by `.Simulator.fit`.
-
-            These generators must also explicitly pass a value for the ``n_steps``
-            input, which should have shape ``(batch_size, 1)``. This input should come
-            first in the input list or use the string name "n_steps"
-            (if generating a dict).
-
-            Inputs must be explicitly specified for all input Nodes in the network.
-
-            If ``y`` values are required for the loss function, then the generator
-            should yield tuples ``(x, y)``, where ``x`` and ``y`` have the forms
-            described in ``x`` and ``y`` for `.Simulator.fit`.
-
-            All generated inputs should have shape
-            ``(sim.minibatch_size, n_steps, node.size_out)``.
-            All targets should have shape
-            ``(sim.minibatch_size, n_steps, probe.size_in)``.
-        stateful : bool
-            If True, update the saved simulation state at the end of the run, so that
-            future operations will resume from the terminal state of this run.
-        kwargs: dict
-            Will be passed on to `tf.keras.Model.fit_generator
-            <https://www.tensorflow.org/api_docs/python/tf/keras/Model#fit_generator>`_.
-
-        Returns
-        -------
-        history : ``tf.keras.callbacks.History``
-            The history has two attributes, ``history.epoch`` is the list of epoch
-            numbers and ``history.history`` is a dictionary keyed by metric names
-            (e.g., "loss") containing a list of values of those metrics from each epoch.
-        """
-
-        return self._call_keras(
-            "fit_generator", x=generator, stateful=stateful, **kwargs
-        )
-
-    @require_open
     def evaluate(self, x=None, y=None, n_steps=None, stateful=False, **kwargs):
         """
         Compute the loss and metric values for the network.
@@ -714,58 +620,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         return self._call_keras(
             "evaluate", x=x, y=y, n_steps=n_steps, stateful=stateful, **kwargs
-        )
-
-    @require_open
-    def evaluate_generator(self, generator, stateful=False, **kwargs):
-        """
-        Compute the loss and metric values for the network.
-
-        Loss functions and other metrics are defined separately in `.Simulator.compile`.
-
-        This function implements the `tf.keras.Model.evaluate_generator
-        <https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate_generator>`_
-        API.
-
-        Parameters
-        ----------
-        generator
-            A generator or ``tf.data.Dataset`` that produces inputs in one of the forms
-            supported by `.Simulator.evaluate`.
-
-            These generators must also explicitly pass a value for the ``n_steps``
-            input, which should have shape ``(batch_size, 1)``. This input should come
-            first in the input list or use the string name "n_steps"
-            (if generating a dict).
-
-            Inputs must be explicitly specified for all input Nodes in the network.
-
-            If ``y`` values are required for the loss function, then the generator
-            should yield tuples ``(x, y)``, where ``x`` and ``y`` have the forms
-            described in ``x`` and ``y`` for `.Simulator.evaluate`.
-
-            All generated inputs should have shape
-            ``(sim.minibatch_size, n_steps, node.size_out)``.
-            All targets should have shape
-            ``(sim.minibatch_size, n_steps, probe.size_in)``.
-        stateful : bool
-            If True, update the saved simulation state at the end of the run, so that
-            future operations will resume from the terminal state of this run.
-        kwargs: dict
-            Will be passed on to `tf.keras.Model.evaluate_generator
-            <https://www.tensorflow.org/api_docs/python/tf/keras/Model
-            #evaluate_generator>`_.
-
-        Returns
-        -------
-        outputs : dict of {str: `numpy.ndarray`}
-            Computed loss/metric values. The overall loss will be in
-            ``outputs["loss"]``, and values for each Probe will be in
-            ``outputs["probe_name_loss"]`` or ``outputs["probe_name_metric_name"]``.
-        """
-
-        return self._call_keras(
-            "evaluate_generator", x=generator, stateful=stateful, **kwargs
         )
 
     @with_self
@@ -867,12 +721,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
             ]
 
         # call underlying keras function
-        if "generator" in func_type:
-            func_args = dict(generator=x, **kwargs)
-        elif "fit" in func_type or "evaluate" in func_type:
-            func_args = dict(x=x, y=y, **kwargs)
-        else:
+        if "predict" in func_type:
             func_args = dict(x=x, **kwargs)
+        else:
+            func_args = dict(x=x, y=y, **kwargs)
+
         outputs = getattr(self.keras_model, func_type)(**func_args)
 
         # update n_steps/time

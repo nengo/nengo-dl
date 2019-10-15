@@ -83,18 +83,17 @@ def test_predict(Simulator, seed):
             assert np.allclose(output[p], data_tile)
 
         # generator input
-        for func in ["predict", "predict_generator"]:
-            output = getattr(sim, func)(
-                (
-                    [
-                        a_vals[i * sim.minibatch_size : (i + 1) * sim.minibatch_size],
-                        np.ones((sim.minibatch_size, 1), dtype=np.int32) * n_steps,
-                    ]
-                    for i in range(n_batches)
-                ),
-                steps=n_batches,
-            )
-            assert np.allclose(output[p], data_tile)
+        output = sim.predict(
+            (
+                [
+                    a_vals[i * sim.minibatch_size : (i + 1) * sim.minibatch_size],
+                    np.ones((sim.minibatch_size, 1), dtype=np.int32) * n_steps,
+                ]
+                for i in range(n_batches)
+            ),
+            steps=n_batches,
+        )
+        assert np.allclose(output[p], data_tile)
 
     # dataset input
     # TODO: this crashes if placed on GPU (but not in eager mode)
@@ -168,26 +167,25 @@ def test_evaluate(Simulator):
         # assert np.allclose(loss["probe_loss"], 0)
         # assert np.allclose(loss["probe_1_loss"], 1)
 
-        for func in ("evaluate", "evaluate_generator"):
-            gen = (
-                (
-                    {
-                        "node": np.ones((minibatch_size, n_steps, 1)),
-                        "node_1": np.ones((minibatch_size, n_steps, 1)) * 2,
-                        "n_steps": np.ones((minibatch_size, 1)) * n_steps,
-                    },
-                    {
-                        "probe": np.ones((minibatch_size, n_steps, 1)),
-                        "probe_1": np.ones((minibatch_size, n_steps, 1)),
-                    },
-                )
-                for _ in range(n_batches)
+        gen = (
+            (
+                {
+                    "node": np.ones((minibatch_size, n_steps, 1)),
+                    "node_1": np.ones((minibatch_size, n_steps, 1)) * 2,
+                    "n_steps": np.ones((minibatch_size, 1)) * n_steps,
+                },
+                {
+                    "probe": np.ones((minibatch_size, n_steps, 1)),
+                    "probe_1": np.ones((minibatch_size, n_steps, 1)),
+                },
             )
+            for _ in range(n_batches)
+        )
 
-            loss = getattr(sim, func)(gen, steps=n_batches)
-            assert np.allclose(loss["loss"], 1)
-            assert np.allclose(loss["probe_loss"], 0)
-            assert np.allclose(loss["probe_1_loss"], 1)
+        loss = sim.evaluate(gen, steps=n_batches)
+        assert np.allclose(loss["loss"], 1)
+        assert np.allclose(loss["probe_loss"], 0)
+        assert np.allclose(loss["probe_1_loss"], 1)
 
         # check custom objective
         def constant_error(y_true, y_pred):
@@ -274,7 +272,7 @@ def test_fit(Simulator, seed):
         # assert history.history["loss"][-1] < 5e-4
 
         sim.reset()
-        history = sim.fit_generator(
+        history = sim.fit(
             (
                 ((x[..., [0]], x[..., [1]], np.ones((4, 1), dtype=np.int32)), y)
                 for _ in range(200)
