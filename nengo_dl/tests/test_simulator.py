@@ -938,12 +938,6 @@ def test_check_data(Simulator):
         with pytest.raises(ValidationError, match="does not match expected size"):
             sim._check_data({"pa": zeros2}, n_steps=2, nodes=False)
 
-        # data with wrong object dimensionality
-        with pytest.raises(ValidationError, match="Dimensionality of data"):
-            sim._check_data({"inpa": zeros1, "n_steps": n_steps})
-        with pytest.raises(ValidationError, match="Dimensionality of data"):
-            sim._check_data({"pa": zeros1}, nodes=False)
-
         # data with batch size < minibatch_size
         with pytest.raises(ValidationError, match="Size of minibatch"):
             sim._check_data({"inpa": zeros2[[0]], "n_steps": n_steps})

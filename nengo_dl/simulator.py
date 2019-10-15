@@ -827,24 +827,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 % (n_steps, self.unroll, actual_steps),
                 RuntimeWarning,
             )
-        if data is not None:
-            # note: we only need to check the shape of the first item, because
-            # check_data (inside predict) will ensure that all the items
-            # have the same shape
-            batch_size, input_steps = next(iter(data.values())).shape[:2]
-            if batch_size != self.minibatch_size:
-                raise ValidationError(
-                    "Input data must have batch size == sim.minibatch_size "
-                    "(%d != %d)" % (batch_size, self.minibatch_size),
-                    "data",
-                )
-            if input_steps != actual_steps:
-                raise ValidationError(
-                    "Number of timesteps in input data (%d) does not "
-                    "match requested number of steps (%d)"
-                    % (input_steps, actual_steps),
-                    "data",
-                )
 
         progress = (
             utils.ProgressBar("Simulating", "Simulation", max_value=None)
@@ -1616,19 +1598,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
                             "expected size (%s)" % (n, labels[i], x.shape[i], args[i]),
                             "data",
                         )
-
-        # object-specific checks
-        for obj in self.node_inputs if nodes else self.model.probes:
-            name = self.get_name(obj)
-
-            # data size matches object size
-            size = obj.size_out if nodes else obj.size_in
-            if name in data and data[name].shape[2] != size:
-                raise ValidationError(
-                    "Dimensionality of data (%s) does not match "
-                    "dimensionality of %s (%s)" % (x.shape[2], obj, size),
-                    "data",
-                )
 
         if (
             n_steps is not None
