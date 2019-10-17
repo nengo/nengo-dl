@@ -6,6 +6,30 @@ Some common loss functions (for use with the ``loss`` argument in
 import tensorflow as tf
 
 
+def nan_mse(y_true, y_pred):
+    """
+    Compute Mean Squared Error between given outputs and targets.
+
+    If any values in ``y_true`` are ``nan``, that will be treated as
+    zero error for those elements.
+
+    Parameters
+    ----------
+    y_true : ``tf.Tensor``
+        Target values for a Probe in a network.
+    y_pred : ``tf.Tensor``
+        Output values from a Probe in a network.
+
+    Returns
+    -------
+    mse : ``tf.Tensor``
+        Tensor representing the mean squared error.
+    """
+
+    targets = tf.where(tf.math.is_nan(y_true), y_pred, y_true)
+    return tf.reduce_mean(tf.square(targets - y_pred))
+
+
 class Regularize(tf.losses.Loss):
     """
     An objective function to apply regularization penalties.

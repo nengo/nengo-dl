@@ -74,3 +74,13 @@ def test_regularize_train(Simulator, mode, seed):
 
         sim.step()
         assert np.allclose(sim.data[p], 0, atol=1e-2)
+
+
+def test_nan_mse():
+    x = np.arange(10, dtype=np.float32)
+    y = np.ones(10) * np.nan
+    y[3:5] = 0
+
+    loss = losses.nan_mse(y, x)
+
+    assert loss.numpy() == (3 ** 2 + 4 ** 2) / 10

@@ -115,6 +115,8 @@ Release History
   API rather than the old ``tf.layers``.
 - TensorFlow's "control flow v2" is disabled on import, for performance reasons; see
   https://github.com/tensorflow/tensorflow/issues/33052.
+- Renamed ``nengo_dl.objectives.mse`` to ``nengo_dl.losses.nan_mse`` (to emphasize
+  the special logic it provides for ``nan`` targets).
 
 **Deprecated**
 
@@ -140,7 +142,6 @@ Release History
   ``Simulator.fit`` to optimize a network instead).
 - Removed the ``nengo_dl.objectives.Regularize(weight=x, ...)`` argument. Use the
   ``Simulator.compile(loss_weights=...)`` functionality instead.
-- Removed ``nengo_dl.objectives.mse``. Use ``tf.losses.mse`` instead.
 - Removed the ``Simulator.run(..., extra_feeds=...)`` argument. TensorFlow 2.0 no longer
   uses the Session/feed execution model.
 - Removed ``Simulator.run_batch``. This functionality is now managed by the underlying
