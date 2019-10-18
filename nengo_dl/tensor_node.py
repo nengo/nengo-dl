@@ -8,6 +8,7 @@ import warnings
 from nengo import Node, Connection, Ensemble, builder
 from nengo.base import NengoObject
 from nengo.builder.operator import Reset
+from nengo.config import Config
 from nengo.exceptions import ValidationError, SimulationError
 from nengo.neurons import NeuronType
 from nengo.params import Default, ShapeParam, Parameter, BoolParam
@@ -15,6 +16,7 @@ import numpy as np
 import tensorflow as tf
 
 from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
+from nengo_dl.config import configure_settings
 
 
 def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
@@ -414,6 +416,11 @@ class Layer:
         conn : `~nengo.Connection`
             If ``return_conn`` is True, also returns the connection object linking
             ``input`` and ``node``.
+
+        Notes
+        -----
+        The input connection created for the new TensorNode will be marked as
+        non-trainable by default.
         """
 
         if isinstance(transform, np.ndarray) and transform.ndim == 2:
@@ -436,6 +443,12 @@ class Layer:
             )
 
         conn = Connection(input, obj, synapse=synapse, transform=transform)
+
+        # set connection to non-trainable
+        cfg = Config.context[0][conn]
+        if not hasattr(cfg, "trainable"):
+            configure_settings(trainable=None)
+        cfg.trainable = False
 
         return (obj, conn) if return_conn else obj
 

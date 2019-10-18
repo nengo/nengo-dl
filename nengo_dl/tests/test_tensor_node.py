@@ -204,6 +204,11 @@ def test_tensor_layer(Simulator):
         )
         assert layer4.size_in == 2
 
+        # check that conn is marked non-trainable
+        with nengo.Network():
+            _, conn = Layer(tf.identity)(inp, return_conn=True)
+        assert not net.config[conn].trainable
+
     with Simulator(net, minibatch_size=2) as sim:
         sim.step()
 

@@ -117,6 +117,8 @@ Release History
   https://github.com/tensorflow/tensorflow/issues/33052.
 - Renamed ``nengo_dl.objectives.mse`` to ``nengo_dl.losses.nan_mse`` (to emphasize
   the special logic it provides for ``nan`` targets).
+- Connections created by ``nengo_dl.Layer/tensor_layer`` will be marked as
+  non-trainable by default.
 
 **Deprecated**
 
