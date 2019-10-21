@@ -122,8 +122,6 @@ ci_scripts:
   - template: examples
     pip_install:
       - $TF_VERSION
-    post_commands:
-      - python docs/whitepaper/whitepaper2018_code.py > /dev/null
   - template: docs
     pip_install:
       - $TF_VERSION
