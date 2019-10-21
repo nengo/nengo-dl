@@ -133,6 +133,8 @@ which differ from the standard config behaviour:
                # correct
                net.config[my_ens].trainable = False
 
+.. _config-planner:
+
 planner
 -------
 
@@ -176,6 +178,8 @@ only two of the default simplifications via
     with nengo.Network() as net:
         nengo_dl.configure_settings(simplifications=[remove_identity_muls,
                                                      remove_zero_incs])
+
+.. _config-inference-only:
 
 inference_only
 --------------
@@ -247,6 +251,8 @@ be further configured on a per-probe basis, e.g.
       my_probe = nengo.Probe(...)
       net.config[my_probe].keep_history = False
 
+.. _config-stateful:
+
 stateful
 --------
 
@@ -260,6 +266,8 @@ simulation speed.
 Note that in any case the internal state of the Simulation will be
 tracked within a given call (e.g. within one call to `.Simulator.run`). This only
 affects whether state is preserved between calls.
+
+.. _config-use-loop:
 
 use_loop
 --------

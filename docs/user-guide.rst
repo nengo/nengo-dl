@@ -32,4 +32,4 @@ inserting TensorFlow code into a Nengo model.
     simulator
     tensor-node
     config
-
+    tips

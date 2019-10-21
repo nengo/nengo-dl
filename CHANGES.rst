@@ -122,7 +122,8 @@ Release History
   updated `Coming from TensorFlow
   <https://www.nengo.ai/nengo-dl/examples/from-tensorflow.html#>`_ tutorial and
   `TensorFlow/Keras integration
-  <https://www.nengo.ai/nengo-dl/examples/tensorflow-models.html>`_ example).
+  <https://www.nengo.ai/nengo-dl/examples/tensorflow-models.html>`_ example, and the
+  new `Tips and tricks <https://www.nengo.ai/nengo-dl/tips.html>`_ page).
 
 **Deprecated**
 
