@@ -242,7 +242,9 @@ def mnist(use_tensor_layer=True):
 
 def spaun(dimensions):
     """
-    Builds the Spaun network from [1]_
+    Builds the Spaun network.
+
+    See [1]_ for more details.
 
     Parameters
     ----------

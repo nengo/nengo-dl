@@ -1,6 +1,12 @@
 {% include "templates/docs/conf.py.template" %}
 
-import errno  # pylint: disable=wrong-import-order
+# pylint: disable=wrong-import-order
+
+import errno
+import inspect
+
+from docutils.parsers.rst import directives
+from sphinx.ext.autosummary import Autosummary, get_documenter
 
 # create redirect pages (from_page, to_page)
 # TODO: we can remove these redirects after a few releases
@@ -64,3 +70,65 @@ def setup(app):
 
     app.add_config_value("redirects", [], "")
     app.connect("build-finished", redirect_pages)
+
+    class AutoAutoSummary(Autosummary):
+        """
+        Automatically generates a summary for a class or module.
+
+        For classes this adds a summary for all methods.
+
+        For modules this adds a summary for all classes/functions.
+        """
+
+        option_spec = {
+            "nosignatures": directives.unchanged,
+            "exclude-members": directives.unchanged,
+        }
+
+        required_arguments = 1
+
+        def get_members(self, obj, typ, include_public=None):
+            if include_public is None:
+                include_public = []
+
+            obj_module = obj.__module__ if inspect.isclass(obj) else obj.__name__
+
+            items = []
+            for name in obj.__dict__:
+                if name in include_public or not name.startswith("_"):
+                    attr = getattr(obj, name)
+                    doc = get_documenter(self.env.app, attr, obj)
+
+                    if (
+                        doc.objtype in typ
+                        and attr.__module__ == obj_module
+                        and name not in self.options.get("exclude-members", [])
+                    ):
+                        items.append(name)
+
+            return items
+
+        def run(self):
+            clazz = str(self.arguments[0])
+            (module_name, obj_name) = clazz.rsplit(".", 1)
+            mod = __import__(module_name, globals(), locals(), [obj_name])
+            obj = getattr(mod, obj_name)
+
+            new_content = []
+            if inspect.isclass(obj):
+                # for classes, we automatically document all methods.
+                # methods with decorators may show up as "attributes"
+                items = self.get_members(obj, ["method", "attribute"])
+
+                # add the class itself
+                new_content.append(clazz)
+            else:
+                # for modules, we automatically document all classes and functions
+                items = self.get_members(obj, ["class", "function"])
+
+            new_content.extend("%s.%s" % (clazz, item) for item in items)
+            self.content = new_content + self.content.data
+
+            return super(AutoAutoSummary, self).run()
+
+    app.add_directive("autoautosummary", AutoAutoSummary)
