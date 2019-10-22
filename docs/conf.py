@@ -18,6 +18,7 @@ extensions = [
     "nengo_sphinx_theme",
     "numpydoc",
     "sphinx_click.ext",
+    "sphinx.ext.doctest",
 ]
 
 # -- sphinx.ext.autodoc
@@ -56,6 +57,12 @@ linkcheck_anchors = True
 default_role = "py:obj"
 pygments_style = "sphinx"
 suppress_warnings = ["image.nonlocal_uri"]
+doctest_global_setup = """
+import nengo
+import nengo_dl
+import numpy as np
+import tensorflow as tf
+"""
 
 project = "NengoDL"
 authors = "Applied Brain Research"

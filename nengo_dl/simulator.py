@@ -11,6 +11,7 @@ import logging
 import textwrap
 import warnings
 
+import jinja2
 from nengo import Ensemble, Connection, Probe, Network, Direct, Node
 from nengo.builder.connection import BuiltConnection
 from nengo.builder.ensemble import BuiltEnsemble
@@ -67,17 +68,25 @@ def require_open(wrapped, instance, args, kwargs):
 
 
 def fill_docs(*args, **kwargs):
-    """Stores documentation for common arguments in one place, to avoid  duplication,
+    """Stores documentation for common arguments in one place, to avoid duplication,
     and then fills them in automatically in the docstring."""
 
     docs = {
         "x": """
+        {% set uses_y = func_name in ("fit", "evaluate") %}
+
+        {% if func_name in ("predict_on_batch", "run_steps") %}
+            {% set batch_size = 1 %}
+        {% else %}
+            {% set batch_size = 50 %}
+        {% endif %}
+
         Data for input Nodes in the model. This argument is optional; if
         it is not specified, then data will automatically be generated
         according to the inputs specified in the Node definitions (e.g., by calling
         the output function associated with that Node).
 
-        ``{param_name}`` can be specified as:
+        ``{{ param_name }}`` can be specified as:
 
         - A dictionary of {`nengo.Node` or str: `numpy.ndarray`}
           indicating the input values for the given nodes. Nodes can be referred
@@ -90,42 +99,89 @@ def fill_docs(*args, **kwargs):
           added to the model (this corresponds to the order found in
           `nengo.Network.all_nodes`).
         - A `numpy.ndarray` indicating the input value for a single input Node.
+        {% if func_name != "run_steps" %}
         - A generator or ``tf.data.Dataset`` that produces one of the above.
+        {% endif %}
 
         All inputs should have shape ``(batch_size, n_steps, node.size_out)``.
 
-        For example, if the model only has a single input Node, then ``{param_name}``
-        can simply be an ndarray of data for that Node.
+        For example, if the model only has a single input Node, then
+        ``{{ param_name }}`` can simply be an ndarray of data for that Node.
 
-        .. code-block:: python
+        .. testcode::
 
             with nengo.Network() as net:
                 a = nengo.Node([0])
-                ...
+                p = nengo.Probe(a)
 
             with nengo_dl.Simulator(net) as sim:
-                sim.{func_name}({param_name}=np.ones((50, 10, 1)), ...)
+                {% if uses_y %}
+                sim.compile(loss="mse")
+                sim.{{ func_name }}(
+                    {{ param_name }}=np.ones((50, 10, 1)), y=np.ones((50, 10, 1)))
+                {% elif func_name == "run_steps" %}
+                sim.{{ func_name }}(
+                    10, {{ param_name }}=np.ones(({{ batch_size }}, 10, 1)))
+                {% else %}
+                sim.{{ func_name }}(
+                    {{ param_name }}=np.ones(({{ batch_size }}, 10, 1)))
+                {% endif %}
 
-        If the network has multiple inputs, then ``{param_name}`` can be specified as a
-        dictionary mapping `nengo.Node` objects to arrays, e.g.
+        {% if uses_y %}
+        .. testoutput::
+            :hide:
 
-        .. code-block:: python
+            ...
+        {% endif %}
+
+        If the network has multiple inputs, then ``{{ param_name }}`` can be specified
+        as a dictionary mapping `nengo.Node` objects to arrays, e.g.
+
+        .. testcode::
 
             with nengo.Network() as net:
                 a = nengo.Node([0])
                 b = nengo.Node([0, 0])
-                ...
+                p = nengo.Probe(a)
 
             with nengo_dl.Simulator(net) as sim:
-                sim.{func_name}(
-                    {param_name}={
+                {% if uses_y %}
+                sim.compile(loss="mse")
+                sim.{{ func_name }}(
+                    {{ param_name }}={
                         a: np.ones((50, 10, 1)),
-                        b: np.ones((50, 10, 2))},
-                    ...)
+                        b: np.ones((50, 10, 2))
+                    },
+                    y=np.ones((50, 10, 1))
+                )
+                {% elif func_name == "run_steps" %}
+                sim.{{ func_name }}(
+                    10,
+                    {{ param_name }}={
+                        a: np.ones(({{ batch_size }}, 10, 1)),
+                        b: np.ones(({{ batch_size }}, 10, 2))
+                    }
+                )
+                {% else %}
+                sim.{{ func_name }}(
+                    {{ param_name }}={
+                        a: np.ones(({{ batch_size }}, 10, 1)),
+                        b: np.ones(({{ batch_size }}, 10, 2))
+                    }
+                )
+                {% endif %}
+
+        {% if uses_y %}
+        .. testoutput::
+            :hide:
+
+            ...
+        {% endif %}
 
         If an input value is not specified for one of the Nodes in the model then
         data will be filled in automatically according to the Node definition.
 
+        {% if func_name != "run_steps" %}
         For dynamic input types (e.g., ``tf.data`` pipelines or generators), NengoDL
         tries to avoid introspecting/altering the data before the
         simulation starts, as this may have unintended side-effects. So data must be
@@ -141,20 +197,43 @@ def fill_docs(*args, **kwargs):
         input value needs to be duplicated into an array with size
         ``(batch_size, 1)`` (where all entries have the same value, e.g. ``10``).
 
-        .. code-block:: python
+        {% if uses_y %}
+        Also keep in mind that when using a dynamic input for ``x`` the ``y`` parameter
+        is unused, and instead the generator should return ``(x, y)`` pairs.
+        {% endif %}
+
+        .. testcode::
 
             with nengo.Network() as net:
                 a = nengo.Node([0], label="a")
-                ...
+                p = nengo.Probe(a, label="p")
 
             with nengo_dl.Simulator(net) as sim:
+                {% if uses_y %}
+                dataset = tf.data.Dataset.from_tensor_slices(
+                    ({"a": tf.ones((50, 10, 1)),
+                      "n_steps": tf.ones((50, 1), dtype=tf.int32) * 10},
+                     {"p": tf.ones((50, 10, 1))})
+                ).batch(sim.minibatch_size)
+
+                sim.compile(loss="mse")
+                sim.{{ func_name }}({{ param_name }}=dataset)
+                {% else %}
                 dataset = tf.data.Dataset.from_tensor_slices(
                     {"a": tf.ones((50, 10, 1)),
                      "n_steps": tf.ones((50, 1), dtype=tf.int32) * 10}
                 ).batch(sim.minibatch_size)
 
-                sim.{func_name}({param_name}=dataset, ...)
+                sim.{{ func_name }}({{ param_name }}=dataset)
+                {% endif %}
 
+        {% if uses_y %}
+        .. testoutput::
+            :hide:
+
+            ...
+        {% endif %}
+        {% endif %}
         """,
         "y": """
         Target values for Probes in the model. These can be specified in the same
@@ -163,39 +242,50 @@ def fill_docs(*args, **kwargs):
 
         For example,
 
-        .. code-block:: python
+        .. testcode::
 
             with nengo.Network() as net:
                 a = nengo.Node([0])
                 p = nengo.Probe(a)
 
             with nengo_dl.Simulator(net) as sim:
-                ...
-                sim.{func_name}(
-                    x=..., y={p: np.zeros((50, 10, 1))})
+                sim.compile(loss="mse")
+                sim.{{ func_name }}(
+                    x={a: np.zeros((50, 10, 1))}, y={p: np.zeros((50, 10, 1))})
+
+        .. testoutput::
+            :hide:
+
+            ...
 
         Note that data is only specified for the probes used in the loss function
         (specified when calling `.Simulator.compile`).  For example, if we have two
         probes, but only one is used during training (the other is used for data
         collection during inference), we could set this up like:
 
-        .. code-block:: python
+        .. testcode::
 
             with nengo.Network() as net:
-                ...
-                p0 = nengo.Probe(a)
-                p1 = nengo.Probe(b)
+                a = nengo.Node([0])
+                b = nengo.Node([0])
+                p_a = nengo.Probe(a)
+                p_b = nengo.Probe(b)
 
             with nengo_dl.Simulator(net) as sim:
                 # compiled loss function only depends on p_a
-                sim.compile(loss={p0: "mse"})
+                sim.compile(loss={p_a: "mse"})
 
-                # only specify data for p0
-                sim.{func_name}(
-                    x=..., y={p0: np.zeros((50, 10, 1))})
+                # only specify data for p_a
+                sim.{{ func_name }}(
+                    x={a: np.zeros((50, 10, 1))},  y={p_a: np.zeros((50, 10, 1))})
+
+        .. testoutput::
+            :hide:
+
+            ...
 
         ``y`` is not used if ``x`` is a generator. Instead, the generator passed to
-        ``x` should yield ``(x, y)`` tuples, where ``y`` is in one of the formats
+        ``x`` should yield ``(x, y)`` tuples, where ``y`` is in one of the formats
         described above.
         """,
         "n_steps": """
@@ -217,13 +307,13 @@ def fill_docs(*args, **kwargs):
         .. code-block:: python
 
             # begins in state0, terminates in state1
-            sim.{func_name}(..., stateful=False)
+            sim.{{ func_name }}(..., stateful=False)
             # begins in state0, terminates in state2
-            sim.{func_name}(..., stateful=True)
+            sim.{{ func_name }}(..., stateful=True)
             # begins in state2, terminates in state3
-            sim.{func_name}(..., stateful=False)
+            sim.{{ func_name }}(..., stateful=False)
             # begins in state2, terminates in state4
-            sim.{func_name}(..., stateful=True)
+            sim.{{ func_name }}(..., stateful=True)
 
         Note that `.Simulator.soft_reset` can be used to reset the state to initial
         conditions at any point.
@@ -234,22 +324,24 @@ def fill_docs(*args, **kwargs):
     for arg in args:
         kwargs[arg] = arg
 
+    env = jinja2.Environment(trim_blocks=True, lstrip_blocks=True)
+
     def fill_documentation(func):
-        for name, arg in kwargs.items():
-            doc = docs[arg]
+        rendered_docs = {}
+        for name, template in kwargs.items():
+            doc = docs[template]
 
             # fill in variables
-            # note: we use .replace instead of .format so that we don't
-            # have to escape all the brackets in the docstrings
-            doc = doc.replace("{param_name}", name)
-            doc = doc.replace("{func_name}", func.__name__)
+            doc = env.from_string(doc).render(param_name=name, func_name=func.__name__)
 
             # correct indentation
             doc = textwrap.indent(doc, " " * 4)
             doc = doc.strip()
 
-            # insert result into docstring
-            func.__doc__ = func.__doc__.replace("{%s}" % name, doc)
+            rendered_docs[name] = doc
+
+        # insert result into docstring
+        func.__doc__ = env.from_string(func.__doc__).render(**rendered_docs)
 
         return func
 
@@ -543,11 +635,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
         Parameters
         ----------
         x
-            {x}
+            {{ x }}
         n_steps : int
-            {n_steps}
+            {{ n_steps }}
         stateful : bool
-            {stateful}
+            {{ stateful}}
         kwargs: dict
             Will be passed on to `tf.keras.Model.predict
             <https://www.tensorflow.org/api_docs/python/tf/keras/Model#predict>`_.
@@ -578,11 +670,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
         Parameters
         ----------
         x
-            {x}
+            {{ x }}
         n_steps : int
-            {n_steps}
+            {{ n_steps }}
         stateful : bool
-            {stateful}
+            {{ stateful }}
         kwargs: dict
             Will be passed on to `tf.keras.Model.predict_on_batch
             <https://www.tensorflow.org/api_docs/python/tf/keras/Model#predict_on_batch>`_.
@@ -645,12 +737,13 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
             For example,
 
-            .. code-block:: python
+            .. testcode::
 
                 with nengo.Network() as net:
-                    ...
-                    probe0 = nengo.Probe(...)
-                    probe1 = nengo.Probe(...)
+                    node0 = nengo.Node([0])
+                    node1 = nengo.Node([0])
+                    probe0 = nengo.Probe(node0)
+                    probe1 = nengo.Probe(node1)
 
                 with nengo_dl.Simulator(net) as sim:
                     sim.compile(loss={probe0: "mse", probe1: tf.losses.mae})
@@ -703,13 +796,13 @@ class Simulator:  # pylint: disable=too-many-public-methods
         Parameters
         ----------
         x
-            {x}
+            {{ x }}
         y
-            {y}
+            {{ y }}
         n_steps : int
-            {n_steps}
+            {{ n_steps }}
         stateful : bool
-            {stateful}
+            {{ stateful }}
         kwargs: dict
             Will be passed on to `tf.keras.Model.evaluate
             <https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate>`_.
@@ -740,13 +833,13 @@ class Simulator:  # pylint: disable=too-many-public-methods
         Parameters
         ----------
         x
-            {x}
+            {{ x }}
         y
-            {y}
+            {{ y }}
         n_steps : int
-            {n_steps}
+            {{ n_steps }}
         stateful : bool
-            {stateful}
+            {{ stateful }}
         kwargs: dict
             Will be passed on to `tf.keras.Model.evaluate
             <https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate>`_.
@@ -776,13 +869,13 @@ class Simulator:  # pylint: disable=too-many-public-methods
         func_type : "predict" or "predict_on_batch" or "fit" or "evaluate"
             The underlying function to call on the Keras model.
         x
-            {x}
+            See description in documentation of ``<func_type>`` method.
         y
-            {y}
+            See description in documentation of ``<func_type>`` method.
         n_steps : int
-            {n_steps}
+            See description in documentation of ``<func_type>`` method.
         stateful : bool
-            {stateful}
+            See description in documentation of ``<func_type>`` method.
         kwargs : dict
             Will be passed to the underlying Keras function.
 
@@ -943,12 +1036,12 @@ class Simulator:  # pylint: disable=too-many-public-methods
         n_steps : int
             The number of simulation steps to be executed.
         data :
-            {data}
+            {{ data }}
         progress_bar : bool
             If True, print information about the simulation status to standard
             output.
         stateful : bool
-            {stateful}
+            {{ stateful }}
 
         Notes
         -----
@@ -1089,19 +1182,24 @@ class Simulator:  # pylint: disable=too-many-public-methods
         This can be helpful for reusing a NengoDL model inside a different
         Simulator.  For example:
 
-        .. code-block:: python
+        .. testcode::
 
             with nengo.Network() as net:
-                < build network >
+                ens = nengo.Ensemble(10, 1)
 
             with nengo_dl.Simulator(net) as sim:
-                < run some optimization >
+                # < run some optimization >
                 sim.freeze_params(net)
 
             with nengo.Simulator(net) as sim2:
                 # run the network in the default Nengo simulator, with the
                 # trained parameters
                 sim2.run(1.0)
+
+        .. testoutput::
+            :hide:
+
+            ...
 
         Parameters
         ----------
@@ -1151,7 +1249,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         For example:
 
-        .. code-block:: python
+        .. testcode::
 
             with nengo.Network() as net:
                 a = nengo.Ensemble(10, 1)
@@ -1643,31 +1741,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
             # data is a generator, so don't perform validation
             return
 
-        if nodes:
-            # validate special n_steps input
-
-            if "n_steps" not in data:
-                raise ValidationError("Must specify 'n_steps' in input data", "data")
-            if (
-                batch_size is None
-                and (data["n_steps"].ndim != 2 or data["n_steps"].shape[1] != 1)
-            ) or (batch_size is not None and data["n_steps"].shape != (batch_size, 1)):
-                raise ValidationError(
-                    "'n_steps' has wrong shape; should be %s (note that this is just "
-                    "the integer n_steps value repeated)" % ((batch_size, 1),),
-                    "data",
-                )
-            if not np.all(data["n_steps"] == data["n_steps"][0, 0]):
-                raise ValidationError(
-                    "'n_steps' should all have the same value", "data"
-                )
-            if n_steps is not None and not np.all(data["n_steps"] == n_steps):
-                raise ValidationError(
-                    "`n_steps` input does not match the requested number of steps",
-                    "data",
-                )
-
-        # exclude n_steps from further data checking
+        # exclude n_steps from normal data checking
+        data_n_steps = data.get("n_steps", None)
         data = {k: val for k, val in data.items() if k != "n_steps"}
 
         for name, x in data.items():
@@ -1748,6 +1823,30 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 "unroll_simulation (%d)" % (n_steps, self.unroll),
                 "n_steps",
             )
+
+        if nodes:
+            # validate special n_steps input
+
+            if data_n_steps is None:
+                raise ValidationError("Must specify 'n_steps' in input data", "data")
+            if (
+                batch_size is None
+                and (data_n_steps.ndim != 2 or data_n_steps.shape[1] != 1)
+            ) or (batch_size is not None and data_n_steps.shape != (batch_size, 1)):
+                raise ValidationError(
+                    "'n_steps' has wrong shape; should be %s (note that this is just "
+                    "the integer n_steps value repeated)" % ((batch_size, 1),),
+                    "data",
+                )
+            if not np.all(data_n_steps == data_n_steps[0, 0]):
+                raise ValidationError(
+                    "'n_steps' should all have the same value", "data"
+                )
+            if n_steps is not None and not np.all(data_n_steps == n_steps):
+                raise ValidationError(
+                    "`n_steps` input does not match the requested number of steps",
+                    "data",
+                )
 
     @with_self
     def _update_steps(self):

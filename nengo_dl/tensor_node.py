@@ -109,6 +109,7 @@ class TensorFuncParam(Parameter):
                     input_spec = []
                 if node.shape_in is not None:
                     input_spec += [tf.TensorSpec((1,) + node.shape_in)]
+
                 if len(input_spec) == 1:
                     input_spec = input_spec[0]
 
@@ -364,12 +365,13 @@ class Layer:
 
     This is designed to mimic and integrate with the ``tf.keras.layers.Layer`` API, e.g.
 
-    .. code-block:: python
+    .. testcode::
 
-        a = ...
-        b = nengo_dl.Layer(tf.keras.layers.Dense(units=10))(a)
-        c = nengo_dl.Layer(lambda x: x + 1)(b)
-        d = nengo_dl.Layer(nengo.LIF())(c)
+        with nengo.Network():
+            a = nengo.Ensemble(10, 1)
+            b = nengo_dl.Layer(tf.keras.layers.Dense(units=10))(a)
+            c = nengo_dl.Layer(lambda x: x + 1)(b)
+            d = nengo_dl.Layer(nengo.LIF())(c)
 
     Parameters
     ----------

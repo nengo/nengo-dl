@@ -38,6 +38,7 @@ install_req = [
     "nengo>=2.8.0",
     "numpy>=1.14.5",
     "%s>=2.0.0" % tf_req,
+    "jinja2>=2.10.1",
     "progressbar2>=3.39.0",
 ]
 {% endblock %}

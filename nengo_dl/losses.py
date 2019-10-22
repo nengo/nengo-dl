@@ -36,10 +36,11 @@ class Regularize(tf.losses.Loss):
 
     This is designed to be applied to a probed signal, e.g.
 
-    .. code-block:: python
+    .. testcode::
 
         with nengo.Network() as net:
-            ...
+            a = nengo.Node([0])
+            b = nengo.Node(size_in=1)
             c = nengo.Connection(a, b)
             p = nengo.Probe(c, "weights")
             ...
@@ -50,7 +51,7 @@ class Regularize(tf.losses.Loss):
             net.config[p].keep_history = False
 
         with nengo_dl.Simulator(net) as sim:
-            sim.compile(loss={p: Regularize()})
+            sim.compile(loss={p: nengo_dl.losses.Regularize()})
 
     Parameters
     ----------

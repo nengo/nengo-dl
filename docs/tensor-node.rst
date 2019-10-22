@@ -14,7 +14,12 @@ Tensor with shape ``(sim.minibatch_size,) + node.shape_out``.
 ``node.shape_out`` will be inferred by calling the function once and
 checking the output, if it isn't set when the Node is created.
 
-.. code-block:: python
+.. testsetup::
+
+    net = nengo.Network()
+    net.__enter__()
+
+.. testcode::
 
     def tensor_func(t, x):
         print(t)  # current simulation time
@@ -22,7 +27,12 @@ checking the output, if it isn't set when the Node is created.
 
         return x + 1
 
-    my_node = nengo_dl.TensorNode(tensor_func, size_in=1)
+    my_node = nengo_dl.TensorNode(tensor_func, shape_in=(1,))
+
+.. testoutput::
+    :hide:
+
+    ...
 
 TensorNodes can also be used with `Keras Layers
 <https://www.tensorflow.org/api_docs/python/tf/keras/layers>`_, by passing an
@@ -30,25 +40,25 @@ instantiated Layer to the TensorNode. Since Keras layers typically don't take th
 simulation time as input, we can use the ``pass_time=False`` parameter to only pass
 ``x``.
 
-.. code-block:: python
+.. testcode::
 
     my_node = nengo_dl.TensorNode(tf.keras.layers.Dense(units=10),
-                                  size_in=1, pass_time=False)
+                                  shape_in=(1,), pass_time=False)
 
 This also means that we can use custom Keras layers to implement more complicated
 TensorNode behaviour. For example, if a TensorNode requires internal parameter
 variables, those can be created inside a Layer's ``build`` function.
 
-.. code-block:: python
+.. testcode::
 
     class MyLayer(tf.keras.layers.Layer):
         def build(self, input_shapes):
-            self.w = self.add_weight(...)
+            self.w = self.add_weight()
 
         def call(self, inputs):
             return inputs * self.w
 
-    my_node = nengo_dl.TensorNode(MyLayer(), size_in=1, pass_time=False)
+    my_node = nengo_dl.TensorNode(MyLayer(), shape_in=(1,), pass_time=False)
 
 See the
 `TensorFlow documentation
@@ -59,9 +69,10 @@ Once created, a TensorNode can then be used in a Nengo network just like any oth
 Nengo object (for example, it can receive input from Connections or have its output
 recorded via Probes)
 
-.. code-block:: python
+.. testcode::
 
-    conn = nengo.Connection(..., my_node)
+    inp = nengo.Node(output=np.sin)
+    conn = nengo.Connection(inp, my_node)
     probe = nengo.Probe(my_node)
 
 NengoDL also provides another syntax for creating TensorNodes, designed for users more
@@ -73,28 +84,33 @@ TensorNode in a single step.
 
 For example, in Keras we would create a Layer like
 
-.. code-block:: python
+.. testcode::
 
-    x = ...
-    y = tf.keras.Layers.Dense(units=10)(x)
+    x = tf.keras.Input(shape=(1,))
+    y = tf.keras.layers.Dense(units=10)(x)
 
 The equivalent, using ``nengo_dl.Layer``, would be
 
-.. code-block:: python
+.. testcode::
 
-    x = ...
+    x = nengo.Node([0])
     y = nengo_dl.Layer(tf.keras.layers.Dense(units=10))(x)
 
 Which, under the hood, is equivalent to
 
-.. code-block:: python
+.. testcode::
 
-    x = ...
-    y = nengo_dl.TensorLayer(tf.keras.layers.Dense(units=10), pass_time=False)
+    x = nengo.Node([0])
+    y = nengo_dl.TensorNode(
+        tf.keras.layers.Dense(units=10), pass_time=False, shape_in=(1,))
     nengo.Connection(x, y, synapse=None)
 
 See the :ref:`TensorNode API <tensornode-api>` for more details, or the
 examples below for demonstrations of using TensorNodes in practice.
+
+.. testcleanup::
+
+    net.__exit__(None, None, None)
 
 Examples
 --------

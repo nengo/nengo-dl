@@ -92,10 +92,18 @@ setup_cfg:
 docs_conf_py:
   extensions:
     - sphinx_click.ext
+    - sphinx.ext.doctest
   nengo_logo: nengo-dl-full-light.svg
   nengo_logo_color: "#ff6600"
   sphinx_options:
     suppress_warnings: "['image.nonlocal_uri']"
+    doctest_global_setup: |-
+      """
+      import nengo
+      import nengo_dl
+      import numpy as np
+      import tensorflow as tf
+      """
   analytics_id: UA-41658423-2
 
 ci_scripts:
@@ -126,6 +134,8 @@ ci_scripts:
     pip_install:
       - $TF_VERSION
       - $NUMPY_VERSION
+    post_commands:
+      - sphinx-build -b doctest -vW -D nbsphinx_execute=never docs docs/_build
   - template: deploy
   - template: gpu
     host: abrgpu

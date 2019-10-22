@@ -9,6 +9,8 @@ NengoDL imports several open source libraries:
   `BSD license <https://numpy.org/license.html>`__
 * `TensorFlow <https://www.tensorflow.org/>`_ - Used under
   `Apache license <https://github.com/tensorflow/tensorflow/blob/master/LICENSE>`__
+* `Jinja2 <https://palletsprojects.com/p/jinja/>`_ - Used under
+  `BSD license <https://palletsprojects.com/license/>`__
 * `Progressbar 2 <https://progressbar-2.readthedocs.io/en/latest/>`_ - Used under
   `BSD license <https://github.com/WoLpH/python-progressbar/blob/develop/LICENSE>`__
 

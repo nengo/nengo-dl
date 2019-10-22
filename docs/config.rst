@@ -58,7 +58,7 @@ individual objects/networks.
 For example, suppose we only want to optimize one connection in our network,
 while leaving everything else unchanged.  This could be achieved via
 
-.. code-block:: python
+.. testcode::
 
     with nengo.Network() as net:
         # this adds the `trainable` attribute to all the trainable objects
@@ -77,7 +77,7 @@ while leaving everything else unchanged.  This could be achieved via
 
 Or if we wanted to disable training for some subnetwork:
 
-.. code-block:: python
+.. testcode::
 
     with nengo.Network() as net:
         nengo_dl.configure_settings(trainable=None)
@@ -97,38 +97,40 @@ which differ from the standard config behaviour:
 1. ``trainable`` applies to all objects in a network, regardless of whether
    they were created before or after ``trainable`` is set.  For example,
 
-   .. code-block:: python
+   .. testcode::
 
-       with nengo.Network() as net:
-           ...
-           net.config[nengo.Ensemble].trainable = False
-           a = nengo.Ensemble(10, 1)
-           ...
+        with nengo.Network() as net:
+            nengo_dl.configure_settings(trainable=None)
+            ...
+            net.config[nengo.Ensemble].trainable = False
+            a = nengo.Ensemble(10, 1)
+            ...
 
    is the same as
 
-   .. code-block:: python
+   .. testcode::
 
-       with nengo.Network() as net:
-           ...
-           a = nengo.Ensemble(10, 1)
-           net.config[nengo.Ensemble].trainable = False
-           ...
+        with nengo.Network() as net:
+            nengo_dl.configure_settings(trainable=None)
+            ...
+            a = nengo.Ensemble(10, 1)
+            net.config[nengo.Ensemble].trainable = False
+            ...
 
 
 2. ``trainable`` can only be set on the config of the top-level network.  For
    example,
 
-   .. code-block:: python
+   .. testcode::
 
        with nengo.Network() as net:
            nengo_dl.configure_settings(trainable=None)
 
            with nengo.Network() as subnet:
-               my_ens = nengo.Ensemble(...)
+               my_ens = nengo.Ensemble(10, 1)
 
                # incorrect
-               subnet.config[my_ens].trainable = False
+               # subnet.config[my_ens].trainable = False
 
                # correct
                net.config[my_ens].trainable = False
@@ -142,7 +144,7 @@ This option can be used to change the algorithm used for assigning an order
 to simulation operations during the graph optimization stage.  For example, we
 could disable operator merging by using the ``noop_planner``.
 
-.. code-block:: python
+.. testcode::
 
     from nengo_dl.graph_optimizer import noop_planner
 
@@ -156,7 +158,7 @@ This option can be used to change the algorithm used for sorting
 signals/operators during the graph optimization stage.  For example, we could
 disable sorting via
 
-.. code-block:: python
+.. testcode::
 
     from nengo_dl.graph_optimizer import noop_order_signals
 
@@ -171,7 +173,7 @@ during the graph optimization stage.  This takes a list of transformation
 functions, where each will be applied in sequence.  For example, we could apply
 only two of the default simplifications via
 
-.. code-block:: python
+.. testcode::
 
     from nengo_dl.graph_optimizer import remove_identity_muls, remove_zero_incs
 
@@ -236,19 +238,21 @@ The ``keep_history`` config option allows Probes to be configured so that they
 only store the output of the probed signal from the last simulation timestep.
 Calling
 
-.. code-block:: python
+.. testcode::
 
-   nengo_dl.configure_settings(keep_history=True/False)
+    with nengo.Network() as net:
+        nengo_dl.configure_settings(keep_history=False)
 
 will set the default value for all probes in the simulation, which can then
 be further configured on a per-probe basis, e.g.
 
-.. code-block:: python
+.. testcode::
 
    with nengo.Network() as net:
       nengo_dl.configure_settings(keep_history=True)
-      ...
-      my_probe = nengo.Probe(...)
+
+      my_ens = nengo.Ensemble(10, 1)
+      my_probe = nengo.Probe(my_ens)
       net.config[my_probe].keep_history = False
 
 .. _config-stateful:

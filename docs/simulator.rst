@@ -73,7 +73,7 @@ The most basic way to access model parameters is through the
 data structure.  This provides access to the parameters of any Nengo object,
 returning them as ``numpy`` arrays.  For example:
 
-.. code-block:: python
+.. testcode::
 
     with nengo.Network() as net:
         node = nengo.Node([0])
@@ -88,6 +88,11 @@ returning them as ``numpy`` arrays.  For example:
         print(sim.data[ens].bias)  # bias values
         print(sim.data[ens].encoders)  # encoder values
         print(sim.data[ens])  # to see all the parameters for an object
+
+.. testoutput::
+    :hide:
+
+    ...
 
 Once we have the parameters as ``numpy`` arrays we can then do whatever
 we want with them (e.g., save them to file, or use them as arguments in a
@@ -104,7 +109,7 @@ model to file.  This is
 convenient if we want to save and resume the state of a model (e.g., run some
 training, do some analysis, and then run more training):
 
-.. code-block:: python
+.. testcode::
 
     with nengo_dl.Simulator(net) as sim:
         # < run training >
@@ -138,7 +143,7 @@ For example, we could optimize a model in NengoDL, save the result as a
 Nengo network, and then run that model in another Simulator (e.g., one running
 on custom neuromorphic hardware).
 
-.. code-block:: python
+.. testcode::
 
     with nengo_dl.Simulator(net) as sim:
         # < run training >
@@ -151,6 +156,10 @@ on custom neuromorphic hardware).
         # with the same parameters as our optimized Nengo DL model
         sim2.run(1.0)
 
+.. testoutput::
+    :hide:
+
+    ...
 
 Examples
 --------
