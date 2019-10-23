@@ -8,7 +8,6 @@ import subprocess
 import sys
 import threading
 import time
-import warnings
 
 from nengo.exceptions import SimulationError
 import numpy as np
@@ -388,85 +387,3 @@ class NullProgressBar(progressbar.NullBar):  # pylint: disable=too-many-ancestor
         """
         Noop for incrementing the progress bar.
         """
-
-
-def minibatch_generator(data, minibatch_size, shuffle=True, truncation=None, rng=None):
-    """
-    Generator to yield ``minibatch_sized`` subsets from ``inputs`` and
-    ``targets``.
-
-    Parameters
-    ----------
-    data : dict of {``NengoObject``: `~numpy.ndarray`}
-        Data arrays to be divided into minibatches.
-    minibatch_size : int
-        The number of items in each minibatch
-    shuffle : bool
-        If True, the division of items into minibatches will be randomized each
-        time the generator is created
-    truncation : int
-        If not None, divide the data up into sequences of ``truncation``
-        timesteps.
-    rng : `~numpy.random.mtrand.RandomState`
-        Seeded random number generator
-
-    Yields
-    ------
-    offset : int
-        The simulation step at which the returned data begins (will only be
-        nonzero if ``truncation`` is not ``None``).
-    inputs : dict of {`~nengo.Node`: `~numpy.ndarray`}
-        The same structure as ``inputs``, but with each array reduced to
-        ``minibatch_size`` elements along the first dimension
-    targets : dict of {`~nengo.Probe`: `~numpy.ndarray`}
-        The same structure as ``targets``, but with each array reduced to
-        ``minibatch_size`` elements along the first dimension
-    """
-
-    if isinstance(data, int):
-        n_inputs = None
-        n_steps = data
-    else:
-        n_inputs, n_steps = next(iter(data.values())).shape[:2]
-
-    if rng is None:
-        rng = np.random
-
-    if truncation is None:
-        truncation = n_steps
-
-    if n_steps % truncation != 0:
-        warnings.warn(
-            UserWarning(
-                "Length of training data (%d) is not an even multiple of "
-                "truncation length (%d); this may result in poor "
-                "training results" % (n_steps, truncation)
-            )
-        )
-
-    if n_inputs is None:
-        # no input to divide up, so we just return the
-        # number of steps to be run based on the truncation
-        for j in range(0, n_steps, truncation):
-            yield (j, min(truncation, n_steps - j))
-    else:
-        if shuffle:
-            perm = rng.permutation(n_inputs)
-        else:
-            perm = np.arange(n_inputs)
-
-        if n_inputs % minibatch_size != 0:
-            warnings.warn(
-                UserWarning(
-                    "Number of data elements (%d) is not an even multiple of "
-                    "minibatch size (%d); inputs will be truncated"
-                    % (n_inputs, minibatch_size)
-                )
-            )
-            perm = perm[: -(n_inputs % minibatch_size)]
-
-        for i in range(0, n_inputs - n_inputs % minibatch_size, minibatch_size):
-            mini_data = {k: v[perm[i : i + minibatch_size]] for k, v in data.items()}
-
-            for j in range(0, n_steps, truncation):
-                yield (j, {k: v[:, j : j + truncation] for k, v in mini_data.items()})

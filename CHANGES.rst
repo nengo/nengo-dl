@@ -169,6 +169,8 @@ Release History
   if needed.
 - Removed ``benchmarks.matmul_vs_reduce``. We use matmul for everything now, so this
   comparison is no longer necessary.
+- Removed ``utils.minibatch_generator`` (training/inference loops are now managed
+  by Keras).
 
 2.2.2 (unreleased)
 ==================
