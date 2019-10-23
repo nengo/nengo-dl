@@ -195,6 +195,12 @@ class TensorNode(Node):
         self.shape_in = shape_in
         self.shape_out = shape_out
         self.pass_time = pass_time
+
+        if not (self.shape_in or self.pass_time):
+            raise ValidationError(
+                "Must specify either shape_in or pass_time", "TensorNode"
+            )
+
         self.tensor_func = tensor_func
 
     @property

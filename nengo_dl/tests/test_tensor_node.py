@@ -37,6 +37,10 @@ def test_validation(Simulator):
         with pytest.raises(ValidationError, match="must return a Tensor"):
             TensorNode(lambda x: [0], shape_in=(1,), pass_time=False)
 
+        # no input
+        with pytest.raises(ValidationError, match="either shape_in or pass_time"):
+            TensorNode(None, pass_time=False)
+
         # correct output
         n = TensorNode(lambda t: tf.zeros((5, 2)))
         assert n.size_out == 2
