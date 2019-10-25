@@ -16,7 +16,9 @@ from nengo_dl.utils import tf_gpu_installed
 )
 @pytest.mark.parametrize("channels_last", (True, False))
 def test_merge_conv(Simulator, channels_last, seed, pytestconfig):
-    from nengo.builder.transforms import ConvInc
+    from nengo.builder.transforms import (  # pylint: disable=import-outside-toplevel
+        ConvInc,
+    )
 
     with nengo.Network(seed=seed) as net:
         a = nengo.Node(np.ones(32))

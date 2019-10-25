@@ -286,6 +286,7 @@ def spaun(dimensions):
         pip install git+https://github.com/drasmuss/spaun2.0.git
     """
 
+    # pylint: disable=import-outside-toplevel
     from _spaun.configurator import cfg
     from _spaun.vocabulator import vocab
     from _spaun.experimenter import experiment
