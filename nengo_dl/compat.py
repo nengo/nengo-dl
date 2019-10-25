@@ -14,7 +14,7 @@ import tensorflow as tf
 if LooseVersion(tf.__version__) < LooseVersion("2.0.0"):
     tf_compat = tf
 
-    def tf_convolution(*args, **kwargs):
+    def tf_convolution(*args, **kwargs):  # pragma: no cover
         """Convert "filters" kwarg to "filter"."""
 
         if "filters" in kwargs:
