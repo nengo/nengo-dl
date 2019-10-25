@@ -118,6 +118,9 @@ ci_scripts:
       - $NUMPY_VERSION
   - template: deploy
   - template: gpu
+    host: abrgpu
+    travis_var_key: fcdbeb54a1c4
+    coverage: true
 
 travis_yml:
   python: 3.6

@@ -1,27 +1,15 @@
-{% extends "templates/base_script.sh.template" %}
+{% extends "templates/remote.sh.template" %}
 
-# see https://oncletom.io/2016/travis-ssh-deploy/ for instructions on how the
-# remote server is set up for this script to connect to
-
-{% block install %}
-    pip install coverage  # needed for the uploading in after_script
-    # decrypt private key, see https://docs.travis-ci.com/user/encrypting-files/
-    exe openssl aes-256-cbc -K "${encrypted_fcdbeb54a1c4_key:?}" -iv "${encrypted_fcdbeb54a1c4_iv:?}" -in .ci/travis_rsa.enc -out ~/.ssh/id_rsa -d
-    exe chmod 600 ~/.ssh/id_rsa
-    echo -e "$ABRGPU_INFO" >> ~/.ssh/config  # ssh config, stored in travis-ci settings
-    ssh -o StrictHostKeyChecking=no abrgpu "echo 'Connected to abrgpu'"
-    exe scp -r "$(pwd)" "abrgpu:/tmp/nengo-dl-$TRAVIS_JOB_NUMBER"
-{% endblock %}
-
-{% block script %}
-    exe ssh abrgpu << EOF
-        export PATH="/home/travis-ci/miniconda3/bin:\$PATH"
-        cd /tmp/nengo-dl-"$TRAVIS_JOB_NUMBER"
-        conda create -y -n travis-ci-"$TRAVIS_JOB_NUMBER" python="$TRAVIS_PYTHON_VERSION" "$TF_VERSION" "$NUMPY_VERSION"
-        source activate travis-ci-"$TRAVIS_JOB_NUMBER"
+{% block remote_install %}
+{{ super() }}
+        conda install -y "$TF_VERSION" "$NUMPY_VERSION"
         pip install "$NENGO_VERSION"
         pip install git+https://github.com/drasmuss/spaun2.0.git
         pip install -e .[tests]
+{% endblock %}
+
+{% block remote_script %}
+{{ super() }}
         echo "Waiting for lock"
         (
             flock -x -w 1800 200 || exit 1
@@ -29,12 +17,4 @@
             pytest $TEST_ARGS nengo_dl -v --durations 20 --color=yes --cov=nengo_dl --cov-report=xml --cov-report=term-missing --cov-append || exit 1
         ) 200>/var/lock/.travis-ci.exclusivelock
         exit \$?
-EOF
-{% endblock %}
-
-{% block after_script %}
-    exe scp "abrgpu:/tmp/nengo-dl-$TRAVIS_JOB_NUMBER/coverage.xml" coverage.xml
-    eval "bash <(curl -s https://codecov.io/bash)"
-    exe ssh abrgpu "export PATH=/home/travis-ci/miniconda3/bin:\$PATH; conda-env remove -y -n travis-ci-$TRAVIS_JOB_NUMBER"
-    exe ssh abrgpu "rm -rf /tmp/nengo-dl-$TRAVIS_JOB_NUMBER"
 {% endblock %}
