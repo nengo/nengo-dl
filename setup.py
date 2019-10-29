@@ -115,7 +115,7 @@ setup(
         "tests": tests_req,
     },
     python_requires=">=3.5",
-    entry_points={"nengo.backends": ["dl = nengo_dl:Simulator"]},
+    entry_points={"nengo.backends": ["dl = nengo_dl:Simulator",],},
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Framework :: Nengo",
