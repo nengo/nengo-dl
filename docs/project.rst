@@ -2,6 +2,10 @@
 Project information
 ###################
 
+*********
+Changelog
+*********
+
 .. include:: ../CHANGES.rst
 
 .. include:: ../CONTRIBUTING.rst
