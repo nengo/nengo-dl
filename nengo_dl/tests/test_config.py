@@ -83,8 +83,19 @@ def test_stateful(Simulator, sim_stateful, func_stateful, func):
     with Simulator(net) as sim:
         kwargs = dict(n_steps=5, stateful=func_stateful)
 
-        getattr(sim, func)(**kwargs)
+        with pytest.warns(None) as recwarns:
+            getattr(sim, func)(**kwargs)
         assert sim.n_steps == (5 if func_stateful and sim_stateful else 0)
+
+        if func == "predict" and func_stateful and not sim_stateful:
+            # note: we do not get warnings for predict_on_batch/run_steps because
+            # they automatically set func_stateful=sim_stateful
+            assert (
+                len([w for w in recwarns if "Ignoring stateful=True" in str(w.message)])
+                > 0
+            )
+        else:
+            assert len(recwarns) == 0
 
         getattr(sim, func)(**kwargs)
         assert sim.n_steps == (10 if func_stateful and sim_stateful else 0)

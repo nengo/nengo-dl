@@ -890,6 +890,12 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 "be run in training mode"
             )
 
+        if stateful and not self.stateful:
+            warnings.warn(
+                "Ignoring stateful=True, since the model was created with the "
+                "stateful=False config setting."
+            )
+
         if "batch_size" in kwargs:
             # note: the keras "batch size" parameter refers to minibatch size
             # (i.e., the number of elements passed to the network in each iteration,
@@ -943,9 +949,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
             ]
             if input_steps == 1 and self.model.toplevel is not None and any(synapses):
                 warnings.warn(
-                    "Running '%s' for one timestep, but the network contains "
+                    "Running for one timestep, but the network contains "
                     "synaptic filters (which will introduce at least a "
-                    "one-timestep delay); did you mean to set synapse=None?" % func_type
+                    "one-timestep delay); did you mean to set synapse=None?"
                 )
 
         # set up callback to reset state after execution.
