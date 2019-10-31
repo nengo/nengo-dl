@@ -9,6 +9,7 @@ import nengo_dl
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
+    "sphinx.ext.doctest",
     "sphinx.ext.githubpages",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
@@ -18,7 +19,6 @@ extensions = [
     "nengo_sphinx_theme",
     "numpydoc",
     "sphinx_click.ext",
-    "sphinx.ext.doctest",
     "nengo_sphinx_theme.ext.autoautosummary",
     "nengo_sphinx_theme.ext.resolvedefaults",
 ]
@@ -27,6 +27,14 @@ extensions = [
 autoclass_content = "both"  # class and __init__ docstrings are concatenated
 autodoc_default_options = {"members": None}
 autodoc_member_order = "bysource"  # default is alphabetical
+
+# -- sphinx.ext.doctest
+doctest_global_setup = """
+import nengo_dl
+import nengo
+import numpy as np
+import tensorflow as tf
+"""
 
 # -- sphinx.ext.intersphinx
 intersphinx_mapping = {
@@ -59,12 +67,6 @@ linkcheck_anchors = True
 default_role = "py:obj"
 pygments_style = "sphinx"
 suppress_warnings = ["image.nonlocal_uri"]
-doctest_global_setup = """
-import nengo
-import nengo_dl
-import numpy as np
-import tensorflow as tf
-"""
 
 project = "NengoDL"
 authors = "Applied Brain Research"
