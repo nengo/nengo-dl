@@ -226,12 +226,10 @@ Utilities
 Benchmarks
 ^^^^^^^^^^
 
-.. TODO: why doesn't this work if the autosummary is placed inside the automodule?
-
-.. autoautosummary:: nengo_dl.benchmarks
-    :nosignatures:
-
 .. automodule:: nengo_dl.benchmarks
+
+    .. autoautosummary:: nengo_dl.benchmarks
+        :nosignatures:
 
 Interface
 *********

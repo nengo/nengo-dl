@@ -93,6 +93,8 @@ docs_conf_py:
   extensions:
     - sphinx_click.ext
     - sphinx.ext.doctest
+    - nengo_sphinx_theme.ext.autoautosummary
+    - nengo_sphinx_theme.ext.resolvedefaults
   nengo_logo: nengo-dl-full-light.svg
   nengo_logo_color: "#ff6600"
   sphinx_options:
