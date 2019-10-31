@@ -133,8 +133,8 @@ Release History
 **Removed**
 
 - Removed the `session_config
-  <https://www.nengo.ai/nengo-dl/config.html#session-config>`_ configuration option.
-  Use the `updated TensorFlow config system
+  <https://www.nengo.ai/nengo-dl/v2.2.1/config.html#session-config>`_ configuration
+  option. Use the `updated TensorFlow config system
   <https://www.tensorflow.org/api_docs/python/tf/config>`_ instead.
 - Removed the deprecated ``nengo_dl.Simulator(..., dtype=...)`` argument. Use
   ``nengo_dl.configure_settings(dtype=...)`` instead.
@@ -225,7 +225,8 @@ Release History
 - Simulator seed will now be deterministic for a given top-level Network seed.
 - Raise a more informative error if user attempts to pickle a Simulator
   (this is not possible to do with TensorFlow sessions; see
-  `the documentation <https://www.nengo.ai/nengo-dl/training.html#saving-and-loading-parameters>`__
+  `the documentation
+  <https://www.nengo.ai/nengo-dl/simulator.html#saving-and-loading-parameters>`__
   for other methods of saving/loading a NengoDL model).
 
 **Removed**
@@ -478,7 +479,7 @@ Release History
 - Added ``sim.freeze_params`` tool, to more easily extract model parameters for
   reuse in different Simulators.
 - Added `documentation on saving and loading model parameters
-  <https://www.nengo.ai/nengo-dl/training.html#saving-and-loading-parameters>`_.
+  <https://www.nengo.ai/nengo-dl/simulator.html#saving-and-loading-parameters>`_.
 - Added `Spaun <https://science.sciencemag.org/content/338/6111/1202.full>`_
   example in ``benchmarks.py``
 
@@ -536,7 +537,7 @@ Release History
   targets/objective (useful for when you have some external process for
   computing error that is not easy to implement as an objective function).
   See `the documentation
-  <https://www.nengo.ai/nengo-dl/training.html#objective>`__ for details.
+  <https://www.nengo.ai/nengo-dl/v1.0.0/training.html#objective>`__ for details.
 - Added `NengoDL white paper <https://arxiv.org/abs/1805.11144>`_
 
 **Changed**
@@ -641,7 +642,7 @@ Release History
 - Added progress bars for the build/simulation process.
 - Added truncated backpropagation option to ``sim.train`` (useful for reducing
   memory usage during training).  See `the documentation for details
-  <https://www.nengo.ai/nengo-dl/training.html#truncation>`__.
+  <https://www.nengo.ai/nengo-dl/v0.6.0/training.html#truncation>`__.
 
 **Changed**
 
@@ -686,7 +687,7 @@ Release History
   <https://www.nengo.ai/nengo-dl/tensor_node.html>`_).
 - Added functionality for outputting summary data during the training process
   that can be viewed in TensorBoard (see the `sim.train documentation
-  <https://www.nengo.ai/nengo-dl/training.html#summaries>`__).
+  <https://www.nengo.ai/nengo-dl/v0.5.2/training.html#summaries>`__).
 - Added some examples demonstrating how to use Nengo DL in a more complicated
   task using semantic pointers to encode/retrieve information
 - Added ``sim.training_step`` variable which will track the current training
@@ -699,7 +700,7 @@ Release History
   Simulator context will automatically be added to the correct graph)
 - Users can now specify a different objective for each output probe during
   training/loss calculation (see the `sim.train documentation
-  <https://www.nengo.ai/nengo-dl/training.html#objective>`__).
+  <https://www.nengo.ai/nengo-dl/v0.5.2/training.html#objective>`__).
 
 **Changed**
 
@@ -767,7 +768,7 @@ Release History
   the more general ``nengo_dl.configure_settings(trainable=x)``.  This has
   resulted in some small changes to how trainability is controlled within
   subnetworks; see the `updated documentation
-  <https://www.nengo.ai/nengo-dl/training.html#choosing-which-elements-to-optimize>`_
+  <https://www.nengo.ai/nengo-dl/simulator.html#choosing-which-elements-to-optimize>`_
   for details.
 - Calling ``Simulator.train``/``Simulator.loss`` no longer resets the internal
   state of the simulation (so they can be safely intermixed with calls to
@@ -804,7 +805,7 @@ Release History
 
 - Added ability to manually specify which parts of a model are trainable
   (see the `sim.train documentation
-  <https://www.nengo.ai/nengo-dl/training.html>`_)
+  <https://www.nengo.ai/nengo-dl/v0.4.0/training.html>`_)
 - Added some code examples (see the ``docs/examples`` directory, or the
   `pre-built examples in the documentation
   <https://www.nengo.ai/nengo-dl/examples.html>`_)
