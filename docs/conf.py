@@ -104,6 +104,7 @@ redirects = [
     ("examples/spa_retrieval.html", "examples/spa-retrieval.html"),
     ("examples/spiking_mnist.html", "examples/spiking-mnist.html"),
     ("examples/pretrained-model.html", "examples/tensorflow-models.html"),
+    ("training.html", "simulator.html"),
 ]
 
 

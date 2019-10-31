@@ -1770,7 +1770,7 @@ class Simulator:
     def __getstate__(self):
         raise NotImplementedError(
             "TensorFlow does not support pickling; see "
-            "https://www.nengo.ai/nengo-dl/training.html"
+            "https://www.nengo.ai/nengo-dl/simulator.html"
             "#saving-and-loading-parameters "
             "for information on how to save/load a NengoDL model."
         )
