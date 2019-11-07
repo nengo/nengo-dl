@@ -1482,7 +1482,9 @@ class Simulator:
                     attr="dt",
                     obj=self,
                 )
-            warnings.warn("`dt` is deprecated. Use `sample_every` instead.")
+            warnings.warn(
+                "`dt` is deprecated. Use `sample_every` instead.", DeprecationWarning
+            )
             sample_every = dt
 
         period = 1 if sample_every is None else sample_every / self.dt

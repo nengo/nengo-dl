@@ -8,7 +8,6 @@ import logging
 
 from nengo.builder.operator import ElementwiseInc, DotInc, Reset, Copy
 from nengo.exceptions import BuildError
-from nengo.utils.compat import iteritems
 from nengo.utils.graphs import toposort, BidirectionalDAG
 from nengo.utils.simulator import operator_dependency_graph
 import numpy as np
@@ -123,7 +122,7 @@ def greedy_planner(operators):
     for op in operators:
         predecessors_of[op] = set()
         successors_of[op] = set()
-    for op, dests in iteritems(dependency_graph):
+    for op, dests in dependency_graph.items():
         for op2 in dests:
             predecessors_of[op2].add(op)
         successors_of[op].update(dests)
@@ -131,7 +130,7 @@ def greedy_planner(operators):
     # the ops in `available` are ready to be scheduled (all predecessors
     # have been scheduled).
     # initialize it with the ops that have no predecessors
-    available = [op for op, dep in iteritems(predecessors_of) if len(dep) == 0]
+    available = [op for op, dep in predecessors_of.items() if len(dep) == 0]
 
     plan = []
     groups = []
