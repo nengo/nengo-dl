@@ -16,6 +16,7 @@ from nengo.neurons import Direct
 from nengo.transforms import SparseMatrix
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.eager import context
 from tensorflow.python.training.tracking import base as trackable
 
 from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node, config
@@ -252,23 +253,57 @@ class TensorGraph(tf.keras.layers.Layer):
         logger.debug([str(x) for x in self.saved_state.values()])
 
         # call build on any TensorNode Layers
-        for ops in self.plan:
-            if isinstance(ops[0], tensor_node.SimTensorNode):
-                for op in ops:
-                    if isinstance(op.func, tf.keras.layers.Layer):
-                        if op.time is None:
-                            shape_in = []
-                        else:
-                            shape_in = [()]
-                        if op.input is not None:
-                            shape_in += [(self.minibatch_size,) + op.shape_in]
-                        if len(shape_in) == 1:
-                            shape_in = shape_in[0]
+        layer_ops = [
+            op
+            for ops in self.plan
+            if isinstance(ops[0], tensor_node.SimTensorNode)
+            for op in ops
+            if isinstance(op.func, tf.keras.layers.Layer)
+        ]
+        for op in layer_ops:
+            if op.time is None:
+                shape_in = []
+            else:
+                shape_in = [()]
+            if op.input is not None:
+                shape_in += [(self.minibatch_size,) + op.shape_in]
+            if len(shape_in) == 1:
+                shape_in = shape_in[0]
 
-                        op.func.build(shape_in)
+            if op.func.built:
+                # if the layer already has some defined weights,
+                # then save the weight values so they can be restored
+                # exactly inside the tensornode
+                weights = op.func.weights
 
-                        # add op func to _layers so that any weights are collected
-                        self._layers.append(op.func)
+                ctx = (
+                    weights[0].graph.as_default()
+                    if weights and hasattr(weights[0], "graph")
+                    else context.eager_mode()
+                )
+                with ctx:
+                    built_weights = op.func.get_weights()
+            else:
+                built_weights = None
+
+            # clear any losses attached to layer (they will be recreated in the build
+            # step below, so we don't want to keep around any losses associated with
+            # the previous build)
+            op.func._eager_losses = []
+            op.func._callable_losses = []
+            # note: not clearing op.func._losses, because those are manually added
+            # by the user (not created during the build process)
+
+            # note: we rebuild the layer (even if it is already built),
+            # because we need to build the weights within the TensorGraph
+            # context
+            op.func.build(shape_in)
+
+            if built_weights is not None:
+                op.func.set_weights(built_weights)
+
+            # add op func to _layers so that any weights are collected
+            self._layers.append(op.func)
 
     # @tf.function  # TODO: get this working? does this help?
     @tf.autograph.experimental.do_not_convert

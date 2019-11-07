@@ -57,6 +57,23 @@ TensorNodes
         :special-members:
         :exclude-members: __init__, __weakref__
 
+Converter
+^^^^^^^^^
+
+`nengo_dl.Converter` can be used to automatically convert a Keras model to a native
+Nengo Network. This can be useful if, for example, you want to run a model in different
+Nengo Simulator backends (which will only support the core Nengo objects).
+
+See `the documentation <https://www.nengo.ai/nengo-dl/convert.html>`__ for more
+details.
+
+.. autosummary::
+    :nosignatures:
+
+    nengo_dl.Converter
+
+.. autoclass:: nengo_dl.Converter
+
 .. _config-api:
 
 Configuration system
@@ -212,6 +229,18 @@ Graph optimization
 
     .. autoautosummary:: nengo_dl.graph_optimizer
         :nosignatures:
+
+.. _layer-converter-api:
+
+Layer converters
+^^^^^^^^^^^^^^^^
+
+.. automodule:: nengo_dl.converter
+    :exclude-members: Converter
+
+    .. autoautosummary:: nengo_dl.converter
+        :nosignatures:
+        :exclude-members: Converter
 
 Utilities
 ^^^^^^^^^

@@ -12,7 +12,7 @@
 {{ super() }}
         echo "Waiting for lock"
         (
-            flock -x -w 1800 200 || exit 1
+            flock -x -w 540 200 || exit 1
             CUDA_VISIBLE_DEVICES=3 pytest $TEST_ARGS nengo_dl/tests/test_benchmarks.py::test_performance --performance -v --durations 20 --color=yes || exit 1
             CUDA_VISIBLE_DEVICES=3 pytest $TEST_ARGS nengo_dl -v --durations 20 --color=yes --cov=nengo_dl --cov-report=xml --cov-report=term-missing || exit 1
             CUDA_VISIBLE_DEVICES=3 pytest $TEST_ARGS --pyargs nengo -v --durations 20 --color=yes --cov=nengo_dl --cov-report=xml --cov-report=term-missing --cov-append || exit 1

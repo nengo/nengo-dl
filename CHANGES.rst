@@ -47,6 +47,9 @@ Release History
 - NengoDL now requires ``jinja2`` (used to template some of the docstrings).
 - Added an ``inputs`` argument to ``Simulator.check_gradients``, which can be used to
   control the initial value of input Nodes during the gradient calculations.
+- Added ``nengo_dl.Converter`` for automatically converting Keras models to native
+  Nengo networks.  See `the documentation
+  <https://www.nengo.ai/nengo-dl/converter.html>`__ for more details.
 
 **Changed**
 
