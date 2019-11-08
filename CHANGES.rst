@@ -45,6 +45,8 @@ Release History
   simulation inside a symbolic TensorFlow loop. This may improve simulation speed,
   but the simulation can only run for exactly ``unroll_simulation`` timesteps.
 - NengoDL now requires ``jinja2`` (used to template some of the docstrings).
+- Added an ``inputs`` argument to ``Simulator.check_gradients``, which can be used to
+  control the initial value of input Nodes during the gradient calculations.
 
 **Changed**
 

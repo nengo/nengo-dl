@@ -280,13 +280,13 @@ def test_recurrent_gradients(Simulator, seed):
     with nengo.Network(seed=seed) as net:
         a = nengo.Node([0])
         b = nengo.Ensemble(
-            10, 1, gain=nengo.dists.Choice([0.5]), bias=nengo.dists.Choice([-0.1])
+            10, 1, gain=nengo.dists.Choice([0.5]), bias=nengo.dists.Choice([0])
         )
         nengo.Connection(a, b.neurons, transform=nengo.dists.Gaussian(0, 1))
         p = nengo.Probe(b.neurons)
 
     with Simulator(net) as sim:
-        sim.check_gradients([p])
+        sim.check_gradients(inputs=[np.ones((1, sim.unroll * 2, 1)) * 0.1], outputs=[p])
 
 
 @pytest.mark.parametrize("unroll", (1, 2))
@@ -320,7 +320,7 @@ def test_train_objective(Simulator, unroll, seed):
         sim.compile(tf.optimizers.SGD(1e-2, momentum=0.9), loss={p: obj, p2: obj})
         sim.fit({inp: x}, {p: y, p2: z}, epochs=200, verbose=0)
 
-        sim.check_gradients([p, p2])
+        sim.check_gradients(outputs=[p, p2])
 
         sim.run_steps(n_steps, data={inp: x})
 

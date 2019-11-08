@@ -1414,7 +1414,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
     @require_open
     @with_self
-    def check_gradients(self, outputs=None, atol=1e-5, rtol=1e-3):
+    def check_gradients(self, inputs=None, outputs=None, atol=1e-5, rtol=1e-3):
         """
         Perform gradient checks for the network (used to verify that the
         analytic gradients are correct).
@@ -1425,6 +1425,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         Parameters
         ----------
+        inputs : list of `numpy.ndarray`
+            Input values for all the input Nodes in the model (ordered according to
+            the order in which Nodes were added to the model). If None, will use all
+            zeros.
         outputs : list of `~nengo.Probe`
             Compute gradients wrt this output (if None, computes wrt each
             output probe).
@@ -1444,17 +1448,20 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 "compute gradients"
             )
 
-        n_steps = self.unroll * 2
+        if inputs is None:
+            n_steps = self.unroll * 2
+            inputs = [
+                np.zeros(
+                    tuple(n_steps if s is None else s for s in x.shape),
+                    x.dtype.as_numpy_dtype(),
+                )
+                for x in self.keras_model.inputs[:-1]
+            ]
+        else:
+            n_steps = inputs[0].shape[1]
+
         if outputs is None:
             outputs = self.model.probes
-
-        inputs = [
-            np.zeros(
-                tuple(n_steps if s is None else s for s in x.shape),
-                x.dtype.as_numpy_dtype(),
-            )
-            for x in self.keras_model.inputs[:-1]
-        ]
 
         # compute_gradients expects to be called with a function that works in
         # specific ways, so we wrap the model to work in the way it expects
