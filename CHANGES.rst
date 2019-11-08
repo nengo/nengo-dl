@@ -124,6 +124,9 @@ Release History
   `TensorFlow/Keras integration
   <https://www.nengo.ai/nengo-dl/examples/tensorflow-models.html>`_ example, and the
   new `Tips and tricks <https://www.nengo.ai/nengo-dl/tips.html>`_ page).
+- The training/inference build logic (e.g., swapping spiking neurons with rate
+  implementations) can be overridden by setting the global Keras learning phase
+  (``tf.keras.backend.set_learning_phase``) before the Simulator is constructed.
 
 **Deprecated**
 

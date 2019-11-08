@@ -1,11 +1,12 @@
 # pylint: disable=missing-docstring
 
 import nengo
+from nengo.exceptions import BuildError
 import numpy as np
 import pytest
 import tensorflow as tf
 
-from nengo_dl import dists
+from nengo_dl import config, dists
 
 
 @pytest.mark.parametrize("minibatch_size", (None, 1, 3))
@@ -301,3 +302,32 @@ def test_fit(Simulator, seed):
             verbose=0,
         )
         assert history.history["loss"][-1] < 5e-4
+
+
+@pytest.mark.training
+def test_learning_phase(Simulator):
+    with nengo.Network() as net:
+        inp = nengo.Node([0])
+        ens = nengo.Ensemble(
+            1, 1, gain=[0], bias=[1], neuron_type=nengo.SpikingRectifiedLinear()
+        )
+        nengo.Connection(inp, ens, synapse=None)
+        p = nengo.Probe(ens.neurons)
+
+    with tf.keras.backend.learning_phase_scope(1):
+        with Simulator(net) as sim:
+            sim.run_steps(10)
+            assert np.allclose(sim.data[p], 1)
+
+    with Simulator(net) as sim:
+        sim.run_steps(10)
+        assert np.allclose(sim.data[p], 0)
+
+
+def test_learning_phase_warning(Simulator):
+    with nengo.Network() as net:
+        config.configure_settings(inference_only=True)
+    with pytest.raises(BuildError, match="inference_only=True"):
+        with tf.keras.backend.learning_phase_scope(1):
+            with Simulator(net):
+                pass

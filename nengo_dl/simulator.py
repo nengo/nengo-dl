@@ -28,6 +28,7 @@ from nengo.utils.magic import decorator
 from nengo.version import version_info as nengo_version
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.keras import backend
 
 from nengo_dl import utils, config, callbacks
 from nengo_dl.builder import NengoBuilder, NengoModel
@@ -534,7 +535,14 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         self.keras_model = tf.keras.Model(
             inputs=inputs,
-            outputs=self.tensor_graph(inputs, stateful=self.stateful),
+            outputs=self.tensor_graph(
+                inputs,
+                stateful=self.stateful,
+                # if the global learning phase is set, use that
+                training=backend._GRAPH_LEARNING_PHASES.get(
+                    backend._DUMMY_EAGER_GRAPH, None
+                ),
+            ),
             name="keras_model",
         )
 
@@ -1458,7 +1466,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
             args += (tf.ones((self.minibatch_size, 1), dtype=np.int32) * n_steps,)
 
-            out = self.keras_model(args, training=True)
+            out = self.tensor_graph(args, training=True)
             self.tensor_graph.build_post()
 
             # reset state

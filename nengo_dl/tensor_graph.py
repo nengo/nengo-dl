@@ -11,6 +11,7 @@ from nengo import Connection, Process
 from nengo.builder.operator import SimPyFunc, Reset
 from nengo.builder.processes import SimProcess
 from nengo.config import ConfigError
+from nengo.exceptions import BuildError
 from nengo.neurons import Direct
 import numpy as np
 import tensorflow as tf
@@ -300,6 +301,12 @@ class TensorGraph(tf.keras.layers.Layer):
         """
 
         super().call(inputs, training=training)
+
+        if training == 1 and self.inference_only:
+            raise BuildError(
+                "TensorGraph was created with inference_only=True; cannot be built "
+                "with training=%s" % training
+            )
 
         tf.random.set_seed(self.seed)
 
