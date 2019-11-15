@@ -17,6 +17,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "nbsphinx",
     "nengo_sphinx_theme",
+    "nengo_sphinx_theme.ext.redirects",
     "numpydoc",
     "sphinx_click.ext",
     "nengo_sphinx_theme.ext.autoautosummary",
@@ -88,14 +89,7 @@ html_theme_options = {
     "nengo_logo_color": "#ff6600",
     "analytics_id": "UA-41658423-2",
 }
-
-# pylint: disable=wrong-import-order
-
-import errno
-
-# create redirect pages (from_page, to_page)
-# TODO: we can remove these redirects after a few releases
-redirects = [
+html_redirects = [
     ("frontend.html", "user-guide.html"),
     ("backend.html", "reference.html#developers"),
     ("builder.html", "reference.html#builder"),
@@ -119,43 +113,3 @@ redirects = [
     ("examples/pretrained-model.html", "examples/tensorflow-models.html"),
     ("training.html", "simulator.html"),
 ]
-
-
-def setup(app):
-    def mkdir_p(path):
-        try:
-            os.makedirs(path)
-        except OSError as exc:
-            if exc.errno == errno.EEXIST and os.path.isdir(path):
-                pass
-            else:
-                raise
-
-    def redirect_pages(app, docname):
-        if app.builder.name == "html":
-            for src, dst in app.config.redirects:
-                srcfile = os.path.join(app.outdir, src)
-                dsturl = "/".join([".." for _ in range(src.count("/"))] + [dst])
-                mkdir_p(os.path.dirname(srcfile))
-                with open(srcfile, "w") as fp:
-                    fp.write(
-                        "\n".join(
-                            [
-                                "<!DOCTYPE html>",
-                                "<html>",
-                                " <head><title>This page has moved</title></head>",
-                                " <body>",
-                                '  <script type="text/javascript">',
-                                '   window.location.replace("{0}");',
-                                "  </script>",
-                                "  <noscript>",
-                                '   <meta http-equiv="refresh" content="0; url={0}">',
-                                "  </noscript>",
-                                " </body>",
-                                "</html>",
-                            ]
-                        ).format(dsturl)
-                    )
-
-    app.add_config_value("redirects", [], "")
-    app.connect("build-finished", redirect_pages)
