@@ -1,7 +1,6 @@
 # pylint: disable=missing-docstring
 
 from collections import OrderedDict
-from distutils.version import LooseVersion
 import logging
 import os
 import pickle
@@ -19,7 +18,8 @@ import pytest
 import tensorflow as tf
 from tensorflow.core.util import event_pb2
 
-from nengo_dl import Layer, TensorNode, configure_settings, dists, callbacks, compat
+from nengo_dl import Layer, TensorNode, configure_settings, dists, callbacks
+from nengo_dl.compat import TFLogFilter
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
 from nengo_dl.utils import tf_gpu_installed
@@ -1102,9 +1102,7 @@ def test_simulation_data(Simulator, seed):
         )
 
         # check connection weights
-        transform = conn.transform
-        if LooseVersion(nengo.__version__) > "2.8.0":
-            transform = transform.init
+        transform = conn.transform.init
         assert np.allclose(transform, sim.data[conn].weights)
 
         # check that batch dimension eliminated
@@ -1240,13 +1238,12 @@ def test_get_nengo_params(Simulator, seed):
         e = nengo.Connection(n, b, transform=Uniform(-1, 1), label="e")
         f = nengo.Ensemble(5, 1, label="a")
         g = nengo.Ensemble(11, 1, neuron_type=nengo.Direct(), label="g")
-        if LooseVersion(nengo.__version__) > "2.8.0":
-            h = nengo.Connection(
-                a.neurons,
-                b,
-                transform=nengo.Convolution(1, (2, 2, 3), padding="same"),
-                label="h",
-            )
+        h = nengo.Connection(
+            a.neurons,
+            b,
+            transform=nengo.Convolution(1, (2, 2, 3), padding="same"),
+            label="h",
+        )
         p = nengo.Probe(b.neurons)
 
     with Simulator(net, seed=seed) as sim:
@@ -1266,9 +1263,7 @@ def test_get_nengo_params(Simulator, seed):
         params = sim.get_nengo_params(d)
         assert params["transform"] == 1
 
-        fetches = [a.neurons, b, c, d, e]
-        if LooseVersion(nengo.__version__) > "2.8.0":
-            fetches += [h]
+        fetches = [a.neurons, b, c, d, e, h]
 
         params = sim.get_nengo_params(fetches, as_dict=True)
         sim.run_steps(100)
@@ -1280,8 +1275,7 @@ def test_get_nengo_params(Simulator, seed):
         nengo.Connection(a2.neurons[:5], b2[:2], **params["c"])
         nengo.Connection(a2, b2.neurons, **params["d"])
         nengo.Connection(n2, b2, **params["e"])
-        if LooseVersion(nengo.__version__) > "2.8.0":
-            nengo.Connection(a2.neurons, b2, **params["h"])
+        nengo.Connection(a2.neurons, b2, **params["h"])
         p2 = nengo.Probe(b2.neurons)
 
     with Simulator(net, seed=seed) as sim2:
@@ -1647,7 +1641,7 @@ def test_log_filter(Simulator, caplog):
         assert "tf.keras.backend.get_session" not in caplog.text
 
         # make sure there were no other deprecation warnings
-        filt = compat.TFLogFilter(err_on_deprecation=True)
+        filt = TFLogFilter(err_on_deprecation=True)
         for rec in caplog.records:
             filt.filter(rec)
 

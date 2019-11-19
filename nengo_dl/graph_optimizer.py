@@ -8,6 +8,7 @@ import logging
 
 from nengo.builder.operator import ElementwiseInc, DotInc, Reset, Copy
 from nengo.exceptions import BuildError
+from nengo.transforms import SparseMatrix
 from nengo.utils.graphs import toposort, BidirectionalDAG
 from nengo.utils.simulator import operator_dependency_graph
 import numpy as np
@@ -20,7 +21,6 @@ from nengo_dl import (
     learning_rule_builders,
     neuron_builders,
 )
-from nengo_dl.compat import is_sparse, SparseMatrix
 
 logger = logging.getLogger(__name__)
 
@@ -69,14 +69,14 @@ def mergeable(op, chosen_ops):
             return False
 
         # sparse status of signals must match
-        if is_sparse(s0) != is_sparse(s1):
+        if s0.sparse != s1.sparse:
             return False
 
         # trainable/minibatched must match
         if s0.trainable != s1.trainable or s0.minibatched != s1.minibatched:
             return False
 
-        if not is_sparse(s0):
+        if not s0.sparse:
             # note: for sparse signals we don't need to worry about the shape
             # of the signal, since what we'll be combining is the underlying
             # data (which is always a vector)
@@ -1107,7 +1107,7 @@ def remove_zero_incs(operators):
 
     def all_zero(sig):
         data = sig.initial_value
-        if is_sparse(sig):
+        if sig.sparse:
             if not isinstance(data, SparseMatrix):
                 data = data.tocoo()
             data = data.data

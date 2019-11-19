@@ -14,13 +14,14 @@ from nengo.builder.operator import (
     SimPyFunc,
     TimeUpdate,
 )
+from nengo.builder.transforms import SparseDotInc
+from nengo.transforms import SparseMatrix
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops import gen_sparse_ops
 
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
-from nengo_dl.compat import SparseDotInc, SparseMatrix
 
 logger = logging.getLogger(__name__)
 

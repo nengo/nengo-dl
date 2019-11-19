@@ -12,7 +12,7 @@ import textwrap
 import warnings
 
 import jinja2
-from nengo import Ensemble, Connection, Probe, Network, Direct, Node
+from nengo import Connection, Direct, Ensemble, Network, Node, Probe, Convolution
 from nengo.builder.connection import BuiltConnection
 from nengo.builder.ensemble import BuiltEnsemble
 from nengo.ensemble import Neurons
@@ -25,14 +25,12 @@ from nengo.exceptions import (
 )
 from nengo.solvers import NoSolver
 from nengo.utils.magic import decorator
-from nengo.version import version_info as nengo_version
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import backend
 
 from nengo_dl import utils, config, callbacks
 from nengo_dl.builder import NengoBuilder, NengoModel
-from nengo_dl.compat import Convolution, add_state_signal
 from nengo_dl.tensor_graph import TensorGraph
 
 
@@ -484,10 +482,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
                     "dt (%g)" % (model.dt, dt),
                     NengoWarning,
                 )
-            if nengo_version <= (2, 8, 0):
-                # 2.8 has a bug where unpickling a model results in step having the
-                # wrong dtype, which we fix here
-                model.step._initial_value = model.step._initial_value.astype(np.int64)
             self.model = model
 
         if network is not None:
@@ -495,9 +489,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
             self.model.build(network, progress=p)
 
         self.stateful = config.get_setting(self.model, "stateful", True)
-
-        # add in state signal for linearfilters in nengo<3.0.0
-        add_state_signal(self.model)
 
         # set up tensorflow graph plan
         with ProgressBar(

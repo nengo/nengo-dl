@@ -105,10 +105,6 @@ def test_unconnected_node(Simulator):
         assert hits == 2
 
 
-@pytest.mark.skipif(
-    LooseVersion(nengo.__version__) <= "2.8.0",
-    reason="Nengo precision option not implemented",
-)
 @pytest.mark.parametrize("bits", ["16", "32", "64"])
 def test_dtype(Simulator, request, seed, bits):
     # Ensure dtype is set back to default after the test, even if it fails
@@ -140,10 +136,6 @@ def test_dtype(Simulator, request, seed, bits):
         # (which is not controlled by precision.bits)
 
 
-@pytest.mark.skipif(
-    LooseVersion(nengo.__version__) <= "2.8.0",
-    reason="Nengo Sparse transforms not implemented",
-)
 @pytest.mark.parametrize("use_dist", (False, True))
 def test_sparse(use_dist, Simulator, rng, seed, monkeypatch):
     # modified version of nengo test_sparse for scipy=False, where we

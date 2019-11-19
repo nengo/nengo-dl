@@ -186,10 +186,9 @@ travis_yml:
       python: 3.7
     - script: test-coverage
       env:
-        NENGO_VERSION: nengo[tests]==2.8.0
+        NENGO_VERSION: nengo[tests]==3.0.0
         TF_VERSION: tensorflow==2.0.0
         NUMPY_VERSION: numpy==1.14.5
-      test_args: -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator --boxed
       python: 3.5
     - test_args: --unroll-simulation 5 --simulator-only
     - test_args: --dtype float64 --simulator-only
@@ -214,17 +213,16 @@ setup_py:
     - sphinx>=1.8.0
     - sphinx-click>=1.4.1
   tests_req:
-    - attrs<19.2.0  # >=19.2.0 doesn't work with pytest<4.1.0 (see below)
     - click>=6.7
     - codespell>=1.12.0
-    - matplotlib>=2.0.0,<3.1.0  # >=3.1.0 doesn't work with nengo tests TODO: remove once there is a compatible nengo release
+    - matplotlib>=2.0.0
     - nbval>=0.6.0
     - pylint>=1.9.2
-    - pytest>=3.6.0,<4.1.0  # >=4.1.0 doesn't work with nengo tests TODO: remove this once there is a compatible nengo release
+    - pytest>=3.6.0
     - pytest-allclose>=1.0.0
     - pytest-cov>=2.6.0
     - pytest-rng>=1.0.0
-    - pytest-xdist>=1.16.0,<1.28.0  # 1.28.0 requires pytest>=4.4.0 (see above)
+    - pytest-xdist>=1.16.0
     - six>=1.11.0  # hint for pip dependency resolution, required by nbval
   entry_points:
     nengo.backends:

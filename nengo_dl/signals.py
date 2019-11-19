@@ -10,7 +10,6 @@ from nengo.exceptions import BuildError
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl.compat import is_sparse
 
 logger = logging.getLogger(__name__)
 
@@ -535,7 +534,7 @@ class SignalDict(Mapping):
         )
 
         if signal is not None:
-            if is_sparse(signal):
+            if signal.sparse:
                 assert len(indices) == signal.size
                 assert shape == (signal.size,)
             else:

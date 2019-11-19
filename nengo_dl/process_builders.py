@@ -14,15 +14,7 @@ import tensorflow as tf
 
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
-from nengo_dl.compat import (
-    make_linear_step,
-    NoX,
-    OneX,
-    NoD,
-    General,
-    make_process_state,
-    make_process_step,
-)
+
 
 logger = logging.getLogger(__name__)
 
@@ -130,8 +122,7 @@ class GenericProcessBuilder(OpBuilder):
     def build_post(self, ops, signals, config):
         # generate state for each op
         step_states = [
-            make_process_state(
-                op.process,
+            op.process.make_state(
                 op.input.shape if op.input is not None else (0,),
                 op.output.shape,
                 signals.dt_val,
@@ -175,8 +166,7 @@ class GenericProcessBuilder(OpBuilder):
 
                     assert np.allclose(state[name], step_states[i][name])
 
-                self.step_fs[i][j] = make_process_step(
-                    op.process,
+                self.step_fs[i][j] = op.process.make_step(
                     op.input.shape if op.input is not None else (0,),
                     op.output.shape,
                     signals.dt_val,
@@ -282,8 +272,14 @@ class LinearFilterBuilder(OpBuilder):
             )
 
         steps = [
-            make_linear_step(
-                op.process, op.input.shape, op.output.shape, signals.dt_val
+            op.process.make_step(
+                op.input.shape,
+                op.output.shape,
+                signals.dt_val,
+                state=op.process.make_state(
+                    op.input.shape, op.output.shape, signals.dt_val
+                ),
+                rng=None,
             )
             for op in ops
         ]
@@ -294,7 +290,7 @@ class LinearFilterBuilder(OpBuilder):
         self.signal_d = ops[0].input.shape[0]
         self.state_d = steps[0].A.shape[0]
 
-        if self.step_type == NoX:
+        if self.step_type == LinearFilter.NoX:
             self.A = None
             self.B = None
             self.C = None
@@ -306,7 +302,7 @@ class LinearFilterBuilder(OpBuilder):
             )
 
             assert self.D.shape == (1, self.n_ops, 1)
-        elif self.step_type == OneX:
+        elif self.step_type == LinearFilter.OneX:
             # combine A scalars for each op, and broadcast along batch/state
             self.A = tf.constant(
                 np.concatenate([step.A for step in steps])[None, :], dtype=signals.dtype
@@ -332,7 +328,7 @@ class LinearFilterBuilder(OpBuilder):
                 np.stack([step.C for step in steps], axis=0), dtype=signals.dtype
             )
 
-            if self.step_type == NoD:
+            if self.step_type == LinearFilter.NoD:
                 self.D = None
             else:
                 self.D = tf.constant(
@@ -351,11 +347,11 @@ class LinearFilterBuilder(OpBuilder):
     def build_step(self, signals):
         input = signals.gather(self.input_data)
 
-        if self.step_type == NoX:
+        if self.step_type == LinearFilter.NoX:
             input = tf.reshape(input, (signals.minibatch_size, self.n_ops, -1))
 
             signals.scatter(self.output_data, self.D * input)
-        elif self.step_type == OneX:
+        elif self.step_type == LinearFilter.OneX:
             input = tf.reshape(input, (signals.minibatch_size, self.n_ops, -1))
 
             # note: we use the output signal in place of a separate state
@@ -386,7 +382,7 @@ class LinearFilterBuilder(OpBuilder):
                 (self.n_ops, self.state_d, self.signal_d * signals.minibatch_size),
             )
 
-            if self.step_type == NoD:
+            if self.step_type == LinearFilter.NoD:
                 # for NoD, we update the state before computing the output
                 new_state = tf.matmul(self.A, state) + self.B * input
 
@@ -399,7 +395,7 @@ class LinearFilterBuilder(OpBuilder):
                 # in the general case, we compute the output before updating
                 # the state
                 output = tf.matmul(self.C, state)
-                if self.step_type == General:
+                if self.step_type == LinearFilter.General:
                     output += self.D * input
                 signals.scatter(self.output_data, undo_batch(output))
 

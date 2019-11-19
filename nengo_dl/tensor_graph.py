@@ -13,17 +13,12 @@ from nengo.builder.processes import SimProcess
 from nengo.config import ConfigError
 from nengo.exceptions import BuildError
 from nengo.neurons import Direct
+from nengo.transforms import SparseMatrix
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.training.tracking import base as trackable
 
 from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node, config
-from nengo_dl.compat import (
-    SparseMatrix,
-    is_sparse,
-    make_process_state,
-    make_process_step,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -658,10 +653,9 @@ class TensorGraph(tf.keras.layers.Layer):
             if isinstance(output, np.ndarray):
                 self.input_funcs[n] = output
             elif isinstance(output, Process):
-                state = make_process_state(output, (n.size_in,), (n.size_out,), self.dt)
+                state = output.make_state((n.size_in,), (n.size_out,), self.dt)
                 self.input_funcs[n] = [
-                    make_process_step(
-                        output,
+                    output.make_step(
                         (n.size_in,),
                         (n.size_out,),
                         self.dt,
@@ -932,7 +926,7 @@ class TensorGraph(tf.keras.layers.Layer):
             else:
                 raise NotImplementedError("Unsupported signal dtype")
 
-            if is_sparse(sig):
+            if sig.sparse:
                 # for sparse tensors, what we care about is the shape of the
                 # underlying data, not the full matrix
                 shape = (sig.initial_value.size,)
@@ -949,7 +943,7 @@ class TensorGraph(tf.keras.layers.Layer):
             key = curr_keys[array_params]
 
             initial_value = sig.initial_value
-            if is_sparse(sig):
+            if sig.sparse:
                 if isinstance(initial_value, SparseMatrix):
                     initial_value = initial_value.data
                 else:
@@ -1030,13 +1024,13 @@ class TensorGraph(tf.keras.layers.Layer):
             # tensorsignal shapes should match signal shapes
             assert (
                 tensor_sig.shape == (sig.size,)
-                if is_sparse(sig)
+                if sig.sparse
                 else (sig.shape if sig.shape != () else (1,))
             )
 
             # tensorsignal values should match signal values
             initial_value = sig.initial_value
-            if is_sparse(sig):
+            if sig.sparse:
                 if isinstance(initial_value, SparseMatrix):
                     initial_value = initial_value.data
                 else:

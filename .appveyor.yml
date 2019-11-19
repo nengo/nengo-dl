@@ -10,14 +10,12 @@ environment:
 
   matrix:
     - MODE: test # default build
-      TEST_ARGS: -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
     - NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
       TF_VERSION: tensorflow --pre
-    - NENGO_VERSION: nengo[tests]==2.8.0
+    - NENGO_VERSION: nengo[tests]==3.0.0
       TF_VERSION: tensorflow==2.0.0
       NUMPY_VERSION: numpy==1.16
       PYTHON_VERSION: C:\Python35-x64
-      TEST_ARGS: -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator
 
 init:
   - set PATH=%PYTHON_VERSION%;%PYTHON_VERSION%\Scripts;%PATH%

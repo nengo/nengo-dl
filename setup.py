@@ -63,7 +63,7 @@ else:
         tf_req = "tensorflow"
 
 install_req = [
-    "nengo>=2.8.0",
+    "nengo>=3.0.0",
     "numpy>=1.14.5",
     "%s>=2.0.0" % tf_req,
     "jinja2>=2.10.1",
@@ -82,17 +82,16 @@ docs_req = [
 ]
 optional_req = []
 tests_req = [
-    "attrs<19.2.0",
     "click>=6.7",
     "codespell>=1.12.0",
-    "matplotlib>=2.0.0,<3.1.0",
+    "matplotlib>=2.0.0",
     "nbval>=0.6.0",
     "pylint>=1.9.2",
-    "pytest>=3.6.0,<4.1.0",
+    "pytest>=3.6.0",
     "pytest-allclose>=1.0.0",
     "pytest-cov>=2.6.0",
     "pytest-rng>=1.0.0",
-    "pytest-xdist>=1.16.0,<1.28.0",
+    "pytest-xdist>=1.16.0",
     "six>=1.11.0",
 ]
 

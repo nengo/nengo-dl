@@ -6,6 +6,7 @@ from nengo.builder import Signal
 from nengo.builder.learning_rules import (
     SimBCM,
     SimOja,
+    SimPES,
     SimVoja,
     get_post_ens,
     build_or_passthrough,
@@ -16,7 +17,6 @@ import numpy as np
 import tensorflow as tf
 
 from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
-from nengo_dl.compat import SimPES
 
 
 @Builder.register(SimBCM)

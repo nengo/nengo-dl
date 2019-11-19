@@ -1,7 +1,5 @@
 # pylint: disable=missing-docstring
 
-from distutils.version import LooseVersion
-
 import nengo
 import numpy as np
 import pytest
@@ -10,10 +8,6 @@ import tensorflow as tf
 from nengo_dl.utils import tf_gpu_installed
 
 
-@pytest.mark.skipif(
-    LooseVersion(nengo.__version__) <= "2.8.0",
-    reason="Nengo Convolutions not implemented",
-)
 @pytest.mark.parametrize("channels_last", (True, False))
 def test_merge_conv(Simulator, channels_last, seed, pytestconfig):
     from nengo.builder.transforms import (  # pylint: disable=import-outside-toplevel
@@ -80,10 +74,6 @@ def test_merge_conv(Simulator, channels_last, seed, pytestconfig):
     assert np.allclose(sim.data[p_c], canonical.data[p_c], atol=5e-6)
 
 
-@pytest.mark.skipif(
-    LooseVersion(nengo.__version__) <= "2.8.0",
-    reason="Nengo Convolutions not implemented",
-)
 @pytest.mark.parametrize("d", (3, 4))
 def test_conv_error(Simulator, d):
     with nengo.Network() as net:
@@ -106,10 +96,6 @@ def test_conv_error(Simulator, d):
         assert d == 3
 
 
-@pytest.mark.skipif(
-    LooseVersion(nengo.__version__) <= "2.8.0",
-    reason="Nengo Sparse transforms not implemented",
-)
 @pytest.mark.training
 def test_sparse(Simulator, rng):
     with nengo.Network() as net:

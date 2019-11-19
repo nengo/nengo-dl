@@ -1,21 +1,24 @@
 # pylint: disable=missing-docstring
 
-from distutils.version import LooseVersion
-
 from nengo.exceptions import BuildError
 from nengo.neurons import LIF, LIFRate, Izhikevich, AdaptiveLIF
 from nengo.synapses import Lowpass, Triangle, Alpha, LinearFilter
 from nengo.builder.learning_rules import SimBCM
 from nengo.builder.neurons import SimNeurons
-from nengo.builder.operator import SimPyFunc, DotInc, Copy, Reset, ElementwiseInc
+from nengo.builder.operator import (
+    Copy,
+    DotInc,
+    ElementwiseInc,
+    Reset,
+    SimPyFunc,
+    SparseDotInc,
+)
 from nengo.builder.processes import SimProcess
 from nengo.builder.signal import Signal
-from nengo.version import version as nengo_version
 import numpy as np
 import pytest
 
 from nengo_dl import op_builders
-from nengo_dl.compat import SparseDotInc
 from nengo_dl.graph_optimizer import (
     mergeable,
     greedy_planner,
@@ -301,10 +304,6 @@ def test_mergeable():
     assert not mergeable(a, [b])
 
 
-@pytest.mark.skipif(
-    LooseVersion(nengo_version) <= "2.8.0",
-    reason="Nengo Sparse transforms not implemented",
-)
 def test_sparsedotinc_mergeable():
     assert mergeable(
         SparseDotInc(dummies.Signal(sparse=True), dummies.Signal(), dummies.Signal()),
