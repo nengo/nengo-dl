@@ -32,16 +32,16 @@ def configure_settings(**kwargs):
         for more details.
     planner : graph planning algorithm
         Pass one of the `graph planners
-        <https://www.nengo.ai/nengo-dl/graph_optimizer.html>`_ to change the
-        default planner.
+        <https://www.nengo.ai/nengo-dl/reference.html#graph-optimization>`_ to change
+        the default planner.
     sorter : signal sorting algorithm
         Pass one of the `sort algorithms
-        <https://www.nengo.ai/nengo-dl/graph_optimizer.html>`_ to change the
-        default sorter.
+        <https://www.nengo.ai/nengo-dl/reference.html#graph-optimization>`_ to change
+        the default sorter.
     simplifications: list of graph simplification functions
         Pass a list of `graph simplification functions
-        <https://www.nengo.ai/nengo-dl/graph_optimizer.html>`_ to change the
-        default simplifications applied.
+        <https://www.nengo.ai/nengo-dl/reference.html#graph-optimization>`_ to change
+        the default simplifications applied.
     inference_only : bool
         Set to True if the network will only be run in inference mode (i.e.,
         no calls to `.Simulator.fit`).  This may result in a small
