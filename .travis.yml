@@ -38,8 +38,6 @@ jobs:
         packages:
           - pandoc
   -
-    env:
-      TEST_ARGS="-p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator"
     cache: False
   -
     env:
@@ -65,13 +63,13 @@ jobs:
     python: 3.5
   -
     env:
-      TEST_ARGS="--dtype float64 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator"
+      TEST_ARGS="--unroll-simulation 5 --simulator-only"
   -
     env:
-      TEST_ARGS="--unroll-simulation 5 --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator"
+      TEST_ARGS="--dtype float64 --simulator-only"
   -
     env:
-      TEST_ARGS="--inference-only --simulator-only -p nengo.tests.options --simulator nengo_dl.Simulator --ref-simulator nengo_dl.Simulator"
+      TEST_ARGS="--inference-only --simulator-only"
   -
     env:
       TF_VERSION="tensorflow<2.0.0"
