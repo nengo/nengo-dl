@@ -61,7 +61,7 @@ def test_predict(Simulator, seed):
         sim.soft_reset()
 
         # no input (also checking batch_size is ignored)
-        with pytest.warns(UserWarning, reason="Batch size is determined statically"):
+        with pytest.warns(UserWarning, match="Batch size is determined statically"):
             output = sim.predict(n_steps=n_steps, batch_size=-1)
         assert np.allclose(output[p], data_noinput)
 

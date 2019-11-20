@@ -114,9 +114,9 @@ def test_run_profile(network, train, pytestconfig, monkeypatch, tmpdir):
         train=train,
         n_steps=10,
         do_profile=True,
-        device=pytestconfig.getvalue("--device"),
-        unroll_simulation=pytest.config.getvalue("--unroll-simulation"),
-        dtype=pytest.config.getvalue("dtype"),
+        device=pytestconfig.getoption("--device"),
+        unroll_simulation=pytestconfig.getoption("--unroll-simulation"),
+        dtype=pytestconfig.getoption("dtype"),
     )
 
     assert net.config[net].inference_only == (not train)

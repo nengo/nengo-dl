@@ -1564,7 +1564,7 @@ def test_tensorflow_gpu_warning(Simulator, pytestconfig):
     recwarns = [w for w in recwarns if "No GPU support detected" in str(w.message)]
 
     assert len(recwarns) == (
-        1 if not tf_gpu_installed and pytestconfig.getvalue("--device") is None else 0
+        1 if not tf_gpu_installed and pytestconfig.getoption("--device") is None else 0
     )
 
 
