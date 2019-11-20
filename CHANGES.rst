@@ -131,6 +131,10 @@ Release History
   (``tf.keras.backend.set_learning_phase``) before the Simulator is constructed.
 - Increased minimum Nengo core version to 3.0.0.
 
+**Fixed**
+
+- Fixed bug due to non-determinism of Process state ordering in Python 3.5.
+
 **Deprecated**
 
 - ``nengo_dl.tensor_layer`` has been deprecated. Use ``nengo_dl.Layer`` instead;

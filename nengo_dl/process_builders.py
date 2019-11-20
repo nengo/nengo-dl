@@ -134,8 +134,10 @@ class GenericProcessBuilder(OpBuilder):
         # (n_states, n_ops, *state_d)
         combined_states = [[None for _ in ops] for _ in range(len(ops[0].state))]
         for i, op in enumerate(ops):
-            for j, s in enumerate(step_states[i].values()):
-                combined_states[j][i] = s
+            # note: we iterate over op.state so that the order is always based on that
+            # dict's order (which is what we used to set up self.state_data)
+            for j, name in enumerate(op.state):
+                combined_states[j][i] = step_states[i][name]
 
         # combine op states, giving shape
         # (n_states, n_ops * state_d[0], *state_d[1:])
@@ -158,7 +160,7 @@ class GenericProcessBuilder(OpBuilder):
             for j in range(signals.minibatch_size):
                 # pass each make_step function a view into the combined state
                 state = {}
-                for k, name in enumerate(step_states[i]):
+                for k, name in enumerate(op.state):
                     start = 0 if i == 0 else offsets[k][i - 1]
                     stop = offsets[k][i]
 
