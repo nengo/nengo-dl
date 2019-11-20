@@ -19,9 +19,12 @@ Release History
    - Deprecated
    - Removed
 
-2.2.2 (unreleased)
-==================
+2.2.2 (November 20, 2019)
+=========================
 
+**Fixed**
+
+- Compatibility with Nengo 3.0 release
 
 2.2.1 (October 2, 2019)
 =======================
