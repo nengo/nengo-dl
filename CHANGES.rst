@@ -50,6 +50,8 @@ Release History
 - Added ``nengo_dl.Converter`` for automatically converting Keras models to native
   Nengo networks.  See `the documentation
   <https://www.nengo.ai/nengo-dl/converter.html>`__ for more details.
+- Added `Legendre Memory Unit RNN example
+  <https://www.nengo.ai/nengo-dl/examples/lmu.html>`_.
 
 **Changed**
 

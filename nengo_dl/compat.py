@@ -5,8 +5,10 @@ Utilities to ease cross-compatibility between different versions of upstream
 dependencies.
 """
 
-
+from nengo._vendor.scipy.sparse import linalg_interface, linalg_onenormest
 import tensorflow as tf
+
+# TensorFlow compatibility
 
 
 class TFLogFilter:
@@ -68,3 +70,8 @@ class TFLogFilter:
 
 
 tf.get_logger().addFilter(TFLogFilter(err_on_deprecation=False))
+
+# Nengo compatibility
+
+# monkeypatch fix for https://github.com/nengo/nengo/pull/1587
+linalg_onenormest.aslinearoperator = linalg_interface.aslinearoperator

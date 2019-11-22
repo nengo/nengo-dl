@@ -5,6 +5,7 @@ import sys
 
 import pytest
 import nengo
+import numpy as np
 
 from nengo_dl import benchmarks, SoftLIFRate
 
@@ -154,6 +155,37 @@ def test_cli():
     sys.argv = old_argv
 
 
+@pytest.mark.training
+@pytest.mark.parametrize("native_nengo", (True, False))
+def test_lmu(Simulator, native_nengo, pytestconfig):
+    n_steps = 1000
+    net = benchmarks.lmu(
+        n_steps, 1, native_nengo=native_nengo, dtype=pytestconfig.getoption("--dtype")
+    )
+
+    # TODO: It would be good to optimize LMU performance as the NengoDL implementation
+    # is a bit slower than the original TensorFlow implementation.
+
+    # benchmarks.run_profile(
+    #     net,
+    #     train=True,
+    #     n_steps=n_steps if native_nengo else 1,
+    #     do_profile=False,
+    #     minibatch_size=100,
+    #     unroll_simulation=25 if native_nengo else 1,
+    #     reps=5,
+    # )
+
+    with Simulator(net) as sim:
+        n_trainable = sum(
+            np.prod(w.shape.as_list()) for w in sim.keras_model.trainable_weights
+        )
+        assert n_trainable == 102017
+
+    assert net.inp.size_out == 1 if native_nengo else n_steps
+    assert net.p.size_in == 10
+
+
 @pytest.mark.performance
 @pytest.mark.parametrize(
     "net, train, minibatch_size, min, max",
@@ -182,6 +214,7 @@ def test_cli():
             0.4,
             0.6,
         ),
+        (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, 0.75, 1.0),
         # (benchmarks.spaun(1), False, None, 8.02, 9.52),
     ],
 )

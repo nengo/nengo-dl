@@ -8,6 +8,7 @@ import timeit
 
 import click
 import nengo
+from nengo.utils.filter_design import cont2discrete
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.eager import profiler
@@ -350,6 +351,253 @@ def random_network(
             posts = random.sample(ensembles, connections_per_ensemble)
             for post in posts:
                 nengo.Connection(ens, post, solver=nengo.solvers.NoSolver(dec))
+
+    return net
+
+
+def lmu(theta, input_d, native_nengo=False, dtype="float32"):
+    """
+    A network containing a single Legendre Memory Unit cell and dense readout.
+
+    See [1]_ for more details.
+
+    Parameters
+    ----------
+    theta : int
+        Time window parameter for LMU.
+    input_d : int
+        Dimensionality of input signal.
+    native_nengo : bool
+        If True, build the LMU out of Nengo objects. Otherwise, build the LMU
+        directly in TensorFlow, and use a `.TensorNode` to wrap the whole cell.
+    dtype : str
+        Float dtype to use for internal parameters of LMU when ``native_nengo=False``
+        (``native_nengo=True`` will use the dtype of the Simulator).
+
+    Returns
+    -------
+    net : `nengo.Network`
+        Benchmark network
+
+    References
+    ----------
+    .. [1] Aaron R. Voelker, Ivana Kajić, and Chris Eliasmith. Legendre memory units:
+       continuous-time representation in recurrent neural networks.
+       In Advances in Neural Information Processing Systems. 2019.
+       https://papers.nips.cc/paper/9689-legendre-memory-units-continuous-time-representation-in-recurrent-neural-networks.
+    """
+    if native_nengo:
+        # building LMU cell directly out of Nengo objects
+
+        class LMUCell(nengo.Network):
+            """Implements an LMU cell as a Nengo network."""
+
+            def __init__(self, units, order, theta, input_d, **kwargs):
+                super().__init__(**kwargs)
+
+                # compute the A and B matrices according to the LMU's mathematical
+                # derivation (see the paper for details)
+                Q = np.arange(order, dtype=np.float64)
+                R = (2 * Q + 1)[:, None] / theta
+                j, i = np.meshgrid(Q, Q)
+
+                A = np.where(i < j, -1, (-1.0) ** (i - j + 1)) * R
+                B = (-1.0) ** Q[:, None] * R
+                C = np.ones((1, order))
+                D = np.zeros((1,))
+
+                A, B, _, _, _ = cont2discrete((A, B, C, D), dt=1.0, method="zoh")
+
+                with self:
+                    nengo_dl.configure_settings(trainable=None)
+
+                    # create objects corresponding to the x/u/m/h variables in LMU
+                    self.x = nengo.Node(size_in=input_d)
+                    self.u = nengo.Node(size_in=1)
+                    self.m = nengo.Node(size_in=order)
+                    self.h = nengo_dl.TensorNode(
+                        tf.nn.tanh, shape_in=(units,), pass_time=False
+                    )
+
+                    # compute u_t
+                    # note that setting synapse=0 (versus synapse=None) adds a
+                    # one-timestep delay, so we can think of any connections with
+                    # synapse=0 as representing value_{t-1}
+                    nengo.Connection(
+                        self.x, self.u, transform=np.ones((1, input_d)), synapse=None
+                    )
+                    nengo.Connection(
+                        self.h, self.u, transform=np.zeros((1, units)), synapse=0
+                    )
+                    nengo.Connection(
+                        self.m, self.u, transform=np.zeros((1, order)), synapse=0
+                    )
+
+                    # compute m_t
+                    # in this implementation we'll make A and B non-trainable, but they
+                    # could also be optimized in the same way as the other parameters
+                    conn = nengo.Connection(self.m, self.m, transform=A, synapse=0)
+                    self.config[conn].trainable = False
+                    conn = nengo.Connection(self.u, self.m, transform=B, synapse=None)
+                    self.config[conn].trainable = False
+
+                    # compute h_t
+                    nengo.Connection(
+                        self.x,
+                        self.h,
+                        transform=np.zeros((units, input_d)),
+                        synapse=None,
+                    )
+                    nengo.Connection(
+                        self.h, self.h, transform=np.zeros((units, units)), synapse=0
+                    )
+                    nengo.Connection(
+                        self.m,
+                        self.h,
+                        transform=nengo_dl.dists.Glorot(distribution="normal"),
+                        synapse=None,
+                    )
+
+        with nengo.Network(seed=0) as net:
+            # remove some unnecessary features to speed up the training
+            nengo_dl.configure_settings(
+                trainable=None, stateful=False, keep_history=False,
+            )
+
+            # input node
+            net.inp = nengo.Node(np.zeros(input_d))
+
+            # lmu cell
+            lmu_cell = LMUCell(units=212, order=256, theta=theta, input_d=input_d)
+            conn = nengo.Connection(net.inp, lmu_cell.x, synapse=None)
+            net.config[conn].trainable = False
+
+            # dense linear readout
+            out = nengo.Node(size_in=10)
+            nengo.Connection(
+                lmu_cell.h, out, transform=nengo_dl.dists.Glorot(), synapse=None
+            )
+
+            # record output. note that we set keep_history=False above, so this will
+            # only record the output on the last timestep (which is all we need
+            # on this task)
+            net.p = nengo.Probe(out)
+    else:
+        # putting everything in a tensornode
+
+        # define LMUCell
+        class LMUCell(tf.keras.layers.AbstractRNNCell):
+            """Implement LMU as Keras RNN cell."""
+
+            def __init__(self, units, order, theta, **kwargs):
+                super().__init__(**kwargs)
+
+                self.units = units
+                self.order = order
+                self.theta = theta
+
+                Q = np.arange(order, dtype=np.float64)
+                R = (2 * Q + 1)[:, None] / theta
+                j, i = np.meshgrid(Q, Q)
+
+                A = np.where(i < j, -1, (-1.0) ** (i - j + 1)) * R
+                B = (-1.0) ** Q[:, None] * R
+                C = np.ones((1, order))
+                D = np.zeros((1,))
+
+                self._A, self._B, _, _, _ = cont2discrete(
+                    (A, B, C, D), dt=1.0, method="zoh"
+                )
+
+            @property
+            def state_size(self):
+                """Size of RNN state variables."""
+                return self.units, self.order
+
+            @property
+            def output_size(self):
+                """Size of cell output."""
+                return self.units
+
+            def build(self, input_shape):
+                """Set up all the weight matrices used inside the cell."""
+
+                super().build(input_shape)
+
+                input_dim = input_shape[-1]
+                self.input_encoders = self.add_weight(
+                    shape=(input_dim, 1), initializer=tf.initializers.ones(),
+                )
+                self.hidden_encoders = self.add_weight(
+                    shape=(self.units, 1), initializer=tf.initializers.zeros(),
+                )
+                self.memory_encoders = self.add_weight(
+                    shape=(self.order, 1), initializer=tf.initializers.zeros(),
+                )
+                self.input_kernel = self.add_weight(
+                    shape=(input_dim, self.units), initializer=tf.initializers.zeros(),
+                )
+                self.hidden_kernel = self.add_weight(
+                    shape=(self.units, self.units), initializer=tf.initializers.zeros(),
+                )
+                self.memory_kernel = self.add_weight(
+                    shape=(self.order, self.units),
+                    initializer=tf.initializers.glorot_normal(),
+                )
+                self.AT = self.add_weight(
+                    shape=(self.order, self.order),
+                    initializer=tf.initializers.constant(self._A.T),
+                    trainable=False,
+                )
+                self.BT = self.add_weight(
+                    shape=(1, self.order),
+                    initializer=tf.initializers.constant(self._B.T),
+                    trainable=False,
+                )
+
+            def call(self, inputs, states):
+                """Compute cell output and state updates."""
+
+                h_prev, m_prev = states
+
+                # compute u_t from the above diagram
+                u = (
+                    tf.matmul(inputs, self.input_encoders)
+                    + tf.matmul(h_prev, self.hidden_encoders)
+                    + tf.matmul(m_prev, self.memory_encoders)
+                )
+
+                # compute updated memory state vector (m_t in diagram)
+                m = tf.matmul(m_prev, self.AT) + tf.matmul(u, self.BT)
+
+                # compute updated hidden state vector (h_t in diagram)
+                h = tf.nn.tanh(
+                    tf.matmul(inputs, self.input_kernel)
+                    + tf.matmul(h_prev, self.hidden_kernel)
+                    + tf.matmul(m, self.memory_kernel)
+                )
+
+                return h, [h, m]
+
+        with nengo.Network(seed=0) as net:
+            # remove some unnecessary features to speed up the training
+            # we could set use_loop=False as well here, but leaving it for parity
+            # with native_nengo
+            nengo_dl.configure_settings(stateful=False)
+
+            net.inp = nengo.Node(np.zeros(theta))
+
+            rnn = nengo_dl.Layer(
+                tf.keras.layers.RNN(
+                    LMUCell(units=212, order=256, theta=theta, dtype=dtype),
+                    return_sequences=False,
+                )
+            )(net.inp, shape_in=(theta, input_d))
+
+            out = nengo.Node(size_in=10)
+            nengo.Connection(rnn, out, transform=nengo_dl.dists.Glorot(), synapse=None)
+
+            net.p = nengo.Probe(out)
 
     return net
 
