@@ -1,0 +1,1118 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>nengo_dl.signals &#8212; NengoDL 2.2.2 docs</title>
+    <link rel="stylesheet" href="../../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+<link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,400i,600|Rajdhani:700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
+<link rel="stylesheet" href="https://www.nengo.ai/css/bootstrap.css" type="text/css">
+<style>
+  body .title-bar,
+  body .documentation-source h1:after {
+    background-color: #ff6600;
+  }
+</style>
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-41658423-2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'UA-41658423-2');
+</script>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/scrollreveal"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stickyfill/2.1.0/stickyfill.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+<!-- From basic/layout.html -->
+<script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+  
+  
+<script type="text/javascript" src="../../_static/underscore.js"></script>
+  
+  
+<script type="text/javascript" src="../../_static/doctools.js"></script>
+  
+  
+<script type="text/javascript" src="../../_static/language_data.js"></script>
+  
+  
+<script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+  
+  
+<script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+  
+<script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+  
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  </head><body class="bg-dark">
+
+<header class="fixed-top header-top shadow-sm">
+  <nav class="navbar navbar-expand-md navbar-light bg-white">
+    <a class="navbar-brand" href="https://www.nengo.ai/">
+      <img
+        src="https://www.nengo.ai/design/_images/general-full-light.svg"
+        alt="Nengo"
+        class="logo"
+      />
+    </a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-toggle="collapse"
+      data-target="#navbar-collapse"
+      aria-controls="navbar-collapse"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-collapse">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/">What is Nengo?</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/examples/">Examples</a>
+        </li>
+        <li class="nav-item dropdown active">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-docs"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Documentation</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-docs"
+          >
+            
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo/">Nengo Core</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-gui/">Nengo GUI</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-dl/">Nengo DL</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-spa/">Nengo SPA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-extras/">Nengo Extras</a>
+            <a class="dropdown-item" href="https://arvoelke.github.io/nengolib-docs/">Nengolib</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-fpga/">Nengo FPGA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-loihi/">Nengo Loihi</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-ocl">Nengo OpenCL</a>
+            <a class="dropdown-item" href="https://github.com/project-rig/nengo_spinnaker">Nengo SpiNNaker</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-mpi">Nengo MPI</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/documentation/"
+              >All documentation</a
+            >
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-community"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Community</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-community"
+          >
+            <a class="dropdown-item" href="https://forum.nengo.ai">Forum</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/people/"
+              >People</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/summer-school/"
+              >Summer school</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/contributing/"
+              >Contributing</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/publications/"
+              >Publications</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/videos/"
+              >Videos</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/conduct/"
+              >Code of conduct</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/caa/">CAA</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link btn btn-success btn-sm text-white"
+            href="https://www.nengo.ai/getting-started/"
+            >Getting started</a
+          >
+        </li>
+      </ul>
+    </div>
+  </nav>
+</header>
+<div class="main-content gradient-top">
+  <div class="container-fluid">
+    <div class="row"><a class="toggle-sidenav d-block d-md-none" href="#"
+  ><i class="icon-close fa fa-fw fa-arrow-left"></i
+  ><i class="icon-open fa fa-fw fa-arrow-right"></i
+></a>
+<div role="complementary" class="sidenav col-4 col-xl-3 p-0 border-right">
+  <h3 class="pt-5 px-5">
+    <a href="../../index.html">
+      <img
+        class="img-fluid documentation-image"
+        src="https://www.nengo.ai/design/_images/nengo-dl-full-light.svg"
+        alt="NengoDL"
+      />
+    </a>
+  </h3>
+  
+  <form class="px-5 pb-5 mb-0 mt-3 border-bottom">
+    <div class="form-group">
+      <label class="text-gray">Version:</label>
+      <select class="custom-select" onchange="switchVersion(this);">
+        
+        
+        <option value="../../../_modules/nengo_dl/signals.html">latest</option>
+        
+        
+          
+        <option selected>v2.2.2</option>
+          
+        
+          
+        <option value="../../../v2.2.1/_modules/nengo_dl/signals.html">
+          v2.2.1
+        </option>
+          
+        
+          
+        <option value="../../../v2.2.0/_modules/nengo_dl/signals.html">
+          v2.2.0
+        </option>
+          
+        
+          
+        <option value="../../../v2.1.1/_modules/nengo_dl/signals.html">
+          v2.1.1
+        </option>
+          
+        
+          
+        <option value="../../../v2.1.0/_modules/nengo_dl/signals.html">
+          v2.1.0
+        </option>
+          
+        
+          
+        <option value="../../../v2.0.0/_modules/nengo_dl/signals.html">
+          v2.0.0
+        </option>
+          
+        
+          
+        <option value="../../../v1.2.1/_modules/nengo_dl/signals.html">
+          v1.2.1
+        </option>
+          
+        
+          
+        <option value="../../../v1.2.0/_modules/nengo_dl/signals.html">
+          v1.2.0
+        </option>
+          
+        
+          
+        <option value="../../../v1.1.0/_modules/nengo_dl/signals.html">
+          v1.1.0
+        </option>
+          
+        
+          
+        <option value="../../../v1.0.0/_modules/nengo_dl/signals.html">
+          v1.0.0
+        </option>
+          
+        
+          
+        <option value="../../../v0.6.2/_modules/nengo_dl/signals.html">
+          v0.6.2
+        </option>
+          
+        
+          
+        <option value="../../../v0.6.1/_modules/nengo_dl/signals.html">
+          v0.6.1
+        </option>
+          
+        
+          
+        <option value="../../../v0.6.0/_modules/nengo_dl/signals.html">
+          v0.6.0
+        </option>
+          
+        
+          
+        <option value="../../../v0.5.2/_modules/nengo_dl/signals.html">
+          v0.5.2
+        </option>
+          
+        
+          
+        <option value="../../../v0.5.1/_modules/nengo_dl/signals.html">
+          v0.5.1
+        </option>
+          
+        
+          
+        <option value="../../../v0.5.0/_modules/nengo_dl/signals.html">
+          v0.5.0
+        </option>
+          
+        
+          
+        <option value="../../../v0.4.0/_modules/nengo_dl/signals.html">
+          v0.4.0
+        </option>
+          
+        
+          
+        <option value="../../../v0.3.1/_modules/nengo_dl/signals.html">
+          v0.3.1
+        </option>
+          
+        
+          
+        <option value="../../../v0.3.0/_modules/nengo_dl/signals.html">
+          v0.3.0
+        </option>
+          
+        
+          
+        <option value="../../../v0.2.0/_modules/nengo_dl/signals.html">
+          v0.2.0
+        </option>
+          
+        
+      </select>
+    </div>
+  </form>
+  
+  <div class="p-5 toctree">
+    <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user-guide.html">User guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../project.html">Project information</a></li>
+</ul>
+
+  </div>
+<form class="p-5 my-0 border-top" action="../../search.html" method="get">
+  <div class="form-group form-group-single">
+    <input type="text" name="q" class="form-control" placeholder="Search" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+    <button type="submit" class="btn btn-link">
+      <img src="https://www.nengo.ai/img/icon-search.svg" alt="Go" />
+    </button>
+  </div>
+</form></div>
+      
+
+      <div class="col-12 col-md-8 col-xl-9">
+        <div class="container">
+          <div class="row">
+            <div class="col-10 offset-1 pb-5 documentation-source" role="main">
+              
+  <h1>Source code for nengo_dl.signals</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Represents and manages the internal simulation signals.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">defaultdict</span><span class="p">,</span> <span class="n">OrderedDict</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">from</span> <span class="nn">nengo.builder.signal</span> <span class="k">import</span> <span class="n">Signal</span>
+<span class="kn">from</span> <span class="nn">nengo.exceptions</span> <span class="k">import</span> <span class="n">BuildError</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+
+<span class="kn">from</span> <span class="nn">nengo_dl.compat</span> <span class="k">import</span> <span class="n">tf_compat</span><span class="p">,</span> <span class="n">is_sparse</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="TensorSignal"><a class="viewcode-back" href="../../reference.html#nengo_dl.signals.TensorSignal">[docs]</a><span class="k">class</span> <span class="nc">TensorSignal</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Represents a tensor as an indexed view into a base array.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    indices : tuple or list or `~numpy.ndarray` of int</span>
+<span class="sd">        Indices along the first axis of the base array corresponding to the</span>
+<span class="sd">        data for this signal</span>
+<span class="sd">    key : object</span>
+<span class="sd">        Key mapping to the base array that contains the data for this signal</span>
+<span class="sd">    dtype : `~numpy.dtype`</span>
+<span class="sd">        dtype of the values represented by this signal</span>
+<span class="sd">    shape : tuple of int</span>
+<span class="sd">        View shape of this signal (may differ from shape of base array)</span>
+<span class="sd">    minibatch_size : int</span>
+<span class="sd">        If not None then this signal contains a minibatch dimension with the</span>
+<span class="sd">        given size</span>
+<span class="sd">    constant : callable</span>
+<span class="sd">        A function that returns a TensorFlow constant (will be provided</span>
+<span class="sd">        by `.signals.SignalDict.get_tensor_signal`)</span>
+<span class="sd">    label : str</span>
+<span class="sd">        Name for this signal, used to make debugging easier</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="p">,</span> <span class="n">constant</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;TensorSignal&quot;</span>
+    <span class="p">):</span>
+        <span class="c1"># make indices read-only</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_indices</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">writeable</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tf_shape</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tf_indices</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tf_slice</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">key</span> <span class="o">=</span> <span class="n">key</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span> <span class="o">=</span> <span class="n">minibatch_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constant</span> <span class="o">=</span> <span class="n">constant</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="n">label</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">indices</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The indices containing the data for this signal in the base array.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_indices</span>
+
+    <span class="nd">@indices</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">BuildError</span><span class="p">(</span><span class="s2">&quot;Indices are read only&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">ndim</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The rank of this signal.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;TensorSignal(key=</span><span class="si">%s</span><span class="s2">, shape=</span><span class="si">%s</span><span class="s2">, label=</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="TensorSignal.__getitem__"><a class="viewcode-back" href="../../reference.html#nengo_dl.signals.TensorSignal.__getitem__">[docs]</a>    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a new TensorSignal representing a subset (slice or advanced</span>
+<span class="sd">        indexing) of the indices of this TensorSignal.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        indices : slice or list of int</span>
+<span class="sd">            The desired subset of the indices in this TensorSignal</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        sig : `.signals.TensorSignal`</span>
+<span class="sd">            A new TensorSignal representing the subset of this TensorSignal</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">indices</span> <span class="ow">is</span> <span class="bp">Ellipsis</span> <span class="ow">or</span> <span class="n">indices</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+
+        <span class="n">new_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">indices</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">TensorSignal</span><span class="p">(</span>
+            <span class="n">new_indices</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+            <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_indices</span><span class="p">),)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constant</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">+</span> <span class="s2">&quot;.slice&quot;</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="TensorSignal.reshape"><a class="viewcode-back" href="../../reference.html#nengo_dl.signals.TensorSignal.reshape">[docs]</a>    <span class="k">def</span> <span class="nf">reshape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a new TensorSignal representing a reshaped view of the</span>
+<span class="sd">        same data in this TensorSignal (size of data must remain unchanged).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        shape : tuple of int</span>
+<span class="sd">            New shape for the signal (one dimension can be -1 to indicate</span>
+<span class="sd">            an inferred dimension size, as in numpy)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        sig : `.signals.TensorSignal`</span>
+<span class="sd">            New TensorSignal representing the same data as this signal but</span>
+<span class="sd">            with the given shape</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># replace -1 with inferred dimension</span>
+        <span class="k">if</span> <span class="n">shape</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BuildError</span><span class="p">(</span><span class="s2">&quot;Only one inferred dimension allowed in reshape&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">shape</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">n_elem</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="n">n_shape</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">([</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">shape</span> <span class="k">if</span> <span class="n">x</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="k">if</span> <span class="n">n_elem</span> <span class="o">%</span> <span class="n">n_shape</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">BuildError</span><span class="p">(</span><span class="s2">&quot;No valid length for inferred dimension&quot;</span><span class="p">)</span>
+
+            <span class="n">shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">x</span> <span class="k">if</span> <span class="n">x</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="k">else</span> <span class="n">n_elem</span> <span class="o">//</span> <span class="n">n_shape</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">shape</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">BuildError</span><span class="p">(</span><span class="s2">&quot;Number of elements don&#39;t match in reshape&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">TensorSignal</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+            <span class="n">shape</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constant</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">+</span> <span class="s2">&quot;.reshape(</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">shape</span><span class="p">,),</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="TensorSignal.broadcast"><a class="viewcode-back" href="../../reference.html#nengo_dl.signals.TensorSignal.broadcast">[docs]</a>    <span class="k">def</span> <span class="nf">broadcast</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">length</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a new dimension by broadcasting this signal along ``axis``</span>
+<span class="sd">        for the given length.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        axis : 0 or -1</span>
+<span class="sd">            Where to insert the new dimension (currently only supports either</span>
+<span class="sd">            the beginning or end of the array)</span>
+<span class="sd">        length : int</span>
+<span class="sd">            The number of times to duplicate signal along the broadcast</span>
+<span class="sd">            dimension</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        sig : `.signals.TensorSignal`</span>
+<span class="sd">            TensorSignal with new broadcasted shape</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">assert</span> <span class="n">axis</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># this only works on vectors</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">minibatched</span>
+
+        <span class="n">indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">indices</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">indices</span><span class="p">]</span> <span class="o">*</span> <span class="n">length</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span>
+
+        <span class="k">if</span> <span class="n">axis</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">display_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="n">length</span><span class="p">,)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">display_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">length</span><span class="p">,)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="k">return</span> <span class="n">TensorSignal</span><span class="p">(</span>
+            <span class="n">indices</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+            <span class="n">display_shape</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constant</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">+</span> <span class="s2">&quot;.broadcast(</span><span class="si">%d</span><span class="s2">, </span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">length</span><span class="p">),</span>
+        <span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">tf_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A ``tf.Tensor`` representing the shape of this signal.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tf_shape</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tf_shape</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">full_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tf_shape</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">tf_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A ``tf.Tensor`` representing the indices of this signal.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tf_indices</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tf_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tf_indices</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">tf_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A tuple of ``tf.Tensors`` representing the ``(start, stop, stride)``</span>
+<span class="sd">        slice within the base array containing the data for this signal.</span>
+
+<span class="sd">        This can be used as a more efficient representation of</span>
+<span class="sd">        `.TensorSignal.tf_indices`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tf_slice</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">stop</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">indices</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">indices</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">step</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">step</span><span class="p">)):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_tf_slice</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">([</span><span class="n">start</span><span class="p">]),</span>
+                    <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">([</span><span class="n">stop</span><span class="p">]),</span>
+                    <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">([</span><span class="n">step</span><span class="p">]),</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">_tf_slice</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tf_slice</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">full_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Shape of the signal including the minibatch dimension.&quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">minibatched</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">minibatched</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Whether or not this TensorSignal contains a minibatch dimension.&quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="SignalDict"><a class="viewcode-back" href="../../reference.html#nengo_dl.signals.SignalDict">[docs]</a><span class="k">class</span> <span class="nc">SignalDict</span><span class="p">(</span><span class="n">Mapping</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Handles the mapping from `~nengo.builder.Signal` to ``tf.Tensor``.</span>
+
+<span class="sd">    Takes care of gather/scatter logic to read/write signals within the base</span>
+<span class="sd">    arrays.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dtype : ``tf.DType``</span>
+<span class="sd">        Floating point precision used in signals</span>
+<span class="sd">    minibatch_size : int</span>
+<span class="sd">        Number of items in each minibatch</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span> <span class="o">=</span> <span class="n">minibatch_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_map</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bases</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>  <span class="c1"># will be filled in tensor_graph.build_loop</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reads_by_base</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gather_bases</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">internal_vars</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constant_phs</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># logging</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_types</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_types</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SignalDict.scatter"><a class="viewcode-back" href="../../reference.html#nengo_dl.signals.SignalDict.scatter">[docs]</a>    <span class="k">def</span> <span class="nf">scatter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dst</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;update&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Updates the base data corresponding to ``dst``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dst : `.TensorSignal`</span>
+<span class="sd">            Signal indicating the data to be modified in base array</span>
+<span class="sd">        val : ``tf.Tensor``</span>
+<span class="sd">            Update data (same shape as ``dst``, i.e. a dense array &lt;= the size</span>
+<span class="sd">            of the base array)</span>
+<span class="sd">        mode : &quot;update&quot; or &quot;inc&quot;</span>
+<span class="sd">            Overwrite/add the data at ``dst`` with ``val``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">val</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">is_floating</span> <span class="ow">and</span> <span class="n">val</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">base_dtype</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BuildError</span><span class="p">(</span>
+                <span class="s2">&quot;Tensor detected with wrong dtype (</span><span class="si">%s</span><span class="s2">), should &quot;</span>
+                <span class="s2">&quot;be </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">val</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">base_dtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="c1"># align val shape with dst base shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bases</span><span class="p">[</span><span class="n">dst</span><span class="o">.</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()</span><span class="o">.</span><span class="n">assert_is_fully_defined</span><span class="p">()</span>
+        <span class="n">val</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()</span><span class="o">.</span><span class="n">assert_is_fully_defined</span><span class="p">()</span>
+        <span class="n">dst_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">dst</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bases</span><span class="p">[</span><span class="n">dst</span><span class="o">.</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()</span><span class="o">.</span><span class="n">as_list</span><span class="p">()[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">val</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()</span> <span class="o">!=</span> <span class="n">dst_shape</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">dst</span><span class="o">.</span><span class="n">tf_shape</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;scatter&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;values </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;dst </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">dst</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;indices </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">dst</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;dst base </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bases</span><span class="p">[</span><span class="n">dst</span><span class="o">.</span><span class="n">key</span><span class="p">])</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;reads_by_base </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">reads_by_base</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">bases</span><span class="p">[</span><span class="n">dst</span><span class="o">.</span><span class="n">key</span><span class="p">]])</span>
+
+        <span class="c1"># make sure that any reads to the target signal happen before this</span>
+        <span class="c1"># write (note: this is only any reads that have happened since the</span>
+        <span class="c1"># last write, since each write changes the base array object)</span>
+        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">control_dependencies</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">reads_by_base</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">bases</span><span class="p">[</span><span class="n">dst</span><span class="o">.</span><span class="n">key</span><span class="p">]]):</span>
+            <span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bases</span><span class="p">[</span><span class="n">dst</span><span class="o">.</span><span class="n">key</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">dst</span><span class="o">.</span><span class="n">tf_slice</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="n">var</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()</span><span class="o">.</span><span class="n">is_compatible_with</span><span class="p">(</span><span class="n">val</span><span class="o">.</span><span class="n">get_shape</span><span class="p">())</span>
+                <span class="ow">and</span> <span class="n">dst</span><span class="o">.</span><span class="n">indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span>
+                <span class="ow">and</span> <span class="n">dst</span><span class="o">.</span><span class="n">indices</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">var</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+                <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">dst</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span> <span class="o">==</span> <span class="n">var</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">):</span>
+                <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;inc&quot;</span><span class="p">:</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="n">tf_compat</span><span class="o">.</span><span class="n">assign_add</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">use_locking</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">write_types</span><span class="p">[</span><span class="s2">&quot;assign_add&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="n">tf_compat</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">use_locking</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">write_types</span><span class="p">[</span><span class="s2">&quot;assign&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;inc&quot;</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">tf_compat</span><span class="o">.</span><span class="n">scatter_add</span><span class="p">(</span>
+                    <span class="n">var</span><span class="p">,</span> <span class="n">dst</span><span class="o">.</span><span class="n">tf_indices</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">use_locking</span><span class="o">=</span><span class="kc">False</span>
+                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_types</span><span class="p">[</span><span class="s2">&quot;scatter_add&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">tf_compat</span><span class="o">.</span><span class="n">scatter_update</span><span class="p">(</span>
+                    <span class="n">var</span><span class="p">,</span> <span class="n">dst</span><span class="o">.</span><span class="n">tf_indices</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">use_locking</span><span class="o">=</span><span class="kc">False</span>
+                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_types</span><span class="p">[</span><span class="s2">&quot;scatter_update&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">bases</span><span class="p">[</span><span class="n">dst</span><span class="o">.</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span>
+
+        <span class="c1"># update reads_by_base. the general workflow is</span>
+        <span class="c1"># gather -&gt; computation -&gt; scatter</span>
+        <span class="c1"># so when we get a scatter, we assume that that value indicates that</span>
+        <span class="c1"># all the previous gathers are complete. so we block any writes to</span>
+        <span class="c1"># those bases on the scatter value, to be sure that the</span>
+        <span class="c1"># computation step is complete before the values can be overwritten</span>
+        <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">gather_bases</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reads_by_base</span><span class="p">[</span><span class="n">b</span><span class="p">]</span> <span class="o">+=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">bases</span><span class="p">[</span><span class="n">dst</span><span class="o">.</span><span class="n">key</span><span class="p">]]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gather_bases</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;new dst base </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bases</span><span class="p">[</span><span class="n">dst</span><span class="o">.</span><span class="n">key</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="SignalDict.gather"><a class="viewcode-back" href="../../reference.html#nengo_dl.signals.SignalDict.gather">[docs]</a>    <span class="k">def</span> <span class="nf">gather</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">force_copy</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetches the data corresponding to ``src`` from the base array.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        src : `.TensorSignal`</span>
+<span class="sd">            Signal indicating the data to be read from base array</span>
+<span class="sd">        force_copy : bool</span>
+<span class="sd">            If True, always perform a gather, not a slice (this forces a</span>
+<span class="sd">            copy). Note that setting ``force_copy=False`` does not guarantee</span>
+<span class="sd">            that a copy won&#39;t be performed.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        gathered : ``tf.Tensor``</span>
+<span class="sd">            Tensor object corresponding to a dense subset of data from the</span>
+<span class="sd">            base array</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;gather&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;src </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">src</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;indices </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">src</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;src base </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bases</span><span class="p">[</span><span class="n">src</span><span class="o">.</span><span class="n">key</span><span class="p">])</span>
+
+        <span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bases</span><span class="p">[</span><span class="n">src</span><span class="o">.</span><span class="n">key</span><span class="p">]</span>
+
+        <span class="c1"># we prefer to get the data via `strided_slice` or `identity` if</span>
+        <span class="c1"># possible, as it is more efficient</span>
+        <span class="k">if</span> <span class="n">force_copy</span> <span class="ow">or</span> <span class="n">src</span><span class="o">.</span><span class="n">tf_slice</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">src</span><span class="o">.</span><span class="n">tf_indices</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">read_types</span><span class="p">[</span><span class="s2">&quot;gather&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="p">(</span>
+            <span class="n">src</span><span class="o">.</span><span class="n">indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span>
+            <span class="ow">and</span> <span class="n">src</span><span class="o">.</span><span class="n">indices</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">var</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span> <span class="o">==</span> <span class="n">var</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="p">):</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">var</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">read_types</span><span class="p">[</span><span class="s2">&quot;identity&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">strided_slice</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="o">*</span><span class="n">src</span><span class="o">.</span><span class="n">tf_slice</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">read_types</span><span class="p">[</span><span class="s2">&quot;strided_slice&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># reshape the data according to the shape set in `src`, if there is</span>
+        <span class="c1"># one, otherwise keep the shape of the base array</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()</span> <span class="o">!=</span> <span class="n">src</span><span class="o">.</span><span class="n">full_shape</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">src</span><span class="o">.</span><span class="n">tf_shape</span><span class="p">)</span>
+
+        <span class="c1"># for some reason the shape inference doesn&#39;t work in some cases</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">set_shape</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">full_shape</span><span class="p">)</span>
+
+        <span class="c1"># whenever we read from an array we use this to mark it as &quot;read&quot;</span>
+        <span class="c1"># (so that any future writes to the array will be scheduled after</span>
+        <span class="c1"># the read)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mark_gather</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="SignalDict.mark_gather"><a class="viewcode-back" href="../../reference.html#nengo_dl.signals.SignalDict.mark_gather">[docs]</a>    <span class="k">def</span> <span class="nf">mark_gather</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Marks ``src`` as being gathered, but doesn&#39;t actually perform a</span>
+<span class="sd">        gather.  Used to indicate that some computation relies on ``src``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        src : `.TensorSignal`</span>
+<span class="sd">            Signal indicating the data being read</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">gather_bases</span> <span class="o">+=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">bases</span><span class="p">[</span><span class="n">src</span><span class="o">.</span><span class="n">key</span><span class="p">]]</span></div>
+
+<div class="viewcode-block" id="SignalDict.combine"><a class="viewcode-back" href="../../reference.html#nengo_dl.signals.SignalDict.combine">[docs]</a>    <span class="k">def</span> <span class="nf">combine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sigs</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Combine&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Combines several TensorSignals into one by concatenating along</span>
+<span class="sd">        the first axis.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sigs : list of `.TensorSignal` or `~nengo.builder.Signal`</span>
+<span class="sd">            Signals to be combined</span>
+<span class="sd">        label : str</span>
+<span class="sd">            Name for combined signal (to help with debugging)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        sig : `.TensorSignal`</span>
+<span class="sd">            New TensorSignal representing the concatenation of the data in</span>
+<span class="sd">            ``sigs``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sigs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sigs</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sigs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="n">Signal</span><span class="p">,</span> <span class="n">TensorSignal</span><span class="p">))</span>
+
+        <span class="n">sigs</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">Signal</span><span class="p">)</span> <span class="k">else</span> <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sigs</span><span class="p">]</span>
+
+        <span class="c1"># make sure all the signals have the same base</span>
+        <span class="c1"># note: this also tells us that they have the same dtype and</span>
+        <span class="c1"># minibatching</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">sigs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">key</span>
+        <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="n">key</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sigs</span><span class="p">)</span>
+
+        <span class="c1"># make sure all signals have the same shape (except first axis,</span>
+        <span class="c1"># which we&#39;re concatenating along); note, this can fail even if they</span>
+        <span class="c1"># all have the same base, due to reshaping</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sigs</span><span class="p">]),)</span> <span class="o">+</span> <span class="n">sigs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">==</span> <span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sigs</span><span class="p">)</span>
+
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">s</span><span class="o">.</span><span class="n">indices</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sigs</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_tensor_signal</span><span class="p">(</span>
+            <span class="n">indices</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">sigs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">sigs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">minibatched</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output</span></div>
+
+<div class="viewcode-block" id="SignalDict.make_internal"><a class="viewcode-back" href="../../reference.html#nengo_dl.signals.SignalDict.make_internal">[docs]</a>    <span class="k">def</span> <span class="nf">make_internal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">minibatched</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a variable to represent an internal simulation signal.</span>
+
+<span class="sd">        This is to handle the case where we want to add a signal that is</span>
+<span class="sd">        not represented as a `nengo.builder.Signal` in the Nengo op graph.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        name : str</span>
+<span class="sd">            Name for the signal/variable.</span>
+<span class="sd">        shape : tuple of int</span>
+<span class="sd">            Shape of the signal/variable.</span>
+<span class="sd">        minibatched : bool</span>
+<span class="sd">            Whether or not this signal contains a minibatch dimension.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        sig : `.TensorSignal`</span>
+<span class="sd">            A TensorSignal representing the newly created variable.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sig</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_tensor_signal</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">object</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">minibatched</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">name</span>
+        <span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">tf_compat</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span>
+            <span class="n">tf_compat</span><span class="o">.</span><span class="n">get_default_graph</span><span class="p">()</span><span class="o">.</span><span class="n">get_name_scope</span><span class="p">(),</span> <span class="n">reuse</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">):</span>
+            <span class="n">var</span> <span class="o">=</span> <span class="n">tf_compat</span><span class="o">.</span><span class="n">get_local_variable</span><span class="p">(</span>
+                <span class="n">name</span><span class="p">,</span>
+                <span class="n">shape</span><span class="o">=</span><span class="n">sig</span><span class="o">.</span><span class="n">full_shape</span><span class="p">,</span>
+                <span class="n">dtype</span><span class="o">=</span><span class="n">sig</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+                <span class="n">trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">initializer</span><span class="o">=</span><span class="n">tf_compat</span><span class="o">.</span><span class="n">initializers</span><span class="o">.</span><span class="n">zeros</span><span class="p">(),</span>
+                <span class="n">use_resource</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">internal_vars</span><span class="p">[</span><span class="n">sig</span><span class="o">.</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">var</span>
+
+        <span class="k">return</span> <span class="n">sig</span></div>
+
+<div class="viewcode-block" id="SignalDict.get_tensor_signal"><a class="viewcode-back" href="../../reference.html#nengo_dl.signals.SignalDict.get_tensor_signal">[docs]</a>    <span class="k">def</span> <span class="nf">get_tensor_signal</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">minibatched</span><span class="p">,</span> <span class="n">signal</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;TensorSignal&quot;</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a new ``TensorSignal`` with the given properties.</span>
+
+<span class="sd">        This should be used rather than instantiating a new TensorSignal</span>
+<span class="sd">        directly, as it handles some extra book-keeping (e.g., using the</span>
+<span class="sd">        custom `.constant` function).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        indices : tuple or list or `~numpy.ndarray` of int</span>
+<span class="sd">            Indices along the first axis of the base array corresponding to the</span>
+<span class="sd">            data for this signal</span>
+<span class="sd">        key : object</span>
+<span class="sd">            Key mapping to the base array that contains the data for this</span>
+<span class="sd">            signal</span>
+<span class="sd">        dtype : `~numpy.dtype`</span>
+<span class="sd">            dtype of the values represented by this signal</span>
+<span class="sd">        shape : tuple of int</span>
+<span class="sd">            View shape of this signal (may differ from shape of base array)</span>
+<span class="sd">        minibatched : bool</span>
+<span class="sd">            Whether or not this signal contains a minibatch dimension</span>
+<span class="sd">        signal : `~nengo.builder.Signal`</span>
+<span class="sd">            If not None, associate the new ``TensorSignal`` with the given</span>
+<span class="sd">            ``Signal`` in the ``sig_map``</span>
+<span class="sd">        label : str</span>
+<span class="sd">            Name for this signal, used to make debugging easier</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        sig : `.TensorSignal`</span>
+<span class="sd">            A new ``TensorSignal`` with the given properties</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">tensor_sig</span> <span class="o">=</span> <span class="n">TensorSignal</span><span class="p">(</span>
+            <span class="n">indices</span><span class="p">,</span>
+            <span class="n">key</span><span class="p">,</span>
+            <span class="n">dtype</span><span class="p">,</span>
+            <span class="n">shape</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">minibatch_size</span> <span class="k">if</span> <span class="n">minibatched</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constant</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">signal</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">is_sparse</span><span class="p">(</span><span class="n">signal</span><span class="p">):</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span> <span class="o">==</span> <span class="n">signal</span><span class="o">.</span><span class="n">size</span>
+                <span class="k">assert</span> <span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">size</span><span class="p">,)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span>
+                    <span class="mi">1</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">signal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="p">)</span>
+                <span class="k">assert</span> <span class="n">signal</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">signal</span><span class="o">.</span><span class="n">minibatched</span> <span class="o">==</span> <span class="n">minibatched</span>
+            <span class="bp">self</span><span class="p">[</span><span class="n">signal</span><span class="p">]</span> <span class="o">=</span> <span class="n">tensor_sig</span>
+
+        <span class="k">return</span> <span class="n">tensor_sig</span></div>
+
+<div class="viewcode-block" id="SignalDict.constant"><a class="viewcode-back" href="../../reference.html#nengo_dl.signals.SignalDict.constant">[docs]</a>    <span class="k">def</span> <span class="nf">constant</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cutoff</span><span class="o">=</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="mi">25</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a constant Tensor containing the given value.</span>
+
+<span class="sd">        The returned Tensor may be underpinned by a ``tf.constant`` op, or</span>
+<span class="sd">        a ``tf.Variable`` that will be initialized to the constant value.  We</span>
+<span class="sd">        use the latter in order to avoid storing large constant values in the</span>
+<span class="sd">        TensorFlow GraphDef, which has a hard-coded limit of 2GB at the moment.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        value : `~numpy.ndarray`</span>
+<span class="sd">            Array containing the value of the constant</span>
+<span class="sd">        dtype : `~numpy.dtype`</span>
+<span class="sd">            The type for the constant (if ``None``, the dtype of ``value``</span>
+<span class="sd">            will be used)</span>
+<span class="sd">        cutoff : int</span>
+<span class="sd">            The size of constant (in bytes) for which we will switch from</span>
+<span class="sd">            ``tf.constant`` to ``tf.Variable``</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        constant : ``tf.Tensor``</span>
+<span class="sd">            A tensor representing the given value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">as_dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">nbytes</span> <span class="o">&gt;</span> <span class="n">cutoff</span><span class="p">:</span>
+
+            <span class="k">def</span> <span class="nf">make_ph</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">_</span><span class="p">):</span>
+                <span class="n">ph</span> <span class="o">=</span> <span class="n">tf_compat</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">constant_phs</span><span class="p">[</span><span class="n">ph</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="k">return</span> <span class="n">ph</span>
+
+            <span class="k">with</span> <span class="n">tf_compat</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s2">&quot;constant_vars&quot;</span><span class="p">,</span> <span class="n">reuse</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+                <span class="c1"># tensorflow doesn&#39;t support int32 variables on the gpu, only</span>
+                <span class="c1"># int64 (for some reason). we don&#39;t want to use int64 since</span>
+                <span class="c1"># that would increase the size a lot, so we allow the variable</span>
+                <span class="c1"># to be created on the CPU if necessary, and then move it to</span>
+                <span class="c1"># the GPU with the identity</span>
+                <span class="c1"># TODO: double check if this is still true in the future</span>
+                <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="kc">None</span><span class="p">):</span>
+                    <span class="n">const_var</span> <span class="o">=</span> <span class="n">tf_compat</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span>
+                        <span class="s2">&quot;constant_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">constant_phs</span><span class="p">),</span>
+                        <span class="n">initializer</span><span class="o">=</span><span class="n">make_ph</span><span class="p">,</span>
+                        <span class="n">shape</span><span class="o">=</span><span class="n">value</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+                        <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                        <span class="n">collections</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;constants&quot;</span><span class="p">],</span>
+                        <span class="n">trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="n">use_resource</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="p">)</span>
+
+                <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">const_var</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SignalDict.op_constant"><a class="viewcode-back" href="../../reference.html#nengo_dl.signals.SignalDict.op_constant">[docs]</a>    <span class="k">def</span> <span class="nf">op_constant</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">,</span> <span class="n">op_sizes</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">ndims</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a tensor representing the constant parameters of an op group.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ops : list of object</span>
+<span class="sd">            The operators for some merged group of ops</span>
+<span class="sd">        op_sizes : list of int</span>
+<span class="sd">            The number of constant elements in each op</span>
+<span class="sd">        attr : str</span>
+<span class="sd">            The attribute of the op that describes the constant parameter</span>
+<span class="sd">        dtype : `~numpy.dtype`</span>
+<span class="sd">            Numeric type of the parameter</span>
+<span class="sd">        ndims : int</span>
+<span class="sd">            Empty dimensions will be added to the end of the returned tensor</span>
+<span class="sd">            for all ndims &gt; 1 (in the case that it is not a scalar).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        constant : ``tf.Tensor``</span>
+<span class="sd">            Tensor containing the values of ``attr`` for the given ops.  This</span>
+<span class="sd">            will be a scalar if all the ops have the same parameter value, or</span>
+<span class="sd">            an array giving the parameter value for each element in each op.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">vals</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">vals</span><span class="p">,</span> <span class="n">vals</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="n">vals</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">as_dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">))</span>
+
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">op_sizes</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">ops</span><span class="p">)</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="nb">sum</span><span class="p">(</span><span class="n">op_sizes</span><span class="p">)]</span> <span class="o">+</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">ndims</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">val</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">vals</span><span class="p">,</span> <span class="n">op_sizes</span><span class="p">):</span>
+            <span class="n">v</span><span class="p">[</span><span class="n">k</span> <span class="p">:</span> <span class="n">k</span> <span class="o">+</span> <span class="n">size</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+            <span class="n">k</span> <span class="o">+=</span> <span class="n">size</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sig</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sig_map</span><span class="p">[</span><span class="n">sig</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sig</span><span class="p">,</span> <span class="n">tensor_sig</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_map</span><span class="p">[</span><span class="n">sig</span><span class="p">]</span> <span class="o">=</span> <span class="n">tensor_sig</span>
+
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_map</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_map</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sig</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">sig</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sig_map</span></div>
+</pre></div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div><footer class="text-light footer-main gradient-bottom">
+  <p class="small text-center mb-0">
+    <a class="no-hover-line" href="https://appliedbrainresearch.com">
+      <img
+        src="https://appliedbrainresearch.com/img/logo-blue-notext.svg"
+        height="48"
+      />
+    </a>
+    <a href="https://www.nengo.ai/">What is Nengo?</a>
+    <a href="https://www.nengo.ai/examples/">Examples</a>
+    <a href="https://www.nengo.ai/documentation/">Documentation</a>
+    <a href="https://www.nengo.ai/getting-started/">Getting started</a>
+    <a href="https://www.nengo.ai/privacy/">Privacy</a>
+  </p>
+  <p class="small text-center mb-0">&copy; Applied Brain Research</p>
+</footer>
+<script>
+  function switchVersion(select) {
+    var option = select.selectedOptions[0];
+    if (option.hasAttribute("value")) {
+      window.location = option.value;
+    }
+  }
+</script>
+
+<script>
+  var elements = document.querySelectorAll('.sidenav');
+  Stickyfill.add(elements);
+</script>
+<script>
+  ScrollReveal().reveal(".fade-in", {
+      scale: 0.85,
+      duration: 1000,
+      delay: 250,
+      interval: 50
+  });
+</script>
+<script>
+  $('a.toggle-sidenav').on('click', function(e) {
+    e.preventDefault();
+    if ( $(this).hasClass('active') ) {
+      $(this).removeClass('active');
+      $('.sidenav').removeClass('open');
+    } else {
+      $(this).addClass('active');
+      $('.sidenav').addClass('open');
+    }
+  });
+</script>
+<script>
+  var lists = document.querySelectorAll('.toctree ul');
+  lists.forEach((ul) => {
+      ul.classList.add("nav");
+  });
+  var links = document.querySelectorAll('.toctree a');
+  links.forEach((link) => {
+      link.classList.add("nav-link");
+  });
+  $("body").scrollspy({target: ".sidenav"});
+</script>
+  </body>
+</html>
