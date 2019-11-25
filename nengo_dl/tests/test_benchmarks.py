@@ -156,28 +156,18 @@ def test_cli():
 
 @pytest.mark.performance
 @pytest.mark.parametrize(
-    "net, train, minibatch_size, use_loop, min, max",
+    "net, train, minibatch_size, min, max",
     [
-        (
-            benchmarks.cconv(128, 64, nengo.RectifiedLinear()),
-            False,
-            64,
-            True,
-            0.7,
-            0.85,
-        ),
-        (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, True, 1.5, 1.7),
-        (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, False, 0.15, 0.2),
+        (benchmarks.cconv(128, 64, nengo.RectifiedLinear()), False, 64, 0.7, 0.85,),
+        (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, 1.5, 1.7),
         (
             benchmarks.integrator(128, 32, nengo.RectifiedLinear()),
             True,
             64,
-            True,
             0.55,
             0.75,
         ),
-        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, True, 1.0, 1.2),
-        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, False, 0.1, 0.15),
+        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 1.0, 1.2),
         (
             benchmarks.random_network(
                 64,
@@ -189,14 +179,13 @@ def test_cli():
             ),
             False,
             None,
-            True,
             0.4,
             0.6,
         ),
         # (benchmarks.spaun(1), False, None, 8.02, 9.52),
     ],
 )
-def test_performance(net, train, minibatch_size, use_loop, min, max):
+def test_performance(net, train, minibatch_size, min, max):
     # performance is based on ABR GPU server
     # CPU: Intel Xeon E5-1650 v3 @ 3.50GHz
     # GPU: GeForce GTX Titan X
@@ -209,8 +198,8 @@ def test_performance(net, train, minibatch_size, use_loop, min, max):
         net,
         minibatch_size=minibatch_size,
         train=train,
-        n_steps=1000 if use_loop else 100,
-        unroll_simulation=25 if use_loop else 100,
+        n_steps=1000,
+        unroll_simulation=25,
         progress_bar=False,
         do_profile=False,
         reps=5,
