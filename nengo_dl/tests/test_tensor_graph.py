@@ -109,10 +109,9 @@ def test_mark_signals_config():
             net.config[ens0.neurons].trainable = True
 
             with nengo.Network():
-                with nengo.Network() as subnet:
+                with nengo.Network():
                     # check that subnetworks can override parent configs
-                    # net.config[nengo.Ensemble].trainable = True
-                    net.config[subnet].trainable = True
+                    config.configure_settings(trainable=True)
                     ens1 = nengo.Ensemble(10, 1, label="ens1")
 
                     with nengo.Network():

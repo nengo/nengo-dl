@@ -88,12 +88,15 @@ def configure_settings(**kwargs):
 
     for attr, val in kwargs.items():
         if attr == "trainable":
-            for obj in (Ensemble, Connection, ensemble.Neurons, Network):
+            # for trainable, we set it on the nearest containing network (rather than
+            # the top-level)
+            sub_config = Network.context[-1].config
+            for obj in (Ensemble, Connection, ensemble.Neurons):
                 try:
-                    obj_params = config[obj]
+                    obj_params = sub_config[obj]
                 except ConfigError:
-                    config.configures(obj)
-                    obj_params = config[obj]
+                    sub_config.configures(obj)
+                    obj_params = sub_config[obj]
 
                 obj_params.set_param(
                     "trainable", BoolParam("trainable", val, optional=True)

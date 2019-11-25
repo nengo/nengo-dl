@@ -53,7 +53,7 @@ override the default for all objects.
 
 Once the ``trainable`` attribute has been added to all the objects in a model,
 the ``Network.config`` system can then be used to control the trainability of
-individual objects/networks.
+individual objects.
 
 For example, suppose we only want to optimize one connection in our network,
 while leaving everything else unchanged.  This could be achieved via
@@ -83,7 +83,7 @@ Or if we wanted to disable training for some subnetwork:
         nengo_dl.configure_settings(trainable=None)
         ...
         with nengo.Network() as subnet:
-            net.config[subnet].trainable = False
+            nengo_dl.configure_settings(trainable=False)
             ...
 
 Note that ``config[nengo.Ensemble].trainable`` controls both encoders and
@@ -91,49 +91,59 @@ biases, as both are properties of an Ensemble.  However, it is possible to
 separately control the biases via ``config[nengo.ensemble.Neurons].trainable``
 or ``config[my_ensemble.neurons].trainable``.
 
-There are two important caveats to keep in mind when configuring ``trainable``,
-which differ from the standard config behaviour:
+There is one important caveat to keep in mind when configuring ``trainable``,
+which differ from the standard config behaviour. ``trainable`` applies to all objects
+in a network, regardless of whether
+they were created before or after ``trainable`` is set.  For example,
 
-1. ``trainable`` applies to all objects in a network, regardless of whether
-   they were created before or after ``trainable`` is set.  For example,
+.. testcode::
 
-   .. testcode::
+    with nengo.Network() as net:
+        nengo_dl.configure_settings(trainable=None)
+        ...
+        net.config[nengo.Ensemble].trainable = False
+        a = nengo.Ensemble(10, 1)
+        ...
+
+is the same as
+
+.. testcode::
+
+    with nengo.Network() as net:
+        nengo_dl.configure_settings(trainable=None)
+        ...
+        a = nengo.Ensemble(10, 1)
+        net.config[nengo.Ensemble].trainable = False
+        ...
+
+Trainability settings are prioritized according to the following rules:
+
+1. Settings in lower subnetworks take priority.
+
+    .. testcode::
+
+        with nengo.Network() as net:
+            nengo_dl.configure_settings(trainable=True)
+            with nengo.Network() as subnet:
+                nengo_dl.configure_settings(trainable=False)
+
+                # this ensemble will not be trainable, because settings on
+                # `subnet` override settings on `net`
+                a = nengo.Ensemble(10, 1)
+
+2. Settings on instances take priority over classes.
+
+    .. testcode::
 
         with nengo.Network() as net:
             nengo_dl.configure_settings(trainable=None)
-            ...
-            net.config[nengo.Ensemble].trainable = False
+
             a = nengo.Ensemble(10, 1)
-            ...
 
-   is the same as
-
-   .. testcode::
-
-        with nengo.Network() as net:
-            nengo_dl.configure_settings(trainable=None)
-            ...
-            a = nengo.Ensemble(10, 1)
+            # this will make `a` trainable (even though Ensembles in general
+            # are not trainable)
+            net.config[a].trainable = True
             net.config[nengo.Ensemble].trainable = False
-            ...
-
-
-2. ``trainable`` can only be set on the config of the top-level network.  For
-   example,
-
-   .. testcode::
-
-       with nengo.Network() as net:
-           nengo_dl.configure_settings(trainable=None)
-
-           with nengo.Network() as subnet:
-               my_ens = nengo.Ensemble(10, 1)
-
-               # incorrect
-               # subnet.config[my_ens].trainable = False
-
-               # correct
-               net.config[my_ens].trainable = False
 
 .. _config-planner:
 

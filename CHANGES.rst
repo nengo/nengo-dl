@@ -137,6 +137,9 @@ Release History
 - DotInc operators with different signal sizes will no longer be merged (these
   merged operators had to use a less efficient sparse matrix multiplication, and in
   general this cost outweighed the benefit of merging).
+- Trainability can now be configured in the config of subnetworks. This replaces
+  the ability to mark Networks as (non)trainable. See the `updated documentation
+  <https://www.nengo.ai/nengo-dl/config.html#trainable>`__ for details.
 
 **Fixed**
 

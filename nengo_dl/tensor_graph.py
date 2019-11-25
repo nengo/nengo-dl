@@ -755,53 +755,43 @@ class TensorGraph(tf.keras.layers.Layer):
         ``net.config[nengo.Ensemble].trainable = False``)
         """
 
-        def get_trainable(net_config, obj, network_trainable):
+        def get_trainable(parent_configs, obj):
             """Looks up the current value of ``obj.trainable``."""
 
             if self.inference_only:
                 return False
 
-            try:
-                if obj in net_config.params:
-                    # priority #1: instance config
-                    trainable = net_config[obj].trainable
-                elif network_trainable is not 1:  # noqa: F632
-                    # priority #2: network setting
-                    trainable = network_trainable
-                else:
-                    # priority #3: class config
-                    trainable = net_config[obj].trainable
-            except (ConfigError, AttributeError):
-                trainable = network_trainable
+            trainable = None
 
-            # we return 1 if trainable isn't configured, since the default is
-            # for everything to be trainable but we want to be able to
-            # distinguish whether something was specifically set to be
-            # trainable (True) or just defaulting to trainable (1)
+            # we go from top down (so lower level settings will override)
+            for cfg in parent_configs:
+                try:
+                    trainable = getattr(cfg[obj], "trainable", trainable)
+                except ConfigError:
+                    # object not configured in this network config
+                    pass
+
+            # default to 1 (so that we can distinguish between an object being
+            # set to trainable vs defaulting to trainable)
             return 1 if trainable is None else trainable
 
-        def mark_network(net_config, net, network_trainable):
-            """Recursively marks the signals for objects within each
-            subnetwork."""
+        def mark_network(parent_configs, net):
+            """Recursively marks the signals for objects within each subnetwork."""
+
+            parent_configs = parent_configs + [net.config]
 
             for subnet in net.networks:
-                mark_network(
-                    net_config,
-                    subnet,
-                    get_trainable(net_config, subnet, network_trainable),
-                )
+                mark_network(parent_configs, subnet)
 
             # encoders and biases are trainable
             for ens in net.ensembles:
-                ens_trainable = get_trainable(net_config, ens, network_trainable)
+                ens_trainable = get_trainable(parent_configs, ens)
 
                 self.model.sig[ens]["encoders"].trainable = ens_trainable
                 self.model.sig[ens]["encoders"].minibatched = False
 
                 if not isinstance(ens.neuron_type, Direct):
-                    neurons_trainable = get_trainable(
-                        net_config, ens.neurons, network_trainable
-                    )
+                    neurons_trainable = get_trainable(parent_configs, ens.neurons)
                     if neurons_trainable is 1:  # noqa: F632
                         neurons_trainable = ens_trainable
 
@@ -813,7 +803,7 @@ class TensorGraph(tf.keras.layers.Layer):
                 # note: this doesn't include probe connections, since they
                 # aren't added to the network
                 self.model.sig[conn]["weights"].trainable = get_trainable(
-                    net_config, conn, network_trainable
+                    parent_configs, conn
                 )
                 self.model.sig[conn]["weights"].minibatched = False
 
@@ -858,12 +848,7 @@ class TensorGraph(tf.keras.layers.Layer):
                 UserWarning,
             )
         else:
-            net_config = self.model.toplevel.config
-            mark_network(
-                net_config,
-                self.model.toplevel,
-                get_trainable(net_config, self.model.toplevel, 1),
-            )
+            mark_network([], self.model.toplevel)
 
             # the connections to connection probes are not trainable, but
             # also not minibatched
