@@ -140,6 +140,9 @@ Release History
 - Trainability can now be configured in the config of subnetworks. This replaces
   the ability to mark Networks as (non)trainable. See the `updated documentation
   <https://www.nengo.ai/nengo-dl/config.html#trainable>`__ for details.
+- Training/evaluation target data can now have a different number of timesteps than
+  input data (as long as it aligns with the number of timesteps expected by the
+  loss function).
 
 **Fixed**
 

@@ -923,12 +923,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
             input_batch = (self.minibatch_size if "on_batch" in func_type else None,)
 
         if y is not None:
-            # check that y is consistent with x (rather than only being
-            # internally consistent)
             y = self._standardize_data(y, self.model.probes)
-            self._check_data(
-                y, n_steps=input_steps, batch_size=input_batch, nodes=False
-            )
+            # we set n_steps=None because targets do not necessarily need to have
+            # the same number of timesteps as input (depending on the loss function)
+            self._check_data(y, n_steps=None, batch_size=input_batch, nodes=False)
 
         # warn for synapses with n_steps=1
         # note: we don't warn if stateful, since there could be effects across runs
@@ -1795,9 +1793,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
                     % (x.shape[0], self.minibatch_size),
                     "%s data" % name,
                 )
-            if x.shape[1] % self.unroll != 0:
+            if nodes and x.shape[1] % self.unroll != 0:
                 raise ValidationError(
-                    "The number of timesteps in data (%s) must be evenly "
+                    "The number of timesteps in input data (%s) must be evenly "
                     "divisible by unroll_simulation (%s)" % (x.shape[1], self.unroll),
                     "data",
                 )
@@ -1809,13 +1807,19 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         for i in range(2):
             if args[i] is None:
+                if i == 1 and not nodes:
+                    # we don't apply this check to probes, because target values can
+                    # have different values for n_steps (as long as it matches what is
+                    # expected by the loss function)
+                    continue
+
                 if len(data) > 0:
                     val = next(iter(data.values())).shape[i]
                 for n, x in data.items():
                     if x.shape[i] != val:
                         raise ValidationError(
                             "Elements have different %s: %s vs %s"
-                            % (labels[i], val, x.shape[0]),
+                            % (labels[i], val, x.shape[i]),
                             "data",
                         )
             else:

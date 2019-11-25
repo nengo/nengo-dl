@@ -376,23 +376,17 @@ def test_train_errors(Simulator):
 
     n_steps = 20
     with Simulator(net) as sim:
-        sim.compile(tf.optimizers.SGD(0), loss=tf.losses.mse)
-
-        # error for mismatched n_steps
-        with pytest.raises(ValidationError, match="does not match expected size"):
-            sim.fit({a: np.ones((1, n_steps + 5, 1))}, {p: np.ones((1, n_steps, 1))})
+        sim.compile(
+            optimizer=tf.optimizers.SGD(0),
+            loss=lambda y_true, y_pred: tf.losses.mse(y_true[:, -1], y_pred[:, -1]),
+        )
 
         # error for mismatched batch size
         with pytest.raises(ValidationError, match="does not match expected size"):
             sim.fit({a: np.ones((2, n_steps, 1))}, {p: np.ones((1, n_steps, 1))})
 
-        # error for mismatched n_steps (in targets)
-        with pytest.raises(ValidationError, match="does not match expected size"):
-            sim.fit({a: np.ones((1, n_steps, 1))}, {p: np.ones((1, n_steps + 5, 1))})
-
-        # error for mismatched batch size (in targets)
-        with pytest.raises(ValidationError, match="does not match expected size"):
-            sim.fit({a: np.ones((1, n_steps, 1))}, {p: np.ones((2, n_steps, 1))})
+        # no error for mismatched n_steps
+        sim.fit({a: np.ones((1, n_steps + 5, 1))}, {p: np.ones((1, n_steps, 1))})
 
     # error when calling train after closing
     with pytest.raises(SimulatorClosed, match="call fit"):
@@ -433,7 +427,7 @@ def test_evaluate_errors(Simulator):
 
     n_steps = 20
     with Simulator(net, unroll_simulation=1) as sim:
-        sim.compile(loss={p: tf.losses.mse})
+        sim.compile(loss=lambda y_true, y_pred: 1.0)
 
         # check that valid inputs pass
         assert np.allclose(
@@ -448,11 +442,8 @@ def test_evaluate_errors(Simulator):
                 n_steps=n_steps,
             )
 
-        # error for mismatched n_steps (between inputs and targets)
-        with pytest.raises(ValidationError, match="does not match expected size"):
-            sim.evaluate(
-                {inp: np.ones((1, n_steps, 1))}, {p: np.ones((1, n_steps + 1, 1))}
-            )
+        # no error for mismatched n_steps (between inputs and targets)
+        sim.evaluate({inp: np.ones((1, n_steps, 1))}, {p: np.ones((1, n_steps + 1, 1))})
 
         # error for mismatched batch size (between inputs and targets)
         with pytest.raises(ValidationError, match="does not match expected size"):
@@ -923,8 +914,8 @@ def test_check_data(Simulator):
         # mismatched target data
         with pytest.raises(ValidationError, match="different batch size"):
             sim._check_data({"pa": zeros2, "pb": np.zeros((4, 1, 1))}, nodes=False)
-        with pytest.raises(ValidationError, match="different number of timesteps"):
-            sim._check_data({"pa": zeros2, "pb": np.zeros((3, 2, 1))}, nodes=False)
+        # no error for different n_steps
+        sim._check_data({"pa": zeros2, "pb": np.zeros((3, 2, 1))}, nodes=False)
 
         # data that doesn't match explicit validation value
         with pytest.raises(ValidationError, match="does not match expected size"):
