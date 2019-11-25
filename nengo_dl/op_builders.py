@@ -251,11 +251,6 @@ def sparse_matmul(A_indices, A_data, A_shape, X, transpose_x=False):
 class DotIncBuilder(OpBuilder):
     """
     Build a group of `~nengo.builder.operator.DotInc` operators.
-
-    Notes
-    -----
-    This also builds `~nengo.builder.operator.SparseDotInc` operators (which are a
-    subclass of DotInc).
     """
 
     def __init__(self, ops, signals, config):
@@ -267,129 +262,55 @@ class DotIncBuilder(OpBuilder):
 
         self.mode = "inc" if type(ops[0]) == DotInc else "update"
 
-        # check if all the signals have the same size for the first dimension
-        self.len_match = True
-        for i, s0 in enumerate(ops[0].all_signals):
-            shape0 = s0.shape[0] if s0.shape != () else 1
-
-            for op in ops:
-                s1 = op.all_signals[i]
-                shape1 = s1.shape[0] if s1.shape != () else 1
-                if shape0 != shape1:
-                    self.len_match = False
-                    break
-
-            if not self.len_match:
-                break
-
         self.Y_data = signals.combine([op.Y for op in ops])
 
         # group all the A's and X's
         A_data = signals.combine([op.A for op in ops])
         X_data = signals.combine([op.X for op in ops])
 
-        if self.len_match:
-            # if the first dimensions all match, then we can used the
-            # (batched) matrix multiplication op
+        # separate data from each op along the first dimension
+        self.A_data = A_data.reshape((len(ops), -1, A_data.shape[1]))
+        self.X_data = X_data.reshape((len(ops), -1))
 
-            # separate data from each op along the first dimension
-            self.A_data = A_data.reshape((len(ops), -1, A_data.shape[1]))
-            self.X_data = X_data.reshape((len(ops), -1))
-
-            if self.A_data.minibatched:
-                # change X to matrix
-                self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
-            else:
-                # precompute transposition permutation
-                self.perm = tf.constant((1, 2, 0))
-                self.perm_inv = tf.constant((2, 0, 1))
+        if self.A_data.minibatched:
+            # change X to matrix
+            self.X_data = self.X_data.reshape(self.X_data.shape + (1,))
         else:
-            # if the first dimensions don't match, then we create a block
-            # diagonal matrix out of all the op matrices, and then multiply
-            # them using a sparse matrix multiplication
-
-            self.A_data = A_data.reshape((-1,))
-            self.X_data = X_data
-
-            assert not self.A_data.minibatched
-            assert self.X_data.minibatched and self.Y_data.minibatched
-
-            sparse_indices = []
-            corner = np.zeros(2, dtype=np.int64)
-            for op in ops:
-                block_shape = (op.A.shape[0], op.A.shape[1])
-                idxs = np.reshape(
-                    np.dstack(
-                        np.meshgrid(
-                            np.arange(block_shape[0]),
-                            np.arange(block_shape[1]),
-                            indexing="ij",
-                        )
-                    ),
-                    (-1, 2),
-                )
-                idxs += corner
-                corner += block_shape
-                sparse_indices += [idxs]
-
-            sparse_indices = np.concatenate(sparse_indices, axis=0)
-            self.sparse_indices = tf.constant(
-                sparse_indices,
-                dtype=(
-                    tf.int32
-                    if np.all(sparse_indices < np.iinfo(np.int32).max)
-                    else tf.int64
-                ),
-            )
-            self.A_shape = tf.constant(corner, dtype=tf.int64)
-
             # precompute transposition permutation
-            self.perm = tf.constant((1, 0))
+            self.perm = tf.constant((1, 2, 0))
+            self.perm_inv = tf.constant((2, 0, 1))
 
     def build_step(self, signals):
         A = signals.gather(self.A_data)
         X = signals.gather(self.X_data)
 
-        if self.len_match:
-            if self.A_data.minibatched and self.X_data.minibatched:
-                # (batch, n_ops, a0, a1) x (batch, n_ops, a1, 1)
-                dot = tf.matmul(A, X)
-            elif not self.A_data.minibatched and self.X_data.minibatched:
-                # (n_ops, a0, a1) x (batch, n_ops, a1)
-                # -> (n_ops, a0, a1) x (n_ops, a1, batch)
-                dot = tf.matmul(A, tf.transpose(X, perm=self.perm))
+        if self.A_data.minibatched and self.X_data.minibatched:
+            # (batch, n_ops, a0, a1) x (batch, n_ops, a1, 1)
+            dot = tf.matmul(A, X)
+        elif not self.A_data.minibatched and self.X_data.minibatched:
+            # (n_ops, a0, a1) x (batch, n_ops, a1)
+            # -> (n_ops, a0, a1) x (n_ops, a1, batch)
+            dot = tf.matmul(A, tf.transpose(X, perm=self.perm))
 
-                # transpose back to (batch, n_ops, a0)
-                dot = tf.transpose(dot, perm=self.perm_inv)
+            # transpose back to (batch, n_ops, a0)
+            dot = tf.transpose(dot, perm=self.perm_inv)
 
-                # for some reason the transposing causes TensorFlow to lose track of
-                # the shape (only when the `perm` constants are outside the loop)
-                dot.set_shape((signals.minibatch_size,) + self.A_data.shape[:2])
-            else:
-                raise NotImplementedError
+            # for some reason the transposing causes TensorFlow to lose track of
+            # the shape (only when the `perm` constants are outside the loop)
+            dot.set_shape((signals.minibatch_size,) + self.A_data.shape[:2])
         else:
-            # (sum(a0s), sum(a1s)) x (batch, sum(a1s))
-            # -> (sum(a0s), sum(a1s)) x (sum(a1s), batch)
-            dot = sparse_matmul(
-                self.sparse_indices, A, self.A_shape, X, transpose_x=True
-            )
-            # transpose result back to (batch, sum(a0s))
-            dot = tf.transpose(dot, self.perm)
-
-            dot.set_shape((signals.minibatch_size,) + self.Y_data.shape)
+            raise NotImplementedError
 
         signals.scatter(self.Y_data, dot, mode=self.mode)
 
     @staticmethod
     def mergeable(x, y):
-        # if the matrix (A) is minibatched, then we're in the non-sparse case, and the
-        # first dimensions need to match up (to allow us to separate them by op)
-        if x.A.minibatched:
-            for s0, s1 in zip(x.all_signals, y.all_signals):
-                shape0 = s0.shape[0] if s0.shape != () else 1
-                shape1 = s1.shape[0] if s1.shape != () else 1
-                if shape0 != shape1:
-                    return False
+        # the first dimensions need to match up (to allow us to separate them by op)
+        for s0, s1 in zip(x.all_signals, y.all_signals):
+            shape0 = s0.shape[0] if s0.shape != () else 1
+            shape1 = s1.shape[0] if s1.shape != () else 1
+            if shape0 != shape1:
+                return False
 
         return True
 

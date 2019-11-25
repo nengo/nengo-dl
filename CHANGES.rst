@@ -134,6 +134,9 @@ Release History
   (``tf.keras.backend.set_learning_phase``) before the Simulator is constructed.
 - Increased minimum Nengo core version to 3.0.0.
 - Reduced size of TensorFlow constants created by Reset ops.
+- DotInc operators with different signal sizes will no longer be merged (these
+  merged operators had to use a less efficient sparse matrix multiplication, and in
+  general this cost outweighed the benefit of merging).
 
 **Fixed**
 
