@@ -253,6 +253,24 @@ class TensorGraph(tf.keras.layers.Layer):
         logger.debug([str(x) for x in self.saved_state.values()])
 
         # call build on any TensorNode Layers
+
+        def unbuild(layer):
+            assert layer.built
+
+            # clear any losses attached to layer (they will be recreated in the
+            # build step, so we don't want to keep around any losses
+            # associated with the previous build)
+            # note: not clearing layer._losses, because those are manually added
+            # by the user (not created during the build process)
+            layer._eager_losses = []
+            layer._callable_losses = []
+
+            layer.built = False
+
+            for sub in layer._layers:
+                if isinstance(sub, tf.keras.layers.Layer):
+                    unbuild(sub)
+
         layer_ops = [
             op
             for ops in self.plan
@@ -261,6 +279,10 @@ class TensorGraph(tf.keras.layers.Layer):
             if isinstance(op.func, tf.keras.layers.Layer)
         ]
         for op in layer_ops:
+            if op.func in self._layers:
+                # already built this layer
+                continue
+
             if op.time is None:
                 shape_in = []
             else:
@@ -271,8 +293,11 @@ class TensorGraph(tf.keras.layers.Layer):
                 shape_in = shape_in[0]
 
             if op.func.built:
-                # if the layer already has some defined weights,
-                # then save the weight values so they can be restored
+                # we rebuild the layer (even if it is already built),
+                # because we need to build the weights within the TensorGraph
+                # context
+
+                # save the weight values so they can be restored
                 # exactly inside the tensornode
                 weights = op.func.weights
 
@@ -283,20 +308,12 @@ class TensorGraph(tf.keras.layers.Layer):
                 )
                 with ctx:
                     built_weights = op.func.get_weights()
+
+                # clear the results of previous build
+                unbuild(op.func)
             else:
                 built_weights = None
 
-            # clear any losses attached to layer (they will be recreated in the build
-            # step below, so we don't want to keep around any losses associated with
-            # the previous build)
-            op.func._eager_losses = []
-            op.func._callable_losses = []
-            # note: not clearing op.func._losses, because those are manually added
-            # by the user (not created during the build process)
-
-            # note: we rebuild the layer (even if it is already built),
-            # because we need to build the weights within the TensorGraph
-            # context
             op.func.build(shape_in)
 
             if built_weights is not None:

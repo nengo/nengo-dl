@@ -147,6 +147,7 @@ Release History
 **Fixed**
 
 - Fixed bug due to non-determinism of Process state ordering in Python 3.5.
+- Nested Keras layers passed to TensorNode will be rebuilt correctly if necessary.
 
 **Deprecated**
 

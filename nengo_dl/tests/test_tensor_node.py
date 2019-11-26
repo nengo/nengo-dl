@@ -288,3 +288,36 @@ def test_tensor_layer_deprecation(Simulator):
         sim.run_steps(5)
 
     assert np.allclose(sim.data[p], 1)
+
+
+def test_nested_layer(Simulator):
+    class MyLayer(tf.keras.layers.Layer):
+        def __init__(self):
+            super().__init__()
+            self.layer = tf.keras.layers.Dense(
+                10, kernel_initializer=tf.initializers.ones()
+            )
+
+        def build(self, input_shapes):
+            super().build(input_shapes)
+
+            if not self.layer.built:
+                self.layer.build(input_shapes)
+
+        def call(self, inputs):
+            return self.layer(inputs)
+
+        def compute_output_shape(self, input_shape):
+            return self.layer.compute_output_shape(input_shape)
+
+    with nengo.Network() as net:
+        inp = nengo.Node([1])
+        node = Layer(MyLayer())(inp)
+        p = nengo.Probe(node)
+
+    # do this twice to test layer rebuilding
+    for _ in range(2):
+        with Simulator(net) as sim:
+            sim.run_steps(5)
+
+        assert np.allclose(sim.data[p], 1)
