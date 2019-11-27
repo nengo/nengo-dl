@@ -130,6 +130,7 @@ Release History
   implementations) can be overridden by setting the global Keras learning phase
   (``tf.keras.backend.set_learning_phase``) before the Simulator is constructed.
 - Increased minimum Nengo core version to 3.0.0.
+- Reduced size of TensorFlow constants created by Reset ops.
 
 **Fixed**
 
