@@ -10,12 +10,16 @@
 
 {% block remote_script %}
 {{ super() }}
-        echo "Waiting for lock"
+        echo "Waiting for lock on GPU $GPU_NUM"
         (
             flock -x -w 540 200 || exit 1
-            CUDA_VISIBLE_DEVICES=3 pytest $TEST_ARGS nengo_dl/tests/test_benchmarks.py::test_performance --performance -v --durations 20 --color=yes || exit 1
-            CUDA_VISIBLE_DEVICES=3 pytest $TEST_ARGS nengo_dl -v --durations 20 --color=yes --cov=nengo_dl --cov-report=xml --cov-report=term-missing || exit 1
-            CUDA_VISIBLE_DEVICES=3 pytest $TEST_ARGS --pyargs nengo -v --durations 20 --color=yes --cov=nengo_dl --cov-report=xml --cov-report=term-missing --cov-append || exit 1
-        ) 200>/var/lock/.travis-ci.exclusivelock
-        exit \$?
+            CUDA_VISIBLE_DEVICES="$GPU_NUM" pytest $TEST_ARGS nengo_dl/tests/test_benchmarks.py::test_performance --performance -v --durations 20 --color=yes || exit 1
+            CUDA_VISIBLE_DEVICES="$GPU_NUM" pytest $TEST_ARGS nengo_dl -v --durations 20 --color=yes --cov=nengo_dl --cov-report=xml --cov-report=term-missing || exit 1
+            CUDA_VISIBLE_DEVICES="$GPU_NUM" pytest $TEST_ARGS --pyargs nengo -v --durations 20 --color=yes --cov=nengo_dl --cov-report=xml --cov-report=term-missing --cov-append || exit 1
+        ) 200>/var/lock/.travis-ci.exclusivelock."$GPU_NUM" || REMOTE_STATUS=1
+{% endblock %}
+
+{% block remote_cleanup %}
+          # same as super, but extending the number of old folders we keep
+          ls -tp | grep '{{ pkg }}-' | tail -n +10 | xargs -I {} rm -r -- {}
 {% endblock %}

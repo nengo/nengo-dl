@@ -1,0 +1,35 @@
+{% extends "templates/remote.sh.template" %}
+
+{% block remote_install %}
+{{ super() }}
+        # copy environment variables into remote environment
+        export NUMPY_VERSION="$NUMPY_VERSION"
+        export TF_VERSION="$TF_VERSION"
+        export NENGO_VERSION="$NENGO_VERSION"
+        export SCIPY_VERSION="$SCIPY_VERSION"
+
+        pip install nengo-bones
+        bones-generate --output-dir .ci ci-scripts || REMOTE_STATUS=1
+        conda install -y cudatoolkit=10.0 cudnn
+        bash .ci/{{ remote_script }}.sh install || REMOTE_STATUS=1
+{% endblock %}
+
+{% block remote_script %}
+{{ super() }}
+        export TRAVIS_BRANCH="$TRAVIS_BRANCH"
+        export TRAVIS_TAG="$TRAVIS_TAG"
+        export TEST_ARGS="$TEST_ARGS"
+
+        echo "Waiting for lock on GPU $GPU_NUM"
+        (
+            flock -x -w 540 200 || exit 1
+            CUDA_VISIBLE_DEVICES="$GPU_NUM" bash .ci/{{ remote_script }}.sh script || exit 1
+        ) 200>/var/lock/.travis-ci.exclusivelock."$GPU_NUM" || REMOTE_STATUS=1
+{% endblock %}
+
+{% block after_script %}
+    {% if remote_script == "docs" %}
+    exe rsync -azh "{{ host }}:./tmp/{{ pkg }}-$TRAVIS_JOB_NUMBER/{{ pkg }}-docs" ..
+    {% endif %}
+    exe bash .ci/{{ remote_script }}.sh after_script
+{% endblock %}

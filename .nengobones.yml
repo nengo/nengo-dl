@@ -155,11 +155,21 @@ ci_scripts:
     pip_install:
       - $TF_VERSION
       - $NUMPY_VERSION
-  - template: deploy
   - template: gpu
     host: abrgpu
     travis_var_key: fcdbeb54a1c4
     coverage: true
+  - template: remote-script
+    remote_script: docs
+    output_name: remote-docs
+    host: abrgpu
+    travis_var_key: fcdbeb54a1c4
+  - template: remote-script
+    remote_script: examples
+    output_name: remote-examples
+    host: abrgpu
+    travis_var_key: fcdbeb54a1c4
+  - template: deploy
 
 travis_yml:
   python: 3.6
@@ -169,14 +179,15 @@ travis_yml:
     NENGO_VERSION: nengo[tests]
     SCIPY_VERSION: noop
   jobs:
-    - script: static
-    - script: docs
+    - stage: basic
+      script: static
     - cache: false
     - script: gpu
       test_args: --device /gpu:0
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
         TF_VERSION: tensorflow-gpu
+        GPU_NUM: 3
     - script: test-coverage
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
@@ -190,10 +201,18 @@ travis_yml:
         TF_VERSION: tensorflow==2.0.0
         NUMPY_VERSION: numpy==1.14.5
       python: 3.5
+    - stage: advanced
+      script: remote-docs
+      env:
+        TF_VERSION: tensorflow-gpu
+        GPU_NUM: 3
+    - script: remote-examples
+      env:
+        TF_VERSION: tensorflow-gpu
+        GPU_NUM: 2
     - test_args: --unroll-simulation 5 --simulator-only
     - test_args: --dtype float64 --simulator-only
     - test_args: --inference-only --simulator-only
-    - script: examples
   pypi_user: drasmuss
   deploy_dists:
     - sdist

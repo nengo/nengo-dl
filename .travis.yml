@@ -28,19 +28,14 @@ jobs:
   -
     env:
       SCRIPT="static"
-  -
-    env:
-      SCRIPT="docs"
-    addons:
-      apt:
-        packages:
-          - pandoc
+    stage: basic
   -
     cache: False
   -
     env:
       NENGO_VERSION="git+https://github.com/nengo/nengo.git#egg=nengo[tests]"
       TF_VERSION="tensorflow-gpu"
+      GPU_NUM="3"
       SCRIPT="gpu"
       TEST_ARGS="--device /gpu:0"
   -
@@ -60,6 +55,17 @@ jobs:
     python: 3.5
   -
     env:
+      TF_VERSION="tensorflow-gpu"
+      GPU_NUM="3"
+      SCRIPT="remote-docs"
+    stage: advanced
+  -
+    env:
+      TF_VERSION="tensorflow-gpu"
+      GPU_NUM="2"
+      SCRIPT="remote-examples"
+  -
+    env:
       TEST_ARGS="--unroll-simulation 5 --simulator-only"
   -
     env:
@@ -67,9 +73,6 @@ jobs:
   -
     env:
       TEST_ARGS="--inference-only --simulator-only"
-  -
-    env:
-      SCRIPT="examples"
   - stage: deploy
     if: branch =~ ^release-candidate-* OR tag =~ ^v[0-9]*
     env: SCRIPT="deploy"
