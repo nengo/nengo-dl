@@ -64,7 +64,7 @@ Converter
 Nengo Network. This can be useful if, for example, you want to run a model in different
 Nengo Simulator backends (which will only support the core Nengo objects).
 
-See `the documentation <https://www.nengo.ai/nengo-dl/convert.html>`__ for more
+See `the documentation <https://www.nengo.ai/nengo-dl/converter.html>`__ for more
 details.
 
 .. autosummary::
