@@ -198,7 +198,7 @@ class MessageBar(progressbar.BouncingBar):
     """
 
     def __init__(self, msg="", finish_msg="", **kwargs):
-        super(MessageBar, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.msg = msg
         self.finish_msg = finish_msg
 
@@ -272,7 +272,7 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
         if max_value is None:
             max_value = progressbar.UnknownLength
 
-        super(ProgressBar, self).__init__(
+        super().__init__(
             poll_interval=0.1,
             widgets=widgets,
             fd=sys.stdout,
@@ -283,7 +283,7 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
     def start(self, **kwargs):
         """Start tracking process, initialize display."""
 
-        super(ProgressBar, self).start(**kwargs)
+        super().start(**kwargs)
 
         self.finished = False
         self.thread.start()
@@ -299,7 +299,7 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
         self.finished = True
         self.thread.join()
 
-        super(ProgressBar, self).finish(**kwargs)
+        super().finish(**kwargs)
 
     def step(self):
         """
@@ -340,7 +340,7 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
         self.max_value = n
 
     def __enter__(self):
-        super(ProgressBar, self).__enter__()
+        super().__enter__()
 
         return self.start()
 
@@ -364,7 +364,7 @@ class SubProgressBar(ProgressBar):  # pylint: disable=too-many-ancestors
 
     def finish(self):
         """Finishing a sub-progress bar doesn't start a new line."""
-        super(SubProgressBar, self).finish(end="\r")
+        super().finish(end="\r")
 
 
 class NullProgressBar(progressbar.NullBar):  # pylint: disable=too-many-ancestors
@@ -375,7 +375,7 @@ class NullProgressBar(progressbar.NullBar):  # pylint: disable=too-many-ancestor
     """
 
     def __init__(self, present="", past=None, max_value=1, **kwargs):
-        super(NullProgressBar, self).__init__(max_value=max_value, **kwargs)
+        super().__init__(max_value=max_value, **kwargs)
 
     def sub(self, *args, **kwargs):
         """

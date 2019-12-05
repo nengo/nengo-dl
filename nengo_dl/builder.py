@@ -344,7 +344,7 @@ class NengoModel(builder.Model):
 
     def __init__(self, *args, fail_fast=True, **kwargs):
         self.fail_fast = fail_fast
-        super(NengoModel, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def add_op(self, op):
         """

@@ -33,7 +33,7 @@ class GenericProcessBuilder(OpBuilder):
     """
 
     def __init__(self, ops, signals, config):
-        super(GenericProcessBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         self.time_data = signals[ops[0].t].reshape(())
         self.input_data = (
@@ -181,7 +181,7 @@ class LowpassBuilder(OpBuilder):
     """Build a group of `~nengo.Lowpass` synapse operators."""
 
     def __init__(self, ops, signals, config):
-        super(LowpassBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         # the main difference between this and the general linearfilter
         # OneX implementation is that this version allows us to merge
@@ -249,7 +249,7 @@ class LinearFilterBuilder(OpBuilder):
     """Build a group of `~nengo.LinearFilter` synapse operators."""
 
     def __init__(self, ops, signals, config):
-        super(LinearFilterBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         # note: linear filters are linear systems with n_inputs/n_outputs == 1.
         # we apply them to multidimensional inputs, but we do so by
@@ -428,7 +428,7 @@ class SimProcessBuilder(OpBuilder):
     )
 
     def __init__(self, ops, signals, config):
-        super(SimProcessBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         logger.debug("process %s", [op.process for op in ops])
         logger.debug("input %s", [op.input for op in ops])

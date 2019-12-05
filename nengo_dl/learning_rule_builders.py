@@ -25,7 +25,7 @@ class SimBCMBuilder(OpBuilder):
     operators."""
 
     def __init__(self, ops, signals, config):
-        super(SimBCMBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         self.post_data = signals.combine([op.post_filtered for op in ops])
         self.post_data = self.post_data.reshape(self.post_data.shape + (1,))
@@ -71,7 +71,7 @@ class SimOjaBuilder(OpBuilder):
         operators."""
 
     def __init__(self, ops, signals, config):
-        super(SimOjaBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         self.post_data = signals.combine([op.post_filtered for op in ops])
         self.post_data = self.post_data.reshape(self.post_data.shape + (1,))
@@ -128,7 +128,7 @@ class SimVojaBuilder(OpBuilder):
         operators."""
 
     def __init__(self, ops, signals, config):
-        super(SimVojaBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         self.post_data = signals.combine([op.post_filtered for op in ops])
         self.post_data = self.post_data.reshape(self.post_data.shape + (1,))
@@ -247,7 +247,7 @@ class SimPESBuilder(OpBuilder):
     """Build a group of `~nengo.builder.learning_rules.SimPES` operators."""
 
     def __init__(self, ops, signals, config):
-        super(SimPESBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         self.error_data = signals.combine([op.error for op in ops])
         self.error_data = self.error_data.reshape((len(ops), ops[0].error.shape[0], 1))

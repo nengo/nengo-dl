@@ -33,13 +33,13 @@ def test_custom_builder():
     # warning when overwriting a registered builder
     with pytest.warns(UserWarning):
 
-        @Builder.register(TestOp)
+        @Builder.register(TestOp)  # pylint: disable=unused-variable
         class TestOpBuilder(OpBuilder):
             pre_built = False
             post_built = False
 
             def __init__(self, ops, signals, config):
-                super(TestOpBuilder, self).__init__(ops, signals, config)
+                super().__init__(ops, signals, config)
                 self.pre_built = True
 
             def build_step(self, signals):
@@ -63,10 +63,10 @@ def test_custom_builder():
     assert builder.op_builds[ops].post_built
 
     # error if builder doesn't define build_step
-    @Builder.register(TestOp)
+    @Builder.register(TestOp)  # pylint: disable=unused-variable
     class TestOpBuilder2(OpBuilder):
         def __init__(self, *_):
-            super(TestOpBuilder2, self).__init__([], None, None)
+            super().__init__([], None, None)
 
     builder.build_pre(progress)
     with pytest.raises(BuildError):

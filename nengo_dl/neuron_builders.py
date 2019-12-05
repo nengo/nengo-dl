@@ -31,7 +31,7 @@ class GenericNeuronBuilder(OpBuilder):
     """
 
     def __init__(self, ops, signals, config):
-        super(GenericNeuronBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
@@ -117,7 +117,7 @@ class RectifiedLinearBuilder(OpBuilder):
     neuron operators."""
 
     def __init__(self, ops, signals, config):
-        super(RectifiedLinearBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
@@ -149,7 +149,7 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
        operators."""
 
     def __init__(self, ops, signals, config):
-        super(SpikingRectifiedLinearBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         self.voltage_data = signals.combine([op.states[0] for op in ops])
 
@@ -176,7 +176,7 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
         if self.config.inference_only:
             out, voltage = spike_out, spike_voltage
         else:
-            rate_out = super(SpikingRectifiedLinearBuilder, self)._step(J)
+            rate_out = super()._step(J)
 
             out, voltage = tf_utils.smart_cond(
                 self.config.training,
@@ -192,7 +192,7 @@ class SigmoidBuilder(OpBuilder):
     """Build a group of `~nengo.Sigmoid` neuron operators."""
 
     def __init__(self, ops, signals, config):
-        super(SigmoidBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         self.J_data = signals.combine([op.J for op in ops])
         self.output_data = signals.combine([op.output for op in ops])
@@ -213,7 +213,7 @@ class LIFRateBuilder(OpBuilder):
     """Build a group of `~nengo.LIFRate` neuron operators."""
 
     def __init__(self, ops, signals, config):
-        super(LIFRateBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         self.tau_ref = signals.op_constant(
             [op.neurons for op in ops],
@@ -270,7 +270,7 @@ class SoftLIFRateBuilder(LIFRateBuilder):
     """Build a group of `.SoftLIFRate` neuron operators."""
 
     def __init__(self, ops, signals, config):
-        super(SoftLIFRateBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         self.sigma = signals.op_constant(
             [op.neurons for op in ops],
@@ -413,7 +413,7 @@ class SimNeuronsBuilder(OpBuilder):
     }
 
     def __init__(self, ops, signals, config):
-        super(SimNeuronsBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         logger.debug("J %s", [op.J for op in ops])
 

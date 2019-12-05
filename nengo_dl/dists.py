@@ -30,7 +30,7 @@ class TruncatedNormal(Distribution):
     limit = NumberParam("limit", low=0, low_open=True)
 
     def __init__(self, mean=0, stddev=1, limit=None):
-        super(TruncatedNormal, self).__init__()
+        super().__init__()
 
         self.mean = mean
         self.stddev = stddev
@@ -92,7 +92,7 @@ class VarianceScaling(Distribution):
     distribution = EnumParam("distribution", values=["uniform", "normal"])
 
     def __init__(self, scale=1, mode="fan_avg", distribution="uniform"):
-        super(VarianceScaling, self).__init__()
+        super().__init__()
 
         self.scale = scale
         self.mode = mode
@@ -165,9 +165,7 @@ class Glorot(VarianceScaling):
     """
 
     def __init__(self, scale=1, distribution="uniform"):
-        super(Glorot, self).__init__(
-            scale=scale, mode="fan_avg", distribution=distribution
-        )
+        super().__init__(scale=scale, mode="fan_avg", distribution=distribution)
 
 
 class He(VarianceScaling):
@@ -189,6 +187,4 @@ class He(VarianceScaling):
     """
 
     def __init__(self, scale=1, distribution="normal"):
-        super(He, self).__init__(
-            scale=scale ** 2, mode="fan_in", distribution=distribution
-        )
+        super().__init__(scale=scale ** 2, mode="fan_in", distribution=distribution)

@@ -45,13 +45,13 @@ class SoftLIFRate(LIFRate):
     sigma = NumberParam("sigma", low=0, low_open=True)
 
     def __init__(self, sigma=1.0, **lif_args):
-        super(SoftLIFRate, self).__init__(**lif_args)
+        super().__init__(**lif_args)
         self.sigma = sigma
         self._epsilon = 1e-15
 
     @property
     def _argreprs(self):
-        args = super(SoftLIFRate, self)._argreprs
+        args = super()._argreprs
         if self.sigma != 1.0:
             args.append("sigma=%s" % self.sigma)
         return args

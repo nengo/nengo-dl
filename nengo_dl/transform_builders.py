@@ -18,7 +18,7 @@ class ConvIncBuilder(OpBuilder):
     """
 
     def __init__(self, ops, signals, config):
-        super(ConvIncBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         self.conv = ops[0].conv
         self.n_ops = len(ops)

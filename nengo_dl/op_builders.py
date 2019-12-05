@@ -45,7 +45,7 @@ class ResetBuilder(OpBuilder):
     """
 
     def __init__(self, ops, signals, config):
-        super(ResetBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         logger.debug("val %s", [op.value for op in ops])
         logger.debug("dst %s", [op.dst for op in ops])
@@ -94,7 +94,7 @@ class CopyBuilder(OpBuilder):
     """
 
     def __init__(self, ops, signals, config):
-        super(CopyBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         logger.debug("src %s", [op.src for op in ops])
         logger.debug("src_slice %s", [getattr(op, "src_slice", None) for op in ops])
@@ -139,7 +139,7 @@ class ElementwiseIncBuilder(OpBuilder):
     """
 
     def __init__(self, ops, signals, config):
-        super(ElementwiseIncBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         logger.debug("dst %s", [op.Y for op in ops])
         logger.debug("A %s", [op.A for op in ops])
@@ -322,7 +322,7 @@ class SimPyFuncBuilder(OpBuilder):
     """
 
     def __init__(self, ops, signals, config):
-        super(SimPyFuncBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         logger.debug("t %s", [op.t for op in ops])
         logger.debug("x %s", [op.x for op in ops])

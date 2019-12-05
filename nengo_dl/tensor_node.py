@@ -70,7 +70,7 @@ class TensorFuncParam(Parameter):
     """Parameter for the ``tensor_func`` parameter of a `.TensorNode`."""
 
     def __init__(self, name, readonly=False):
-        super(TensorFuncParam, self).__init__(name, optional=False, readonly=readonly)
+        super().__init__(name, optional=False, readonly=readonly)
 
     def coerce(self, node, func):
         """
@@ -90,7 +90,7 @@ class TensorFuncParam(Parameter):
             The function after validation is applied.
         """
 
-        output = super(TensorFuncParam, self).coerce(node, func)
+        output = super().coerce(node, func)
 
         if not callable(func):
             raise ValidationError(
@@ -291,7 +291,7 @@ class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
     """
 
     def __init__(self, func, time, input, output, shape_in, tag=None):
-        super(SimTensorNode, self).__init__(tag=tag)
+        super().__init__(tag=tag)
 
         self.func = func
         self.time = time
@@ -316,7 +316,7 @@ class SimTensorNodeBuilder(OpBuilder):
     model."""
 
     def __init__(self, ops, signals, config):
-        super(SimTensorNodeBuilder, self).__init__(ops, signals, config)
+        super().__init__(ops, signals, config)
 
         # SimTensorNodes should never be merged
         assert len(ops) == 1
