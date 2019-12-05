@@ -790,6 +790,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
         """
         Trains the model on some dataset.
 
+        Note that if the model contains spiking neurons, during the execution of this
+        function those neurons will be swapped for the equivalent non-spiking
+        implementation (as opposed to, e.g., `Simulator.evaluate`, which will
+        use the spiking implementation).
+
         Optimizer and loss functions are defined separately in `.Simulator.compile`.
 
         This function implements the `tf.keras.Model.fit
