@@ -258,9 +258,25 @@ def test_fit(Simulator, seed):
         # note: batch_size should be ignored
         with pytest.warns(UserWarning, match="Batch size is determined statically"):
             history = sim.fit(
-                [x[..., [0]], x[..., [1]]], y, epochs=200, verbose=0, batch_size=-1
+                [x[..., [0]], x[..., [1]]],
+                y,
+                validation_data=([x[..., [0]], x[..., [1]]], y),
+                epochs=200,
+                verbose=0,
+                batch_size=-1,
             )
         assert history.history["loss"][-1] < 5e-4
+        assert history.history["val_loss"][-1] < 5e-4
+
+        # check that validation_sample_weights work correctly
+        history = sim.fit(
+            [x[..., [0]], x[..., [1]]],
+            y,
+            validation_data=([x[..., [0]], x[..., [1]]], y, np.zeros(y.shape[0])),
+            epochs=1,
+            verbose=0,
+        )
+        assert np.allclose(history.history["val_loss"][-1], 0)
 
         # TODO: this will work in eager mode
         # sim.reset()
@@ -298,10 +314,14 @@ def test_fit(Simulator, seed):
             tf.data.Dataset.from_tensors(
                 ((x[..., [0]], x[..., [1]], np.ones((4, 1), dtype=np.int32)), y)
             ),
+            validation_data=tf.data.Dataset.from_tensors(
+                ((x[..., [0]], x[..., [1]], np.ones((4, 1), dtype=np.int32)), y)
+            ),
             epochs=200,
             verbose=0,
         )
         assert history.history["loss"][-1] < 5e-4
+        assert history.history["val_loss"][-1] < 5e-4
 
 
 @pytest.mark.training

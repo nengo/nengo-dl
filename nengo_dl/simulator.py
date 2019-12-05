@@ -822,6 +822,25 @@ class Simulator:  # pylint: disable=too-many-public-methods
             (e.g., "loss") containing a list of values of those metrics from each epoch.
         """
 
+        # if validation data is None or a dataset we don't do anything, but
+        # otherwise we apply the same data augmentation/validation
+        # as for x and y
+        if isinstance(kwargs.get("validation_data", None), (list, tuple)):
+            validation_data = kwargs["validation_data"]
+
+            x_val = validation_data[0]
+            x_val = self._generate_inputs(x_val, n_steps=n_steps)
+            self._check_data(x_val, n_steps=n_steps)
+
+            y_val = validation_data[1]
+            y_val = self._standardize_data(y_val, self.model.probes)
+            self._check_data(y_val, n_steps=None, nodes=False)
+
+            if len(validation_data) == 2:
+                kwargs["validation_data"] = (x_val, y_val)
+            else:
+                kwargs["validation_data"] = (x_val, y_val, validation_data[2])
+
         return self._call_keras(
             "fit", x=x, y=y, n_steps=n_steps, stateful=stateful, **kwargs
         )
