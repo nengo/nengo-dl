@@ -4,6 +4,7 @@ from collections import OrderedDict
 import logging
 import os
 import pickle
+import sys
 
 import nengo
 from nengo.dists import Uniform
@@ -18,11 +19,10 @@ import pytest
 import tensorflow as tf
 from tensorflow.core.util import event_pb2
 
-from nengo_dl import Layer, TensorNode, configure_settings, dists, callbacks
+from nengo_dl import Layer, TensorNode, callbacks, configure_settings, dists, utils
 from nengo_dl.compat import TFLogFilter
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
-from nengo_dl.utils import tf_gpu_installed
 
 
 def test_persistent_state(Simulator, seed):
@@ -635,7 +635,7 @@ def test_model_passing(Simulator, seed):
 
 @pytest.mark.parametrize("device", ["/cpu:0", "/gpu:0", None])
 def test_devices(Simulator, device, seed, caplog):
-    if device == "/gpu:0" and not tf_gpu_installed:
+    if device == "/gpu:0" and not utils.tf_gpu_installed:
         pytest.skip("This test requires tensorflow-gpu")
 
     caplog.set_level(logging.INFO)
@@ -658,7 +658,7 @@ def test_devices(Simulator, device, seed, caplog):
             assert "Running on CPU" in caplog.text
         elif device == "/gpu:0":
             assert "Running on GPU" in caplog.text
-        elif tf_gpu_installed:
+        elif utils.tf_gpu_installed:
             assert "Running on CPU/GPU" in caplog.text
         else:
             # device is None but gpu not installed
@@ -1562,7 +1562,9 @@ def test_tensorflow_gpu_warning(Simulator, pytestconfig):
     recwarns = [w for w in recwarns if "No GPU support detected" in str(w.message)]
 
     assert len(recwarns) == (
-        1 if not tf_gpu_installed and pytestconfig.getoption("--device") is None else 0
+        1
+        if not utils.tf_gpu_installed and pytestconfig.getoption("--device") is None
+        else 0
     )
 
 
@@ -1664,3 +1666,43 @@ def test_uneven_batch_size(Simulator):
 
         with pytest.warns(UserWarning, match="not evenly divisible"):
             sim.fit(np.zeros((20, 5, 2)), np.zeros((20, 5, 2)))
+
+
+def test_progress_bar(Simulator, capsys, monkeypatch):
+    class StdProgressBar(utils.ProgressBar):  # pylint: disable=too-many-ancestors
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+            # manually set fd to stdout (passing `fd=sys.stdout` in init is not the
+            # same, because it wraps it in some stream wrapper that is slightly
+            # different). we want to use sys.stdout exactly so that stdout capturing
+            # (e.g. in capsys) works correctly.
+            self.fd = sys.stdout
+
+    monkeypatch.setattr(utils, "ProgressBar", StdProgressBar)
+
+    net, _, _ = dummies.linear_net()
+
+    with Simulator(net) as sim:
+        # default to displaying build information
+        assert "Building" in capsys.readouterr().out
+
+        # display simulation progress
+        sim.run_steps(10)
+        assert "Simulating" in capsys.readouterr().out
+
+        # simulation progress explicitly disabled
+        sim.run_steps(10, progress_bar=False)
+        assert capsys.readouterr().out == ""
+
+    with Simulator(net, progress_bar=False) as sim:
+        # no build information
+        assert capsys.readouterr().out == ""
+
+        # defaults to false
+        sim.run_steps(10)
+        assert capsys.readouterr().out == ""
+
+        # can be explicitly enabled
+        sim.run_steps(10, progress_bar=True)
+        assert "Simulating" in capsys.readouterr().out

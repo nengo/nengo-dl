@@ -415,7 +415,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
         `.Simulator.predict`/`.Simulator.fit` with a batch of data, that data will be
         divided up into ``minibatch_size`` chunks.
     progress_bar : bool
-        If True (default), display progress information when building a model.
+        If True (default), display progress information when building a model. This will
+        also be the default for the ``progress_bar`` argument within `.Simulator.run`
+        and `.Simulator.run_steps`.
 
     Attributes
     ----------
@@ -465,6 +467,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 "CPU/GPU" if device is None else ("CPU" if "cpu" in device else "GPU"),
             )
 
+        self.progress_bar = progress_bar
         ProgressBar = utils.ProgressBar if progress_bar else utils.NullProgressBar
 
         # build model (uses default nengo builder)
@@ -856,7 +859,6 @@ class Simulator:  # pylint: disable=too-many-public-methods
         )
 
     @with_self
-    @fill_docs("x", "y", "n_steps", "stateful")
     def _call_keras(
         self, func_type, x=None, y=None, n_steps=None, stateful=False, **kwargs
     ):
@@ -1030,7 +1032,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
     @require_open
     @fill_docs("stateful", data="x")
-    def run_steps(self, n_steps, data=None, progress_bar=True, stateful=True):
+    def run_steps(self, n_steps, data=None, progress_bar=None, stateful=True):
         """
         Run the simulation for the given number of steps.
 
@@ -1065,6 +1067,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 RuntimeWarning,
             )
 
+        if progress_bar is None:
+            progress_bar = self.progress_bar
         progress = (
             utils.ProgressBar("Simulating", "Simulation", max_value=None)
             if progress_bar

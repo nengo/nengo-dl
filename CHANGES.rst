@@ -145,6 +145,9 @@ Release History
 - Training/evaluation target data can now have a different number of timesteps than
   input data (as long as it aligns with the number of timesteps expected by the
   loss function).
+- Whether or not to display progress bars in ``Simulator.run`` and
+  ``Simulator.run_steps`` now defaults to the value of
+  ``Simulator(..., progress_bar=x)``.
 
 **Fixed**
 
