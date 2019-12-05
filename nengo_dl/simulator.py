@@ -1588,7 +1588,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
         return self.tensor_graph.io_names[obj]
 
     def _standardize_data(self, data, objects, broadcast_unary=False):
-        """Converts data to the standardized input format (named string dicts).
+        """
+        Converts data to the standardized input format (named string dicts).
 
         Parameters
         ----------
@@ -1747,11 +1748,33 @@ class Simulator:  # pylint: disable=too-many-public-methods
         nodes : bool
             If True the data being validated is associated with Nodes, if False the
             data is associated with Probes.
+
+        Notes
+        -----
+        This may modify ``data`` in-place, if it contains data that is not evenly
+        divisible by ``Simulator.minibatch_size``.
         """
 
         if not isinstance(data, dict):
             # data is a generator, so don't perform validation
             return
+
+        # make sure data is evenly divisible by minibatch size
+        for k, v in data.items():
+            try:
+                data_batch = v.shape[0]
+            except IndexError:
+                # v is a scalar
+                continue
+
+            if data_batch % self.minibatch_size != 0:
+                warnings.warn(
+                    "Number of elements in input data (%d) is not evenly divisible by "
+                    "Simulator.minibatch_size (%d); input data will be truncated."
+                    % (data_batch, self.minibatch_size)
+                )
+                data_batch -= data_batch % self.minibatch_size
+                data[k] = v[:data_batch]
 
         # exclude n_steps from normal data checking
         data_n_steps = data.get("n_steps", None)

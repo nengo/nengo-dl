@@ -142,11 +142,11 @@ def test_input_feeds(Simulator):
         assert np.allclose(sim.data[p2], val[..., :2])
 
         # error for wrong minibatch size
-        with pytest.raises(ValidationError):
-            sim.run_steps(10, data={inp: np.zeros((minibatch_size + 1, 10, 3))})
+        with pytest.raises(ValidationError, match="does not match expected size"):
+            sim.run_steps(10, data={inp: np.zeros((minibatch_size * 2, 10, 3))})
         # error for wrong number of steps
-        with pytest.raises(ValidationError):
-            sim.run_steps(10, data={inp: np.zeros((minibatch_size, 11, 3))})
+        with pytest.raises(ValidationError, match="does not match expected size"):
+            sim.run_steps(10, data={inp: np.zeros((minibatch_size, 15, 3))})
 
 
 @pytest.mark.parametrize(
@@ -904,7 +904,11 @@ def test_check_data(Simulator):
         # mismatched input data
         with pytest.raises(ValidationError, match="different batch size"):
             sim._check_data(
-                {"inpa": zeros2, "inpb": np.zeros((4, 1, 1)), "n_steps": n_steps}
+                {
+                    "inpa": zeros2,
+                    "inpb": np.zeros((sim.minibatch_size * 2, 1, 1)),
+                    "n_steps": n_steps,
+                }
             )
         with pytest.raises(ValidationError, match="different number of timesteps"):
             sim._check_data(
@@ -913,7 +917,10 @@ def test_check_data(Simulator):
 
         # mismatched target data
         with pytest.raises(ValidationError, match="different batch size"):
-            sim._check_data({"pa": zeros2, "pb": np.zeros((4, 1, 1))}, nodes=False)
+            sim._check_data(
+                {"pa": zeros2, "pb": np.zeros((sim.minibatch_size * 2, 1, 1))},
+                nodes=False,
+            )
         # no error for different n_steps
         sim._check_data({"pa": zeros2, "pb": np.zeros((3, 2, 1))}, nodes=False)
 
@@ -1641,3 +1648,19 @@ def test_log_filter(Simulator, caplog):
     logger.addFilter(filt)
     with pytest.raises(Exception, match="Deprecation warning"):
         logger.warning("a thing is deprecated")
+
+
+@pytest.mark.training
+def test_uneven_batch_size(Simulator):
+    with nengo.Network() as net:
+        inp = nengo.Node(np.zeros(2))
+        nengo.Probe(inp)
+
+    with Simulator(net, minibatch_size=16) as sim:
+        with pytest.warns(UserWarning, match="not evenly divisible"):
+            sim.predict(np.zeros((20, 5, 2)))
+
+        sim.compile(optimizer=tf.optimizers.SGD(0), loss=tf.losses.mse)
+
+        with pytest.warns(UserWarning, match="not evenly divisible"):
+            sim.fit(np.zeros((20, 5, 2)), np.zeros((20, 5, 2)))
