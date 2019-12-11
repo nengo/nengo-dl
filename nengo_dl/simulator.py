@@ -1145,7 +1145,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
     @require_open
     @with_self
-    def save_params(self, path, include_internal=False):
+    def save_params(self, path, include_non_trainable=False):
         """
         Save network parameters to the given ``path``.
 
@@ -1153,9 +1153,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
         ----------
         path : str
             Filepath of parameter output file.
-        include_internal : bool
+        include_non_trainable : bool
             If True (default False) also save information representing
-            internal simulation state.
+            non-trainable parameters of the network (this includes the internal
+            simulation state).
 
         Notes
         -----
@@ -1166,7 +1167,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         vars = (
             self.keras_model.weights
-            if include_internal
+            if include_non_trainable
             else self.keras_model.trainable_weights
         )
 
@@ -1176,7 +1177,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
     @require_open
     @with_self
-    def load_params(self, path, include_internal=False):
+    def load_params(self, path, include_non_trainable=False):
         """
         Load network parameters from the given ``path``.
 
@@ -1184,9 +1185,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
         ----------
         path : str
             Filepath of parameter input file.
-        include_internal : bool
+        include_non_trainable : bool
             If True (default False) also load information representing
-            internal simulation state.
+            non-trainable parameters of the network (this includes the internal
+            simulation state).
 
         Notes
         -----
@@ -1197,7 +1199,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         vars = (
             self.keras_model.weights
-            if include_internal
+            if include_non_trainable
             else self.keras_model.trainable_weights
         )
 

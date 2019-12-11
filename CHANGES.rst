@@ -57,7 +57,7 @@ Release History
 
 - Minimum TensorFlow version is now 2.0.0.
 - ``Simulator.save/load_params`` now uses a single
-  ``include_internal=True/False`` (equivalent to the previous
+  ``include_non_trainable=True/False`` (equivalent to the previous
   ``include_local``). Trainable parameters will always be saved, so the
   ``include_global`` argument is removed.
 - Standardized all signals/operations in a simulation to be batch-first.

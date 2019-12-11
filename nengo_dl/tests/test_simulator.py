@@ -514,9 +514,9 @@ def test_generate_inputs(Simulator, seed):
             sim._generate_inputs(data={p[0]: np.zeros((minibatch_size, n_steps, 1))})
 
 
-@pytest.mark.parametrize("include_internal", (True, False))
+@pytest.mark.parametrize("include_non_trainable", (True, False))
 @pytest.mark.training
-def test_save_load_params(Simulator, include_internal, tmpdir):
+def test_save_load_params(Simulator, include_non_trainable, tmpdir):
     def get_network(seed):
         with nengo.Network(seed=seed) as net:
             configure_settings(simplifications=[])
@@ -542,7 +542,7 @@ def test_save_load_params(Simulator, include_internal, tmpdir):
 
         sim_save.run_steps(10)
 
-        sim_save.save_params(str(tmpdir), include_internal=include_internal)
+        sim_save.save_params(str(tmpdir), include_non_trainable=include_non_trainable)
 
         sim_save.run_steps(10)
 
@@ -562,7 +562,7 @@ def test_save_load_params(Simulator, include_internal, tmpdir):
 
         pre_model = sim_load.keras_model
 
-        sim_load.load_params(str(tmpdir), include_internal=include_internal)
+        sim_load.load_params(str(tmpdir), include_non_trainable=include_non_trainable)
 
         weights2, enc2, bias2 = sim_load.data.get_params(
             (conn1, "weights"), (ens1, "encoders"), (ens1, "bias")
@@ -571,7 +571,7 @@ def test_save_load_params(Simulator, include_internal, tmpdir):
         # check if weights match
         assert np.allclose(weights0, weights2)
 
-        if include_internal:
+        if include_non_trainable:
             assert np.allclose(enc0, enc2)
             assert np.allclose(bias0, bias2)
         else:
@@ -585,7 +585,7 @@ def test_save_load_params(Simulator, include_internal, tmpdir):
         sim_load.run_steps(10)
 
         # check if simulation state resumed correctly
-        if include_internal:
+        if include_non_trainable:
             assert np.allclose(sim_load.data[p1], sim_save.data[p0][10:])
         else:
             assert not np.allclose(sim_load.data[p1], sim_save.data[p0][10:])
