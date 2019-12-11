@@ -570,8 +570,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
         `nengo.Process`, as normal).
         """
 
-        # initialize variables and internal simulation state
-        self.soft_reset(include_params=True, include_probes=True)
+        # reset variables and internal simulation state
+        self.soft_reset(include_trainable=True, include_probes=True)
 
         # update rng
         if seed is not None:
@@ -586,18 +586,22 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
     @require_open
     @with_self
-    def soft_reset(self, include_params=False, include_probes=False):
+    def soft_reset(self, include_trainable=False, include_probes=False):
         """
         Resets the internal state of the simulation, but doesn't
         rebuild the graph.
 
         Parameters
         ----------
-        include_params : bool
+        include_trainable : bool
             If True, also reset any training that has been performed on
-            network parameters (e.g., connection weights).
+            simulator parameters (e.g., connection weights).
         include_probes : bool
             If True, also clear probe data.
+
+        Notes
+        -----
+        This will not affect any parameters created inside TensorNodes.
         """
 
         # reset saved state
@@ -606,7 +610,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             var_vals.append((var, self.tensor_graph.base_arrays_init[False][key]))
         tf.keras.backend.batch_set_value(var_vals)
 
-        if include_params:
+        if include_trainable:
             # reset base params
             tf.keras.backend.batch_set_value(
                 list(

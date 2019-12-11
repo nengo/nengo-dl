@@ -60,10 +60,6 @@ Release History
   ``include_internal=True/False`` (equivalent to the previous
   ``include_local``). Trainable parameters will always be saved, so the
   ``include_global`` argument is removed.
-- ``Simulator.soft_reset`` ``include_trainable`` parameter renamed to
-  ``include_params``, which now resets all Variables in the model (not just
-  those marked as trainable).  In most cases this won't make a difference,
-  as non-trainable Variables won't have changed from their initial value.
 - Standardized all signals/operations in a simulation to be batch-first.
 - The `dtype option <https://www.nengo.ai/nengo-dl/config.html#dtype>`_ is now specified
   as a string (e.g. ``"float32"`` rather than ``tf.float32``).
