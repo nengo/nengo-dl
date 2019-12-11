@@ -11,7 +11,7 @@ environment:
   matrix:
     - MODE: test # default build
     - NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
-      TF_VERSION: tensorflow --pre
+      TF_VERSION: tensorflow-cpu --pre
     - NENGO_VERSION: nengo[tests]==3.0.0
       TF_VERSION: tensorflow==2.0.0
       NUMPY_VERSION: numpy==1.16
