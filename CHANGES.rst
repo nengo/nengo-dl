@@ -1,4 +1,4 @@
-Release History
+Release history
 ===============
 
 .. Changelog entries should follow this format:
@@ -20,6 +20,10 @@ Release History
 
 3.0.0 (unreleased)
 ------------------
+
+There are a lot of **breaking changes** in NengoDL 3.0. See the `migration guide
+<https://www.nengo.ai/nengo-dl/migration-guide.html#nengodl-2-to-3>`_ for all the
+details.
 
 **Added**
 
