@@ -200,6 +200,13 @@ Release History
 - Removed ``utils.minibatch_generator`` (training/inference loops are now managed
   by Keras).
 
+2.2.2 (November 20, 2019)
+-------------------------
+
+**Fixed**
+
+- Compatibility with Nengo 3.0 release
+
 2.2.1 (October 2, 2019)
 -----------------------
 
