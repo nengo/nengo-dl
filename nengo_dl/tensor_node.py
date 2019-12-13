@@ -435,10 +435,10 @@ class Layer:
         non-trainable by default.
         """
 
-        if isinstance(transform, np.ndarray) and transform.ndim == 2:
-            size_in = transform.shape[0]
-        elif shape_in is not None:
+        if shape_in is not None and all(x is not None for x in shape_in):
             size_in = np.prod(shape_in)
+        elif isinstance(transform, np.ndarray) and transform.ndim == 2:
+            size_in = transform.shape[0]
         else:
             size_in = input.size_out
 
