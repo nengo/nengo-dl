@@ -321,3 +321,20 @@ def test_nested_layer(Simulator):
             sim.run_steps(5)
 
         assert np.allclose(sim.data[p], 1)
+
+
+def test_unspecified_shape():
+    with nengo.Network():
+        inp = nengo.Node([0])
+
+        with pytest.raises(ValidationError, match="must be an int"):
+            TensorNode(lambda x: x, shape_in=(None, 1))
+
+        with pytest.raises(ValidationError, match="must be an int"):
+            TensorNode(lambda x: x, shape_out=(None, 1))
+
+        with pytest.raises(ValidationError, match="must be an int"):
+            Layer(lambda x: x)(inp, shape_in=(None, 1))
+
+        with pytest.raises(ValidationError, match="must be an int"):
+            Layer(lambda x: x)(inp, shape_out=(None, 1))

@@ -21,6 +21,12 @@ Release history
 3.0.1 (unreleased)
 ------------------
 
+**Fixed**
+
+- Provide a more informative error message if Layer ``shape_in``/``shape_out`` contains
+  undefined (``None``) elements. (`#119`_)
+
+.. _#119: https://github.com/nengo/nengo-dl/pull/119
 
 3.0.0 (December 17, 2019)
 -------------------------
