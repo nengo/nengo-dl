@@ -725,7 +725,9 @@ class ConvertModel(LayerConverter):
         for tensor in source_tensors:
             # look up the layer/node to be converted
             model_layer, model_node_id, _ = self.get_history(tensor)
-            assert model_node_id not in self.converter.layer_map[model_layer]
+            if model_node_id in self.converter.layer_map[model_layer]:
+                # already built this node
+                continue
 
             logger.info("-" * 30)
             logger.info("Converting layer %s node %d", model_layer.name, model_node_id)
