@@ -278,6 +278,8 @@ class TensorGraph(tf.keras.layers.Layer):
             for op in ops
             if isinstance(op.func, tf.keras.layers.Layer)
         ]
+        weight_gets = []
+        weight_sets = []
         for op in layer_ops:
             if op.func in self._layers:
                 # already built this layer
@@ -300,27 +302,32 @@ class TensorGraph(tf.keras.layers.Layer):
                 # save the weight values so they can be restored
                 # exactly inside the tensornode
                 weights = op.func.weights
-
-                ctx = (
-                    weights[0].graph.as_default()
-                    if weights and hasattr(weights[0], "graph")
-                    else context.eager_mode()
-                )
-                with ctx:
-                    built_weights = op.func.get_weights()
+                weight_gets.extend(weights)
 
                 # clear the results of previous build
                 unbuild(op.func)
             else:
-                built_weights = None
+                weights = None
 
             op.func.build(shape_in)
 
-            if built_weights is not None:
-                op.func.set_weights(built_weights)
+            if weights is not None:
+                weight_sets.extend(op.func.weights)
 
             # add op func to _layers so that any weights are collected
             self._layers.append(op.func)
+
+        if len(weight_gets) > 0:
+            # do all the weight getting/setting in one go, for efficiency reasons
+            ctx = (
+                weight_gets[0].graph.as_default()
+                if hasattr(weight_gets[0], "graph")
+                else context.eager_mode()
+            )
+            with ctx:
+                weight_vals = tf.keras.backend.batch_get_value(weight_gets)
+
+            tf.keras.backend.batch_set_value(zip(weight_sets, weight_vals))
 
     # @tf.function  # TODO: get this working? does this help?
     @tf.autograph.experimental.do_not_convert
