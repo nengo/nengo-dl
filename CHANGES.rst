@@ -21,6 +21,10 @@ Release history
 3.0.1 (unreleased)
 ------------------
 
+**Changed**
+
+- Improved build time of networks containing lots of ``TensorNodes``. (`#119`_)
+
 **Fixed**
 
 - Provide a more informative error message if Layer ``shape_in``/``shape_out`` contains
