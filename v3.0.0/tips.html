@@ -1,0 +1,524 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tips and tricks &#8212; NengoDL 3.0.0 docs</title>
+    <link rel="stylesheet" href="_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+<link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,400i,600|Rajdhani:700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
+<link rel="stylesheet" href="https://www.nengo.ai/css/bootstrap.css" type="text/css">
+<style>
+  body .title-bar,
+  body .documentation-source h1:after {
+    background-color: #ff6600;
+  }
+</style>
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-41658423-2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'UA-41658423-2');
+</script>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/scrollreveal"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stickyfill/2.1.0/stickyfill.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+<!-- From basic/layout.html -->
+<script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+  
+  
+<script type="text/javascript" src="_static/underscore.js"></script>
+  
+  
+<script type="text/javascript" src="_static/doctools.js"></script>
+  
+  
+<script type="text/javascript" src="_static/language_data.js"></script>
+  
+  
+<script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+  
+  
+<script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+  
+<script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API reference" href="reference.html" />
+    <link rel="prev" title="Configuration options" href="config.html" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  </head><body class="bg-dark">
+
+<header class="fixed-top header-top shadow-sm">
+  <nav class="navbar navbar-expand-md navbar-light bg-white">
+    <a class="navbar-brand" href="https://www.nengo.ai/">
+      <img
+        src="https://www.nengo.ai/design/_images/general-full-light.svg"
+        alt="Nengo"
+        class="logo"
+      />
+    </a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-toggle="collapse"
+      data-target="#navbar-collapse"
+      aria-controls="navbar-collapse"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-collapse">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/">What is Nengo?</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/examples/">Examples</a>
+        </li>
+        <li class="nav-item dropdown active">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-docs"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Documentation</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-docs"
+          >
+            
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo/">Nengo Core</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-gui/">Nengo GUI</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-dl/">Nengo DL</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-spa/">Nengo SPA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-extras/">Nengo Extras</a>
+            <a class="dropdown-item" href="https://arvoelke.github.io/nengolib-docs/">Nengolib</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-fpga/">Nengo FPGA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-loihi/">Nengo Loihi</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-ocl">Nengo OpenCL</a>
+            <a class="dropdown-item" href="https://github.com/project-rig/nengo_spinnaker">Nengo SpiNNaker</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-mpi">Nengo MPI</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/documentation/"
+              >All documentation</a
+            >
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-community"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Community</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-community"
+          >
+            <a class="dropdown-item" href="https://forum.nengo.ai">Forum</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/people/"
+              >People</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/summer-school/"
+              >Summer school</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/contributing/"
+              >Contributing</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/publications/"
+              >Publications</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/videos/"
+              >Videos</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/conduct/"
+              >Code of conduct</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/caa/">CAA</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link btn btn-success btn-sm text-white"
+            href="https://www.nengo.ai/getting-started/"
+            >Getting started</a
+          >
+        </li>
+      </ul>
+    </div>
+  </nav>
+</header>
+<div class="main-content gradient-top">
+  <div class="container-fluid">
+    <div class="row"><a class="toggle-sidenav d-block d-md-none" href="#"
+  ><i class="icon-close fa fa-fw fa-arrow-left"></i
+  ><i class="icon-open fa fa-fw fa-arrow-right"></i
+></a>
+<div role="complementary" class="sidenav col-4 col-xl-3 p-0 border-right">
+  <h3 class="pt-5 px-5">
+    <a href="index.html">
+      <img
+        class="img-fluid documentation-image"
+        src="https://www.nengo.ai/design/_images/nengo-dl-full-light.svg"
+        alt="NengoDL"
+      />
+    </a>
+  </h3>
+  
+  <form class="px-5 pb-5 mb-0 mt-3 border-bottom">
+    <div class="form-group">
+      <label class="text-gray">Version:</label>
+      <select class="custom-select" onchange="switchVersion(this);">
+        
+        
+        <option value="../tips.html">latest</option>
+        
+        
+          
+        <option selected>v3.0.0</option>
+          
+        
+          
+        <option value="../v2.2.2/tips.html">
+          v2.2.2
+        </option>
+          
+        
+          
+        <option value="../v2.2.1/tips.html">
+          v2.2.1
+        </option>
+          
+        
+          
+        <option value="../v2.2.0/tips.html">
+          v2.2.0
+        </option>
+          
+        
+          
+        <option value="../v2.1.1/tips.html">
+          v2.1.1
+        </option>
+          
+        
+          
+        <option value="../v2.1.0/tips.html">
+          v2.1.0
+        </option>
+          
+        
+          
+        <option value="../v2.0.0/tips.html">
+          v2.0.0
+        </option>
+          
+        
+          
+        <option value="../v1.2.1/tips.html">
+          v1.2.1
+        </option>
+          
+        
+          
+        <option value="../v1.2.0/tips.html">
+          v1.2.0
+        </option>
+          
+        
+          
+        <option value="../v1.1.0/tips.html">
+          v1.1.0
+        </option>
+          
+        
+          
+        <option value="../v1.0.0/tips.html">
+          v1.0.0
+        </option>
+          
+        
+          
+        <option value="../v0.6.2/tips.html">
+          v0.6.2
+        </option>
+          
+        
+          
+        <option value="../v0.6.1/tips.html">
+          v0.6.1
+        </option>
+          
+        
+          
+        <option value="../v0.6.0/tips.html">
+          v0.6.0
+        </option>
+          
+        
+          
+        <option value="../v0.5.2/tips.html">
+          v0.5.2
+        </option>
+          
+        
+          
+        <option value="../v0.5.1/tips.html">
+          v0.5.1
+        </option>
+          
+        
+          
+        <option value="../v0.5.0/tips.html">
+          v0.5.0
+        </option>
+          
+        
+          
+        <option value="../v0.4.0/tips.html">
+          v0.4.0
+        </option>
+          
+        
+          
+        <option value="../v0.3.1/tips.html">
+          v0.3.1
+        </option>
+          
+        
+          
+        <option value="../v0.3.0/tips.html">
+          v0.3.0
+        </option>
+          
+        
+          
+        <option value="../v0.2.0/tips.html">
+          v0.2.0
+        </option>
+          
+        
+      </select>
+    </div>
+  </form>
+  
+  <div class="p-5 toctree">
+    <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="user-guide.html">User guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="simulator.html">NengoDL Simulator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tensor-node.html">TensorNodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="converter.html">Converter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html">Configuration options</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Tips and tricks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#speed-improvements">Speed improvements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#training-a-spiking-deep-network">Training a spiking deep network</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a></li>
+</ul>
+
+  </div>
+<form class="p-5 my-0 border-top" action="search.html" method="get">
+  <div class="form-group form-group-single">
+    <input type="text" name="q" class="form-control" placeholder="Search" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+    <button type="submit" class="btn btn-link">
+      <img src="https://www.nengo.ai/img/icon-search.svg" alt="Go" />
+    </button>
+  </div>
+</form></div>
+      
+
+      <div class="col-12 col-md-8 col-xl-9">
+        <div class="container">
+          <div class="row">
+            <div class="col-10 offset-1 pb-5 documentation-source" role="main">
+              
+  <div class="section" id="tips-and-tricks">
+<h1>Tips and tricks<a class="headerlink" href="#tips-and-tricks" title="Permalink to this headline">¶</a></h1>
+<p>This page includes some tips and tricks to get the most out of NengoDL, or answers to
+common questions we see from users.  If you have a question that isn’t answered here,
+come <a class="reference external" href="https://forum.nengo.ai/">post it on the forums</a> and we will do our best to help.</p>
+<div class="section" id="speed-improvements">
+<h2>Speed improvements<a class="headerlink" href="#speed-improvements" title="Permalink to this headline">¶</a></h2>
+<p>There are a number of options within NengoDL that can customize the behaviour for a
+particular model in order to improve the training or inference speed.</p>
+<p>First is the <a class="reference internal" href="reference.html#nengo_dl.Simulator" title="nengo_dl.Simulator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator</span> <span class="pre">unroll_simulation</span></code></a> option.  This unrolls the
+simulation loop, which can improve the speed of models that are simulated over time.
+The optimal value for this parameter will depend on the size of the model; there will
+likely be some sweet spot in the middle that offers the best performance, with
+performance decreasing if <code class="docutils literal notranslate"><span class="pre">unroll_simulation</span></code> is too high or too low.  In general,
+this parameter just needs to be determined experimentally, by running with different
+<code class="docutils literal notranslate"><span class="pre">unroll_simulation</span></code> values and seeing which one is fastest.</p>
+<p>If you know that you will only ever be running your model for a fixed number of
+timesteps, you can build the model without the outer simulation loop by setting
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings(use_loop=False)</span></code>.
+See <a class="reference internal" href="config.html#config-use-loop"><span class="std std-ref">the documentation</span></a> for more details.</p>
+<p>If you know that you will never need to preserve simulator state between runs, you
+can avoid building and running the state-saving parts of the model by setting
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings(stateful=False)</span></code>.  In particular, if you see warnings
+like “<code class="docutils literal notranslate"><span class="pre">Method</span> <span class="pre">(on_train_batch_end)</span> <span class="pre">is</span> <span class="pre">slow</span> <span class="pre">compared</span> <span class="pre">to</span> <span class="pre">the</span> <span class="pre">batch</span> <span class="pre">update</span></code>”, then this
+setting may alleviate that issue.
+See <a class="reference internal" href="config.html#config-stateful"><span class="std std-ref">the documentation</span></a> for more details.</p>
+<p>If you know that you will never be calling <a class="reference internal" href="reference.html#nengo_dl.Simulator.fit" title="nengo_dl.Simulator.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.fit</span></code></a>, you can disable the
+training parts of the model with <code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings(inference_only=True)</span></code>.
+See <a class="reference internal" href="config.html#config-inference-only"><span class="std std-ref">the documentation</span></a> for more details.</p>
+<p>For large models with a complex architecture, modifying the graph optimization
+settings may offer speed improvements. For example, you could increase the planning
+search depth by setting</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">functools</span>
+
+<span class="kn">from</span> <span class="nn">nengo_dl</span> <span class="kn">import</span> <span class="n">graph_optimizer</span>
+
+<span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">():</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">planner</span><span class="o">=</span><span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span>
+        <span class="n">graph_optimizer</span><span class="o">.</span><span class="n">tree_planner</span><span class="p">,</span> <span class="n">max_depth</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>See <a class="reference internal" href="config.html#config-planner"><span class="std std-ref">the documentation</span></a> for more details.</p>
+</div>
+<div class="section" id="training-a-spiking-deep-network">
+<h2>Training a spiking deep network<a class="headerlink" href="#training-a-spiking-deep-network" title="Permalink to this headline">¶</a></h2>
+<p>Training a spiking version of a deep network comes with some important differences
+compared to training the corresponding standard deep network.  In general,
+we cannot expect to simply copy code that works for a standard deep network, add
+spiking neurons, and have everything work the same.  The process of
+successfully training a spiking network will depend on the particular task, but here
+are some general tips and things to think about.</p>
+<p>First, begin with a standard, non-spiking network, and then gradually add complexity.
+For example, following the steps in <a class="reference external" href="https://www.nengo.ai/nengo-dl/examples/tensorflow-models.html">this example</a>, we can begin by
+adding the source network to Nengo completely unchanged, and verify that the performance
+of the network hasn’t changed.  Then we can separate the model into individual layers
+(and again verify that the performance hasn’t changed).  Finally, we can begin changing
+some of the nonlinearities to spiking neurons, and see how that impacts performance.
+This process allows us to debug any issues uncovered at each stage one at a time,
+rather than attempting to jump into a fully redesigned spiking network.</p>
+<p>When debugging spiking performance issues, here are somethings to think about:</p>
+<ol class="arabic simple">
+<li><p><strong>Connection/Probe synapses</strong>. Spiking neurons produce discrete, “spiky” output
+signals. Synapses smooth that output, making it look more like the continuous
+signal we would get from a non-spiking nonlinearity.  So by adding synaptic filters
+into our network architecture, we can make the spiking network more like a standard
+rate network.  However, this comes at the cost of introducing temporal filter effects
+(so, for example, we will need to run the network for multiple timesteps in order
+to allow the output to stabilize).  We may also want to train the network without
+synapses, and then add them in for evaluation/inference (see <a class="reference external" href="https://www.nengo.ai/nengo-dl/examples/spiking-mnist.html">this example</a>).</p></li>
+<li><p><strong>Neuron model</strong>. There are many kinds of spiking neurons, just as there are many
+kinds of non-spiking nonlinearities.  The default in Nengo is <a class="reference external" href="https://www.nengo.ai/nengo/frontend-api.html#nengo.LIF" title="(in Nengo v3.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LIF</span></code></a> neurons,
+which have a very nonlinear response curve (in addition to being spiking). It may
+be better to start with <a class="reference external" href="https://www.nengo.ai/nengo/frontend-api.html#nengo.SpikingRectifiedLinear" title="(in Nengo v3.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nengo.SpikingRectifiedLinear</span></code></a>, which will behave more
+similarly to the standard <code class="docutils literal notranslate"><span class="pre">relu</span></code> nonlinearity.</p></li>
+<li><p><strong>Ensemble parameterization</strong>. The default parameters in Nengo are often different
+than the typical defaults in deep learning. In particular, in deep learning
+applications it is often useful to change the Nengo defaults to use a constant
+<code class="docutils literal notranslate"><span class="pre">max_rate</span></code> and zero <code class="docutils literal notranslate"><span class="pre">intercepts</span></code>.  We also typically
+set the <code class="docutils literal notranslate"><span class="pre">amplitude</span></code> parameter on the neurons to be equal to <code class="docutils literal notranslate"><span class="pre">1/max_rate</span></code> (so
+that the overall output of the neuron will be around the 0–1 range). See
+<a class="reference external" href="https://www.nengo.ai/nengo-dl/examples/spiking-mnist.html">this example</a> where
+we use both of these techniques.  Again, however, as with any hyperparameters these
+will likely need to be adjusted depending on the application if we want to
+maximize performance.</p></li>
+</ol>
+</div>
+</div>
+
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div><footer class="text-light footer-main gradient-bottom">
+  <p class="small text-center mb-0">
+    <a class="no-hover-line" href="https://appliedbrainresearch.com">
+      <img
+        src="https://appliedbrainresearch.com/img/logo-blue-notext.svg"
+        height="48"
+      />
+    </a>
+    <a href="https://www.nengo.ai/">What is Nengo?</a>
+    <a href="https://www.nengo.ai/examples/">Examples</a>
+    <a href="https://www.nengo.ai/documentation/">Documentation</a>
+    <a href="https://www.nengo.ai/getting-started/">Getting started</a>
+    <a href="https://www.nengo.ai/privacy/">Privacy</a>
+  </p>
+  <p class="small text-center mb-0">&copy; Applied Brain Research</p>
+</footer>
+<script>
+  function switchVersion(select) {
+    var option = select.selectedOptions[0];
+    if (option.hasAttribute("value")) {
+      window.location = option.value;
+    }
+  }
+</script>
+
+<script>
+  var elements = document.querySelectorAll('.sidenav');
+  Stickyfill.add(elements);
+</script>
+<script>
+  ScrollReveal().reveal(".fade-in", {
+      scale: 0.85,
+      duration: 1000,
+      delay: 250,
+      interval: 50
+  });
+</script>
+<script>
+  $('a.toggle-sidenav').on('click', function(e) {
+    e.preventDefault();
+    if ( $(this).hasClass('active') ) {
+      $(this).removeClass('active');
+      $('.sidenav').removeClass('open');
+    } else {
+      $(this).addClass('active');
+      $('.sidenav').addClass('open');
+    }
+  });
+</script>
+<script>
+  var lists = document.querySelectorAll('.toctree ul');
+  lists.forEach((ul) => {
+      ul.classList.add("nav");
+  });
+  var links = document.querySelectorAll('.toctree a');
+  links.forEach((link) => {
+      link.classList.add("nav-link");
+  });
+  $("body").scrollspy({target: ".sidenav"});
+</script>
+  </body>
+</html>
