@@ -18,8 +18,8 @@ Release history
    - Deprecated
    - Removed
 
-3.0.0 (unreleased)
-------------------
+3.0.0 (December 17, 2019)
+-------------------------
 
 There are a lot of **breaking changes** in NengoDL 3.0. See the `migration guide
 <https://www.nengo.ai/nengo-dl/migration-guide.html#nengodl-2-to-3>`_ for all the
