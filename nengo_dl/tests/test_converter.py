@@ -125,16 +125,31 @@ def test_average():
     _test_convert(inp, out)
 
 
-def test_concatenate():
+def test_concatenate(rng):
     inp = [
-        tf.keras.Input(shape=(2, 3)),
-        tf.keras.Input(shape=(2, 3)),
-        tf.keras.Input(shape=(4, 3)),
+        tf.keras.Input(shape=(1, 4)),
+        tf.keras.Input(shape=(2, 4)),
+        tf.keras.Input(shape=(3, 5)),
     ]
     x = tf.keras.layers.Concatenate(axis=1)(inp[:2])
-    x = tf.keras.layers.Concatenate(axis=2)([x, inp[2]])
+    x = tf.keras.layers.Concatenate(axis=-1)([x, inp[2]])
 
-    _test_convert(inp, x)
+    _test_convert(
+        inp,
+        x,
+        inp_vals=[
+            rng.uniform(size=(5, 1, 4)),
+            rng.uniform(size=(5, 2, 4)),
+            rng.uniform(size=(5, 3, 5)),
+        ],
+    )
+
+    inp = [tf.keras.Input(shape=(1,)), tf.keras.Input(shape=(1,))]
+    x = tf.keras.layers.Concatenate(axis=0)(inp)
+    model = tf.keras.Model(inp, x)
+
+    with pytest.raises(TypeError, match="concatenate along batch dimension"):
+        converter.Converter(model, allow_fallback=False)
 
 
 def test_zero_padding():
