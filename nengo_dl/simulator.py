@@ -815,8 +815,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
         stateful : bool
             {{ stateful }}
         kwargs: dict
-            Will be passed on to `tf.keras.Model.evaluate
-            <https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate>`_.
+            Will be passed on to `tf.keras.Model.fit
+            <https://www.tensorflow.org/api_docs/python/tf/keras/Model#fit>`_.
 
         Returns
         -------
