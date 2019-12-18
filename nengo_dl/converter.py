@@ -1166,15 +1166,31 @@ class ConvertConcatenate(LayerConverter):
     """Convert ``tf.keras.layers.Concatenate`` to Nengo objects."""
 
     def convert(self, node_id):
-        offsets = np.cumsum([np.prod(shape) for shape in self.input_shape(node_id)])
-        offsets = np.concatenate(([0], offsets))
         output = self.add_nengo_obj(node_id)
+
+        # axis-1 because not counting batch dimension
+        axis = self.layer.axis - 1 if self.layer.axis > 0 else self.layer.axis
+
+        idxs = np.arange(np.prod(self.output_shape(node_id))).reshape(
+            self.output_shape(node_id)
+        )
+        slices = [slice(None) for _ in range(idxs.ndim)]
+        offsets = np.cumsum([shape[axis] for shape in self.input_shape(node_id)])
+        offsets = np.concatenate(([0], offsets))
+
         for i in range(len(self.layer.input)):
-            self.add_connection(
-                node_id, output[offsets[i] : offsets[i + 1]], input_idx=i
-            )
+            slices[axis] = slice(offsets[i], offsets[i + 1])
+            self.add_connection(node_id, output[np.ravel(idxs[slices])], input_idx=i)
 
         return output
+
+    @classmethod
+    def convertible(cls, layer, converter):
+        if layer.axis == 0:
+            msg = "Cannot concatenate along batch dimension (axis 0)"
+            return False, msg
+
+        return super().convertible(layer, converter)
 
 
 class ConvertConv(LayerConverter):
