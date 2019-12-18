@@ -464,6 +464,14 @@ class Layer:
 
         return (obj, conn) if return_conn else obj
 
+    def __str__(self):
+
+        return "Layer(%s)" % getattr(
+            self.layer_func,
+            "name",
+            getattr(self.layer_func, "__name__", self.layer_func),
+        )
+
 
 def tensor_layer(input, layer_func, **kwargs):
     """Deprecated, use `.Layer` instead."""
