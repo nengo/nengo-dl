@@ -338,3 +338,23 @@ def test_unspecified_shape():
 
         with pytest.raises(ValidationError, match="must be an int"):
             Layer(lambda x: x)(inp, shape_out=(None, 1))
+
+
+def test_str():
+    with nengo.Network():
+
+        def test_func(x):
+            return x
+
+        node = nengo.Node([0])
+        layer_w_func = Layer(test_func)
+        assert str(layer_w_func) == "Layer(test_func)"
+        assert "TensorNode (unlabeled)" in str(layer_w_func(node))
+        assert str(layer_w_func(node, label="test_func")) == '<TensorNode "test_func">'
+
+        class TestLayer(tf.keras.layers.Layer):
+            pass
+
+        assert str(Layer(TestLayer())) == "Layer(test_layer)"
+
+        assert str(Layer(tf.keras.layers.Dense(units=10))) == "Layer(dense)"

@@ -258,7 +258,9 @@ class Converter:
 
         # perform custom checks in layer converters
         if ConverterClass is None:
-            error_msg = None
+            error_msg = "Layer type %s does not have a registered converter" % type(
+                layer
+            )
         else:
             convertible, error_msg = ConverterClass.convertible(layer, self)
             if not convertible:
@@ -861,14 +863,16 @@ class ConvertFallback(LayerConverter):
         self.tensor_layer = Layer(layer)
 
     def convert(self, node_id):
-        warnings.warn(
-            "Layer type %s does not have a registered converter; falling back to "
-            "nengo_dl.Layer" % type(self.layer)
+        logger.info("Using TensorNode %s", self.tensor_layer)
+
+        input_obj = self.get_input_obj(node_id)
+        output = self.tensor_layer(
+            input_obj, shape_in=self.input_shape(node_id), label=self.layer.name
         )
 
-        return self.tensor_layer(
-            self.get_input_obj(node_id), shape_in=self.input_shape(node_id),
-        )
+        logger.info("Applying to %s, created %s", input_obj, output)
+
+        return output
 
 
 class ConvertAvgPool(LayerConverter):

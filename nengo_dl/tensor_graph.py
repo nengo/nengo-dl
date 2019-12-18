@@ -309,7 +309,8 @@ class TensorGraph(tf.keras.layers.Layer):
             else:
                 weights = None
 
-            op.func.build(shape_in)
+            with tf.name_scope(op.func.name):
+                op.func.build(shape_in)
 
             if weights is not None:
                 weight_sets.extend(op.func.weights)
