@@ -484,3 +484,22 @@ def test_input():
 
     with pytest.raises(ValueError, match="must be fully specified"):
         converter.Converter(model)
+
+
+def test_nested_input():
+    subinputs = (
+        tf.keras.Input(shape=(2,), name="sub0"),
+        tf.keras.Input(shape=(2,), name="sub1"),
+    )
+    x_0 = x = tf.keras.layers.Activation(tf.nn.relu)(subinputs[0])
+    x = tf.keras.layers.Concatenate()([x, subinputs[1]])
+    submodel = tf.keras.Model(subinputs, (x_0, x))
+
+    inputs = (
+        tf.keras.Input(shape=(2,), name="in0"),
+        tf.keras.Input(shape=(2,), name="in1"),
+    )
+    x_0, x = submodel(inputs)
+    x = tf.keras.layers.Concatenate()([x, x_0])
+
+    _test_convert(inputs, x)

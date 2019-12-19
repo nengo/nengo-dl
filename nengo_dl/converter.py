@@ -525,7 +525,11 @@ class LayerConverter:
             tensor = input_tensors
 
         input_layer, input_node_id, input_tensor_id = self.get_history(tensor)
-        return self.converter.layer_map[input_layer][input_node_id][input_tensor_id]
+
+        if input_node_id in self.converter.layer_map[input_layer]:
+            return self.converter.layer_map[input_layer][input_node_id][input_tensor_id]
+        else:
+            return None
 
     def _get_shape(self, input_output, node_id, include_batch=False):
         """
@@ -804,6 +808,9 @@ class ConvertModel(LayerConverter):
         if results is None:
             results = []
 
+        logger.debug("===starting===")
+        logger.debug("Tracing tensors %s", tensors)
+
         for tensor in tensors:
             if any(tensor is y for y in results):
                 # already traced this tensor
@@ -811,17 +818,23 @@ class ConvertModel(LayerConverter):
 
             layer, node_index, _ = self.get_history(tensor)
 
-            logger.debug("Tracing layer %s node %s", layer.name, node_index)
+            logger.debug("---")
+            logger.debug("Layer %s node %s", layer.name, node_index)
 
             if layer.inbound_nodes:
                 node = layer.inbound_nodes[node_index]
                 if node.inbound_layers:
+                    logger.debug("Input layers %s", node.inbound_layers)
+                    logger.debug("Input tensors %s", node.input_tensors)
+
                     # not an input layer, so continue recursion
                     self.trace_tensors(
                         nest.flatten(node.input_tensors), results=results
                     )
 
             results.append(tensor)
+
+        logger.debug("===done===")
 
         return results
 
@@ -1357,11 +1370,21 @@ class ConvertInput(LayerConverter):
     """Convert ``tf.keras.layers.InputLayer`` to Nengo objects."""
 
     def convert(self, node_id):
-        shape = self.output_shape(node_id)
-        if any(x is None for x in shape):
-            raise ValueError("Input shapes must be fully specified; got %s" % (shape,))
+        # if this input layer has an input obj, that means it is a passthrough
+        # (so we just return the input)
+        output = self.get_input_obj(node_id)
 
-        output = nengo.Node(np.zeros(np.prod(shape)), label=self.layer.name)
+        if output is None:
+            # not a passthrough input, so create input node
+            shape = self.output_shape(node_id)
+            if any(x is None for x in shape):
+                raise ValueError(
+                    "Input shapes must be fully specified; got %s" % (shape,)
+                )
+            output = nengo.Node(np.zeros(np.prod(shape)), label=self.layer.name)
+
+            logger.info("Created %s", output)
+
         return output
 
 
