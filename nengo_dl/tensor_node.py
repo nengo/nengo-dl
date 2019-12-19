@@ -351,7 +351,12 @@ class SimTensorNodeBuilder(OpBuilder):
         if isinstance(self.func, tf.keras.layers.Layer):
             if len(inputs) == 1:
                 inputs = inputs[0]
-            output = self.func.call(inputs)
+            kwargs = (
+                dict(training=self.config.training)
+                if self.func._expects_training_arg
+                else {}
+            )
+            output = self.func.call(inputs, **kwargs)
         else:
             output = self.func(*inputs)
 

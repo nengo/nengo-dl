@@ -33,6 +33,8 @@ Release history
 - Fixed bug in ``Converter`` for ``Concatenate`` layers with ``axis != 1``. (`#119`_)
 - Fixed bug in ``Converter`` for models containing passthrough ``Input`` layers inside
   submodels. (`#119`_)
+- Keras Layers inside TensorNodes will be called with the ``training`` argument set
+  correctly (previously it was always set to the default value). (`#119`_)
 
 .. _#119: https://github.com/nengo/nengo-dl/pull/119
 
