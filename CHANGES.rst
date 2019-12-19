@@ -31,6 +31,8 @@ Release history
   undefined (``None``) elements. (`#119`_)
 - Fixed bug in ``Converter`` when source model contains duplicate nodes. (`#119`_)
 - Fixed bug in ``Converter`` for ``Concatenate`` layers with ``axis != 1``. (`#119`_)
+- Fixed bug in ``Converter`` for models containing passthrough ``Input`` layers inside
+  submodels. (`#119`_)
 
 .. _#119: https://github.com/nengo/nengo-dl/pull/119
 
