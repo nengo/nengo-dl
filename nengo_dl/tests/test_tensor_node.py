@@ -358,3 +358,33 @@ def test_str():
         assert str(Layer(TestLayer())) == "Layer(test_layer)"
 
         assert str(Layer(tf.keras.layers.Dense(units=10))) == "Layer(dense)"
+
+
+@pytest.mark.training
+def test_training_arg(Simulator):
+    class TrainingLayer(tf.keras.layers.Layer):
+        def __init__(self, expected):
+            super().__init__()
+
+            self.expected = expected
+
+        def call(self, inputs, training=None):
+            with tf.control_dependencies([tf.assert_equal(training, self.expected)]):
+                return tf.reshape(inputs, (1, 1))
+
+    with nengo.Network() as net:
+        node = TensorNode(TrainingLayer(expected=False), shape_in=None, shape_out=(1,))
+        nengo.Probe(node)
+
+    with Simulator(net) as sim:
+        sim.predict(n_steps=10)
+
+    node.tensor_func.expected = True
+
+    with Simulator(net) as sim:
+        sim.compile(optimizer=tf.optimizers.SGD(0), loss=tf.losses.mse)
+        sim.fit(n_steps=10, y=np.zeros((1, 1, 1)))
+
+    with tf.keras.backend.learning_phase_scope(True):
+        with Simulator(net) as sim:
+            sim.predict(n_steps=10)
