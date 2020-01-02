@@ -527,17 +527,17 @@ class Simulator:  # pylint: disable=too-many-public-methods
         self.node_inputs, n_steps = self.tensor_graph.build_inputs()
         inputs = list(self.node_inputs.values()) + [n_steps]
 
-        self.keras_model = tf.keras.Model(
-            inputs=inputs,
-            outputs=self.tensor_graph(
-                inputs,
-                stateful=self.stateful,
-                # if the global learning phase is set, use that
-                training=backend._GRAPH_LEARNING_PHASES.get(
-                    backend._DUMMY_EAGER_GRAPH, None
-                ),
+        outputs = self.tensor_graph(
+            inputs,
+            stateful=self.stateful,
+            # if the global learning phase is set, use that
+            training=backend._GRAPH_LEARNING_PHASES.get(
+                backend._DUMMY_EAGER_GRAPH, None
             ),
-            name="keras_model",
+        )
+
+        self.keras_model = tf.keras.Model(
+            inputs=inputs, outputs=outputs, name="keras_model",
         )
 
         # set more informative output names
@@ -605,20 +605,14 @@ class Simulator:  # pylint: disable=too-many-public-methods
         """
 
         # reset saved state
-        var_vals = []
-        for key, var in self.tensor_graph.saved_state.items():
-            var_vals.append((var, self.tensor_graph.base_arrays_init[False][key]))
-        tf.keras.backend.batch_set_value(var_vals)
+        tf.keras.backend.batch_get_value(
+            [var.initializer for var in self.tensor_graph.saved_state.values()]
+        )
 
         if include_trainable:
             # reset base params
-            tf.keras.backend.batch_set_value(
-                list(
-                    zip(
-                        self.tensor_graph.base_params.values(),
-                        self.tensor_graph.base_arrays_init[True].values(),
-                    )
-                )
+            tf.keras.backend.batch_get_value(
+                [var.initializer for var in self.tensor_graph.base_params.values()]
             )
 
         if include_probes:
@@ -1500,8 +1494,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
             self.tensor_graph.build_post()
 
             # reset state
-            for key, var in self.tensor_graph.saved_state.items():
-                var.assign(self.tensor_graph.base_arrays_init[False][key])
+            for var in self.tensor_graph.saved_state.values():
+                var.assign(var.initial_value)
 
             # drop steps_run
             out = out[:-1]

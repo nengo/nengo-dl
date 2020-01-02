@@ -13,44 +13,46 @@ from nengo_dl.signals import TensorSignal, SignalDict
 
 def test_tensor_signal_basic():
     # check that indices are read-only
-    sig = TensorSignal([0, 1, 2], None, None, None, None)
-    with pytest.raises(BuildError):
-        sig.indices = [2, 3, 4]
-    with pytest.raises(ValueError):
-        sig.indices[0] = 1
+    sig = TensorSignal([(0, 2)], None, None, None, None)
+    with pytest.raises(BuildError, match="Slices are read only"):
+        sig.slices = ((2, 4),)
+    with pytest.raises(TypeError, match="does not support item assignment"):
+        sig.slices[0] = (2, 4)
+    with pytest.raises(TypeError, match="does not support item assignment"):
+        sig.slices[0][0] = 2
 
     # check ndim
-    sig = TensorSignal([0, 1, 2], None, None, (1, 2), 1)
+    sig = TensorSignal([(0, 2)], None, None, (1, 2), 1)
     assert sig.ndim == 2
 
 
 def test_tensor_signal_getitem():
-    sig = TensorSignal([1, 2, 3, 4], object(), None, (4, 3), None)
+    sig = TensorSignal([(1, 6)], object(), None, (4, 3), None)
     sig_slice = sig[:2]
-    assert np.all(sig_slice.indices == (1, 2))
+    assert sig_slice.slices == ((1, 3),)
     assert sig_slice.key == sig.key
     assert sig_slice.shape == (2, 3)
 
     assert sig[...] is sig
 
-    sig_adv = sig[[1, 3]]
-    assert np.all(sig_adv.indices == (2, 4))
-    assert sig_adv.shape == (2, 3)
+    sig_adv = sig[[0, 1, 3, 4]]
+    assert sig_adv.slices == ((1, 3), (4, 6))
+    assert sig_adv.shape == (4, 3)
 
 
 def test_tensor_signal_reshape():
-    sig = TensorSignal([1, 2, 3, 4], object(), None, (4, 3), None)
+    sig = TensorSignal([(1, 5)], object(), None, (4, 3), None)
 
     with pytest.raises(BuildError):
         sig.reshape((100,))
 
     sig_reshape = sig.reshape((6, 2))
-    assert np.all(sig_reshape.indices == sig.indices)
+    assert sig_reshape.slices == sig.slices
     assert sig_reshape.key == sig.key
     assert sig_reshape.shape == (6, 2)
 
     sig_reshape = sig.reshape((6, 2, 1))
-    assert np.all(sig_reshape.indices == sig.indices)
+    assert sig_reshape.slices == sig.slices
     assert sig_reshape.key == sig.key
     assert sig_reshape.shape == (6, 2, 1)
 
@@ -71,37 +73,27 @@ def test_tensor_signal_reshape():
 
 
 def test_tensor_signal_broadcast():
-    sig = TensorSignal([0, 1, 2, 3], object(), None, (4,), None)
+    sig = TensorSignal([(0, 4)], object(), None, (4,), None)
     base = np.random.randn(4)
 
-    sig_broad = sig.broadcast(-1, 2)
-    assert sig_broad.shape == (4, 2)
-    assert sig_broad.key == sig.key
-    assert np.all(np.reshape(base[sig_broad.indices], sig_broad.shape) == base[:, None])
-
-    sig_broad = sig.broadcast(0, 2)
+    sig_broad = sig.broadcast(2)
+    assert sig_broad.slices == ((0, 4), (0, 4))
     assert sig_broad.shape == (2, 4)
     assert sig_broad.key == sig.key
-    assert np.all(np.reshape(base[sig_broad.indices], sig_broad.shape) == base[None, :])
+    assert np.all(
+        np.reshape(base[sig_broad.tf_indices.numpy()], sig_broad.shape) == base[None, :]
+    )
 
 
 def test_tensor_signal_load_indices():
-    sig = TensorSignal([2, 3, 4, 5], object(), None, (4,), None)
-    assert np.all(sig.tf_indices == sig.indices)
-    start, stop, step = sig.tf_slice
+    sig = TensorSignal([(2, 6)], object(), None, (4,), None)
+    assert np.all(sig.tf_indices == np.arange(*sig.slices[0]))
+    start, stop = sig.tf_slice
     assert start == 2
     assert stop == 6
-    assert step == 1
 
-    sig = TensorSignal([2, 4, 6, 8], object(), None, (4,), None)
-    assert np.all(sig.tf_indices == sig.indices)
-    start, stop, step = sig.tf_slice
-    assert start == 2
-    assert stop == 9
-    assert step == 2
-
-    sig = TensorSignal([2, 2, 3, 3], object(), None, (4,), None)
-    assert np.all(sig.tf_indices == sig.indices)
+    sig = TensorSignal(((2, 3), (2, 3), (3, 4), (3, 4)), object(), None, (4,), None)
+    assert np.all(sig.tf_indices == [2, 2, 3, 3])
     assert sig.tf_slice is None
 
 
@@ -122,13 +114,11 @@ def test_signal_dict_scatter(minibatched):
 
     signals.bases = {key: tf.constant(val), var_key: tf.Variable(val)}
 
-    x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), minibatched)
+    x = signals.get_tensor_signal([(0, 4)], key, tf.float32, (4,), minibatched)
     with pytest.raises(BuildError, match="wrong dtype"):
         signals.scatter(x, tf.ones(update_shape, dtype=tf.float64))
 
-    x_var = signals.get_tensor_signal(
-        [0, 1, 2, 3], var_key, tf.float32, (4,), minibatched
-    )
+    x_var = signals.get_tensor_signal([(0, 4)], var_key, tf.float32, (4,), minibatched)
     with pytest.raises(BuildError, match="should not be a Variable"):
         signals.scatter(x_var, tf.ones(update_shape))
 
@@ -150,23 +140,12 @@ def test_signal_dict_scatter(minibatched):
 
     # recognize assignment to full array
     x = signals.get_tensor_signal(
-        np.arange(var_size), key, tf.float32, (var_size,), minibatched
+        [(0, var_size)], key, tf.float32, (var_size,), minibatched
     )
     y = tf.ones((minibatch_size, var_size) if minibatched else (var_size,))
     signals.scatter(x, y)
     assert signals.bases[key] is y
     assert signals.write_types["assign"] == 1
-
-    # recognize assignment to strided full array
-    x = signals.get_tensor_signal(
-        np.arange(0, var_size, 2), key, tf.float32, (var_size // 2 + 1,), minibatched
-    )
-    y = tf.ones(
-        (minibatch_size, var_size // 2 + 1) if minibatched else (var_size // 2 + 1,)
-    )
-    signals.scatter(x, y)
-    assert signals.bases[key] is not y
-    assert signals.write_types["scatter_update"] == 2
 
 
 @pytest.mark.parametrize("minibatched", (True, False))
@@ -182,14 +161,14 @@ def test_signal_dict_gather(minibatched):
     gathered_val = val[:, :4] if minibatched else val[:4]
     signals.bases = {key: tf.constant(val, dtype=tf.float32)}
 
-    x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), minibatched)
+    x = signals.get_tensor_signal([(0, 4)], key, tf.float32, (4,), minibatched)
 
     # sliced read
     assert np.allclose(signals.gather(x), gathered_val)
     assert signals.read_types["strided_slice"] == 1
 
     # read with reshape
-    x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (2, 2), minibatched)
+    x = signals.get_tensor_signal([(0, 4)], key, tf.float32, (2, 2), minibatched)
     y = signals.gather(x)
     shape = (minibatch_size, 2, 2) if minibatched else (2, 2)
     assert y.shape == shape
@@ -197,11 +176,13 @@ def test_signal_dict_gather(minibatched):
     assert signals.read_types["strided_slice"] == 2
 
     # gather read
-    x = signals.get_tensor_signal([0, 1, 2, 3], key, tf.float32, (4,), minibatched)
+    x = signals.get_tensor_signal([(0, 4)], key, tf.float32, (4,), minibatched)
     y = signals.gather(x, force_copy=True)
     assert signals.read_types["gather"] == 1
 
-    x = signals.get_tensor_signal([0, 0, 3, 3], key, tf.float32, (4,), minibatched)
+    x = signals.get_tensor_signal(
+        ((0, 1), (0, 1), (3, 4), (3, 4)), key, tf.float32, (4,), minibatched
+    )
     assert np.allclose(
         signals.gather(x), val[:, [0, 0, 3, 3]] if minibatched else val[[0, 0, 3, 3]]
     )
@@ -209,7 +190,7 @@ def test_signal_dict_gather(minibatched):
 
     # reading from full array
     x = signals.get_tensor_signal(
-        np.arange(var_size), key, tf.float32, (var_size,), minibatched
+        [(0, var_size)], key, tf.float32, (var_size,), minibatched
     )
     y = signals.gather(x)
     assert y is signals.bases[key]
@@ -217,11 +198,15 @@ def test_signal_dict_gather(minibatched):
 
     # reading from strided full array
     x = signals.get_tensor_signal(
-        np.arange(0, var_size, 2), key, tf.float32, (var_size // 2 + 1,), minibatched
+        tuple((i * 2, i * 2 + 1) for i in range(var_size // 2 + 1)),
+        key,
+        tf.float32,
+        (var_size // 2 + 1,),
+        minibatched,
     )
     y = signals.gather(x)
     assert y is not signals.bases[key]
-    assert signals.read_types["strided_slice"] == 3
+    assert signals.read_types["gather"] == 3
 
 
 def test_signal_dict_combine():
@@ -234,16 +219,25 @@ def test_signal_dict_combine():
 
     y = signals.combine(
         [
-            signals.get_tensor_signal([0, 1, 2], key, None, (3, 2), False),
-            signals.get_tensor_signal([4, 5, 6], key, None, (3, 2), False),
+            signals.get_tensor_signal([(0, 3)], key, None, (3, 2), False),
+            signals.get_tensor_signal([(4, 7)], key, None, (3, 2), False),
         ]
     )
     assert y.key is key
     assert y._tf_indices is None
-
     assert y.shape == (6, 2)
+    assert y.slices == ((0, 3), (4, 7))
 
-    assert np.all(y.indices == [0, 1, 2, 4, 5, 6])
+    y = signals.combine(
+        [
+            signals.get_tensor_signal([(0, 3)], key, None, (3, 2), False),
+            signals.get_tensor_signal([(3, 6)], key, None, (3, 2), False),
+        ]
+    )
+    assert y.key is key
+    assert y._tf_indices is None
+    assert y.shape == (6, 2)
+    assert y.slices == ((0, 6),)
 
 
 @pytest.mark.parametrize("dtype", (np.float32, np.float64))
@@ -290,10 +284,10 @@ def test_get_tensor_signal():
 
     # check that tensor_signal is created correctly
     key = object()
-    tensor_signal = signals.get_tensor_signal((0,), key, np.float64, (3, 4), True)
+    tensor_signal = signals.get_tensor_signal([(0, 1)], key, np.float64, (3, 4), True)
 
     assert isinstance(tensor_signal, TensorSignal)
-    assert np.array_equal(tensor_signal.indices, (0,))
+    assert tensor_signal.slices == ((0, 1),)
     assert tensor_signal.key == key
     assert tensor_signal.dtype == np.float64
     assert tensor_signal.shape == (3, 4)
@@ -304,7 +298,7 @@ def test_get_tensor_signal():
     sig = Signal(np.zeros(4))
     sig.minibatched = True
     tensor_signal = signals.get_tensor_signal(
-        np.arange(4), key, np.float64, (2, 2), True, signal=sig
+        [(0, 4)], key, np.float64, (2, 2), True, signal=sig
     )
     assert len(signals) == 1
     assert signals[sig] is tensor_signal
@@ -315,25 +309,19 @@ def test_get_tensor_signal():
     with pytest.raises(AssertionError):
         sig = Signal(np.zeros((2, 2)))
         sig.minibatched = True
-        signals.get_tensor_signal(
-            np.arange(4), key, np.float64, (2, 2), True, signal=sig
-        )
+        signals.get_tensor_signal([(0, 4)], key, np.float64, (2, 2), True, signal=sig)
 
     # error if sig size doesn't match given shape
     with pytest.raises(AssertionError):
         sig = Signal(np.zeros(4))
         sig.minibatched = True
-        signals.get_tensor_signal(
-            np.arange(4), key, np.float64, (2, 3), True, signal=sig
-        )
+        signals.get_tensor_signal([(0, 4)], key, np.float64, (2, 3), True, signal=sig)
 
     # error if minibatched doesn't match
     with pytest.raises(AssertionError):
         sig = Signal(np.zeros(4))
         sig.minibatched = False
-        signals.get_tensor_signal(
-            np.arange(4), key, np.float64, (2, 2), True, signal=sig
-        )
+        signals.get_tensor_signal([(0, 4)], key, np.float64, (2, 2), True, signal=sig)
 
 
 @pytest.mark.parametrize("ndims", (1, 2, 3))
@@ -344,7 +332,7 @@ def test_tf_indices_nd(ndims):
         tf.range(0, 3, dtype=tf.float32), (-1,) + (1,) * (ndims - 1)
     )
     assert x.shape == shape
-    sig = signals.get_tensor_signal([0, 2], None, np.float32, shape, False)
+    sig = signals.get_tensor_signal([(0, 1), (2, 3)], None, np.float32, shape, False)
     indices = sig.tf_indices_nd
 
     result = tf.gather_nd(x, indices)

@@ -60,13 +60,13 @@ class ResetBuilder(OpBuilder):
         # bases, which we need to handle
         scatters = defaultdict(list)
         for op in ops:
-            scatters[signals[op.dst].key] += [op]
+            scatters[signals[op.dst].key].append(op)
         self.scatters = []
         for group in scatters.values():
             value = tf.concat(
                 [
                     tf.broadcast_to(
-                        np.asarray(x.value).astype(dtype)[None, ...],
+                        tf.cast(x.value, dtype),
                         (signals.minibatch_size,) + x.dst.shape,
                     )
                     for x in group
@@ -115,7 +115,7 @@ class CopyBuilder(OpBuilder):
         if not self.src_data.minibatched and self.dst_data.minibatched:
             # broadcast indices so that the un-minibatched src data gets
             # copied to each minibatch dimension in dst
-            self.src_data = self.src_data.broadcast(0, signals.minibatch_size)
+            self.src_data = self.src_data.broadcast(signals.minibatch_size)
 
     def build_step(self, signals):
         signals.scatter(self.dst_data, signals.gather(self.src_data), mode=self.mode)
