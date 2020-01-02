@@ -259,7 +259,7 @@ def test_create_signals():
     plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
-    assert np.all([graph.signals[x].dtype == np.float32 for x in sigs])
+    assert np.all([graph.signals[x].dtype == "float32" for x in sigs])
     assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
     assert graph.signals[sigs[1]].key == graph.signals[sigs[2]].key
     assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
@@ -274,7 +274,7 @@ def test_create_signals():
     plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
-    assert np.all([graph.signals[x].dtype == np.int32 for x in sigs])
+    assert np.all([graph.signals[x].dtype == "int32" for x in sigs])
     assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
     assert graph.signals[sigs[1]].key == graph.signals[sigs[2]].key
     assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
@@ -289,12 +289,14 @@ def test_create_signals():
     plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
-    assert graph.base_arrays_init[False][graph.signals[sigs[0]].key].shape == (10, 15)
-    assert graph.base_arrays_init[False][graph.signals[sigs[2]].key].shape == (
-        10,
-        15,
-        1,
-    )
+    assert graph.base_arrays_init[False][graph.signals[sigs[0]].key][1] == [
+        (10, 10),
+        (10, 5),
+    ]
+    assert graph.base_arrays_init[False][graph.signals[sigs[2]].key][1] == [
+        (10, 10, 1),
+        (10, 5, 1),
+    ]
     assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
     assert graph.signals[sigs[1]].key != graph.signals[sigs[2]].key
     assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
@@ -309,8 +311,11 @@ def test_create_signals():
     plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
-    assert graph.base_arrays_init[True][graph.signals[sigs[0]].key].shape == (2,)
-    assert graph.base_arrays_init[False][graph.signals[sigs[2]].key].shape == (10, 2)
+    assert graph.base_arrays_init[True][graph.signals[sigs[0]].key][1] == [(1,), (1,)]
+    assert graph.base_arrays_init[False][graph.signals[sigs[2]].key][1] == [
+        (10, 1),
+        (10, 1),
+    ]
     assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
     assert graph.signals[sigs[1]].key != graph.signals[sigs[2]].key
     assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
@@ -320,14 +325,14 @@ def test_create_signals():
     plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
-    assert list(graph.base_arrays_init[False].values())[0].shape == (10, 5)
+    assert list(graph.base_arrays_init[False].values())[0][1] == [(10, 1), (10, 4)]
 
     # check that boolean signals are handled correctly
     sigs = [dummies.Signal(dtype=np.bool, shape=())]
     plan = [(dummies.Op(reads=sigs),)]
     graph = dummies.TensorGraph(plan, tf.float32, 1)
     graph.create_signals(sigs)
-    assert list(graph.base_arrays_init[False].values())[0].dtype == np.bool
+    assert list(graph.base_arrays_init[False].values())[0][2] == "bool"
 
 
 def test_create_signals_views():
@@ -339,14 +344,14 @@ def test_create_signals_views():
     plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs[2:])
-    assert list(graph.base_arrays_init[False].values())[0].shape == (10, 8)
+    assert list(graph.base_arrays_init[False].values())[0][1] == [(10, 4), (10, 4)]
     assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
     assert graph.signals[sigs[1]].key == graph.signals[sigs[2]].key
     assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
-    assert np.all(graph.signals[sigs[0]].indices == (0, 1, 2, 3))
-    assert np.all(graph.signals[sigs[1]].indices == (4, 5, 6, 7))
-    assert np.all(graph.signals[sigs[0]].indices == graph.signals[sigs[2]].indices)
-    assert np.all(graph.signals[sigs[1]].indices == graph.signals[sigs[3]].indices)
+    assert graph.signals[sigs[0]].slices == ((0, 4),)
+    assert graph.signals[sigs[1]].slices == ((4, 8),)
+    assert graph.signals[sigs[0]].slices == graph.signals[sigs[2]].slices
+    assert graph.signals[sigs[1]].slices == graph.signals[sigs[3]].slices
 
 
 def test_create_signals_partition():
@@ -410,3 +415,69 @@ def test_get_tensor(Simulator, use_loop):
 
         sim.run_steps(10)
         assert np.allclose(sim.data[p], np.arange(10)[None, :])
+
+
+@pytest.mark.parametrize("trainable", (True, False))
+def test_build(trainable, rng):
+    sigs = [
+        dummies.Signal(
+            shape=(2, 1), dtype="float32", initial_value=0, trainable=trainable
+        ),
+        dummies.Signal(
+            shape=(3, 1),
+            dtype="float32",
+            initial_value=np.zeros((3, 1)),
+            trainable=trainable,
+        ),
+        dummies.Signal(
+            shape=(4, 1), dtype="float32", initial_value=1, trainable=trainable
+        ),
+        dummies.Signal(
+            shape=(5, 1),
+            dtype="float32",
+            initial_value=np.ones((5, 1)),
+            trainable=trainable,
+        ),
+        dummies.Signal(
+            shape=(6, 1),
+            dtype="float32",
+            initial_value=rng.uniform(size=(6, 1)),
+            trainable=trainable,
+        ),
+        dummies.Signal(
+            shape=(7, 1),
+            dtype="float32",
+            initial_value=rng.uniform(size=(7, 1)),
+            trainable=trainable,
+        ),
+    ]
+
+    plan = [
+        tuple(dummies.Op(reads=[x]) for x in sigs[:2]),
+        tuple(dummies.Op(reads=[x]) for x in sigs[2:4]),
+        tuple(dummies.Op(reads=[x]) for x in sigs[4:]),
+    ]
+
+    graph = dummies.TensorGraph(plan=plan, dtype="float32", minibatch_size=16)
+    graph.create_signals(sigs)
+    graph.build()
+
+    assert len(graph.weights) == 3
+
+    init0 = graph.weights[0].numpy()
+    assert init0.shape == (5, 1) if trainable else (16, 5, 1)
+    assert np.allclose(init0, 0)
+
+    init1 = graph.weights[1].numpy()
+    assert init1.shape == (9, 1) if trainable else (16, 9, 1)
+    assert np.allclose(init1, 1)
+
+    init2 = graph.weights[2].numpy()
+    if trainable:
+        assert init2.shape == (13, 1)
+        assert np.allclose(init2[:6], sigs[4].initial_value)
+        assert np.allclose(init2[6:], sigs[5].initial_value)
+    else:
+        assert init2.shape == (16, 13, 1)
+        assert np.allclose(init2[:, :6], sigs[4].initial_value)
+        assert np.allclose(init2[:, 6:], sigs[5].initial_value)

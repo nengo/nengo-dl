@@ -24,6 +24,7 @@ Release history
 **Changed**
 
 - Improved build time of networks containing lots of ``TensorNodes``. (`#119`_)
+- Improved memory usage of build process. (`#119`_)
 
 **Fixed**
 

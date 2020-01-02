@@ -20,29 +20,27 @@ class TensorSignal:
 
     Parameters
     ----------
-    indices : tuple or list or `~numpy.ndarray` of int
-        Indices along the first axis of the base array corresponding to the
-        data for this signal
+    slices : tuple of tuple of int
+        Start/stop indices of slices along the first axis of the base array,
+        corresponding to the data for this signal.
     key : object
-        Key mapping to the base array that contains the data for this signal
-    dtype : `~numpy.dtype`
-        dtype of the values represented by this signal
+        Key mapping to the base array that contains the data for this signal.
+    dtype : str
+        dtype of the values represented by this signal.
     shape : tuple of int
-        View shape of this signal (may differ from shape of base array)
+        View shape of this signal (may differ from shape of base array).
     minibatch_size : int
         If not None then this signal contains a minibatch dimension with the
-        given size
+        given size.
     label : str
-        Name for this signal, used to make debugging easier
+        Name for this signal, used to make debugging easier.
     """
 
-    def __init__(
-        self, indices, key, dtype, shape, minibatch_size, label="TensorSignal"
-    ):
-        # make indices read-only
-        assert isinstance(indices, (tuple, list, np.ndarray))
-        self._indices = np.asarray(indices)
-        self._indices.flags.writeable = False
+    def __init__(self, slices, key, dtype, shape, minibatch_size, label="TensorSignal"):
+        # make sure slices are read-only
+        slices = tuple(tuple(s) for s in slices)
+
+        self._slices = slices
         self.key = key
         self.dtype = dtype
         self.shape = shape
@@ -61,15 +59,15 @@ class TensorSignal:
         self._tf_slice = -1
 
     @property
-    def indices(self):
+    def slices(self):
         """
-        The indices containing the data for this signal in the base array.
+        The slices containing the data for this signal in the base array.
         """
-        return self._indices
+        return self._slices
 
-    @indices.setter
-    def indices(self, _):
-        raise BuildError("Indices are read only")
+    @slices.setter
+    def slices(self, _):
+        raise BuildError("Slices are read only")
 
     @property
     def ndim(self):
@@ -104,9 +102,27 @@ class TensorSignal:
         if indices is Ellipsis or indices is None:
             return self
 
-        new_indices = self.indices[indices]
+        # figure out indices in new view
+        source_indices = np.concatenate(
+            [np.arange(start, stop, dtype=np.int32) for start, stop in self.slices]
+        )
+        new_indices = source_indices[indices]
+
+        # find all the entries that are not runs (not consecutive with the
+        # previous entry)
+        run_starts = np.empty(new_indices.shape[0], dtype=bool)
+        run_starts[0] = True
+        np.not_equal(new_indices[:-1] + 1, new_indices[1:], out=run_starts[1:])
+
+        # find run start/stop indices
+        run_breaks = np.nonzero(run_starts)[0]
+        starts = new_indices[run_breaks]
+        stops = np.append(new_indices[run_breaks - 1][1:], new_indices[-1]) + 1
+
+        slices = tuple(zip(starts, stops))
+
         return TensorSignal(
-            new_indices,
+            slices,
             self.key,
             self.dtype,
             (len(new_indices),) + self.shape[1:],
@@ -147,7 +163,7 @@ class TensorSignal:
                 raise BuildError("Number of elements don't match in reshape")
 
         return TensorSignal(
-            self.indices,
+            self.slices,
             self.key,
             self.dtype,
             shape,
@@ -155,19 +171,15 @@ class TensorSignal:
             label=self.label + ".reshape(%s)" % (shape,),
         )
 
-    def broadcast(self, axis, length):
+    def broadcast(self, length):
         """
-        Add a new dimension by broadcasting this signal along ``axis``
+        Add a new dimension by broadcasting this signal along the first axis
         for the given length.
 
         Parameters
         ----------
-        axis : 0 or -1
-            Where to insert the new dimension (currently only supports either
-            the beginning or end of the array)
         length : int
-            The number of times to duplicate signal along the broadcast
-            dimension
+            The number of times to duplicate signal along the first dimension.
 
         Returns
         -------
@@ -175,26 +187,16 @@ class TensorSignal:
             TensorSignal with new broadcasted shape
         """
 
-        assert axis in (0, -1)
         # this only works on vectors
         assert self.ndim == 1 and not self.minibatched
 
-        indices = self.indices
-        indices = np.stack([indices] * length, axis=axis)
-        indices = np.reshape(indices, (-1,))
-
-        if axis == -1:
-            display_shape = self.shape + (length,)
-        else:
-            display_shape = (length,) + self.shape
-
         return TensorSignal(
-            indices,
+            self.slices * length,
             self.key,
             self.dtype,
-            display_shape,
+            (length,) + self.shape,
             self.minibatch_size,
-            label=self.label + ".broadcast(%d, %d)" % (axis, length),
+            label=self.label + ".broadcast(%d)" % length,
         )
 
     @property
@@ -213,7 +215,10 @@ class TensorSignal:
         A ``tf.Tensor`` representing the indices of this signal.
         """
         if self._tf_indices is None:
-            self._tf_indices = tf.constant(self.indices, dtype=tf.int32)
+            self._tf_indices = tf.concat(
+                [tf.range(start, stop, dtype=tf.int32) for start, stop in self.slices],
+                axis=0,
+            )
 
         return self._tf_indices
 
@@ -226,13 +231,14 @@ class TensorSignal:
 
         if self._tf_indices_nd is None:
             if self.minibatched:
-                idxs = np.stack(
-                    np.meshgrid(
-                        np.arange(self.minibatch_size), self.indices, indexing="ij"
+                self._tf_indices_nd = tf.stack(
+                    tf.meshgrid(
+                        tf.range(self.minibatch_size, dtype=tf.int32),
+                        self.tf_indices,
+                        indexing="ij",
                     ),
                     axis=-1,
                 )
-                self._tf_indices_nd = tf.constant(idxs, dtype=tf.int32)
             else:
                 self._tf_indices_nd = tf.expand_dims(self.tf_indices, -1)
 
@@ -248,27 +254,21 @@ class TensorSignal:
         `.TensorSignal.tf_indices`.
         """
         if self._tf_slice == -1:
-            start = self.indices[0]
-            stop = self.indices[-1] + 1
-            step = self.indices[1] - self.indices[0] if len(self.indices) > 1 else 1
-            if step != 0 and np.array_equal(self.indices, np.arange(start, stop, step)):
+            if len(self.slices) == 1:
+                start, stop = self.slices[0]
                 if self.minibatched:
                     # add full slice along first (batch) dimension
                     start = [0, start]
                     stop = [self.minibatch_size, stop]
-                    step = [1, step]
                 else:
                     start = [start]
                     stop = [stop]
-                    step = [step]
 
                 self._tf_slice = (
                     tf.constant(start),
                     tf.constant(stop),
-                    tf.constant(step),
                 )
             else:
-
                 self._tf_slice = None
 
         return self._tf_slice
@@ -345,7 +345,7 @@ class SignalDict(Mapping):
         logger.debug("scatter")
         logger.debug("values %s", val)
         logger.debug("dst %s", dst)
-        logger.debug("indices %s", dst.indices)
+        logger.debug("slices %s", dst.slices)
         logger.debug("dst base %s", self.bases[dst.key])
 
         if val.dtype.is_floating and val.dtype.base_dtype != self.dtype:
@@ -369,11 +369,10 @@ class SignalDict(Mapping):
             raise BuildError("Scatter target should not be a Variable")
 
         if (
-            dst.tf_slice is not None
+            len(dst.slices) == 1
             and var.shape.is_compatible_with(val.shape)
-            and dst.indices[0] == 0
-            and dst.indices[-1] == var.shape[dst.minibatched] - 1
-            and len(dst.indices) == var.shape[dst.minibatched]
+            and dst.slices[0][0] == 0
+            and dst.slices[0][1] == var.shape[dst.minibatched]
         ):
             if mode == "inc":
                 result = var + val
@@ -414,21 +413,17 @@ class SignalDict(Mapping):
 
         logger.debug("gather")
         logger.debug("src %s", src)
-        logger.debug("indices %s", src.indices)
+        logger.debug("slices %s", src.slices)
         logger.debug("src base %s", self.bases[src.key])
 
         var = self.bases[src.key]
 
         # we prefer to get the data via `strided_slice` or `identity` if
         # possible, as it is more efficient
-        if force_copy or src.tf_slice is None:
+        if force_copy or len(src.slices) > 1:
             result = tf.gather(var, src.tf_indices, axis=1 if src.minibatched else 0)
             self.read_types["gather"] += 1
-        elif (
-            src.indices[0] == 0
-            and src.indices[-1] == var.shape[src.minibatched] - 1
-            and len(src.indices) == var.shape[src.minibatched]
-        ):
+        elif src.slices[0][0] == 0 and src.slices[0][1] == var.shape[src.minibatched]:
             result = var
             self.read_types["identity"] += 1
         else:
@@ -481,16 +476,30 @@ class SignalDict(Mapping):
         shape = (np.sum([s.shape[0] for s in sigs]),) + sigs[0].shape[1:]
         assert all(s.shape[1:] == shape[1:] for s in sigs)
 
-        indices = np.concatenate([s.indices for s in sigs], axis=0)
+        # combine slices from signals (possibly merging consecutive slices)
+        combined_slices = []
+        for sig in sigs:
+            if len(combined_slices) > 0 and combined_slices[-1][1] == sig.slices[0][0]:
+                combined_slices = combined_slices[:-1] + [
+                    (combined_slices[-1][0], sig.slices[0][1])
+                ]
+                combined_slices.extend(sig.slices[1:])
+            else:
+                combined_slices.extend(sig.slices)
 
         output = self.get_tensor_signal(
-            indices, key, sigs[0].dtype, shape, sigs[0].minibatched, label=label
+            combined_slices,
+            key,
+            sigs[0].dtype,
+            shape,
+            sigs[0].minibatched,
+            label=label,
         )
 
         return output
 
     def get_tensor_signal(
-        self, indices, key, dtype, shape, minibatched, signal=None, label="TensorSignal"
+        self, slices, key, dtype, shape, minibatched, signal=None, label="TensorSignal"
     ):
         """
         Creates a new ``TensorSignal`` with the given properties.
@@ -500,13 +509,13 @@ class SignalDict(Mapping):
 
         Parameters
         ----------
-        indices : tuple or list or `~numpy.ndarray` of int
-            Indices along the first axis of the base array corresponding to the
-            data for this signal
+        slices : tuple of tuple of int
+            Start/stop indices of slices along the first axis of the base array,
+            corresponding to the data for this signal.
         key : object
             Key mapping to the base array that contains the data for this
             signal
-        dtype : `~numpy.dtype`
+        dtype : str
             dtype of the values represented by this signal
         shape : tuple of int
             View shape of this signal (may differ from shape of base array)
@@ -525,7 +534,7 @@ class SignalDict(Mapping):
         """
 
         tensor_sig = TensorSignal(
-            indices,
+            slices,
             key,
             dtype,
             shape,
@@ -535,10 +544,10 @@ class SignalDict(Mapping):
 
         if signal is not None:
             if signal.sparse:
-                assert len(indices) == signal.size
+                assert sum(stop - start for start, stop in slices) == signal.size
                 assert shape == (signal.size,)
             else:
-                assert len(indices) == (
+                assert sum(stop - start for start, stop in slices) == (
                     1 if len(signal.shape) == 0 else signal.shape[0]
                 )
                 assert signal.size == np.prod(shape)
@@ -559,7 +568,7 @@ class SignalDict(Mapping):
             The number of constant elements in each op
         attr : str
             The attribute of the op that describes the constant parameter
-        dtype : `~numpy.dtype` or ``tf.DType``
+        dtype : str
             Numeric type of the parameter
         shape : tuple of int
             Shape for returned constant (this will be ignored in the scalar case).

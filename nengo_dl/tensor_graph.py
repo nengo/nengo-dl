@@ -217,17 +217,43 @@ class TensorGraph(tf.keras.layers.Layer):
 
         tf.random.set_seed(self.seed)
 
+        def get_initializer(init_vals):
+            """Use more efficient initializers if possible to save memory."""
+
+            values, shapes, dtype, minibatched = init_vals
+
+            if all(np.all(v == 0) for v in values):
+                initializer = tf.initializers.zeros()
+            elif all(np.all(v == 1) for v in values):
+                initializer = tf.initializers.ones()
+            else:
+                val = tf.concat(
+                    [
+                        tf.cast(tf.broadcast_to(v, s), dtype)
+                        for v, s in zip(values, shapes)
+                    ],
+                    axis=1 if minibatched else 0,
+                )
+                initializer = lambda shape=None, dtype=None: val
+
+            # figure out shape of full concatenated initial value
+            shape = list(shapes[0])
+            shape[minibatched] = sum(x[minibatched] for x in shapes)
+
+            return initializer, tuple(shape), dtype
+
         # variables for model parameters
         with trackable.no_automatic_dependency_tracking_scope(self):
             self.base_params = OrderedDict()
         assert len(self.base_params) == 0
         for k, v in self.base_arrays_init[True].items():
+            initializer, shape, dtype = get_initializer(v)
             self.base_params[k] = self.add_weight(
-                initializer=tf.initializers.constant(v),
-                shape=v.shape,
-                dtype=v.dtype,
+                initializer=initializer,
+                shape=shape,
+                dtype=dtype,
                 trainable=True,
-                name="base_params/%s_%s" % (v.dtype, "_".join(str(x) for x in v.shape)),
+                name="base_params/%s_%s" % (dtype, "_".join(str(x) for x in shape)),
             )
 
         logger.debug("created base param variables")
@@ -240,13 +266,13 @@ class TensorGraph(tf.keras.layers.Layer):
             self.saved_state = OrderedDict()
         with tf.device("/cpu:0"):
             for k, v in self.base_arrays_init[False].items():
+                initializer, shape, dtype = get_initializer(v)
                 self.saved_state[k] = self.add_weight(
-                    initializer=tf.initializers.constant(v),
-                    shape=v.shape,
-                    dtype=v.dtype,
+                    initializer=initializer,
+                    shape=shape,
+                    dtype=dtype,
                     trainable=False,
-                    name="saved_state/%s_%s"
-                    % (v.dtype, "_".join(str(x) for x in v.shape)),
+                    name="saved_state/%s_%s" % (dtype, "_".join(str(x) for x in shape)),
                 )
 
         logger.debug("created saved state variables")
@@ -758,10 +784,13 @@ class TensorGraph(tf.keras.layers.Layer):
         except KeyError:
             base = self.saved_state[tensor_sig.key]
 
+        if "/while/" in tensor_sig.tf_indices.name:
+            # invalidate cached indices so they will be rebuilt outside the
+            # while loop
+            tensor_sig._tf_indices = None
+
         return tf.gather(
-            base,
-            tf.constant(tensor_sig.indices),
-            axis=1 if tensor_sig.minibatched else 0,
+            base, tensor_sig.tf_indices, axis=1 if tensor_sig.minibatched else 0,
         )
 
     def mark_signals(self):
@@ -919,7 +948,6 @@ class TensorGraph(tf.keras.layers.Layer):
             memory (e.g., output from `.graph_optimizer.order_signals`)
         """
 
-        float_type = np.dtype(self.dtype)
         base_arrays = [OrderedDict(), OrderedDict()]
         curr_keys = {}
         sig_idxs = {s: i for i, s in enumerate(sigs)}
@@ -963,11 +991,11 @@ class TensorGraph(tf.keras.layers.Layer):
 
             # convert to appropriate dtype
             if np.issubdtype(sig.dtype, np.floating):
-                dtype = float_type
+                dtype = self.dtype
             elif np.issubdtype(sig.dtype, np.integer):
-                dtype = np.int32
+                dtype = "int32"
             elif np.issubdtype(sig.dtype, np.bool_):
-                dtype = sig.dtype
+                dtype = "bool"
             else:
                 raise NotImplementedError("Unsupported signal dtype")
 
@@ -994,47 +1022,36 @@ class TensorGraph(tf.keras.layers.Layer):
                 else:
                     initial_value = initial_value.tocoo().data
 
-            initial_value = initial_value.astype(dtype, copy=False)
-
-            # broadcast scalars up to full size
-            if initial_value.shape == ():
-                initial_value = np.resize(initial_value, shape)
-
             if sig.minibatched:
-                # duplicate along minibatch dimension
-                initial_value = np.tile(
-                    initial_value[None, ...],
-                    (self.minibatch_size,) + tuple(1 for _ in shape),
-                )
+                shape = (self.minibatch_size,) + shape
 
             if key in base_arrays[sig.trainable]:
                 base_arrays[sig.trainable][key][0].append(initial_value)
-                base_arrays[sig.trainable][key][1] += shape[0]
+                base_arrays[sig.trainable][key][1].append(shape)
             else:
                 base_arrays[sig.trainable][key] = [
                     [initial_value],
-                    shape[0],
+                    [shape],
+                    dtype,
                     sig.minibatched,
                 ]
 
-            n = base_arrays[sig.trainable][key][1]
-            indices = np.arange(n - shape[0], n)
+            n = sum(x[sig.minibatched] for x in base_arrays[sig.trainable][key][1])
+            slices = [(n - shape[sig.minibatched], n)]
 
             tensor_sig = self.signals.get_tensor_signal(
-                indices, key, dtype, shape, sig.minibatched, label=sig.name, signal=sig
+                slices,
+                key,
+                dtype,
+                shape[sig.minibatched :],
+                sig.minibatched,
+                label=sig.name,
+                signal=sig,
             )
 
             logger.debug("created base signal")
             logger.debug(sig)
             logger.debug(tensor_sig)
-
-        # concatenate all the signal initial values into full base arrays
-        for trainable in (True, False):
-            for key in base_arrays[trainable]:
-                minibatched = base_arrays[trainable][key][2]
-                base_arrays[trainable][key] = np.concatenate(
-                    base_arrays[trainable][key][0], axis=1 if minibatched else 0
-                )
 
         # add any signal views to the sig_map
         all_views = [
@@ -1063,41 +1080,5 @@ class TensorGraph(tf.keras.layers.Layer):
                     stop = None
 
                 self.signals[sig] = self.signals[sig.base][slice(start, stop, stride)]
-
-        # error checking
-        for sig, tensor_sig in self.signals.items():
-            # tensorsignal shapes should match signal shapes
-            assert (
-                tensor_sig.shape == (sig.size,)
-                if sig.sparse
-                else (sig.shape if sig.shape != () else (1,))
-            )
-
-            # tensorsignal values should match signal values
-            initial_value = sig.initial_value
-            if sig.sparse:
-                if isinstance(initial_value, SparseMatrix):
-                    initial_value = initial_value.data
-                else:
-                    initial_value = initial_value.tocoo().data
-
-            base_value = base_arrays[sig.trainable][tensor_sig.key]
-            if sig.minibatched:
-                initial_value = initial_value[None, ...]
-                base_value = base_value[:, tensor_sig.indices]
-            else:
-                base_value = base_value[tensor_sig.indices]
-            assert np.allclose(base_value, initial_value)
-
-        logger.debug("base arrays")
-        logger.debug(
-            "\n".join(
-                [
-                    str((k, v.dtype, v.shape, trainable))
-                    for trainable in [True, False]
-                    for k, v in base_arrays[trainable].items()
-                ]
-            )
-        )
 
         self.base_arrays_init = base_arrays
