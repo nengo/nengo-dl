@@ -29,12 +29,11 @@ class Converter:
         If True, allow layers that cannot be converted to native Nengo
         objects to be added as a `.TensorNode` instead. Note that if this occurs, the
         converted Nengo network will only be runnable in the NengoDL simulator.
-    freeze_batchnorm : bool
-        If True, build batch normalization layers into the Nengo network as fixed
-        linear transformations.  This means that layer inputs will be normalized
-        according to what has been learned in the Keras model, but will not change
-        any further in the future.  If ``freeze_batchnorm=False`` then batch
-        normalization layers cannot be converted to native Nengo objects (but you can
+    inference_only : bool
+        Allow layers to be converted in such a way that inference behaviour will
+        match the source model but training behaviour will not.
+        If ``inference_only=False`` then some
+        layers cannot be converted to native Nengo objects (but you can
         still use ``allow_fallback=True`` to use a `.TensorNode` instead).
     max_to_avg_pool : bool
         If True, convert max pooling layers to average pooling layers. Note that this
@@ -85,13 +84,13 @@ class Converter:
         self,
         model,
         allow_fallback=True,
-        freeze_batchnorm=False,
+        inference_only=False,
         max_to_avg_pool=False,
         split_shared_weights=False,
         swap_activations=None,
     ):
         self.allow_fallback = allow_fallback
-        self.freeze_batchnorm = freeze_batchnorm
+        self.inference_only = inference_only
         self.max_to_avg_pool = max_to_avg_pool
         self.split_shared_weights = split_shared_weights
         self.swap_activations = swap_activations or {}
@@ -100,7 +99,7 @@ class Converter:
 
         with nengo.Network(label=model.name) as self.net:
             # add the "trainable" attribute to all objects
-            configure_settings(trainable=None)
+            configure_settings(trainable=None, inference_only=self.inference_only)
 
             # convert model
             self.get_converter(model).convert(None)
@@ -345,7 +344,9 @@ class LayerConverter:
     certain non-default Layer attributes that are not supported by the converter.
     This is a list of names for attributes that must have the default value for the
     layer to be convertible. The default is assumed to be ``None``, or a tuple of
-    ``("attribute_name", default_value)`` can be specified.
+    ``("attribute_name", default_value)`` can be specified. If there are parameters
+    that are supported in inference mode but not in training mode, they should be
+    added to the ``unsupported_training_args`` parameter.
 
     Subclasses should override the ``has_weights`` class parameter if the layer type
     being converted contains internal weights (this affects how the converter will
@@ -373,6 +374,8 @@ class LayerConverter:
     # the default value is assumed to be None, or a tuple of
     # ("attr_name", default_value) can be specified
     unsupported_args = []
+    # attributes that are supported in inference_only mode but otherwise not
+    unsupported_training_args = []
 
     # whether or not this layer contains trainable weights (this indicates whether
     # this layer is affected by split_shared_weights)
@@ -662,7 +665,10 @@ class LayerConverter:
             True if the layer can be converted to native Nengo objects, else False.
         """
         # check if the layer uses any unsupported arguments
-        for arg in cls.unsupported_args:
+        unsupported = cls.unsupported_args
+        if not converter.inference_only:
+            unsupported = unsupported + cls.unsupported_training_args
+        for arg in unsupported:
             if isinstance(arg, str):
                 default = None
             else:
@@ -676,6 +682,8 @@ class LayerConverter:
                     val,
                     default,
                 )
+                if arg in cls.unsupported_training_args:
+                    msg += " (unless inference_only=True)"
                 return False, msg
 
         return True, None
@@ -1164,10 +1172,10 @@ class ConvertBatchNormalization(LayerConverter):
 
     @classmethod
     def convertible(cls, layer, converter):
-        if not converter.freeze_batchnorm:
+        if not converter.inference_only:
             msg = (
                 "Cannot convert BatchNormalization layer to native Nengo objects "
-                "unless freeze_batchnorm=True"
+                "unless inference_only=True"
             )
             return False, msg
 
@@ -1193,7 +1201,9 @@ class ConvertConcatenate(LayerConverter):
 
         for i in range(len(self.layer.input)):
             slices[axis] = slice(offsets[i], offsets[i + 1])
-            self.add_connection(node_id, output[np.ravel(idxs[slices])], input_idx=i)
+            self.add_connection(
+                node_id, output[np.ravel(idxs[tuple(slices)])], input_idx=i
+            )
 
         return output
 
@@ -1276,6 +1286,8 @@ class ConvertConv1D(ConvertConv):
 
     unsupported_args = [
         ("dilation_rate", (1,)),
+    ]
+    unsupported_training_args = [
         "kernel_regularizer",
         "bias_regularizer",
         "activity_regularizer",
@@ -1293,6 +1305,8 @@ class ConvertConv2D(ConvertConv):
 
     unsupported_args = [
         ("dilation_rate", (1, 1)),
+    ]
+    unsupported_training_args = [
         "kernel_regularizer",
         "bias_regularizer",
         "activity_regularizer",
@@ -1310,6 +1324,8 @@ class ConvertConv3D(ConvertConv):
 
     unsupported_args = [
         ("dilation_rate", (1, 1, 1)),
+    ]
+    unsupported_training_args = [
         "kernel_regularizer",
         "bias_regularizer",
         "activity_regularizer",
@@ -1325,7 +1341,7 @@ class ConvertConv3D(ConvertConv):
 class ConvertDense(LayerConverter):
     """Convert ``tf.keras.layers.Dense`` to Nengo objects."""
 
-    unsupported_args = [
+    unsupported_training_args = [
         "kernel_regularizer",
         "bias_regularizer",
         "activity_regularizer",
@@ -1444,7 +1460,7 @@ class ConvertZeroPadding(LayerConverter):
 
         # apply slices to index array to get the list of indices we want to connect to
         idxs = np.arange(output.size_in).reshape(self.output_shape(node_id))
-        idxs = np.ravel(idxs[slices])
+        idxs = np.ravel(idxs[tuple(slices)])
 
         # connect up the input to the appropriate indices
         self.add_connection(node_id, output[idxs])
