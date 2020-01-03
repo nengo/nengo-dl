@@ -604,10 +604,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
         This will not affect any parameters created inside TensorNodes.
         """
 
-        # reset saved state
-        tf.keras.backend.batch_get_value(
-            [var.initializer for var in self.tensor_graph.saved_state.values()]
-        )
+        if self.stateful:
+            # reset saved state
+            tf.keras.backend.batch_get_value(
+                [var.initializer for var in self.tensor_graph.saved_state.values()]
+            )
 
         if include_trainable:
             # reset base params
@@ -1493,9 +1494,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
             out = self.tensor_graph(args, training=True)
             self.tensor_graph.build_post()
 
-            # reset state
-            for var in self.tensor_graph.saved_state.values():
-                var.assign(var.initial_value)
+            if self.stateful:
+                # reset state
+                for var in self.tensor_graph.saved_state.values():
+                    var.assign(var.initial_value)
 
             # drop steps_run
             out = out[:-1]
