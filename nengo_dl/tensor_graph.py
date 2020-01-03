@@ -260,20 +260,17 @@ class TensorGraph(tf.keras.layers.Layer):
         logger.debug([str(x) for x in self.base_params.values()])
 
         # variables to save the internal state of simulation between runs
-        # note: place these on CPU because they'll only be accessed once at the
-        # beginning of the simulation loop, and they can be quite large
         with trackable.no_automatic_dependency_tracking_scope(self):
             self.saved_state = OrderedDict()
-        with tf.device("/cpu:0"):
-            for k, v in self.base_arrays_init[False].items():
-                initializer, shape, dtype = get_initializer(v)
-                self.saved_state[k] = self.add_weight(
-                    initializer=initializer,
-                    shape=shape,
-                    dtype=dtype,
-                    trainable=False,
-                    name="saved_state/%s_%s" % (dtype, "_".join(str(x) for x in shape)),
-                )
+        for k, v in self.base_arrays_init[False].items():
+            initializer, shape, dtype = get_initializer(v)
+            self.saved_state[k] = self.add_weight(
+                initializer=initializer,
+                shape=shape,
+                dtype=dtype,
+                trainable=False,
+                name="saved_state/%s_%s" % (dtype, "_".join(str(x) for x in shape)),
+            )
 
         logger.debug("created saved state variables")
         logger.debug([str(x) for x in self.saved_state.values()])
@@ -372,6 +369,9 @@ class TensorGraph(tf.keras.layers.Layer):
             uses the symbolic Keras learning phase variable.
         progress : `.utils.ProgressBar`
             Progress bar for construction stage.
+        stateful : bool
+            Whether or not to build the model to support preserving the internal state
+            between executions.
 
         Returns
         -------

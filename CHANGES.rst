@@ -25,6 +25,8 @@ Release history
 
 - Improved build time of networks containing lots of ``TensorNodes``. (`#119`_)
 - Improved memory usage of build process. (`#119`_)
+- Saved simulation state may now be placed on GPU (this should improve the speed of
+  state updates, but may slightly increase GPU memory usage). (`#119`_)
 
 **Fixed**
 
