@@ -6,7 +6,7 @@ import pytest
 import tensorflow as tf
 from tensorflow.python.keras.layers import BatchNormalization
 
-from nengo_dl import converter, utils
+from nengo_dl import config, converter, utils
 
 
 def _test_convert(inputs, outputs, allow_fallback=False, inp_vals=None):
@@ -179,7 +179,7 @@ def test_batch_normalization(rng):
     # test using tensornode fallback
     # TODO: there is some bug with using batchnormalization layers inside
     #  nengo_dl.Layers in general (unrelated to converting)
-    # conv = convert.Converter(allow_fallback=True, freeze_batchnorm=False)
+    # conv = convert.Converter(allow_fallback=True, inference_only=False)
     # with pytest.warns(UserWarning, match="falling back to nengo_dl.Layer"):
     #     net = conv.convert(model)
     #
@@ -187,7 +187,7 @@ def test_batch_normalization(rng):
     # assert conv.verify(model, net, training=True, inputs=inp_vals)
 
     # test actually converting to nengo objects
-    conv = converter.Converter(model, allow_fallback=False, freeze_batchnorm=True)
+    conv = converter.Converter(model, allow_fallback=False, inference_only=True)
 
     assert conv.verify(training=False, inputs=inp_vals)
     with pytest.raises(ValueError, match="number of trainable parameters"):
@@ -195,9 +195,9 @@ def test_batch_normalization(rng):
         # the batch normalization in the nengo network (but not the keras model)
         conv.verify(training=True, inputs=inp_vals)
 
-    # error if freeze_batchnorm=False
-    with pytest.raises(TypeError, match="unless freeze_batchnorm=True"):
-        converter.Converter(model, allow_fallback=False, freeze_batchnorm=False)
+    # error if inference_only=False
+    with pytest.raises(TypeError, match="unless inference_only=True"):
+        converter.Converter(model, allow_fallback=False, inference_only=False)
 
 
 def test_relu():
@@ -259,7 +259,7 @@ def test_densenet(Simulator, seed):
     )
 
     conv = converter.Converter(
-        model, allow_fallback=False, max_to_avg_pool=True, freeze_batchnorm=True
+        model, allow_fallback=False, max_to_avg_pool=True, inference_only=True
     )
 
     keras_params = 0
@@ -271,6 +271,11 @@ def test_densenet(Simulator, seed):
     # note: we don't expect any of the verification checks to pass, due to the
     # max_to_avg_pool swap, so just checking that the network structure has been
     # recreated
+    with conv.net:
+        # undo the inference_only=True so that parameters will be marked as
+        # trainable (so that the check below will work)
+        config.configure_settings(inference_only=False)
+
     with Simulator(conv.net) as sim:
         assert keras_params == sum(
             np.prod(w.shape) for w in sim.keras_model.trainable_weights
@@ -430,10 +435,16 @@ def test_unsupported_args():
 
     model = tf.keras.Model(inp, x)
 
-    with pytest.raises(TypeError, match="kernel_regularizer has value .* != None"):
+    with pytest.raises(
+        TypeError,
+        match="kernel_regularizer has value .* != None.*unless inference_only=True",
+    ):
         converter.Converter(model, allow_fallback=False)
 
-    with pytest.warns(UserWarning, match="kernel_regularizer has value .* != None"):
+    with pytest.warns(
+        UserWarning,
+        match="kernel_regularizer has value .* != None.*unless inference_only=True",
+    ):
         conv = converter.Converter(model, allow_fallback=True)
     assert conv.verify(training=False)
     assert conv.verify(training=True)

@@ -21,12 +21,22 @@ Release history
 3.0.1 (unreleased)
 ------------------
 
+**Added**
+
+- Added ``inference_only=True`` option to the Converter, which will allow some
+  Layers/parameters that cannot be fully converted to native Nengo objects to be
+  converted in a way that only matches the inference behaviour of the source Keras model
+  (not the training behaviour). (`#119`_)
+
 **Changed**
 
 - Improved build time of networks containing lots of ``TensorNodes``. (`#119`_)
 - Improved memory usage of build process. (`#119`_)
 - Saved simulation state may now be placed on GPU (this should improve the speed of
   state updates, but may slightly increase GPU memory usage). (`#119`_)
+- Changed Converter ``freeze_batchnorm=True`` option to ``inference_only=True``
+  (effect of the parameter is the same on BatchNormalization layers, but also has
+  broader effects). (`#119`_)
 
 **Fixed**
 
