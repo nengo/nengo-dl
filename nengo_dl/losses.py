@@ -41,7 +41,7 @@ class Regularize(tf.losses.Loss):
         with nengo.Network() as net:
             a = nengo.Node([0])
             b = nengo.Node(size_in=1)
-            c = nengo.Connection(a, b)
+            c = nengo.Connection(a, b, transform=1)
             p = nengo.Probe(c, "weights")
             ...
 

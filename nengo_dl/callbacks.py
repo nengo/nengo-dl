@@ -17,7 +17,7 @@ from nengo.exceptions import ValidationError
 import tensorflow as tf
 from tensorflow.python.eager import context
 
-from nengo_dl import utils
+from nengo_dl import compat, utils
 
 
 class NengoSummaries(tf.keras.callbacks.Callback):
@@ -61,6 +61,11 @@ class NengoSummaries(tf.keras.callbacks.Callback):
                     param = "bias"
                     name = "Ensemble.neurons_%s" % obj.ensemble.label
                 elif isinstance(obj, nengo.Connection):
+                    if not compat.conn_has_weights(obj):
+                        raise ValidationError(
+                            "Connection '%s' does not have any weights to log" % obj,
+                            "objects",
+                        )
                     param = "weights"
                     name = "Connection_%s" % obj.label
 

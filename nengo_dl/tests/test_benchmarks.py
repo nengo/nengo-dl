@@ -192,8 +192,8 @@ def test_lmu(Simulator, native_nengo, pytestconfig):
     [
         (benchmarks.cconv(128, 64, nengo.RectifiedLinear()), False, 64, 0.65, 0.8),
         (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, 1.45, 1.65),
-        (benchmarks.integrator(128, 32, nengo.RectifiedLinear()), True, 64, 0.5, 0.75),
-        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 0.9, 1.2),
+        (benchmarks.integrator(128, 32, nengo.RectifiedLinear()), True, 64, 0.6, 1.0),
+        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 1.1, 1.4),
         (
             benchmarks.random_network(
                 64,
@@ -208,8 +208,7 @@ def test_lmu(Simulator, native_nengo, pytestconfig):
             0.35,
             0.55,
         ),
-        (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, 0.75, 1.05),
-        # (benchmarks.spaun(1), False, None, 8.02, 9.52),
+        (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, 0.85, 1.15),
     ],
 )
 def test_performance(net, train, minibatch_size, min, max):
@@ -218,8 +217,8 @@ def test_performance(net, train, minibatch_size, min, max):
     # GPU: GeForce GTX Titan X
     # Python version: 3.6.8
     # TensorFlow GPU version: 2.0.0
-    # Nengo version: 3.0.0
-    # NengoDL version: 3.0.0
+    # Nengo version: 3.1.0
+    # NengoDL version: 3.1.0
 
     time = benchmarks.run_profile(
         net,

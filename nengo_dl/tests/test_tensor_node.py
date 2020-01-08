@@ -1,5 +1,6 @@
 # pylint: disable=missing-docstring
 
+from distutils.version import LooseVersion
 from functools import partial
 
 import nengo
@@ -261,12 +262,19 @@ def test_reuse_vars(Simulator, pytestconfig):
         assert np.allclose(sim.data[p2], 3)
 
         # note: when inference-only=True the weights will be marked as non-trainable
+
+        default_conn_params = 2 if LooseVersion(nengo.__version__) < "3.1.0" else 0
+
         if sim.tensor_graph.inference_only:
-            assert len(sim.keras_model.non_trainable_variables) == 10
+            assert (
+                len(sim.keras_model.non_trainable_variables) == 8 + default_conn_params
+            )
             assert len(sim.keras_model.trainable_variables) == 0
             vars = sim.keras_model.non_trainable_variables[-2:]
         else:
-            assert len(sim.keras_model.non_trainable_variables) == 8
+            assert (
+                len(sim.keras_model.non_trainable_variables) == 6 + default_conn_params
+            )
             assert len(sim.keras_model.trainable_variables) == 2
             vars = sim.keras_model.trainable_variables
 

@@ -157,7 +157,7 @@ def linear_net():
     with nengo.Network() as net:
         a = nengo.Node([1])
         b = nengo.Node(size_in=1)
-        nengo.Connection(a, b, synapse=None)
+        nengo.Connection(a, b, synapse=None, transform=1)
         p = nengo.Probe(b)
 
     return net, a, p

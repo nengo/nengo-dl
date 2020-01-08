@@ -5,6 +5,9 @@ Utilities to ease cross-compatibility between different versions of upstream
 dependencies.
 """
 
+from distutils.version import LooseVersion
+
+import nengo
 from nengo._vendor.scipy.sparse import linalg_interface, linalg_onenormest
 import tensorflow as tf
 
@@ -75,3 +78,18 @@ tf.get_logger().addFilter(TFLogFilter(err_on_deprecation=False))
 
 # monkeypatch fix for https://github.com/nengo/nengo/pull/1587
 linalg_onenormest.aslinearoperator = linalg_interface.aslinearoperator
+
+if LooseVersion(nengo.__version__) < "3.1.0":
+    default_transform = 1
+
+    def conn_has_weights(conn):
+        """All connections have weights."""
+        return True
+
+
+else:
+    default_transform = None
+
+    def conn_has_weights(conn):
+        """Equivalent to conn.has_weights."""
+        return conn.has_weights

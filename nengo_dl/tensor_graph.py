@@ -19,7 +19,15 @@ import tensorflow as tf
 from tensorflow.python.eager import context
 from tensorflow.python.training.tracking import base as trackable
 
-from nengo_dl import builder, graph_optimizer, signals, utils, tensor_node, config
+from nengo_dl import (
+    builder,
+    config,
+    compat,
+    graph_optimizer,
+    tensor_node,
+    signals,
+    utils,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -856,10 +864,11 @@ class TensorGraph(tf.keras.layers.Layer):
             for conn in net.connections:
                 # note: this doesn't include probe connections, since they
                 # aren't added to the network
-                self.model.sig[conn]["weights"].trainable = get_trainable(
-                    parent_configs, conn
-                )
-                self.model.sig[conn]["weights"].minibatched = False
+                if compat.conn_has_weights(conn):
+                    self.model.sig[conn]["weights"].trainable = get_trainable(
+                        parent_configs, conn
+                    )
+                    self.model.sig[conn]["weights"].minibatched = False
 
             # parameters can't be modified by an online Nengo learning rule
             # and offline training at the same time. (it is possible in
@@ -909,8 +918,9 @@ class TensorGraph(tf.keras.layers.Layer):
             probe_seeds = [self.model.seeds[p] for p in self.model.probes]
             for obj, seed in self.model.seeds.items():
                 if isinstance(obj, Connection) and seed in probe_seeds:
-                    self.model.sig[obj]["weights"].trainable = False
-                    self.model.sig[obj]["weights"].minibatched = False
+                    if compat.conn_has_weights(obj):
+                        self.model.sig[obj]["weights"].trainable = False
+                        self.model.sig[obj]["weights"].minibatched = False
 
         # time/step are not minibatched and not trainable
         self.model.step.trainable = False

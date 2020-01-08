@@ -20,6 +20,7 @@ import numpy as np
 import tensorflow as tf
 
 from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
+from nengo_dl.compat import default_transform
 from nengo_dl.config import configure_settings
 
 
@@ -403,7 +404,7 @@ class Layer:
     def __call__(
         self,
         input,
-        transform=1,
+        transform=default_transform,
         shape_in=None,
         synapse=None,
         return_conn=False,

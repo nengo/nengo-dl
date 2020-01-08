@@ -30,7 +30,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import backend
 
-from nengo_dl import utils, config, callbacks
+from nengo_dl import callbacks, compat, config, utils
 from nengo_dl.builder import NengoBuilder, NengoModel
 from nengo_dl.tensor_graph import TensorGraph
 
@@ -1346,7 +1346,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
         fetches = []
         for obj in nengo_objs:
             if isinstance(obj, Connection):
-                fetches.append((obj, "weights"))
+                if compat.conn_has_weights(obj):
+                    fetches.append((obj, "weights"))
             elif isinstance(obj, Ensemble):
                 if isinstance(obj.neuron_type, Direct):
                     # we cannot transfer direct ensemble parameters, because
@@ -1372,6 +1373,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
         idx = 0
         for obj in nengo_objs:
             if isinstance(obj, Connection):
+                if not compat.conn_has_weights(obj):
+                    params.append({"transform": None})
+                    continue
+
                 weights = data[idx]
                 idx += 1
                 if isinstance(obj.pre_obj, Ensemble):
@@ -1381,7 +1386,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
                             "function": lambda x, weights=weights: np.zeros(
                                 weights.shape[0]
                             ),
-                            "transform": 1,
+                            "transform": compat.default_transform,
                         }
                     )
                 elif isinstance(obj.transform, Convolution):
@@ -2104,7 +2109,11 @@ class SimulationData(collections.Mapping):
             )
         elif isinstance(obj, Connection):
             # get the live simulation values
-            weights = self.get_params((obj, "weights"))[0]
+            weights = (
+                self.get_params((obj, "weights"))[0]
+                if compat.conn_has_weights(obj)
+                else None
+            )
 
             # impossible to recover transform
             transform = None

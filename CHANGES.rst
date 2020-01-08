@@ -18,7 +18,7 @@ Release history
    - Deprecated
    - Removed
 
-3.0.1 (unreleased)
+3.1.0 (unreleased)
 ------------------
 
 **Added**
@@ -41,6 +41,10 @@ Release history
   ``nengo_dl.configure_settings(dtype=...)`` config option. Note that this will
   override the default precision set in ``nengo.rc``. (`#119`_)
 - Minimum Numpy version is now 1.16.0 (required by TensorFlow). (`#119`_)
+- Added support for the new ``transform=None`` default in Nengo connections
+  (see `Nengo#1591`_). Note that this may change the number of trainable
+  parameters in a network as the scalar default ``transform=1`` weights on
+  non-Ensemble connections will no longer be present. (`#128`_)
 
 **Fixed**
 
@@ -54,6 +58,8 @@ Release history
   correctly (previously it was always set to the default value). (`#119`_)
 
 .. _#119: https://github.com/nengo/nengo-dl/pull/119
+.. _#128: https://github.com/nengo/nengo-dl/pull/128
+.. _Nengo#1591: https://github.com/nengo/nengo/pull/1591
 
 3.0.0 (December 17, 2019)
 -------------------------

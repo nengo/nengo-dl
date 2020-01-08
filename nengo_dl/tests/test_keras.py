@@ -236,8 +236,8 @@ def test_fit(Simulator, seed):
         inp_a = nengo.Node([0])
         inp_b = nengo.Node([0])
         inp = nengo.Node(size_in=2)
-        nengo.Connection(inp_a, inp[0])
-        nengo.Connection(inp_b, inp[1])
+        nengo.Connection(inp_a, inp[0], transform=1)
+        nengo.Connection(inp_b, inp[1], transform=1)
 
         ens = nengo.Ensemble(
             n_hidden + 1, n_hidden, neuron_type=nengo.Sigmoid(tau_ref=1)
