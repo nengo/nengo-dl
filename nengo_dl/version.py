@@ -8,7 +8,7 @@ a release version. Release versions are git tagged with the version.
 import warnings
 
 name = "nengo-dl"
-version_info = (3, 0, 1)  # (major, minor, patch)
+version_info = (3, 1, 0)  # (major, minor, patch)
 dev = 0  # set to None for releases
 
 version = "{v}{dev}".format(
@@ -28,7 +28,7 @@ else:
     # for release versions of nengo-dl, this should be the latest released
     # nengo version. for dev versions of nengo-dl, this should be the current
     # nengo dev version.
-    latest_nengo_version = (3, 0, 1)
+    latest_nengo_version = (3, 1, 0)
 
     if nengo.version.version_info < minimum_nengo_version:  # pragma: no cover
         raise ValueError(

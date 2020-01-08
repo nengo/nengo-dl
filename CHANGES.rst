@@ -18,7 +18,7 @@ Release history
    - Deprecated
    - Removed
 
-3.0.1 (unreleased)
+3.1.0 (unreleased)
 ------------------
 
 **Added**
@@ -37,6 +37,10 @@ Release history
 - Changed Converter ``freeze_batchnorm=True`` option to ``inference_only=True``
   (effect of the parameter is the same on BatchNormalization layers, but also has
   broader effects). (`#119`_)
+- Added support for the new ``transform=None`` default in Nengo Connections
+  (see `#1591`_). Note that this may change the number of trainable parameters in a
+  network (the scalar default ``transform=1`` weights on non-Ensemble connections will
+  no longer be present). (`#119`_)
 
 **Fixed**
 
@@ -50,6 +54,7 @@ Release history
   correctly (previously it was always set to the default value). (`#119`_)
 
 .. _#119: https://github.com/nengo/nengo-dl/pull/119
+.. _#1591: https://github.com/nengo/nengo/pull/1591
 
 3.0.0 (December 17, 2019)
 -------------------------

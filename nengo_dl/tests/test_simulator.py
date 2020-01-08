@@ -1,6 +1,7 @@
 # pylint: disable=missing-docstring
 
 from collections import OrderedDict
+from distutils.version import LooseVersion
 import logging
 import os
 import pickle
@@ -20,7 +21,7 @@ import tensorflow as tf
 from tensorflow.core.util import event_pb2
 
 from nengo_dl import Layer, TensorNode, callbacks, configure_settings, dists, utils
-from nengo_dl.compat import TFLogFilter
+from nengo_dl.compat import TFLogFilter, default_transform
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
 
@@ -167,8 +168,8 @@ def test_train_ff(Simulator, neurons, use_loop, seed):
         inp_a = nengo.Node([0])
         inp_b = nengo.Node([0])
         inp = nengo.Node(size_in=2)
-        nengo.Connection(inp_a, inp[0])
-        nengo.Connection(inp_b, inp[1])
+        nengo.Connection(inp_a, inp[0], transform=1)
+        nengo.Connection(inp_b, inp[1], transform=1)
 
         ens = nengo.Ensemble(
             n_hidden + 1, n_hidden, neuron_type=nengo.Sigmoid(tau_ref=1)
@@ -300,11 +301,11 @@ def test_train_objective(Simulator, unroll, seed):
         inp = nengo.Node([1])
 
         ens = nengo.Ensemble(n_hidden, 1, neuron_type=nengo.RectifiedLinear())
-        nengo.Connection(inp, ens, synapse=0.01)
+        nengo.Connection(inp, ens, synapse=0.01, transform=1)
         p = nengo.Probe(ens)
 
         ens2 = nengo.Ensemble(n_hidden, 1, neuron_type=nengo.RectifiedLinear())
-        nengo.Connection(inp, ens2, synapse=0.01)
+        nengo.Connection(inp, ens2, synapse=0.01, transform=1)
         p2 = nengo.Probe(ens2)
 
     with Simulator(
@@ -688,7 +689,8 @@ def test_tensorboard(Simulator, tmpdir):
     with nengo.Network() as net:
         a = nengo.Node([0])
         b = nengo.Ensemble(10, 1, neuron_type=nengo.LIFRate())
-        c = nengo.Connection(a, b)
+        c = nengo.Connection(a, b, transform=1)
+        c0 = nengo.Connection(a, b)
         p = nengo.Probe(b)
         p2 = nengo.Probe(c)
 
@@ -767,6 +769,10 @@ def test_tensorboard(Simulator, tmpdir):
     # check for error on invalid object
     with pytest.raises(ValidationError, match="Unknown summary object"):
         callbacks.NengoSummaries(log_dir=log_dir + "/nengo", sim=sim, objects=[a])
+
+    if LooseVersion(nengo.__version__) >= "3.1.0":
+        with pytest.raises(ValidationError, match="does not have any weights"):
+            callbacks.NengoSummaries(log_dir=log_dir + "/nengo", sim=sim, objects=[c0])
 
 
 @pytest.mark.parametrize("mode", ("predict", "train"))
@@ -1259,7 +1265,7 @@ def test_get_nengo_params(Simulator, seed):
 
         # check that single objects are returned as single dicts
         params = sim.get_nengo_params(d)
-        assert params["transform"] == 1
+        assert params["transform"] is default_transform
 
         fetches = [a.neurons, b, c, d, e, h]
 
@@ -1290,7 +1296,7 @@ def test_direct_grads(Simulator, mixed):
     if mixed:
         with net:
             c = nengo.Node(size_in=1)
-            nengo.Connection(a, c, synapse=None)
+            nengo.Connection(a, c, synapse=None, transform=1)
             p2 = nengo.Probe(c)
 
     with Simulator(net, minibatch_size=1) as sim:
@@ -1328,7 +1334,7 @@ def test_non_differentiable(Simulator):
     with nengo.Network() as net:
         a = nengo.Node([0])
         b = nengo.Node(lambda t, x: x, size_in=1)
-        c = nengo.Connection(a, b)
+        c = nengo.Connection(a, b, transform=1)
         p = nengo.Probe(b)
 
     with Simulator(net) as sim:
@@ -1429,7 +1435,7 @@ def test_inference_only(Simulator, neuron_type, seed):
 
         a = nengo.Node([0])
         b = nengo.Ensemble(10, 1, neuron_type=neuron_type)
-        c = nengo.Connection(a, b, synapse=None)
+        c = nengo.Connection(a, b, synapse=None, transform=1)
         p = nengo.Probe(b)
 
     with Simulator(net) as sim:
