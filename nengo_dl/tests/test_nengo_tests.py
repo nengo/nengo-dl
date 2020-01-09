@@ -115,12 +115,13 @@ def test_dtype(Simulator, request, seed, bits):
     int_dtype = np.dtype(getattr(np, "int%s" % bits))
 
     with nengo.Network() as model:
+        nengo_dl.configure_settings(dtype="float%s" % bits)
+
         u = nengo.Node([0.5, -0.4])
         a = nengo.Ensemble(10, 2)
         nengo.Connection(u, a)
-        nengo.Probe(a)
+        p = nengo.Probe(a)
 
-    nengo.rc.set("precision", "bits", bits)
     with Simulator(model) as sim:
         sim.step()
 
@@ -131,9 +132,12 @@ def test_dtype(Simulator, request, seed, bits):
                 "Signal '%s' wrong dtype" % sig
             )
 
-        # note: we do not check the dtypes of `sim.data` arrays in this
-        # version of the test, because those depend on the simulator dtype
-        # (which is not controlled by precision.bits)
+        objs = (obj for obj in model.all_objects if sim.data[obj] is not None)
+        for obj in objs:
+            for x in (x for x in sim.data[obj] if isinstance(x, np.ndarray)):
+                assert x.dtype == float_dtype, obj
+
+        assert sim.data[p].dtype == float_dtype
 
 
 @pytest.mark.parametrize("use_dist", (False, True))

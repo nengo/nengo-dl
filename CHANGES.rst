@@ -37,6 +37,9 @@ Release history
 - Changed Converter ``freeze_batchnorm=True`` option to ``inference_only=True``
   (effect of the parameter is the same on BatchNormalization layers, but also has
   broader effects). (`#119`_)
+- The precision of the Nengo core build process will now be set based on the
+  ``nengo_dl.configure_settings(dtype=...)`` config option. Note that this will
+  override the default precision set in ``nengo.rc``. (`#119`_)
 
 **Fixed**
 
