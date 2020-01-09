@@ -40,6 +40,7 @@ Release history
 - The precision of the Nengo core build process will now be set based on the
   ``nengo_dl.configure_settings(dtype=...)`` config option. Note that this will
   override the default precision set in ``nengo.rc``. (`#119`_)
+- Minimum Numpy version is now 1.16.0 (required by TensorFlow). (`#119`_)
 
 **Fixed**
 

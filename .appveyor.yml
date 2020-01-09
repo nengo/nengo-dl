@@ -16,7 +16,7 @@ environment:
       TF_VERSION: tensorflow --pre
     - NENGO_VERSION: nengo[tests]==3.0.0
       TF_VERSION: tensorflow==2.0.0
-      NUMPY_VERSION: numpy==1.16
+      NUMPY_VERSION: numpy==1.16.0
       PYTHON_VERSION: C:\Python35-x64
 
 init:

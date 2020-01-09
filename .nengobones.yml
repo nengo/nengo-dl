@@ -174,7 +174,7 @@ ci_scripts:
 travis_yml:
   python: 3.6
   global_vars:
-    NUMPY_VERSION: numpy
+    NUMPY_VERSION: numpy>=1.16.0
     TF_VERSION: tensorflow
     NENGO_VERSION: nengo[tests]
     SCIPY_VERSION: noop
@@ -199,7 +199,7 @@ travis_yml:
       env:
         NENGO_VERSION: nengo[tests]==3.0.0
         TF_VERSION: tensorflow==2.0.0
-        NUMPY_VERSION: numpy==1.14.5
+        NUMPY_VERSION: numpy==1.16.0
       python: 3.5
     - stage: advanced
       script: remote-docs

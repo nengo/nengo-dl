@@ -36,7 +36,7 @@ else:
 
 install_req = [
     "nengo>=3.0.0",
-    "numpy>=1.14.5",
+    "numpy>=1.16.0",
     "%s>=2.0.0" % tf_req,
     "jinja2>=2.10.1",
     "progressbar2>=3.39.0",
