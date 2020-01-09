@@ -2,6 +2,7 @@
 Utility objects used throughout the code base.
 """
 
+from distutils.version import LooseVersion
 import logging
 import re
 import subprocess
@@ -18,16 +19,17 @@ import tensorflow as tf
 logger = logging.getLogger(__name__)
 
 # check if GPU support is available
-# note: we run this in a subprocess because is_gpu_available() creates
-# a Session, which will fix certain process-level TensorFlow configuration
+# note: we run this in a subprocess because list_physical_devices()
+# will fix certain process-level TensorFlow configuration
 # options the first time it is called
-tf_gpu_installed = subprocess.call(
+tf_gpu_installed = not subprocess.call(
     [
         "python",
         "-c",
         "import sys; "
         "import tensorflow as tf; "
-        "sys.exit(tf.test.is_gpu_available())",
+        "sys.exit(len(tf.config%s.list_physical_devices('GPU')) == 0)"
+        % (".experimental" if LooseVersion(tf.__version__) < "2.1.0" else ""),
     ]
 )
 
