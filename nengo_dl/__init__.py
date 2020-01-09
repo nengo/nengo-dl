@@ -1,6 +1,6 @@
 # pylint: disable=wrong-import-order,wrong-import-position,missing-docstring,ungrouped-imports
 
-__copyright__ = "2015-2018, Applied Brain Research"
+__copyright__ = "2015-2020, Applied Brain Research"
 __license__ = "Free for non-commercial use; see LICENSE.rst"
 from nengo_dl.version import version as __version__
 
