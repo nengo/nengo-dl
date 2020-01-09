@@ -2,6 +2,7 @@
 Build classes for Nengo learning rule operators.
 """
 
+from nengo import rc as nengo_rc
 from nengo.builder import Signal
 from nengo.builder.learning_rules import (
     SimBCM,
@@ -205,7 +206,7 @@ def build_pes(model, pes, rule):
     conn = rule.connection
 
     # Create input error signal
-    error = Signal(np.zeros(rule.size_in), name="PES:error")
+    error = Signal(np.zeros(rule.size_in, dtype=nengo_rc.float_dtype), name="PES:error")
     model.add_op(Reset(error))
     model.sig[rule]["in"] = error  # error connection will attach here
 
@@ -221,13 +222,17 @@ def build_pes(model, pes, rule):
             # in order to avoid slicing encoders along an axis > 0, we pad
             # `error` out to the full base dimensionality and then do the
             # dotinc with the full encoder matrix
-            padded_error = Signal(np.zeros(encoders.shape[1]))
+            padded_error = Signal(
+                np.zeros(encoders.shape[1], dtype=nengo_rc.float_dtype)
+            )
             model.add_op(Copy(error, padded_error, dst_slice=conn.post_slice))
         else:
             padded_error = error
 
         # error = dot(encoders, error)
-        local_error = Signal(np.zeros(post.n_neurons), name="PES:encoded")
+        local_error = Signal(
+            np.zeros(post.n_neurons, dtype=nengo_rc.float_dtype), name="PES:encoded"
+        )
         model.add_op(Reset(local_error))
         model.add_op(DotInc(encoders, padded_error, local_error, tag="PES:encode"))
     else:

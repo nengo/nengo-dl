@@ -41,6 +41,9 @@ Release history
   (see `#1591`_). Note that this may change the number of trainable parameters in a
   network (the scalar default ``transform=1`` weights on non-Ensemble connections will
   no longer be present). (`#119`_)
+- The precision of the Nengo core build process will now be set based on the
+  ``nengo_dl.configure_settings(dtype=...)`` config option. Note that this will
+  override the default precision set in ``nengo.rc``. (`#119`_)
 
 **Fixed**
 

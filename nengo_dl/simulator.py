@@ -13,6 +13,7 @@ import warnings
 
 import jinja2
 from nengo import Connection, Direct, Ensemble, Network, Node, Probe, Convolution
+from nengo import rc as nengo_rc
 from nengo.builder.connection import BuiltConnection
 from nengo.builder.ensemble import BuiltEnsemble
 from nengo.ensemble import Neurons
@@ -471,6 +472,12 @@ class Simulator:  # pylint: disable=too-many-public-methods
         ProgressBar = utils.ProgressBar if progress_bar else utils.NullProgressBar
 
         # build model (uses default nengo builder)
+        nengo_precision = nengo_rc.get("precision", "bits")
+        nengo_rc.set(
+            "precision",
+            "bits",
+            config.get_setting(model or network, "dtype", "float32")[-2:],
+        )
         if model is None:
             self.model = NengoModel(
                 dt=float(dt),
@@ -490,6 +497,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
         if network is not None:
             p = ProgressBar("Building network", "Build")
             self.model.build(network, progress=p)
+
+        nengo_rc.set("precision", "bits", nengo_precision)
 
         self.stateful = config.get_setting(self.model, "stateful", True)
 
