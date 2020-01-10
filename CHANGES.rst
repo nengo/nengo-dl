@@ -722,7 +722,7 @@ details.
 - Changed the default ``tensorboard`` argument in ``Simulator`` from ``False``
   to ``None``
 - Use the new `tf.profiler
-  <https://www.tensorflow.org/versions/r1.14/api_docs/python/tf/profiler/profile>`_
+  <https://github.com/tensorflow/docs/blob/r1.14/site/en/api_docs/python/tf/profiler/profile.md>`_
   tool to collect profiling data in ``sim.run_steps`` and ``sim.train`` when
   ``profile=True``.
 - Minor improvements to efficiency of build process.
