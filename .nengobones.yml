@@ -185,12 +185,12 @@ travis_yml:
     - script: gpu
       test_args: --device /gpu:0
       env:
-        NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
+        NENGO_VERSION: git+https://github.com/nengo/nengo.git@transform-none#egg=nengo[tests]
         TF_VERSION: tensorflow-gpu
         GPU_NUM: 3
     - script: test-coverage
       env:
-        NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
+        NENGO_VERSION: git+https://github.com/nengo/nengo.git@transform-none#egg=nengo[tests]
         TF_VERSION: tensorflow
         SCIPY_VERSION: scipy
       dist: bionic
