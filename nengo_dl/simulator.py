@@ -731,8 +731,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
             Losses can be specified as:
 
-            - A `tf.losses.Loss <https://www.tensorflow.org/api_docs/python/tf/losses>`_
-              instance.
+            - A `tf.losses.Loss
+              <https://www.tensorflow.org/api_docs/python/tf/keras/losses>`_ instance.
             - A string matching the name of one of the loss functions above.
             - A function that accepts two arguments (``y_true, y_pred``) and returns
               a loss value (represented as a ``tf.Tensor``).
