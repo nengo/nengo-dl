@@ -1,7 +1,7 @@
 # pylint: disable=missing-docstring
 
 import nengo
-from nengo.builder.operator import Reset
+from nengo.builder.operator import Copy, Reset
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -386,6 +386,13 @@ def test_create_signals_partition():
     # check that resets are ignored
     sigs = [dummies.Signal(), dummies.Signal(), dummies.Signal(), dummies.Signal()]
     plan = [tuple(Reset(x) for x in sigs)]
+    graph = dummies.TensorGraph(plan, tf.float32, 10)
+    graph.create_signals(sigs)
+    assert len(graph.base_arrays_init[False]) == 4
+
+    # check that copies are ignored
+    sigs = [dummies.Signal(), dummies.Signal(), dummies.Signal(), dummies.Signal()]
+    plan = [tuple(Copy(x, x) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
     assert len(graph.base_arrays_init[False]) == 4

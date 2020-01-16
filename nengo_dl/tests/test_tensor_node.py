@@ -267,13 +267,13 @@ def test_reuse_vars(Simulator, pytestconfig):
 
         if sim.tensor_graph.inference_only:
             assert (
-                len(sim.keras_model.non_trainable_variables) == 8 + default_conn_params
+                len(sim.keras_model.non_trainable_variables) == 11 + default_conn_params
             )
             assert len(sim.keras_model.trainable_variables) == 0
             vars = sim.keras_model.non_trainable_variables[-2:]
         else:
             assert (
-                len(sim.keras_model.non_trainable_variables) == 6 + default_conn_params
+                len(sim.keras_model.non_trainable_variables) == 9 + default_conn_params
             )
             assert len(sim.keras_model.trainable_variables) == 2
             vars = sim.keras_model.trainable_variables
