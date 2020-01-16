@@ -171,34 +171,6 @@ class TensorSignal:
             label=self.label + ".reshape(%s)" % (shape,),
         )
 
-    def broadcast(self, length):
-        """
-        Add a new dimension by broadcasting this signal along the first axis
-        for the given length.
-
-        Parameters
-        ----------
-        length : int
-            The number of times to duplicate signal along the first dimension.
-
-        Returns
-        -------
-        sig : `.signals.TensorSignal`
-            TensorSignal with new broadcasted shape
-        """
-
-        # this only works on vectors
-        assert self.ndim == 1 and not self.minibatched
-
-        return TensorSignal(
-            self.slices * length,
-            self.key,
-            self.dtype,
-            (length,) + self.shape,
-            self.minibatch_size,
-            label=self.label + ".broadcast(%d)" % length,
-        )
-
     @property
     def tf_shape(self):
         """

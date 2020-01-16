@@ -8,7 +8,7 @@ import logging
 import warnings
 
 from nengo import Connection, Process
-from nengo.builder.operator import SimPyFunc, Reset
+from nengo.builder.operator import Reset, SimPyFunc
 from nengo.builder.processes import SimProcess
 from nengo.config import ConfigError
 from nengo.exceptions import BuildError
@@ -956,14 +956,18 @@ class TensorGraph(tf.keras.layers.Layer):
         breaks = []
         diff = defaultdict(int)
         for ops in self.plan:
-            # note: we don't include Resets, otherwise the big reset block
-            # overrides most of the partitioning
-            if not isinstance(ops[0], Reset):
-                for i in range(len(ops[0].all_signals)):
-                    op_sigs = [op.all_signals[i].base for op in ops]
-                    idxs = [sig_idxs[s] for s in op_sigs]
-                    diff[op_sigs[np.argmin(idxs)]] += 1
-                    diff[op_sigs[np.argmax(idxs)]] -= 1
+            if isinstance(ops[0], Reset):
+                # don't include Resets, otherwise the big reset block
+                # overrides most of the partitioning
+                partition_sigs = []
+            else:
+                partition_sigs = range(len(ops[0].all_signals))
+
+            for i in partition_sigs:
+                op_sigs = [op.all_signals[i].base for op in ops]
+                idxs = [sig_idxs[s] for s in op_sigs]
+                diff[op_sigs[np.argmin(idxs)]] += 1
+                diff[op_sigs[np.argmax(idxs)]] -= 1
 
         # find the partition points in signal list
         open = 0

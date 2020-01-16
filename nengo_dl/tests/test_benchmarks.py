@@ -190,7 +190,7 @@ def test_lmu(Simulator, native_nengo, pytestconfig):
 @pytest.mark.parametrize(
     "net, train, minibatch_size, min, max",
     [
-        (benchmarks.cconv(128, 64, nengo.RectifiedLinear()), False, 64, 0.7, 0.85),
+        (benchmarks.cconv(128, 64, nengo.RectifiedLinear()), False, 64, 0.65, 0.8),
         (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, 1.45, 1.65),
         (benchmarks.integrator(128, 32, nengo.RectifiedLinear()), True, 64, 0.5, 0.75),
         (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 0.9, 1.2),

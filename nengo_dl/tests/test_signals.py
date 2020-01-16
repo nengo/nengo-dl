@@ -72,19 +72,6 @@ def test_tensor_signal_reshape():
         sig.reshape((4, 4))
 
 
-def test_tensor_signal_broadcast():
-    sig = TensorSignal([(0, 4)], object(), None, (4,), None)
-    base = np.random.randn(4)
-
-    sig_broad = sig.broadcast(2)
-    assert sig_broad.slices == ((0, 4), (0, 4))
-    assert sig_broad.shape == (2, 4)
-    assert sig_broad.key == sig.key
-    assert np.all(
-        np.reshape(base[sig_broad.tf_indices.numpy()], sig_broad.shape) == base[None, :]
-    )
-
-
 def test_tensor_signal_load_indices():
     sig = TensorSignal([(2, 6)], object(), None, (4,), None)
     assert np.all(sig.tf_indices == np.arange(*sig.slices[0]))

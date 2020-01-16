@@ -56,8 +56,8 @@ class ResetBuilder(OpBuilder):
         if np.issubdtype(dtype, np.floating):
             dtype = signals.dtype.as_numpy_dtype
 
-        # unlike other ops, Reset signals might be spread across multiple
-        # bases, which we need to handle
+        # Reset signals might be spread across multiple bases, so group them
+        # by the ones that do share a base
         scatters = defaultdict(list)
         for op in ops:
             scatters[signals[op.dst].key].append(op)
@@ -73,7 +73,7 @@ class ResetBuilder(OpBuilder):
                 ],
                 axis=1,
             )
-            self.scatters += [(signals.combine([x.dst for x in group]), value)]
+            self.scatters.append((signals.combine([x.dst for x in group]), value))
 
         logger.debug("scatters")
         logger.debug("\n".join([str(x) for x in self.scatters]))
@@ -101,24 +101,16 @@ class CopyBuilder(OpBuilder):
         logger.debug("dst %s", [op.dst for op in ops])
         logger.debug("dst_slice %s", [getattr(op, "dst_slice", None) for op in ops])
 
-        srcs = []
-        dsts = []
-        for op in ops:
-            srcs += [signals[op.src][op.src_slice]]
-            dsts += [signals[op.dst][op.dst_slice]]
+        self.src_data = signals.combine([signals[op.src][op.src_slice] for op in ops])
+        self.dst_data = signals.combine([signals[op.dst][op.dst_slice] for op in ops])
 
         self.mode = "inc" if ops[0].inc else "update"
 
-        self.src_data = signals.combine(srcs)
-        self.dst_data = signals.combine(dsts)
-
-        if not self.src_data.minibatched and self.dst_data.minibatched:
-            # broadcast indices so that the un-minibatched src data gets
-            # copied to each minibatch dimension in dst
-            self.src_data = self.src_data.broadcast(signals.minibatch_size)
-
     def build_step(self, signals):
-        signals.scatter(self.dst_data, signals.gather(self.src_data), mode=self.mode)
+        src = signals.gather(self.src_data)
+        if not self.src_data.minibatched and self.dst_data.minibatched:
+            src = tf.broadcast_to(src, self.dst_data.full_shape)
+        signals.scatter(self.dst_data, src, mode=self.mode)
 
     @staticmethod
     def mergeable(x, y):
