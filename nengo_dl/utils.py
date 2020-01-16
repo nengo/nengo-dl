@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # options the first time it is called
 tf_gpu_installed = not subprocess.call(
     [
-        "python",
+        sys.executable,
         "-c",
         "import sys; "
         "import tensorflow as tf; "
