@@ -191,7 +191,7 @@ def test_lmu(Simulator, native_nengo, pytestconfig):
     "net, train, minibatch_size, min, max",
     [
         (benchmarks.cconv(128, 64, nengo.RectifiedLinear()), False, 64, 0.7, 0.85),
-        (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, 1.5, 1.7),
+        (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, 1.45, 1.65),
         (benchmarks.integrator(128, 32, nengo.RectifiedLinear()), True, 64, 0.5, 0.75),
         (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 0.9, 1.2),
         (
@@ -205,8 +205,8 @@ def test_lmu(Simulator, native_nengo, pytestconfig):
             ),
             False,
             None,
-            0.4,
-            0.6,
+            0.35,
+            0.55,
         ),
         (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, 0.75, 1.05),
         # (benchmarks.spaun(1), False, None, 8.02, 9.52),
