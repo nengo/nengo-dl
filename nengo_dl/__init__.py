@@ -58,6 +58,10 @@ from nengo_dl import (
 from nengo_dl import callbacks, compat, converter, dists, losses
 from nengo_dl.config import configure_settings
 from nengo_dl.converter import Converter
-from nengo_dl.neurons import SoftLIFRate
+from nengo_dl.neurons import (
+    LeakyReLU,
+    SoftLIFRate,
+    SpikingLeakyReLU,
+)
 from nengo_dl.simulator import Simulator
 from nengo_dl.tensor_node import TensorNode, Layer, tensor_layer

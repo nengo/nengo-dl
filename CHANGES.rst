@@ -31,6 +31,8 @@ Release history
   Layers/parameters that cannot be fully converted to native Nengo objects to be
   converted in a way that only matches the inference behaviour of the source Keras model
   (not the training behaviour). (`#119`_)
+- Added ``nengo_dl.LeakyReLU`` and ``nengo_dl.SpikingLeakyReLU`` neuron models.
+  (`#126`_)
 
 **Changed**
 
@@ -63,9 +65,10 @@ Release history
 - Fixed compatibility with ``progressbar2`` version 3.50.0. (`#136`_)
 
 .. _#119: https://github.com/nengo/nengo-dl/pull/119
+.. _#126: https://github.com/nengo/nengo-dl/pull/126
 .. _#128: https://github.com/nengo/nengo-dl/pull/128
-.. _Nengo#1591: https://github.com/nengo/nengo/pull/1591
 .. _#136: https://github.com/nengo/nengo-dl/pull/136
+.. _Nengo#1591: https://github.com/nengo/nengo/pull/1591
 
 3.0.0 (December 17, 2019)
 -------------------------

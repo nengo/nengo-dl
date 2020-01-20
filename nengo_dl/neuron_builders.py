@@ -12,7 +12,7 @@ from tensorflow.python.keras.utils import tf_utils
 
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
-from nengo_dl.neurons import SoftLIFRate
+from nengo_dl.neurons import LeakyReLU, SoftLIFRate, SpikingLeakyReLU
 
 logger = logging.getLogger(__name__)
 
@@ -132,8 +132,20 @@ class RectifiedLinearBuilder(OpBuilder):
                 signals.dtype,
             )
 
+        if all(getattr(op.neurons, "negative_slope", 0) == 0 for op in ops):
+            self.negative_slope = None
+        else:
+            self.negative_slope = signals.op_constant(
+                [op.neurons for op in ops],
+                [op.J.shape[0] for op in ops],
+                "negative_slope",
+                signals.dtype,
+            )
+
     def _step(self, J):
         out = tf.nn.relu(J)
+        if self.negative_slope is not None:
+            out -= self.negative_slope * tf.nn.relu(-J)
         if self.amplitude is not None:
             out *= self.amplitude
         return out
@@ -157,8 +169,13 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
         self.alpha /= signals.dt
 
     def _step(self, J, voltage, dt):
-        voltage += tf.nn.relu(J) * dt
-        n_spikes = tf.floor(voltage)
+        if self.negative_slope is None:
+            voltage += tf.nn.relu(J) * dt
+            n_spikes = tf.floor(voltage)
+        else:
+            voltage += (tf.nn.relu(J) - self.negative_slope * tf.nn.relu(-J)) * dt
+            n_spikes = tf.floor(voltage) + tf.cast(voltage < 0, voltage.dtype)
+
         voltage -= n_spikes
         out = n_spikes * self.alpha
 
@@ -406,6 +423,8 @@ class SimNeuronsBuilder(OpBuilder):
     TF_NEURON_IMPL = {
         RectifiedLinear: RectifiedLinearBuilder,
         SpikingRectifiedLinear: SpikingRectifiedLinearBuilder,
+        LeakyReLU: RectifiedLinearBuilder,
+        SpikingLeakyReLU: SpikingRectifiedLinearBuilder,
         Sigmoid: SigmoidBuilder,
         LIF: LIFBuilder,
         LIFRate: LIFRateBuilder,

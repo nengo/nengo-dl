@@ -4,7 +4,14 @@ import nengo
 import numpy as np
 import pytest
 
-from nengo_dl import config, dists, SoftLIFRate, neuron_builders
+from nengo_dl import (
+    LeakyReLU,
+    SoftLIFRate,
+    SpikingLeakyReLU,
+    config,
+    dists,
+    neuron_builders,
+)
 
 
 def test_lif_deterministic(Simulator, seed):
@@ -176,3 +183,75 @@ def test_spiking_swap(Simulator, rate, spiking, seed):
 
     # check that the gradients match
     assert all(np.allclose(g0, g1) for g0, g1 in zip(*grads))
+
+
+@pytest.mark.parametrize("Neurons", (LeakyReLU, SpikingLeakyReLU))
+def test_leaky_relu(Simulator, Neurons):
+    assert np.allclose(Neurons(negative_slope=0.1).rates([-2, 2], 1, 0), [[-0.2], [2]])
+
+    assert np.allclose(
+        Neurons(negative_slope=0.1, amplitude=0.1).rates([-2, 2], 1, 0),
+        [[-0.02], [0.2]],
+    )
+
+    with nengo.Network() as net:
+        vals = np.linspace(-400, 400, 10)
+        ens0 = nengo.Ensemble(
+            10,
+            1,
+            neuron_type=Neurons(negative_slope=0.1, amplitude=2),
+            gain=nengo.dists.Choice([1]),
+            bias=vals,
+        )
+        ens1 = nengo.Ensemble(
+            10,
+            1,
+            neuron_type=Neurons(negative_slope=0.5),
+            gain=nengo.dists.Choice([1]),
+            bias=vals,
+        )
+        p0 = nengo.Probe(ens0.neurons)
+        p1 = nengo.Probe(ens1.neurons)
+
+    with Simulator(net) as sim:
+        # make sure that ops have been merged
+        assert (
+            len(
+                [
+                    ops
+                    for ops in sim.tensor_graph.plan
+                    if isinstance(ops[0], nengo.builder.neurons.SimNeurons)
+                ]
+            )
+            == 1
+        )
+
+        sim.run(1.0)
+
+        assert np.allclose(
+            np.sum(sim.data[p0], axis=0) * sim.dt,
+            np.where(vals < 0, vals * 0.1 * 2, vals * 2),
+            atol=1,
+        )
+
+        assert np.allclose(
+            np.sum(sim.data[p1], axis=0) * sim.dt,
+            np.where(vals < 0, vals * 0.5, vals),
+            atol=1,
+        )
+
+    # check that it works in the regular nengo simulator as well
+    with nengo.Simulator(net) as sim:
+        sim.run(1.0)
+
+        assert np.allclose(
+            np.sum(sim.data[p0], axis=0) * sim.dt,
+            np.where(vals < 0, vals * 0.1 * 2, vals * 2),
+            atol=1,
+        )
+
+        assert np.allclose(
+            np.sum(sim.data[p1], axis=0) * sim.dt,
+            np.where(vals < 0, vals * 0.5, vals),
+            atol=1,
+        )

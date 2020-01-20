@@ -2,7 +2,7 @@
 Additions to the `neuron types included with Nengo <nengo.neurons.NeuronType>`.
 """
 
-from nengo.neurons import LIFRate
+from nengo.neurons import LIFRate, RectifiedLinear, SpikingRectifiedLinear
 from nengo.params import NumberParam
 import numpy as np
 
@@ -76,3 +76,66 @@ class SoftLIFRate(LIFRate):
 
         q = np.where(j_valid, np.log1p(1 / z), -js - np.log(self.sigma))
         output[:] = self.amplitude / (self.tau_ref + self.tau_rc * q)
+
+
+class LeakyReLU(RectifiedLinear):
+    """
+    Rectified linear neuron with nonzero slope for values < 0.
+
+    Parameters
+    ----------
+    negative_slope : float
+        Scaling factor applied to values less than zero.
+    amplitude : float
+        Scaling factor on the neuron output. Note that this will combine
+        multiplicatively with ``negative_slope`` for values < 0.
+    """
+
+    def __init__(self, negative_slope=0.3, amplitude=1):
+        super().__init__(amplitude=amplitude)
+
+        self.negative_slope = negative_slope
+
+    def step_math(self, dt, J, output):
+        """Implement the leaky relu nonlinearity."""
+
+        output[...] = self.amplitude * np.where(J < 0, self.negative_slope * J, J)
+
+
+class SpikingLeakyReLU(SpikingRectifiedLinear):
+    """
+    Spiking version of `.LeakyReLU`.
+
+    Note that this may output "negative spikes" (i.e. a spike with a sign of -1).
+
+    Parameters
+    ----------
+    negative_slope : float
+        Scaling factor applied to values less than zero.
+    amplitude : float
+        Scaling factor on the neuron output. Note that this will combine
+        multiplicatively with ``negative_slope`` for values < 0.
+    """
+
+    def __init__(self, negative_slope=0.3, amplitude=1):
+        super().__init__(amplitude=amplitude)
+
+        self.negative_slope = negative_slope
+
+    def rates(self, x, gain, bias):
+        """Use `.LeakyReLU` to determine rates."""
+
+        J = self.current(x, gain, bias)
+        out = np.zeros_like(J)
+        LeakyReLU.step_math(self, dt=1, J=J, output=out)
+        return out
+
+    def step_math(self, dt, J, spiked, voltage):
+        """
+        Implement the spiking leaky relu nonlinearity.
+        """
+
+        voltage += np.where(J < 0, self.negative_slope * J, J) * dt
+        n_spikes = np.trunc(voltage)
+        spiked[:] = (self.amplitude / dt) * n_spikes
+        voltage -= n_spikes
