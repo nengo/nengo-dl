@@ -514,3 +514,11 @@ def test_nested_input():
     x = tf.keras.layers.Concatenate()([x, x_0])
 
     _test_convert(inputs, x)
+
+
+def test_leaky_relu(rng):
+    inp = x = tf.keras.Input(shape=(4,))
+    x = tf.keras.layers.ReLU(negative_slope=0.1)(x)
+    x = tf.keras.layers.LeakyReLU(alpha=2)(x)
+
+    _test_convert(inp, x, inp_vals=[rng.uniform(-1, 1, size=(32, 4))])

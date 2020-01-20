@@ -33,6 +33,7 @@ Release history
   (not the training behaviour). (`#119`_)
 - Added ``nengo_dl.LeakyReLU`` and ``nengo_dl.SpikingLeakyReLU`` neuron models.
   (`#126`_)
+- Added support for leaky ReLU Keras layers to ``nengo_dl.Converter``. (`#126`_)
 
 **Changed**
 

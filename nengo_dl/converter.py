@@ -11,8 +11,10 @@ from tensorflow.python.keras.layers import BatchNormalization, BatchNormalizatio
 from tensorflow.python.util import nest
 
 from nengo_dl.config import configure_settings
-from nengo_dl.tensor_node import Layer, TensorNode
+from nengo_dl.neurons import LeakyReLU
 from nengo_dl.simulator import Simulator
+from nengo_dl.tensor_node import Layer, TensorNode
+
 
 logger = logging.getLogger(__name__)
 
@@ -1121,8 +1123,8 @@ class ConvertBatchNormalization(LayerConverter):
         broadcast_bias = np.zeros(self.output_shape(node_id))
         for i in range(idxs.shape[axis]):
             slices[axis] = i
-            broadcast_scale[slices] = scale[i]
-            broadcast_bias[slices] = bias[i]
+            broadcast_scale[tuple(slices)] = scale[i]
+            broadcast_bias[tuple(slices)] = bias[i]
         broadcast_scale = np.ravel(broadcast_scale)
         broadcast_bias = np.ravel(broadcast_bias)
 
@@ -1408,10 +1410,29 @@ class ConvertInput(LayerConverter):
 class ConvertReLU(LayerConverter):
     """Convert ``tf.keras.layers.ReLU`` to Nengo objects."""
 
-    unsupported_args = [("negative_slope", 0), "max_value", ("threshold", 0)]
+    unsupported_args = ["max_value", ("threshold", 0)]
 
     def convert(self, node_id):
-        output = self.add_nengo_obj(node_id, biases=None, activation=tf.nn.relu)
+        if self.layer.negative_slope == 0:
+            activation = tf.nn.relu
+        else:
+            activation = LeakyReLU(negative_slope=self.layer.negative_slope)
+
+        output = self.add_nengo_obj(node_id, biases=None, activation=activation)
+
+        self.add_connection(node_id, output)
+
+        return output
+
+
+@Converter.register(tf.keras.layers.LeakyReLU)
+class ConvertLeakyReLU(LayerConverter):
+    """Convert ``tf.keras.layers.LeakyReLU`` to Nengo objects."""
+
+    def convert(self, node_id):
+        output = self.add_nengo_obj(
+            node_id, biases=None, activation=LeakyReLU(negative_slope=self.layer.alpha)
+        )
 
         self.add_connection(node_id, output)
 
