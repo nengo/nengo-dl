@@ -121,6 +121,7 @@ class TensorGraph(tf.keras.layers.Layer):
                 graph_optimizer.remove_unmodified_resets,
                 graph_optimizer.remove_zero_incs,
                 graph_optimizer.remove_identity_muls,
+                graph_optimizer.remove_constant_copies,
             ],
         )
 

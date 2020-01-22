@@ -7,7 +7,7 @@ from collections import OrderedDict, defaultdict
 import logging
 
 from nengo.builder.operator import ElementwiseInc, DotInc, Reset, Copy
-from nengo.exceptions import BuildError
+from nengo.exceptions import BuildError, SignalError
 from nengo.transforms import SparseMatrix
 from nengo.utils.graphs import toposort, BidirectionalDAG
 from nengo.utils.simulator import operator_dependency_graph
@@ -1228,6 +1228,14 @@ def remove_constant_copies(operators):
         if isinstance(op, Copy):
             src = op.src
 
+            try:
+                dst = op.dst if op.dst_slice is None else op.dst[op.dst_slice]
+            except SignalError:
+                # Copy is implementing advanced indexing, which cannot be applied
+                # directly to a signal
+                new_operators.append(op)
+                continue
+
             # check if the input is the output of a Node (in which case the
             # value might change, so we should never get rid of this op).
             # checking the name of the signal seems a bit fragile, but I can't
@@ -1238,8 +1246,8 @@ def remove_constant_copies(operators):
 
             pred = sets[src.base] + incs[src.base]
             if len(pred) == 0 and not op.src.trainable and len(updates[src.base]) == 0:
-                # no predecessors means that the src is constant. but we also
-                # need to keep the bias signal if it is trainable (since
+                # no predecessors means that the src is constant. but we still
+                # need to keep the signal if it is trainable (since
                 # changing it to a reset op would make it not trainable).
                 # we also need to check if anything is updating src (which
                 # wouldn't be in the predecessors).
@@ -1248,6 +1256,8 @@ def remove_constant_copies(operators):
                 # if the only predecessor is a Reset, we can just use that
                 # set value
                 val = pred[0].value
+
+                # remove the reset operator
                 try:
                     new_operators.remove(pred[0])
                 except ValueError:
@@ -1256,13 +1266,13 @@ def remove_constant_copies(operators):
                 new_operators.append(op)
                 continue
 
-            new_op = Reset(op.dst if op.dst_slice is None else op.dst[op.dst_slice])
+            new_op = Reset(dst)
             # note: we need to set the value separately to bypass the float()
             # casting in Reset
             new_op.value = val
 
             if op.inc:
-                new_op.incs.extend(new_op.sets)
+                new_op.incs = [new_op.dst]
                 new_op.sets = []
                 new_op.__class__ = op_builders.ResetInc
 
