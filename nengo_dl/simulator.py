@@ -1935,16 +1935,12 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
     @with_self
     def _update_steps(self):
-        if not hasattr(self, "_step_tensors"):
-            # cache these so we aren't adding new ops every time we call this function
-            self._step_tensors = [
-                self.tensor_graph.get_tensor(self.model.step),
-                self.tensor_graph.get_tensor(self.model.time),
-            ]
+        if not hasattr(self, "_step_tensor"):
+            # cache this so we aren't adding new ops every time we call this function
+            self._step_tensor = self.tensor_graph.get_tensor(self.model.step)
 
-        self._n_steps, self._time = [
-            x.item() for x in tf.keras.backend.batch_get_value(self._step_tensors)
-        ]
+        self._n_steps = tf.keras.backend.get_value(self._step_tensor).item()
+        self._time = self._n_steps * self.dt
 
     @property
     def dt(self):

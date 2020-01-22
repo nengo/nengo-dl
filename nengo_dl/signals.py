@@ -318,7 +318,9 @@ class SignalDict(Mapping):
         logger.debug("values %s", val)
         logger.debug("dst %s", dst)
         logger.debug("slices %s", dst.slices)
-        logger.debug("dst base %s", self.bases[dst.key])
+        logger.debug(
+            "dst base %s", self.bases[dst.key] if dst.key in self.bases else None
+        )
 
         if val.dtype.is_floating and val.dtype.base_dtype != self.dtype:
             raise BuildError(
@@ -326,26 +328,29 @@ class SignalDict(Mapping):
                 "be %s." % (val.dtype.base_dtype, self.dtype)
             )
 
+        # should never be writing to a variable
+        if isinstance(self.bases[dst.key], tf.Variable):
+            raise BuildError("Scatter target should not be a Variable")
+
+        if isinstance(self.bases[dst.key], tuple):
+            # this is the first set operation for this signal
+            assert mode == "update"
+
+            base_shape = self.bases[dst.key]
+            var = None
+        else:
+            self.bases[dst.key].shape.assert_is_fully_defined()
+            base_shape = self.bases[dst.key].shape
+            var = self.bases[dst.key]
+
         # align val shape with dst base shape
-        self.bases[dst.key].shape.assert_is_fully_defined()
         val.shape.assert_is_fully_defined()
-        dst_shape = self.bases[dst.key].shape.as_list()
+        dst_shape = list(base_shape)
         dst_shape[dst.minibatched] = dst.shape[0]
         if val.shape != dst_shape:
             val = tf.reshape(val, dst.tf_shape)
 
-        var = self.bases[dst.key]
-
-        # should never be writing to a variable
-        if isinstance(var, tf.Variable):
-            raise BuildError("Scatter target should not be a Variable")
-
-        if (
-            len(dst.slices) == 1
-            and var.shape.is_compatible_with(val.shape)
-            and dst.slices[0][0] == 0
-            and dst.slices[0][1] == var.shape[dst.minibatched]
-        ):
+        if len(dst.slices) == 1 and val.shape == base_shape:
             if mode == "inc":
                 result = var + val
                 self.write_types["assign_add"] += 1
@@ -356,7 +361,10 @@ class SignalDict(Mapping):
             result = tf.tensor_scatter_nd_add(var, dst.tf_indices_nd, val)
             self.write_types["scatter_add"] += 1
         else:
-            result = tf.tensor_scatter_nd_update(var, dst.tf_indices_nd, val)
+            if var is None:
+                result = tf.scatter_nd(dst.tf_indices_nd, val, shape=base_shape)
+            else:
+                result = tf.tensor_scatter_nd_update(var, dst.tf_indices_nd, val)
             self.write_types["scatter_update"] += 1
 
         self.bases[dst.key] = result
@@ -389,6 +397,8 @@ class SignalDict(Mapping):
         logger.debug("src base %s", self.bases[src.key])
 
         var = self.bases[src.key]
+
+        assert isinstance(var, tf.Tensor)
 
         # we prefer to get the data via `strided_slice` or `identity` if
         # possible, as it is more efficient

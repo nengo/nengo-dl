@@ -8,11 +8,13 @@ import logging
 import warnings
 
 from nengo import Connection, Process
-from nengo.builder.operator import Reset, SimPyFunc
+from nengo.builder.neurons import SimNeurons
+from nengo.builder.operator import Reset, SimPyFunc, TimeUpdate
 from nengo.builder.processes import SimProcess
 from nengo.config import ConfigError
 from nengo.exceptions import BuildError
 from nengo.neurons import Direct
+from nengo.synapses import Lowpass
 from nengo.transforms import SparseMatrix
 import numpy as np
 import tensorflow as tf
@@ -224,14 +226,20 @@ class TensorGraph(tf.keras.layers.Layer):
 
             values, shapes, dtype, minibatched = init_vals
 
-            if all(np.all(v == 0) for v in values):
+            # initial value of None means that the initial value isn't used, so we
+            # can use anything for the initial value
+            if all(v is None for v in values):
+                initializer = None
+            elif all(v is None or np.all(v == 0) for v in values):
                 initializer = tf.initializers.zeros()
-            elif all(np.all(v == 1) for v in values):
+            elif all(v is None or np.all(v == 1) for v in values):
                 initializer = tf.initializers.ones()
             else:
                 val = tf.concat(
                     [
-                        tf.cast(tf.broadcast_to(v, s), dtype)
+                        tf.zeros(s, dtype)
+                        if v is None
+                        else tf.cast(tf.broadcast_to(v, s), dtype)
                         for v, s in zip(values, shapes)
                     ],
                     axis=1 if minibatched else 0,
@@ -250,6 +258,7 @@ class TensorGraph(tf.keras.layers.Layer):
         assert len(self.base_params) == 0
         for k, v in self.base_arrays_init[True].items():
             initializer, shape, dtype = get_initializer(v)
+            assert initializer is not None  # trainable params should never be set
             self.base_params[k] = self.add_weight(
                 initializer=initializer,
                 shape=shape,
@@ -266,13 +275,16 @@ class TensorGraph(tf.keras.layers.Layer):
             self.saved_state = OrderedDict()
         for k, v in self.base_arrays_init[False].items():
             initializer, shape, dtype = get_initializer(v)
-            self.saved_state[k] = self.add_weight(
-                initializer=initializer,
-                shape=shape,
-                dtype=dtype,
-                trainable=False,
-                name="saved_state/%s_%s" % (dtype, "_".join(str(x) for x in shape)),
-            )
+            if initializer is not None:
+                # don't need to save the state for signals where the initial value
+                # doesn't matter
+                self.saved_state[k] = self.add_weight(
+                    initializer=initializer,
+                    shape=shape,
+                    dtype=dtype,
+                    trainable=False,
+                    name="saved_state/%s_%s" % (dtype, "_".join(str(x) for x in shape)),
+                )
 
         logger.debug("created saved state variables")
         logger.debug([str(x) for x in self.saved_state.values()])
@@ -471,6 +483,33 @@ class TensorGraph(tf.keras.layers.Layer):
 
         return outputs
 
+    def _fill_bases(self, saved_state, base_params):
+        """
+        Initialize signals.bases from TensorGraph params.
+
+        Parameters
+        ----------
+        saved_state : dict
+            Mapping from base keys to initial values
+        base_params : dict
+            Mapping from base keys to initial values
+        """
+
+        for key, val in saved_state.items():
+            # we add the tf.identity so that when we write we're not updating
+            # the base variable
+            self.signals.bases[key] = tf.identity(val)
+        for key, val in base_params.items():
+            self.signals.bases[key] = tf.identity(val)
+        for key, (_, shapes, _, minibatched) in self.base_arrays_init[False].items():
+            if key not in self.signals.bases:
+                # no saved state for this base, so we just temporarily insert
+                # the shape information so that future scatters will know
+                # what the base shape is
+                shape = list(shapes[0])
+                shape[minibatched] = sum(x[minibatched] for x in shapes)
+                self.signals.bases[key] = tuple(shape)
+
     def _build_loop(self, progress):
         """
         Build simulation loop using symbolic while loop.
@@ -497,13 +536,10 @@ class TensorGraph(tf.keras.layers.Layer):
             # fill in signals.bases
             # note: we need to do this here because we
             # need to use the tensors from inside the loop, not the source variables)
-            # note2: eager while loops pass in the variable directly,
-            # so we add the tf.identity so that when we write we're not updating
-            # the base variable
-            for key, val in zip(self.saved_state.keys(), saved_state):
-                self.signals.bases[key] = tf.identity(val)
-            for key, val in zip(self.base_params.keys(), base_params):
-                self.signals.bases[key] = tf.identity(val)
+            self._fill_bases(
+                dict(zip(self.saved_state, saved_state)),
+                dict(zip(self.base_params, base_params)),
+            )
 
             def update_probes(probe_tensors, loop_i):
                 for i, p in enumerate(probe_tensors):
@@ -593,10 +629,7 @@ class TensorGraph(tf.keras.layers.Layer):
             Tensors representing the value of all internal state at the end of the run.
         """
 
-        for key, val in self.saved_state.items():
-            self.signals.bases[key] = tf.identity(val)
-        for key, val in self.base_params.items():
-            self.signals.bases[key] = tf.identity(val)
+        self._fill_bases(self.saved_state, self.base_params)
 
         loop_i = tf.constant(0)  # symbolic loop variable
         loop_iter = 0  # non-symbolic loop variable
@@ -785,11 +818,6 @@ class TensorGraph(tf.keras.layers.Layer):
             base = self.base_params[tensor_sig.key]
         except KeyError:
             base = self.saved_state[tensor_sig.key]
-
-        if "/while/" in tensor_sig.tf_indices.name:
-            # invalidate cached indices so they will be rebuilt outside the
-            # while loop
-            tensor_sig._tf_indices = None
 
         return tf.gather(
             base, tensor_sig.tf_indices, axis=1 if tensor_sig.minibatched else 0,
@@ -987,6 +1015,31 @@ class TensorGraph(tf.keras.layers.Layer):
             "\n%s", "".join("|" if i in breaks else " " for i in range(len(sigs)))
         )
 
+        # find all the signals that have a set operation associated with them
+
+        def special_set(s, op):
+            return (
+                # we don't include Lowpass ops, because for efficiency reasons in the
+                # nengo-dl Lowpass implementation we reuse the output signal (which is
+                # set) as the state signal (so we need to include that signal in the
+                # state)
+                (isinstance(op, SimProcess) and isinstance(op.process, Lowpass))
+                # nengo marks the time step as a set, but really it's an inc (since
+                # it's incrementing the simulation step)
+                or (isinstance(op, TimeUpdate) and s is op.step)
+                # nengo marks neuron state as a set, but really it's more like an
+                # inc/update (since the neuron calculation may depend on the state)
+                or (isinstance(op, SimNeurons) and s in op.states)
+            )
+
+        set_sigs = {
+            s.base
+            for ops in self.plan
+            for op in ops
+            for s in op.sets
+            if not special_set(s, op)
+        }
+
         # create all the base signals
         for i, sig in enumerate(sigs):
             assert sig not in self.signals
@@ -1023,12 +1076,18 @@ class TensorGraph(tf.keras.layers.Layer):
                 curr_keys[array_params] = object()
             key = curr_keys[array_params]
 
-            initial_value = sig.initial_value
-            if sig.sparse:
-                if isinstance(initial_value, SparseMatrix):
-                    initial_value = initial_value.data
-                else:
-                    initial_value = initial_value.tocoo().data
+            if sig in set_sigs:
+                # signals with a set operation associated with them don't need an
+                # initial value (since the value will just be immediately overridden
+                # by the set operation)
+                initial_value = None
+            else:
+                initial_value = sig.initial_value
+                if sig.sparse:
+                    if isinstance(initial_value, SparseMatrix):
+                        initial_value = initial_value.data
+                    else:
+                        initial_value = initial_value.tocoo().data
 
             if sig.minibatched:
                 shape = (self.minibatch_size,) + shape

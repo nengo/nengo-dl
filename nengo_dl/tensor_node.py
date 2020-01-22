@@ -9,7 +9,6 @@ details.
 import warnings
 
 from nengo import Node, Connection, Ensemble, builder
-from nengo import rc as nengo_rc
 from nengo.base import NengoObject
 from nengo.builder.operator import Reset
 from nengo.config import Config
@@ -248,16 +247,12 @@ def build_tensor_node(model, node):
 
     # input signal
     if node.shape_in is not None:
-        sig_in = builder.Signal(
-            np.zeros(node.size_in, dtype=nengo_rc.float_dtype), name="%s.in" % node
-        )
+        sig_in = builder.Signal(shape=(node.size_in,), name="%s.in" % node)
         model.add_op(Reset(sig_in))
     else:
         sig_in = None
 
-    sig_out = builder.Signal(
-        np.zeros(node.size_out, dtype=nengo_rc.float_dtype), name="%s.out" % node
-    )
+    sig_out = builder.Signal(shape=(node.size_out,), name="%s.out" % node)
 
     model.sig[node]["in"] = sig_in
     model.sig[node]["out"] = sig_out

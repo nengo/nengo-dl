@@ -229,7 +229,10 @@ def test_signal_order_deterministic(Simulator, seed):
                     sim1.tensor_graph.base_arrays_init[trainable].values(),
                     sim2.tensor_graph.base_arrays_init[trainable].values(),
                 ):
-                    assert np.allclose(v[0], v2[0])
+                    assert all(
+                        (x is None and y is None) or np.allclose(x, y)
+                        for x, y in zip(v[0], v2[0])
+                    )
 
 
 def test_create_signals():
