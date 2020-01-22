@@ -11,7 +11,25 @@ import tensorflow as tf
 from nengo_dl.builder import Builder, OpBuilder
 
 
+class ConvSet(ConvInc):
+    """
+    A version of `~nengo.builder.transforms.ConvInc` that overwrites the target
+    rather than incrementing.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.incs, self.sets = self.sets, self.incs
+
+    @property
+    def Y(self):
+        """Y is stored in ``sets`` rather than ``incs``."""
+        return self.sets[0]
+
+
 @Builder.register(ConvInc)
+@Builder.register(ConvSet)
 class ConvIncBuilder(OpBuilder):
     """
     Build a group of `nengo.builder.transforms.ConvInc` operators.
@@ -22,6 +40,7 @@ class ConvIncBuilder(OpBuilder):
 
         self.conv = ops[0].conv
         self.n_ops = len(ops)
+        self.mode = "inc" if type(ops[0]) == ConvInc else "update"
 
         if not self.conv.channels_last and config.cpu_only:
             # TensorFlow doesn't support channels first on CPU, so if
@@ -167,7 +186,7 @@ class ConvIncBuilder(OpBuilder):
                 (signals.minibatch_size, self.n_ops) + self.conv.output_shape.shape
             )
 
-        signals.scatter(self.Y_data, Y, mode="inc")
+        signals.scatter(self.Y_data, Y, mode=self.mode)
 
     @staticmethod
     def mergeable(x, y):

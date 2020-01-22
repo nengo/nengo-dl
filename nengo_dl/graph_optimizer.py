@@ -5,21 +5,25 @@ can be simulated more efficiently when converted into a TensorFlow graph.
 
 from collections import OrderedDict, defaultdict
 import logging
+import warnings
 
-from nengo.builder.operator import ElementwiseInc, DotInc, Reset, Copy
+from nengo.builder.operator import Copy, DotInc, ElementwiseInc, Reset, SparseDotInc
+from nengo.builder.processes import SimProcess
+from nengo.builder.transforms import ConvInc
 from nengo.exceptions import BuildError, SignalError
 from nengo.transforms import SparseMatrix
-from nengo.utils.graphs import toposort, BidirectionalDAG
+from nengo.utils.graphs import BidirectionalDAG, toposort
 from nengo.utils.simulator import operator_dependency_graph
 import numpy as np
 
 from nengo_dl import (
-    process_builders,
     builder,
-    tensor_node,
-    op_builders,
     learning_rule_builders,
     neuron_builders,
+    op_builders,
+    process_builders,
+    tensor_node,
+    transform_builders,
 )
 
 logger = logging.getLogger(__name__)
@@ -1051,7 +1055,7 @@ def remove_unmodified_resets(operators):
     If a signal is reset, but never inced/updated after that, we can just set
     the default signal value to the reset value and remove the reset. Note:
     this wouldn't normally happen, but it can happen if we removed
-    some of the incs (e.g. in remove_zero_incs).
+    some of the incs (e.g. in `.remove_zero_incs`).
 
     Parameters
     ----------
@@ -1087,7 +1091,7 @@ def remove_zero_incs(operators):
     Remove any operators where we know the input (and therefore output) is
     zero.
 
-    If the input to a DotInc/ElementwiseInc/Copy is zero then we know
+    If the input to a DotInc/ElementwiseInc/Copy/ConvInc is zero then we know
     that the output of the op will be zero, so we can just get rid of it.
 
     Parameters
@@ -1118,7 +1122,7 @@ def remove_zero_incs(operators):
 
     new_operators = []
     for op in operators:
-        if isinstance(op, (DotInc, ElementwiseInc, Copy)):
+        if isinstance(op, (DotInc, ElementwiseInc, Copy, ConvInc)):
             for src in op.reads:
                 # check if the input is the output of a Node (in which case the
                 # value might change, so we should never get rid of this op).
@@ -1159,47 +1163,114 @@ def remove_zero_incs(operators):
     return new_operators
 
 
-# def remove_reset_incs(operators):
-#     """Replace ``y=Reset(0) + x`` with ``y=x``.
-#
-#     If a signal is Reset and Inc'd, we can change that to a Set that combines
-#     the two ops (note: any other incs of that signal can proceed as normal)
-#
-#     Parameters
-#     ----------
-#     operators : list of `~nengo.builder.Operator`
-#         operators in the model
-#
-#     Returns
-#     -------
-#     new_operators : list of `~nengo.builder.Operator`
-#         modified list of operators
-#
-#     Notes
-#     -----
-#     In practice, this modification seems to hurt more than it helps.  Inc
-#     operators are cheaper to compute the gradient for, and changing Incs to
-#     Incs and Sets splits up the Inc merge groups.
-#     """
-#
-#     dg = operator_dependency_graph(operators)
-#
-#     for op in operators:
-#         if type(op) == Reset and np.all(op.value == 0):
-#             incers = [succ for succ in dg[op] if op.dst in succ.incs]
-#             if len(incers) > 0:
-#                 del dg[op]
-#                 incer = incers[0]
-#                 incer.sets.extend(incer.incs)
-#                 incer.incs = []
-#                 if isinstance(incer, ElementwiseInc):
-#                     incer.__class__ = op_builders.ElementwiseSet
-#                 elif isinstance(incer, DotInc):
-#                     incer.__class__ = op_builders.DotSet
-#                 else:
-#                     incer.inc = False
-#
-#     return list(dg.keys())
+def remove_reset_incs(operators):
+    """Replace ``y=Reset(0) + x`` with ``y=x``.
+
+    If a signal is Reset and Inc'd, we can change that to a Set that combines
+    the two ops (note: any other incs of that signal can proceed as normal)
+
+    Parameters
+    ----------
+    operators : list of `~nengo.builder.Operator`
+        operators in the model
+
+    Returns
+    -------
+    new_operators : list of `~nengo.builder.Operator`
+        modified list of operators
+
+    Notes
+    -----
+    In practice, this modification can hurt more than it helps.  Inc
+    operators are cheaper to compute the gradient for, and changing Incs to
+    Incs and Sets splits up the Inc merge groups. It tends to provide the
+    most value for models consisting of long linear chains of objects.
+    """
+
+    # note: not using signal_io_dict because we care about exact signal matches
+    # in this case, not bases
+    valid_inc_types = [
+        ElementwiseInc,
+        SparseDotInc,
+        DotInc,
+        Copy,
+        SimProcess,
+        ConvInc,
+        op_builders.ResetInc,
+    ]
+    incs = defaultdict(list)
+    for op in operators:
+        for s in op.incs:
+            if type(op) not in valid_inc_types:
+                warnings.warn("Unknown incer type %s in remove_reset_incs" % type(op))
+            elif getattr(op, "dst_slice", None) is None:
+                # don't include copy ops with dst_slice, as they aren't incrementing
+                # the whole signal
+                incs[s].append(op)
+
+    new_operators = []
+    ignore = []
+    for op in operators:
+        if op in ignore:
+            # don't add this op to new_operators
+            ignore.remove(op)
+            continue
+
+        if type(op) == Reset and np.all(op.value == 0) and len(incs[op.dst]) > 0:
+            # pick the first op that increments dst, and change it to a set
+            # (to take the place of the reset)
+            incer = incs[op.dst][0]
+
+            if isinstance(incer, ElementwiseInc):
+                setter = op_builders.ElementwiseSet(
+                    incer.A, incer.X, incer.Y, tag=incer.tag
+                )
+            elif isinstance(incer, SparseDotInc):
+                # note: this needs to come before the DotInc condition, since
+                # SparseDotInc is a subclass of DotInc
+                setter = op_builders.SparseDotSet(
+                    incer.A, incer.X, incer.Y, tag=incer.tag
+                )
+            elif isinstance(incer, DotInc):
+                setter = op_builders.DotSet(incer.A, incer.X, incer.Y, tag=incer.tag)
+            elif isinstance(incer, Copy):
+                setter = Copy(
+                    incer.src,
+                    incer.dst,
+                    src_slice=incer.src_slice,
+                    dst_slice=incer.dst_slice,
+                    inc=False,
+                    tag=incer.tag,
+                )
+            elif isinstance(incer, SimProcess):
+                setter = SimProcess(
+                    incer.process,
+                    incer.input,
+                    incer.output,
+                    incer.t,
+                    mode="set",
+                    state=incer.state,
+                    tag=incer.tag,
+                )
+            elif isinstance(incer, ConvInc):
+                setter = transform_builders.ConvSet(
+                    incer.W, incer.X, incer.Y, incer.conv, tag=incer.tag
+                )
+            elif isinstance(incer, op_builders.ResetInc):
+                setter = Reset(incer.dst, tag=incer.tag)
+                # setting the value separately to bypass float casting in Reset init
+                setter.value = incer.value
+
+            # replace incer with setter
+            try:
+                new_operators.remove(incer)
+            except ValueError:
+                ignore.append(incer)
+            new_operators.append(setter)
+        else:
+            new_operators.append(op)
+
+    return new_operators
 
 
 def remove_constant_copies(operators):
@@ -1224,7 +1295,13 @@ def remove_constant_copies(operators):
     sets, incs, _, updates = signal_io_dicts(operators)
 
     new_operators = []
+    ignore = []
     for op in operators:
+        if op in ignore:
+            # don't add this op to new_operators
+            ignore.remove(op)
+            continue
+
         if isinstance(op, Copy):
             src = op.src
 
@@ -1261,20 +1338,15 @@ def remove_constant_copies(operators):
                 try:
                     new_operators.remove(pred[0])
                 except ValueError:
-                    operators.remove(pred[0])
+                    ignore.append(pred[0])
             else:
                 new_operators.append(op)
                 continue
 
-            new_op = Reset(dst)
+            new_op = op_builders.ResetInc(dst) if op.inc else Reset(dst)
             # note: we need to set the value separately to bypass the float()
             # casting in Reset
             new_op.value = val
-
-            if op.inc:
-                new_op.incs = [new_op.dst]
-                new_op.sets = []
-                new_op.__class__ = op_builders.ResetInc
 
             new_operators.append(new_op)
         else:
@@ -1350,7 +1422,14 @@ def remove_identity_muls(operators):
 
                 if identity_input:
                     other_src = [x for x in op.reads if x is not src][0]
-                    new_operators.append(Copy(other_src, op.Y, inc=len(op.incs) > 0))
+                    new_operators.append(
+                        Copy(
+                            other_src,
+                            op.Y,
+                            inc=len(op.incs) > 0,
+                            tag="%s.identity_mul" % op.tag,
+                        )
+                    )
                     break
             else:
                 new_operators.append(op)
@@ -1436,3 +1515,16 @@ def display_signal_blocks(operators, all_signals):
             output[n, sig_group] = str(i)
 
     return "\n".join("".join(line) for line in output)
+
+
+# the default simplifications that will be applied. exposed as a variable here to make
+# it easier for users to add something to the defaults (e.g.
+# `simplifications=default_simplifications + (a_thing,)`), rather than having to
+# manually specify and track changes to the defaults
+default_simplifications = (
+    remove_unmodified_resets,
+    remove_zero_incs,
+    remove_identity_muls,
+    remove_constant_copies,
+    remove_reset_incs,
+)

@@ -41,7 +41,8 @@ def configure_settings(**kwargs):
     simplifications: list of graph simplification functions
         Pass a list of `graph simplification functions
         <https://www.nengo.ai/nengo-dl/reference.html#graph-optimization>`_ to change
-        the default simplifications applied.
+        the default simplifications applied.  The default list of simplifications
+        can be found in ``nengo_dl.graph_optimizer.default_simplifications``.
     inference_only : bool
         Set to True if the network will only be run in inference mode (i.e.,
         no calls to `.Simulator.fit`).  This may result in a small

@@ -1,5 +1,8 @@
 # pylint: disable=missing-docstring
 
+from distutils.version import LooseVersion
+
+import nengo
 from nengo.exceptions import BuildError
 from nengo.neurons import LIF, LIFRate, Izhikevich, AdaptiveLIF
 from nengo.synapses import Lowpass, Triangle, Alpha, LinearFilter
@@ -15,22 +18,24 @@ from nengo.builder.operator import (
 )
 from nengo.builder.processes import SimProcess
 from nengo.builder.signal import Signal
+from nengo.builder.transforms import ConvInc
 import numpy as np
 import pytest
 
-from nengo_dl import op_builders
+from nengo_dl import config, op_builders, transform_builders
 from nengo_dl.graph_optimizer import (
-    mergeable,
     greedy_planner,
-    tree_planner,
-    transitive_planner,
+    mergeable,
+    noop_order_signals,
     noop_planner,
     order_signals,
-    noop_order_signals,
-    remove_unmodified_resets,
-    remove_zero_incs,
     remove_constant_copies,
     remove_identity_muls,
+    remove_reset_incs,
+    remove_unmodified_resets,
+    remove_zero_incs,
+    transitive_planner,
+    tree_planner,
 )
 from nengo_dl.tensor_node import SimTensorNode
 from nengo_dl.tests import dummies
@@ -1017,3 +1022,209 @@ def test_remove_identity_muls(Op):
     operators = [Op(x, dummies.Signal(), dummies.Signal()), dummies.Op(sets=[x])]
     new_operators = remove_identity_muls(operators)
     assert new_operators == operators
+
+
+def test_remove_reset_incs():
+    # elementwiseinc converted to elementwiseset
+    x = dummies.Signal()
+    operators = [Reset(x), ElementwiseInc(dummies.Signal(), dummies.Signal(), x)]
+    new_operators = remove_reset_incs(operators)
+    assert len(new_operators) == 1
+    assert isinstance(new_operators[0], op_builders.ElementwiseSet)
+    assert new_operators[0].Y is x
+    assert new_operators[0].incs == []
+    assert new_operators[0].sets == [x]
+
+    # dotinc converted to dotset
+    x = dummies.Signal()
+    operators = [Reset(x), DotInc(dummies.Signal(), dummies.Signal(), x)]
+    new_operators = remove_reset_incs(operators)
+    assert len(new_operators) == 1
+    assert isinstance(new_operators[0], op_builders.DotSet)
+    assert new_operators[0].Y is x
+
+    # copy inc converted to copy set
+    x = dummies.Signal()
+    operators = [Reset(x), Copy(dummies.Signal(), x, inc=True)]
+    new_operators = remove_reset_incs(operators)
+    assert len(new_operators) == 1
+    assert not new_operators[0].inc
+    assert new_operators[0].dst is x
+
+    # simprocess inc converted to simprocess set
+    x = dummies.Signal()
+    operators = [
+        Reset(x),
+        SimProcess(None, dummies.Signal(), x, dummies.Signal(), mode="inc"),
+    ]
+    new_operators = remove_reset_incs(operators)
+    assert len(new_operators) == 1
+    assert new_operators[0].mode == "set"
+    assert new_operators[0].output is x
+
+    # convinc converted to convset
+    x = dummies.Signal()
+    operators = [Reset(x), ConvInc(dummies.Signal(), dummies.Signal(), x, None)]
+    new_operators = remove_reset_incs(operators)
+    assert len(new_operators) == 1
+    assert isinstance(new_operators[0], transform_builders.ConvSet)
+    assert new_operators[0].Y is x
+
+    # sparsedotinc converted to sparsedotset
+    x = dummies.Signal()
+    operators = [
+        Reset(x),
+        SparseDotInc(dummies.Signal(sparse=True), dummies.Signal(), x, None),
+    ]
+    new_operators = remove_reset_incs(operators)
+    assert len(new_operators) == 1
+    assert isinstance(new_operators[0], op_builders.SparseDotSet)
+    assert new_operators[0].Y is x
+
+    # resetinc converted to reset
+    x = dummies.Signal()
+    operators = [Reset(x), op_builders.ResetInc(x)]
+    operators[1].value = np.ones((2, 3))
+    new_operators = remove_reset_incs(operators)
+    assert len(new_operators) == 1
+    assert type(new_operators[0]) == Reset
+    assert np.allclose(new_operators[0].value, 1)
+    assert new_operators[0].dst is x
+
+    # multiple incs
+    x = dummies.Signal()
+    operators = [
+        Reset(x),
+        ElementwiseInc(dummies.Signal(), dummies.Signal(), x),
+        ElementwiseInc(dummies.Signal(), dummies.Signal(), x),
+    ]
+    new_operators = remove_reset_incs(operators)
+    assert len(new_operators) == 2
+    assert isinstance(new_operators[0], op_builders.ElementwiseSet)
+    assert isinstance(new_operators[1], ElementwiseInc)
+
+    # nonzero reset doesn't get converted
+    x = dummies.Signal()
+    operators = [
+        Reset(x, value=1),
+        ElementwiseInc(dummies.Signal(), dummies.Signal(), x),
+    ]
+    new_operators = remove_reset_incs(operators)
+    assert operators == new_operators
+
+    # reset without inc
+    x = dummies.Signal()
+    operators = [
+        Reset(x),
+        Copy(dummies.Signal(), x, inc=False),
+    ]
+    new_operators = remove_reset_incs(operators)
+    assert operators == new_operators
+
+    # reset with partial inc
+    x = Signal(shape=(10,))
+    operators = [
+        Reset(x),
+        Copy(dummies.Signal(), x[:5], inc=True),
+    ]
+    new_operators = remove_reset_incs(operators)
+    assert operators == new_operators
+
+    # unknown inc type
+    class NewCopy(Copy):
+        pass
+
+    x = dummies.Signal()
+    operators = [
+        Reset(x),
+        NewCopy(dummies.Signal(), x, inc=True),
+        ElementwiseInc(dummies.Signal(), dummies.Signal(), x),
+    ]
+    with pytest.warns(UserWarning, match="Unknown incer type"):
+        new_operators = remove_reset_incs(operators)
+    assert len(new_operators) == 2
+    # uses the known op (ElementwiseInc) instead of unknown one
+    assert isinstance(new_operators[0], op_builders.ElementwiseSet)
+    assert new_operators[1] is operators[1]
+
+    operators = [
+        Reset(x),
+        NewCopy(dummies.Signal(), x, inc=True),
+    ]
+    # no optimization if only unknown incers
+    with pytest.warns(UserWarning, match="Unknown incer type"):
+        new_operators = remove_reset_incs(operators)
+    assert new_operators == operators
+
+
+def test_remove_reset_inc_functional(Simulator, seed):
+    with nengo.Network(seed=seed) as net:
+        config.configure_settings(
+            simplifications=[remove_zero_incs, remove_unmodified_resets]
+        )
+
+        # reset+simprocess on the noise
+        ens = nengo.Ensemble(
+            1, 1, noise=nengo.processes.WhiteNoise(), neuron_type=nengo.Direct()
+        )
+
+        node0 = nengo.Node(size_in=1, label="node0")
+        # reset+elementwiseinc (weights)
+        # reset+copy (to node input)
+        nengo.Connection(ens, node0, transform=1, synapse=None)
+
+        node1 = nengo.Node(size_in=3, label="node1")
+        # reset+dotinc (weights)
+        # reset+copy (to node input)
+        nengo.Connection(node0, node1, transform=np.ones((3, 1)), synapse=None)
+
+        # reset+elementwiseinc (weights, in nengo<3.1)
+        # reset+copy (to probe input)
+        p = nengo.Probe(node1)
+
+    with Simulator(net) as sim:
+        extra_op = LooseVersion(nengo.__version__) < "3.1.0"
+
+        assert len(sim.tensor_graph.plan) == 8 + extra_op
+
+        # check that we have all the resets we expect
+        resets = sim.tensor_graph.plan[1]
+        assert isinstance(resets[0], Reset)
+        assert len(resets) == 6 + extra_op
+
+        # check that all the ops are incs like we expect
+        incs = sim.tensor_graph.plan[2:]
+        for ops in incs:
+            for op in ops:
+                assert len(op.incs) == 1
+                assert len(op.sets) == 0
+
+        sim.run_steps(100)
+
+    with net:
+        config.configure_settings(
+            simplifications=[
+                remove_zero_incs,
+                remove_unmodified_resets,
+                remove_reset_incs,
+            ]
+        )
+
+    with Simulator(net) as sim_remove:
+        # check that resets have been removed
+        assert len(sim_remove.tensor_graph.plan) == 7 + extra_op
+        assert (
+            len([x for x in sim_remove.tensor_graph.plan if isinstance(x[0], Reset)])
+            == 0
+        )
+
+        # check that all the ops are sets like we expect
+        incs = sim_remove.tensor_graph.plan[1:]
+        for ops in incs:
+            for op in ops:
+                assert len(op.incs) == 0
+                assert len(op.sets) == 1
+
+        sim_remove.run_steps(100)
+
+    assert np.allclose(sim.data[p], sim_remove.data[p])

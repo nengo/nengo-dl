@@ -28,13 +28,70 @@ logger = logging.getLogger(__name__)
 
 class ResetInc(Reset):
     """
-    A version of Reset that increments the target value rather than setting it.
+    A version of `~nengo.builder.operator.Reset` that increments the target value
+    rather than overwriting.
     """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.incs, self.sets = self.sets, self.incs
 
     @property
     def dst(self):
-        """Overridden to return from incs rather than sets."""
+        """dst is stored in ``incs`` rather than ``sets``."""
         return self.incs[0]
+
+
+class ElementwiseSet(ElementwiseInc):
+    """
+    A version of `~nengo.builder.operator.ElementwiseInc` that overwrites the target
+    rather than incrementing.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.incs, self.sets = self.sets, self.incs
+
+    @property
+    def Y(self):
+        """Y is stored in ``sets`` rather than ``incs``."""
+        return self.sets[0]
+
+
+class DotSet(DotInc):
+    """
+    A version of `~nengo.builder.operator.DotInc` that overwrites the target rather
+    than incrementing.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.incs, self.sets = self.sets, self.incs
+
+    @property
+    def Y(self):
+        """Y is stored in ``sets`` rather than ``incs``."""
+        return self.sets[0]
+
+
+class SparseDotSet(SparseDotInc):
+    """
+    A version of `~nengo.builder.operator.SparseDotInc` that overwrites the target
+    rather than incrementing.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.incs, self.sets = self.sets, self.incs
+
+    @property
+    def Y(self):
+        """Y is stored in ``sets`` rather than ``incs``."""
+        return self.sets[0]
 
 
 @Builder.register(Reset)
@@ -117,14 +174,8 @@ class CopyBuilder(OpBuilder):
         return True
 
 
-# class ElementwiseSet(ElementwiseInc):
-#     @property
-#     def Y(self):
-#         return self.sets[0]
-
-
 @Builder.register(ElementwiseInc)
-# @Builder.register(ElementwiseSet)
+@Builder.register(ElementwiseSet)
 class ElementwiseIncBuilder(OpBuilder):
     """
     Build a group of `~nengo.builder.operator.ElementwiseInc` operators.
@@ -232,14 +283,8 @@ def sparse_matmul(A_indices, A_data, A_shape, X, transpose_x=False):
     return dot
 
 
-# class DotSet(DotInc):
-#     @property
-#     def Y(self):
-#         return self.sets[0]
-
-
 @Builder.register(DotInc)
-# @Builder.register(DotSet)
+@Builder.register(DotSet)
 class DotIncBuilder(OpBuilder):
     """
     Build a group of `~nengo.builder.operator.DotInc` operators.
@@ -396,6 +441,7 @@ class SimPyFuncBuilder(OpBuilder):
 
 
 @Builder.register(SparseDotInc)
+@Builder.register(SparseDotSet)
 class SparseDotIncBuilder(OpBuilder):
     """
     Build a group of `~nengo.builder.operator.SparseDotInc` operators.
@@ -403,6 +449,8 @@ class SparseDotIncBuilder(OpBuilder):
 
     def __init__(self, ops, signals, config):
         super().__init__(ops, signals, config)
+
+        self.mode = "inc" if type(ops[0]) == SparseDotInc else "update"
 
         self.Y_data = signals.combine([op.Y for op in ops])
 
@@ -457,7 +505,7 @@ class SparseDotIncBuilder(OpBuilder):
 
         dot.set_shape((signals.minibatch_size,) + self.Y_data.shape)
 
-        signals.scatter(self.Y_data, dot, mode="inc")
+        signals.scatter(self.Y_data, dot, mode=self.mode)
 
     @staticmethod
     def mergeable(x, y):

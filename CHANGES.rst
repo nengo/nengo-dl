@@ -34,6 +34,7 @@ Release history
 - Added ``nengo_dl.LeakyReLU`` and ``nengo_dl.SpikingLeakyReLU`` neuron models.
   (`#126`_)
 - Added support for leaky ReLU Keras layers to ``nengo_dl.Converter``. (`#126`_)
+- Added a new ``remove_reset_incs`` graph simplification step. (`#129`_)
 
 **Changed**
 

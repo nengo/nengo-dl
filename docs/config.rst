@@ -175,6 +175,8 @@ disable sorting via
     with nengo.Network() as net:
         nengo_dl.configure_settings(sorter=noop_order_signals)
 
+.. _config-simplifications:
+
 simplifications
 ---------------
 

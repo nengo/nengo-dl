@@ -115,14 +115,7 @@ class TensorGraph(tf.keras.layers.Layer):
 
         # apply graph simplification functions
         simplifications = config.get_setting(
-            model,
-            "simplifications",
-            [
-                graph_optimizer.remove_unmodified_resets,
-                graph_optimizer.remove_zero_incs,
-                graph_optimizer.remove_identity_muls,
-                graph_optimizer.remove_constant_copies,
-            ],
+            model, "simplifications", graph_optimizer.default_simplifications,
         )
 
         with progress.sub("operator simplificaton", max_value=None):
