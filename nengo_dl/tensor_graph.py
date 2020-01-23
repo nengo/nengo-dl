@@ -191,14 +191,14 @@ class TensorGraph(tf.keras.layers.Layer):
         for n in self.invariant_inputs:
             inputs[n] = tf.keras.layers.Input(
                 shape=(None, n.size_out),
-                batch_size=self.minibatch_size,
+                batch_size=None,
                 dtype=self.dtype,
                 name=self.io_names[n],
             )
 
         # number of steps to run
         n_steps = tf.keras.layers.Input(
-            shape=(1,), batch_size=self.minibatch_size, dtype="int32", name="n_steps"
+            shape=(1,), batch_size=None, dtype="int32", name="n_steps"
         )
 
         return inputs, n_steps

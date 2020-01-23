@@ -5,6 +5,7 @@ a model.
 """
 
 import collections
+import contextlib
 import copy
 from functools import partial
 import logging
@@ -44,9 +45,13 @@ def with_self(wrapped, instance, args, kwargs):
 
     keras_dtype = tf.keras.backend.floatx()
     tf.keras.backend.set_floatx(instance.tensor_graph.dtype)
+    if instance.distribute_strategy is None:
+        distribute_ctx = contextlib.suppress()
+    else:
+        distribute_ctx = instance.distribute_strategy.scope()
     with instance.graph.as_default(), instance.graph.device(
         instance.tensor_graph.device
-    ):
+    ), distribute_ctx:
         output = wrapped(*args, **kwargs)
     tf.keras.backend.set_floatx(keras_dtype)
 
@@ -506,6 +511,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 progress,
                 seed,
             )
+
+        # set up distribution strategy
+        self.distribute_strategy = config.get_setting(
+            self.model, "distribute_strategy", None,
+        )
 
         # build keras models
         self.graph = tf.Graph()

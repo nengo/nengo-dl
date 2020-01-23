@@ -69,6 +69,10 @@ def configure_settings(**kwargs):
         simulation iterations are explicitly built into the model, avoiding the
         while loop. This can improve performance, but the simulation can only run
         for exactly ``Simulator.unroll_simulation`` iterations.
+    distribute_strategy : ``tf.distribute.Strategy``
+        A `TensorFlow distribution strategy
+        <https://www.tensorflow.org/api_docs/python/tf/distribute/Strategy>`_ for
+        running on multiple GPUs.
     """
 
     # get the toplevel network
@@ -112,6 +116,7 @@ def configure_settings(**kwargs):
             "dtype",
             "stateful",
             "use_loop",
+            "distribute_strategy",
         ):
             params.set_param(attr, Parameter(attr, val))
         else:
