@@ -1208,6 +1208,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
         )
 
         with np.load(path + ".npz") as vals:
+            if len(vars) != len(vals.files):
+                raise SimulationError(
+                    "Number of saved parameters in %s (%d) != number of variables in "
+                    "the model (%d)" % (path, len(vals.files), len(vars))
+                )
             tf.keras.backend.batch_set_value(
                 zip(vars, (vals["arr_%d" % i] for i in range(len(vals.files))))
             )

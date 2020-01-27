@@ -55,6 +55,8 @@ Release history
   non-Ensemble connections will no longer be present. (`#128`_)
 - Re-enabled the ``remove_constant_copies`` graph simplification by default. (`#129`_)
 - Reduced the amount of state that needs to be stored in the simulation. (`#129`_)
+- Added more information to the error message when loading saved parameters that
+  don't match the current model. (`#129`_)
 
 **Fixed**
 

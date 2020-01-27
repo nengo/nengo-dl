@@ -591,6 +591,10 @@ def test_save_load_params(Simulator, include_non_trainable, tmpdir):
         else:
             assert not np.allclose(sim_load.data[p1], sim_save.data[p0][10:])
 
+    with Simulator(nengo.Network()) as sim:
+        with pytest.raises(SimulationError, match="!= number of variables"):
+            sim.load_params(str(tmpdir))
+
 
 def test_model_passing(Simulator, seed):
     # make sure that passing a built model to the Simulator works properly
