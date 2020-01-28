@@ -101,7 +101,9 @@ def _test_random(
     assert all(net.inp in x for x in post_conns.values())
 
 
-@pytest.mark.parametrize("network, train", [("integrator", True), ("cconv", False)])
+@pytest.mark.parametrize(
+    "network, train", [("integrator", True), ("cconv", False), ("test", True)]
+)
 def test_run_profile(network, train, pytestconfig, monkeypatch, tmpdir):
     monkeypatch.chdir(tmpdir)
 
@@ -109,6 +111,10 @@ def test_run_profile(network, train, pytestconfig, monkeypatch, tmpdir):
         net = benchmarks.integrator(3, 2, nengo.SpikingRectifiedLinear())
     elif network == "cconv":
         net = benchmarks.cconv(3, 10, nengo.LIF())
+    elif network == "test":
+        with nengo.Network() as net:
+            ens = nengo.Ensemble(10, 1)
+            net.p = nengo.Probe(ens)
 
     benchmarks.run_profile(
         net,

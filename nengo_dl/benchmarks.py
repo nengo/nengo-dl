@@ -649,7 +649,7 @@ def run_profile(
                     sim.minibatch_size * n_batches, n_steps, net.inp.size_out
                 )
             }
-        else:
+        elif hasattr(net, "inp_a"):
             x = {
                 net.inp_a: np.random.randn(
                     sim.minibatch_size * n_batches, n_steps, net.inp_a.size_out
@@ -658,6 +658,8 @@ def run_profile(
                     sim.minibatch_size * n_batches, n_steps, net.inp_b.size_out
                 ),
             }
+        else:
+            x = None
 
         if train:
             y = {
@@ -670,14 +672,14 @@ def run_profile(
 
             # run once to eliminate startup overhead
             start = timeit.default_timer()
-            sim.fit(x, y, epochs=1)
+            sim.fit(x, y, epochs=1, n_steps=n_steps)
             print("Warmup time:", timeit.default_timer() - start)
 
             for _ in range(reps):
                 if do_profile:
                     profiler.start()
                 start = timeit.default_timer()
-                sim.fit(x, y, epochs=1)
+                sim.fit(x, y, epochs=1, n_steps=n_steps)
                 exec_time = min(timeit.default_timer() - start, exec_time)
                 if do_profile:
                     profiler.save("profile", profiler.stop())
