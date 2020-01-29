@@ -1451,6 +1451,96 @@ class ConvertReshape(LayerConverter):
         return self.get_input_obj(node_id)
 
 
+class ConvertUpSampling(LayerConverter):
+    """Base class for converting upsampling layers to Nengo objects."""
+
+    def convert(self, node_id, dimensions):
+        output = self.add_nengo_obj(node_id)
+
+        channels_last = (
+            getattr(self.layer, "data_format", "channels_last") == "channels_last"
+        )
+        reps = np.atleast_1d(self.layer.size)
+
+        input_shape = self.input_shape(node_id)
+        input_shape = input_shape[:-1] if channels_last else input_shape[1:]
+
+        output_shape = self.output_shape(node_id)
+        output_shape = output_shape[:-1] if channels_last else output_shape[1:]
+
+        # figure out nearest neighbour (in the source array) for each point in the
+        # upsampled array
+        input_pts = np.stack(
+            np.meshgrid(
+                *[
+                    np.arange(0, x * reps[i], reps[i], dtype=np.float32)
+                    for i, x in enumerate(input_shape)
+                ],
+                indexing="ij",
+            ),
+            axis=-1,
+        )
+        input_pts += (reps - 1) / 2  # shift to centre of upsampled block
+        input_pts = np.reshape(input_pts, (-1, dimensions))
+
+        upsampled_pts = np.stack(
+            np.meshgrid(*[np.arange(x) for x in output_shape], indexing="ij",), axis=-1,
+        )
+        upsampled_pts = np.reshape(upsampled_pts, (-1, dimensions))
+
+        dists = np.linalg.norm(
+            input_pts[..., None] - upsampled_pts.T[None, ...], axis=1
+        )
+        nearest = np.argmin(dists, axis=0)
+
+        # duplicate along channel axis
+        idxs = np.arange(np.prod(self.input_shape(node_id))).reshape(
+            self.input_shape(node_id)
+        )
+        if channels_last:
+            idxs = np.reshape(idxs, (-1, idxs.shape[-1]))
+            idxs = idxs[nearest]
+        else:
+            idxs = np.reshape(idxs, (idxs.shape[0], -1))
+            idxs = idxs[:, nearest]
+
+        # connect from pre, using idxs to perform upsampling
+        conn = nengo.Connection(
+            self.get_input_obj(node_id, tensor_idx=0)[np.ravel(idxs)],
+            output,
+            synapse=None,
+        )
+        self.converter.net.config[conn].trainable = False
+
+        return output
+
+
+@Converter.register(tf.keras.layers.UpSampling1D)
+class ConvertUpSampling1D(ConvertUpSampling):
+    """Convert ``tf.keras.layers.UpSampling1D`` to Nengo objects."""
+
+    def convert(self, node_id):
+        return super().convert(node_id, dimensions=1)
+
+
+@Converter.register(tf.keras.layers.UpSampling2D)
+class ConvertUpSampling2D(ConvertUpSampling):
+    """Convert ``tf.keras.layers.UpSampling2D`` to Nengo objects."""
+
+    unsupported_args = [("interpolation", "nearest")]
+
+    def convert(self, node_id):
+        return super().convert(node_id, dimensions=2)
+
+
+@Converter.register(tf.keras.layers.UpSampling3D)
+class ConvertUpSampling3D(ConvertUpSampling):
+    """Convert ``tf.keras.layers.UpSampling3D`` to Nengo objects."""
+
+    def convert(self, node_id):
+        return super().convert(node_id, dimensions=3)
+
+
 class ConvertZeroPadding(LayerConverter):
     """Base class for converting zero-padding layers to Nengo objects."""
 

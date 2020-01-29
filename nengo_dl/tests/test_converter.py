@@ -522,3 +522,28 @@ def test_leaky_relu(rng):
     x = tf.keras.layers.LeakyReLU(alpha=2)(x)
 
     _test_convert(inp, x, inp_vals=[rng.uniform(-1, 1, size=(32, 4))])
+
+
+@pytest.mark.parametrize(
+    "Layer, size, data_format",
+    [
+        (tf.keras.layers.UpSampling1D, 3, None),
+        (tf.keras.layers.UpSampling2D, (2, 2), "channels_last"),
+        (tf.keras.layers.UpSampling2D, (3, 3), "channels_first"),
+        (tf.keras.layers.UpSampling3D, (2, 3, 4), "channels_first"),
+    ],
+)
+def test_upsampling(Layer, size, data_format, rng):
+    input_shape = (4,) * (len(size) if isinstance(size, tuple) else 1)
+    if data_format is None or data_format == "channels_last":
+        input_shape += (2,)
+    else:
+        input_shape = (2,) + input_shape
+    inp = x = tf.keras.Input(shape=input_shape, batch_size=3)
+    x = Layer(
+        size=size, **({} if data_format is None else dict(data_format=data_format))
+    )(x)
+
+    _test_convert(
+        inp, x, inp_vals=[np.arange(np.prod(inp.get_shape())).reshape(inp.shape)],
+    )

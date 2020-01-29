@@ -35,6 +35,7 @@ Release history
   (`#126`_)
 - Added support for leaky ReLU Keras layers to ``nengo_dl.Converter``. (`#126`_)
 - Added a new ``remove_reset_incs`` graph simplification step. (`#129`_)
+- Added support for UpSampling layers to ``nengo_dl.Converter``. (`#130`_)
 
 **Changed**
 
@@ -74,6 +75,7 @@ Release history
 .. _#126: https://github.com/nengo/nengo-dl/pull/126
 .. _#128: https://github.com/nengo/nengo-dl/pull/128
 .. _#129: https://github.com/nengo/nengo-dl/pull/129
+.. _#130: https://github.com/nengo/nengo-dl/pull/130
 .. _#136: https://github.com/nengo/nengo-dl/pull/136
 .. _Nengo#1591: https://github.com/nengo/nengo/pull/1591
 
