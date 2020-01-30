@@ -217,7 +217,8 @@ travis_yml:
   deploy_dists:
     - sdist
 
-codecov_yml: {}
+codecov_yml:
+  abs_target: 100%
 
 setup_py:
   include_package_data: True
