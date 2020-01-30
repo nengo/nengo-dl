@@ -142,7 +142,7 @@ class Converter:
                 logger.info("Probing %s (%s)", output_obj, output)
                 self.outputs[output] = nengo.Probe(output_obj)
 
-    def verify(self, training=False, inputs=None):
+    def verify(self, training=False, inputs=None, atol=1e-8, rtol=1e-5):
         """
         Verify that output of converted Nengo network matches the original Keras model.
 
@@ -154,6 +154,11 @@ class Converter:
         inputs : list of `numpy.ndarray`
             Testing values for model inputs (if not specified, array of ones will be
             used).
+        atol : float
+            Absolute tolerance for difference between Nengo and Keras outputs.
+        rtol : float
+            Relative (to Nengo) tolerance for difference between nengo and Keras
+            outputs.
 
         Returns
         -------
@@ -214,10 +219,13 @@ class Converter:
         for i, out in enumerate(self.model.outputs):
             keras_vals = np.ravel(keras_out[i])
             nengo_vals = np.ravel(sim_out[self.outputs[out]])
-            if not np.allclose(keras_vals, nengo_vals):
+            fails = np.logical_not(
+                np.isclose(keras_vals, nengo_vals, atol=atol, rtol=rtol)
+            )
+            if np.any(fails):
                 logger.info("Verification failure")
-                logger.info("Keras:\n%s", keras_vals)
-                logger.info("Nengo:\n%s", nengo_vals)
+                logger.info("Keras:\n%s", keras_vals[fails])
+                logger.info("Nengo:\n%s", nengo_vals[fails])
                 raise ValueError(
                     "Output of Keras model does not match output of converted "
                     "Nengo network"
@@ -1100,7 +1108,7 @@ class ConvertBatchNormalization(LayerConverter):
         stddev = np.sqrt(variance)
 
         scale = gamma / stddev
-        bias = beta - gamma * mean / stddev
+        bias = beta - scale * mean
 
         # build output object
         output = self.add_nengo_obj(node_id)

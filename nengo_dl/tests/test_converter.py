@@ -1,5 +1,7 @@
 # pylint: disable=missing-docstring
 
+from distutils.version import LooseVersion
+
 import nengo
 import numpy as np
 import pytest
@@ -167,14 +169,34 @@ def test_zero_padding():
 
 
 def test_batch_normalization(rng):
-    inp = x = tf.keras.Input(shape=(4, 4))
-    x = tf.keras.layers.BatchNormalization(axis=1)(x)
-    x = tf.keras.layers.BatchNormalization(axis=2)(x)
-    x = tf.keras.layers.BatchNormalization(center=False, scale=False)(x)
+    inp = tf.keras.Input(shape=(4, 4, 3))
+    out = []
 
-    model = tf.keras.Model(inputs=inp, outputs=x)
+    # TF<2.1 doesn't support axis!=-1 for fused batchnorm
+    out.append(
+        tf.keras.layers.BatchNormalization(
+            axis=1, fused=None if LooseVersion(tf.__version__) >= "2.1.0" else False
+        )(inp)
+    )
+    out.append(
+        tf.keras.layers.BatchNormalization(
+            axis=2, fused=None if LooseVersion(tf.__version__) >= "2.1.0" else False
+        )(inp)
+    )
+    out.append(tf.keras.layers.BatchNormalization()(inp))
+    out.append(tf.keras.layers.BatchNormalization(center=False, scale=False)(inp))
 
-    inp_vals = [rng.uniform(size=(2, 4, 4))]
+    model = tf.keras.Model(inputs=inp, outputs=out)
+
+    # train it for a bit to initialize the moving averages
+    model.compile(loss=tf.losses.mse, optimizer=tf.optimizers.SGD())
+    model.fit(
+        rng.uniform(size=(1024, 4, 4, 3)),
+        [rng.uniform(size=(1024, 4, 4, 3))] * len(out),
+        epochs=2,
+    )
+
+    inp_vals = [rng.uniform(size=(32, 4, 4, 3))]
 
     # test using tensornode fallback
     # TODO: there is some bug with using batchnormalization layers inside
@@ -189,7 +211,8 @@ def test_batch_normalization(rng):
     # test actually converting to nengo objects
     conv = converter.Converter(model, allow_fallback=False, inference_only=True)
 
-    assert conv.verify(training=False, inputs=inp_vals)
+    assert conv.verify(training=False, inputs=inp_vals, atol=1e-7)
+
     with pytest.raises(ValueError, match="number of trainable parameters"):
         # we don't expect the verification to pass for training=True, since we froze
         # the batch normalization in the nengo network (but not the keras model)
