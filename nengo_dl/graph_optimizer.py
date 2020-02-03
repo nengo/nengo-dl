@@ -1381,9 +1381,13 @@ def remove_identity_muls(operators):
 
         d = x.shape[0]
         if sig.ndim == 1:
-            return np.array_equal(x, np.ones(d))
+            return x.shape == (d,) and np.allclose(x, 1)
 
-        return np.array_equal(x, np.diag(np.ones(d)))
+        return (
+            x.shape == (d, d)
+            and np.allclose(np.diag(x), 1)
+            and np.allclose(np.sum(np.abs(x)), d)  # all non-diagonal elements are 0
+        )
 
     new_operators = []
     for op in operators:
