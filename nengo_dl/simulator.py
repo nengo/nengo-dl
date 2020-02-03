@@ -517,8 +517,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
             )
 
         # build keras models
-        self.graph = tf.Graph()
-        self._build_keras()
+        with ProgressBar(
+            "Constructing graph", "Construction", max_value=None
+        ) as progress:
+            self.graph = tf.Graph()
+            self._build_keras(progress)
 
         # initialize sim attributes
         self._n_steps = self._time = 0
@@ -528,8 +531,15 @@ class Simulator:  # pylint: disable=too-many-public-methods
         self.closed = False
 
     @with_self
-    def _build_keras(self):
-        """Build the underlying Keras model that drives the simulation."""
+    def _build_keras(self, progress=None):
+        """
+        Build the underlying Keras model that drives the simulation.
+
+        Parameters
+        ----------
+        progress : `.utils.ProgressBar`
+            Progress bar for construction stage.
+        """
 
         tf.config.set_soft_device_placement(False)
 
@@ -543,6 +553,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             training=backend._GRAPH_LEARNING_PHASES.get(
                 backend._DUMMY_EAGER_GRAPH, None
             ),
+            progress=progress,
         )
 
         self.keras_model = tf.keras.Model(

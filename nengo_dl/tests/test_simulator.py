@@ -1695,7 +1695,10 @@ def test_progress_bar(Simulator, capsys, monkeypatch):
 
     with Simulator(net) as sim:
         # default to displaying build information
-        assert "Building" in capsys.readouterr().out
+        build_output = capsys.readouterr().out
+        assert "Building" in build_output
+        assert "Optimization" in build_output
+        assert "Construction" in build_output
 
         # display simulation progress
         sim.run_steps(10)
