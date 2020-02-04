@@ -436,7 +436,7 @@ class LayerConverter:
                 if biases is not None:
                     # use a connection from a constant node (so that the bias
                     # values will be trainable)
-                    bias_node = nengo.Node([1], label="%s.bias_node" % name)
+                    bias_node = nengo.Node([1], label="%s.bias" % name)
                     nengo.Connection(
                         bias_node, obj, transform=biases[:, None], synapse=None
                     )
@@ -1137,7 +1137,9 @@ class ConvertBatchNormalization(LayerConverter):
         broadcast_bias = np.ravel(broadcast_bias)
 
         # connect up bias node to output
-        bias_node = nengo.Node(broadcast_bias)
+        bias_node = nengo.Node(
+            broadcast_bias, label="%s.%d.bias" % (self.layer.name, node_id)
+        )
         conn = nengo.Connection(bias_node, output, synapse=None)
         self.converter.net.config[conn].trainable = False
 
@@ -1149,34 +1151,6 @@ class ConvertBatchNormalization(LayerConverter):
             transform=broadcast_scale,
         )
         self.converter.net.config[conn].trainable = False
-
-        # this is an alternate approach, where rather than broadcasting scale/bias,
-        # we create individual connections for each element in the batch normalization
-        # axis. this will result in smaller weight matrices, but more Connections
-        # TODO: figure out where the tradeoffs lie between these two approaches
-        # bias_node = nengo.Node(np.ones(idxs[slices].size))
-        #
-        # # for each element in the batch normalization axis
-        # for i in range(idxs.shape[axis]):
-        #     # slice out one element of the output along the axis
-        #     slices[axis] = i
-        #     slice_idxs = np.ravel(idxs[slices])
-        #     sliced_output = output[slice_idxs]
-        #
-        #     # connect up bias
-        #     conn = nengo.Connection(
-        #         bias_node, sliced_output, synapse=None, transform=bias[i],
-        #     )
-        #     self.converter.net.config[conn].trainable = False
-        #
-        #     # connect up input with scale applied
-        #     conn = nengo.Connection(
-        #         self.get_input_obj(node_id)[slice_idxs],
-        #         sliced_output,
-        #         synapse=None,
-        #         transform=scale[i],
-        #     )
-        #     self.converter.net.config[conn].trainable = False
 
         return output
 
@@ -1248,31 +1222,41 @@ class ConvertConv(LayerConverter):
             # conv layer biases are per-output-channel, rather than per-output-element,
             # so we need to set up a nengo connection structure that will have one
             # bias parameter shared across all the spatial dimensions
-            if self.layer.data_format == "channels_first":
-                spatial_size = np.prod(self.output_shape(node_id)[1:])
-                bias_node = nengo.Node(np.ones(spatial_size), label="conv_bias")
-                offset = 0
-                for i in range(self.output_shape(node_id)[0]):
-                    nengo.Connection(
-                        bias_node,
-                        output[offset : offset + spatial_size],
-                        transform=biases[i],
-                        synapse=None,
-                    )
-                    offset += spatial_size
-            else:
-                spatial_size = np.prod(self.output_shape(node_id)[:-1])
-                bias_node = nengo.Node(np.ones(spatial_size), label="conv_bias")
-                idxs = np.arange(np.prod(self.output_shape(node_id))).reshape(
-                    (-1, self.output_shape(node_id)[-1])
+
+            # add trainable bias weights
+            bias_node = nengo.Node([1], label="%s.%d.bias" % (self.layer.name, node_id))
+            bias_relay = nengo.Node(size_in=len(biases))
+            nengo.Connection(
+                bias_node, bias_relay, transform=biases[:, None], synapse=None
+            )
+
+            # use a non-trainable sparse transform to broadcast biases along all
+            # non-channel dimensions
+            broadcast_indices = []
+            idxs = np.arange(np.prod(self.output_shape(node_id))).reshape(
+                self.output_shape(node_id)
+            )
+            slices = [slice(None) for _ in range(len(self.output_shape(node_id)))]
+            n_spatial = np.prod(
+                self.output_shape(node_id)[:-1]
+                if self.layer.data_format == "channels_last"
+                else self.output_shape(node_id)[1:]
+            )
+            axis = -1 if self.layer.data_format == "channels_last" else 0
+            for i in range(self.output_shape(node_id)[axis]):
+                slices[axis] = i
+                broadcast_indices.extend(
+                    tuple(zip(np.ravel(idxs[tuple(slices)]), [i] * n_spatial))
                 )
-                for i in range(self.output_shape(node_id)[-1]):
-                    nengo.Connection(
-                        bias_node,
-                        output[idxs[:, i]],
-                        transform=biases[i],
-                        synapse=None,
-                    )
+            conn = nengo.Connection(
+                bias_relay,
+                output,
+                transform=nengo.Sparse(
+                    (output.size_in, bias_relay.size_out), indices=broadcast_indices
+                ),
+                synapse=None,
+            )
+            self.converter.net.config[conn].trainable = False
 
         # set up a convolutional transform that matches the layer parameters
         transform = nengo.Convolution(

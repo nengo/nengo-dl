@@ -59,6 +59,7 @@ Release history
 - Reduced the amount of state that needs to be stored in the simulation. (`#129`_)
 - Added more information to the error message when loading saved parameters that
   don't match the current model. (`#129`_)
+- More efficient implementation of convolutional biases in the Converter. (`#130`_)
 
 **Fixed**
 

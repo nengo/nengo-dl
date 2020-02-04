@@ -1383,6 +1383,13 @@ def remove_identity_muls(operators):
         if sig.ndim == 1:
             return x.shape == (d,) and np.allclose(x, 1)
 
+        if isinstance(x, SparseMatrix):
+            return (
+                x.shape == (d, d)
+                and np.allclose(x.data, 1)
+                and np.allclose(x.indices, [[i, i] for i in range(d)])
+            )
+
         return (
             x.shape == (d, d)
             and np.allclose(np.diag(x), 1)
