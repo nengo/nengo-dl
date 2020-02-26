@@ -570,3 +570,86 @@ def test_upsampling(Layer, size, data_format, rng):
     _test_convert(
         inp, x, inp_vals=[np.arange(np.prod(inp.get_shape())).reshape(inp.shape)],
     )
+
+
+def test_scale_firing_rates():
+    inp = tf.keras.Input(shape=(1,))
+    x = tf.keras.layers.ReLU()(inp)
+    model = tf.keras.Model(inp, x)
+
+    # scaling doesn't affect output at all for non-spiking neurons
+    conv = converter.Converter(model, scale_firing_rates=5)
+    assert conv.verify()
+
+    # works with existing amplitude values
+    neuron_type = nengo.RectifiedLinear(amplitude=2)
+    conv = converter.Converter(
+        model,
+        scale_firing_rates=5,
+        swap_activations={nengo.RectifiedLinear(): neuron_type},
+    )
+    assert neuron_type.amplitude == 2
+    assert conv.net.ensembles[0].neuron_type.amplitude == 2 / 5
+
+    # warning when applying scaling to non-amplitude neuron type
+    inp = tf.keras.Input(shape=(1,))
+    x = tf.keras.layers.Activation(tf.nn.sigmoid)(inp)
+    model = tf.keras.Model(inp, x)
+
+    with pytest.warns(UserWarning, match="does not support amplitude"):
+        conv = converter.Converter(model, scale_firing_rates=5)
+
+    with pytest.raises(ValueError, match="does not match output"):
+        conv.verify()
+
+
+@pytest.mark.parametrize(
+    "scale_firing_rates, expected_rates",
+    [(5, [5, 5]), ({1: 3, 2: 4}, [3, 4]), ({2: 3}, [1, 3])],
+)
+def test_scale_firing_rates_cases(Simulator, scale_firing_rates, expected_rates):
+    input_val = 100
+    bias_val = 50
+    n_steps = 100
+
+    inp = tf.keras.Input(shape=(1,))
+    x0 = tf.keras.layers.ReLU()(inp)
+    x1 = tf.keras.layers.Dense(
+        units=1,
+        activation=tf.nn.relu,
+        kernel_initializer=tf.initializers.constant([[1]]),
+        bias_initializer=tf.initializers.constant([[bias_val]]),
+    )(inp)
+    model = tf.keras.Model(inp, [x0, x1])
+
+    # convert indices to layers
+    scale_firing_rates = (
+        {model.layers[k]: v for k, v in scale_firing_rates.items()}
+        if isinstance(scale_firing_rates, dict)
+        else scale_firing_rates
+    )
+
+    conv = converter.Converter(
+        model,
+        swap_activations={tf.nn.relu: nengo.SpikingRectifiedLinear()},
+        scale_firing_rates=scale_firing_rates,
+    )
+
+    with Simulator(conv.net) as sim:
+        sim.run_steps(
+            n_steps, data={conv.inputs[inp]: np.ones((1, n_steps, 1)) * input_val}
+        )
+
+        for i, p in enumerate(conv.net.probes):
+            # spike heights are scaled down
+            assert np.allclose(np.max(sim.data[p]), 1 / sim.dt / expected_rates[i])
+
+            # number of spikes is scaled up
+            assert np.allclose(
+                np.count_nonzero(sim.data[p]),
+                (input_val if i == 0 else input_val + bias_val)
+                * expected_rates[i]
+                * n_steps
+                * sim.dt,
+                atol=1,
+            )

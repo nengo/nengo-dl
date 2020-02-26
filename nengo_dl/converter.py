@@ -1,6 +1,7 @@
 """Tools for automatically converting a Keras model to a Nengo network."""
 
 import collections
+import copy
 import logging
 import warnings
 
@@ -64,6 +65,17 @@ class Converter:
         ``{nengo.RectifiedLinear(): nengo.SpikingRectifiedLinear()}``.  Or it can be
         used to swap activation types that don't have a native Nengo implementation,
         e.g. ``{tf.keras.activatons.elu: tf.keras.activations.relu}``.
+    scale_firing_rates: float or dict
+        Scales the inputs of neurons by ``x``, and the outputs by ``1/x``.
+        The idea is that this parameter can be used to increase the firing rates of
+        spiking neurons (by scaling the input), without affecting the overall output
+        (because the output spikes are being scaled back down). Note that this is only
+        strictly true for neuron types with linear activation functions (e.g. ReLU).
+        Nonlinear neuron types (e.g. LIF) will be skewed by this linear scaling on the
+        input/output. ``scale_firing_rates`` can be specified as a float, which will
+        be applied to all layers in the model, or as a dictionary mapping Keras model
+        layers to a scale factor, allowing different scale factors to be applied to
+        different layers.
 
     Attributes
     ----------
@@ -90,12 +102,14 @@ class Converter:
         max_to_avg_pool=False,
         split_shared_weights=False,
         swap_activations=None,
+        scale_firing_rates=None,
     ):
         self.allow_fallback = allow_fallback
         self.inference_only = inference_only
         self.max_to_avg_pool = max_to_avg_pool
         self.split_shared_weights = split_shared_weights
         self.swap_activations = swap_activations or {}
+        self.scale_firing_rates = scale_firing_rates
         self.layer_map = collections.defaultdict(dict)
         self._layer_converters = {}
 
@@ -442,11 +456,47 @@ class LayerConverter:
                     )
             else:
                 # use ensemble to implement the appropriate neuron type
+
+                # apply firing rate scaling
+                if self.converter.scale_firing_rates is None:
+                    scale_firing_rates = None
+                elif isinstance(self.converter.scale_firing_rates, dict):
+                    # look up specific layer rate
+                    scale_firing_rates = self.converter.scale_firing_rates.get(
+                        self.layer, None
+                    )
+                else:
+                    # constant scale applied to all layers
+                    scale_firing_rates = self.converter.scale_firing_rates
+
+                if scale_firing_rates is None:
+                    gain = 1
+                else:
+                    gain = scale_firing_rates
+                    if biases is not None:
+                        biases *= scale_firing_rates
+
+                    if hasattr(activation, "amplitude"):
+                        # copy activation so that we can change amplitude without
+                        # affecting other instances
+                        activation = copy.copy(activation)
+
+                        # bypass read-only protection
+                        type(activation).amplitude.data[
+                            activation
+                        ] /= scale_firing_rates
+                    else:
+                        warnings.warn(
+                            "Firing rate scaling being applied to activation type "
+                            "that does not support amplitude (%s); this will change "
+                            "the output" % type(activation)
+                        )
+
                 obj = nengo.Ensemble(
                     np.prod(self.output_shape(node_id)),
                     1,
                     neuron_type=activation,
-                    gain=nengo.dists.Choice([1]),
+                    gain=nengo.dists.Choice([gain]),
                     bias=nengo.dists.Choice([0]) if biases is None else biases,
                     label=name,
                 ).neurons

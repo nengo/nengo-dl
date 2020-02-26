@@ -98,3 +98,20 @@ When debugging spiking performance issues, here are somethings to think about:
    we use both of these techniques.  Again, however, as with any hyperparameters these
    will likely need to be adjusted depending on the application if we want to
    maximize performance.
+4. **Firing rates**. Non-spiking neurons output continuous values every timestep, so
+   it doesn't make much difference whether they are outputting a value of 1 or 100.
+   However, spiking neurons communicate via discrete events, and the rate of those
+   events is proportional to the continuous output value of the corresponding
+   non-spiking counterpart. So a spiking neuron emitting spikes at
+   1Hz is very different than one emitting spikes at 100Hz. Imagine we're
+   simulating the model for 100 timesteps with a simulation timestep of 0.001s. The
+   1Hz neuron is only expected to spike once every 1000 timesteps, so it may not
+   spike at all in our 100 timestep window, meaning that we really have no information
+   about what value that neuron is outputting. Even if a neuron spiked 1 or 2
+   times, that still doesn't provide much information. The 100Hz neuron, on the other
+   hand, would spike about 10 times in our 100 timestep window, allowing us to
+   estimate its firing rate fairly accurately. In conclusion, it is important to look
+   at the firing rates of neurons in your model, and make sure they are spiking fast
+   enough to provide useful information. If they are not spiking fast enough, consider
+   adjusting Ensemble parameterizations (before or after training) or adding
+   regularization terms during training to encourage higher firing rates.
