@@ -919,7 +919,8 @@ class TensorGraph(tf.keras.layers.Layer):
 
                 if not isinstance(ens.neuron_type, Direct):
                     neurons_trainable = get_trainable(parent_configs, ens.neurons)
-                    if neurons_trainable is 1:  # noqa: F632
+                    if neurons_trainable and type(neurons_trainable) == int:
+                        # neurons_trainable is 1, so default to trainability of parent
                         neurons_trainable = ens_trainable
 
                     self.model.sig[ens.neurons]["bias"].trainable = neurons_trainable
