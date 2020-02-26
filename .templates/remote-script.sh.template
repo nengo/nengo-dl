@@ -23,7 +23,7 @@
         echo "Waiting for lock on GPU $GPU_NUM"
         (
             flock -x -w 540 200 || exit 1
-            CUDA_VISIBLE_DEVICES="$GPU_NUM" bash .ci/{{ remote_script }}.sh script || exit 1
+            CUDA_VISIBLE_DEVICES="$GPU_NUM" TF_FORCE_GPU_ALLOW_GROWTH=true bash .ci/{{ remote_script }}.sh script || exit 1
         ) 200>/var/lock/.travis-ci.exclusivelock."$GPU_NUM" || REMOTE_STATUS=1
 {% endblock %}
 
