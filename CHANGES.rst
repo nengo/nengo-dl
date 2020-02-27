@@ -38,6 +38,9 @@ Release history
 - Added support for UpSampling layers to ``nengo_dl.Converter``. (`#130`_)
 - Added tolerance parameters to ``nengo_dl.Converter.verify``. (`#130`_)
 - Added ``scale_firing_rates`` option to ``nengo_dl.Converter``. (`#134`_)
+- Added ``Converter.layers`` attribute which will map Keras layers/tensors to
+  the converted Nengo objects, to make it easier to access converted components.
+  (`#134`_)
 
 **Changed**
 

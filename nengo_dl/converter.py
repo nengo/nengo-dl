@@ -84,12 +84,15 @@ class Converter:
         equivalent Functional model).
     net : `nengo.Network`
         The converted Nengo network.
-    inputs : `.Converter.TensorDict`
+    inputs : `.Converter.KerasTensorDict`
         Maps from Keras model inputs to input Nodes in the converted Nengo network.
         For example, ``my_node = Converter(my_model).inputs[my_model.input]``.
-    outputs : `.Converter.TensorDict`
+    outputs : `.Converter.KerasTensorDict`
         Maps from Keras model outputs to output Probes in the converted Nengo network.
         For example, ``my_probe = Converter(my_model).outputs[my_model.output]``.
+    layers : `.Converter.KerasTensorDict`
+        Maps from Keras model layers to the converted Nengo object.
+        For example, ``my_neurons = Converter(my_model).layers[my_layer]``.
     """
 
     converters = {}
@@ -129,8 +132,8 @@ class Converter:
             else:
                 self.model = model
 
-            # track inputs/outputs of model on network object
-            self.inputs = Converter.TensorDict()
+            # data structures to track converted objects
+            self.inputs = Converter.KerasTensorDict()
             for input in self.model.inputs:
                 (
                     input_layer,
@@ -141,7 +144,7 @@ class Converter:
                     input_tensor_id
                 ]
 
-            self.outputs = Converter.TensorDict()
+            self.outputs = Converter.KerasTensorDict()
             for output in self.model.outputs:
                 (
                     output_layer,
@@ -155,6 +158,19 @@ class Converter:
                 # add probes to outputs
                 logger.info("Probing %s (%s)", output_obj, output)
                 self.outputs[output] = nengo.Probe(output_obj)
+
+            self.layers = Converter.KerasTensorDict()
+            for layer in self.model.layers:
+                for node_id, node_outputs in self.layer_map[layer].items():
+                    for nengo_obj in node_outputs:
+                        output_tensor = layer.inbound_nodes[node_id].output_tensors
+
+                        # assuming layers with only one output (for now)
+                        if isinstance(output_tensor, list):
+                            assert len(output_tensor) == 1
+                            output_tensor = output_tensor[0]
+
+                        self.layers[output_tensor] = nengo_obj
 
     def verify(self, training=False, inputs=None, atol=1e-8, rtol=1e-5):
         """
@@ -336,23 +352,45 @@ class Converter:
 
         return register_converter
 
-    class TensorDict:
-        """A dictionary-like object that works with TensorFlow Tensors."""
+    class KerasTensorDict(collections.abc.Mapping):
+        """
+        A dictionary-like object that has extra logic to handle Layer/Tensor keys.
+        """
 
         def __init__(self):
             self.dict = collections.OrderedDict()
 
-        def __setitem__(self, key, val):
+        def _get_key(self, key):
+            if isinstance(key, tf.keras.layers.Layer):
+                if len(key.inbound_nodes) > 1 or (
+                    isinstance(key.inbound_nodes[0].output_tensors, list)
+                    and len(key.inbound_nodes[0].output_tensors) > 1
+                ):
+                    raise KeyError(
+                        "Layer %s is ambiguous because it has multiple output tensors; "
+                        "use a specific tensor as key instead" % key
+                    )
+
+                # get output tensor
+                key = key.output
+
             if isinstance(key, tf.Tensor):
+                # get hashable key
                 key = key.experimental_ref()
 
-            self.dict[key] = val
+            return key
+
+        def __setitem__(self, key, val):
+            self.dict[self._get_key(key)] = val
 
         def __getitem__(self, key):
-            if isinstance(key, tf.Tensor):
-                key = key.experimental_ref()
+            return self.dict[self._get_key(key)]
 
-            return self.dict[key]
+        def __iter__(self):
+            return iter(ref._wrapped for ref in self.dict)
+
+        def __len__(self):
+            return len(self.dict)
 
 
 class LayerConverter:

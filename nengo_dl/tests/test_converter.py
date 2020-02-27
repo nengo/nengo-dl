@@ -653,3 +653,51 @@ def test_scale_firing_rates_cases(Simulator, scale_firing_rates, expected_rates)
                 * sim.dt,
                 atol=1,
             )
+
+
+def test_layer_dicts():
+    inp0 = tf.keras.Input(shape=(1,))
+    inp1 = tf.keras.Input(shape=(1,))
+    add = tf.keras.layers.Add()([inp0, inp1])
+    dense_node = tf.keras.layers.Dense(units=1)(add)
+    dense_ens = tf.keras.layers.Dense(units=1, activation=tf.nn.relu)(dense_node)
+
+    model = tf.keras.Model([inp0, inp1], [dense_node, dense_ens])
+
+    conv = converter.Converter(model)
+    assert len(conv.inputs) == 2
+    assert len(conv.outputs) == 2
+    assert len(conv.layers) == 5
+
+    # inputs/outputs/layers referencing the same stuff
+    assert isinstance(conv.outputs[dense_node], nengo.Probe)
+    assert conv.outputs[dense_node].target is conv.layers[dense_node]
+    assert conv.inputs[inp0] is conv.layers[inp0]
+
+    # look up by tensor
+    assert isinstance(conv.layers[dense_node], nengo.Node)
+    assert isinstance(conv.layers[dense_ens], nengo.ensemble.Neurons)
+
+    # look up by layer
+    assert isinstance(conv.layers[model.layers[-2]], nengo.Node)
+    assert isinstance(conv.layers[model.layers[-1]], nengo.ensemble.Neurons)
+
+    # iterating over dict works as expected
+    for i, tensor in enumerate(conv.layers):
+        assert model.layers.index(tensor._keras_history.layer) == i
+
+    # applying the same layer multiple times
+    inp = tf.keras.Input(shape=(1,))
+    layer = tf.keras.layers.ReLU()
+    x0 = layer(inp)
+    x1 = layer(inp)
+
+    model = tf.keras.Model(inp, [x0, x1])
+
+    conv = converter.Converter(model, split_shared_weights=True)
+
+    with pytest.raises(KeyError, match="multiple output tensors"):
+        assert conv.layers[layer]
+
+    assert conv.outputs[x0].target is conv.layers[x0]
+    assert conv.outputs[x1].target is conv.layers[x1]
