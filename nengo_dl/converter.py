@@ -627,10 +627,7 @@ class LayerConverter:
 
         input_layer, input_node_id, input_tensor_id = self.get_history(tensor)
 
-        if input_node_id in self.converter.layer_map[input_layer]:
-            return self.converter.layer_map[input_layer][input_node_id][input_tensor_id]
-        else:
-            return None
+        return self.converter.layer_map[input_layer][input_node_id][input_tensor_id]
 
     def _get_shape(self, input_output, node_id, include_batch=False):
         """
@@ -819,18 +816,6 @@ class ConvertModel(LayerConverter):
         # trace the model to find all the tensors (which correspond to layers/nodes)
         # that need to be built into the Nengo network
         source_tensors = self.trace_tensors(self.layer.outputs)
-
-        def sort_key(x):
-            # sort tensors so that order of model inputs/outputs is preserved
-            for i, y in enumerate(self.layer.inputs):
-                if x is y:
-                    return -(len(self.layer.inputs) - i)
-            for i, y in enumerate(self.layer.outputs):
-                if x is y:
-                    return i + 1
-            return 0
-
-        source_tensors = sorted(source_tensors, key=sort_key)
 
         for tensor in source_tensors:
             # look up the layer/node to be converted
@@ -1467,11 +1452,11 @@ class ConvertInput(LayerConverter):
     """Convert ``tf.keras.layers.InputLayer`` to Nengo objects."""
 
     def convert(self, node_id):
-        # if this input layer has an input obj, that means it is a passthrough
-        # (so we just return the input)
-        output = self.get_input_obj(node_id)
-
-        if output is None:
+        try:
+            # if this input layer has an input obj, that means it is a passthrough
+            # (so we just return the input)
+            output = self.get_input_obj(node_id)
+        except KeyError:
             # not a passthrough input, so create input node
             shape = self.output_shape(node_id)
             if any(x is None for x in shape):

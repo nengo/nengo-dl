@@ -75,6 +75,8 @@ Release history
 - Added ``tensorflow-cpu`` distributions to installation checks (so Nengo DL will
   not attempt to reinstall TensorFlow if ``tensorflow-cpu`` is already installed).
   (`#142`_)
+- Fixed bug when applying the Converter to Keras models that re-use intermediate
+  layers as output layers. (`#137`_)
 
 **Deprecated**
 
@@ -88,6 +90,7 @@ Release history
 .. _#129: https://github.com/nengo/nengo-dl/pull/129
 .. _#130: https://github.com/nengo/nengo-dl/pull/130
 .. _#134: https://github.com/nengo/nengo-dl/pull/134
+.. _#137: https://github.com/nengo/nengo-dl/pull/137
 .. _#139: https://github.com/nengo/nengo-dl/pull/139
 .. _#140: https://github.com/nengo/nengo-dl/pull/140
 .. _#142: https://github.com/nengo/nengo-dl/pull/142

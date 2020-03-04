@@ -701,3 +701,20 @@ def test_layer_dicts():
 
     assert conv.outputs[x0].target is conv.layers[x0]
     assert conv.outputs[x1].target is conv.layers[x1]
+
+
+def test_mid_model_output(Simulator):
+    """Check that converter supports output tensors from the middle of the model.
+
+    Previous converter put output tensors last in build order, so having an output
+    tensor that needed to be built before non-output tensors was problematic.
+    https://github.com/nengo/nengo-dl/pull/137
+    """
+
+    # model must have at least three layers, with one layer in between outputs
+    inp = tf.keras.Input(shape=(1,))
+    x0 = tf.keras.layers.ReLU()(inp)
+    x1 = tf.keras.layers.ReLU()(x0)
+    x2 = tf.keras.layers.ReLU()(x1)
+
+    _test_convert(inp, [x0, x2], inp_vals=[np.ones((4, 1))])
