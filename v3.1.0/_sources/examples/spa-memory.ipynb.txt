@@ -1,0 +1,666 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Optimizing a cognitive model with temporal dynamics\n",
+    "\n",
+    "[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nengo/nengo-dl/blob/master/docs/examples/spa-memory.ipynb)\n",
+    "\n",
+    "In the previous examples we have essentially ignored time by defining models that map inputs to outputs in a single forward pass (e.g., we configured the default synapse to be `None`). In this example we'll introduce a simple process model of information retrieval based on [this](https://www.nengo.ai/nengo-spa/examples/question-memory.html) Nengo SPA example. The idea is similar to [this example](https://www.nengo.ai/nengo-dl/examples/spa-retrieval.html) where we encoded role/filler information using semantic pointers and then retrieved a cued attribute.  But in this example, rather than presenting the whole trace at once, we will present the input Role/Filler pairs one at a time and have the network remember them. Once all the bound pairs have been added to the memory, we can then query the model with a cue to test retrieval accuracy. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "\n",
+    "from urllib.request import urlretrieve\n",
+    "\n",
+    "import matplotlib.pyplot as plt\n",
+    "import nengo\n",
+    "import nengo.spa as spa\n",
+    "import numpy as np\n",
+    "import tensorflow as tf\n",
+    "\n",
+    "import nengo_dl"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Optimizing a memory network\n",
+    "\n",
+    "First we'll define a function for generating training data.  Note that this function will produce arrays of shape `(n_inputs, n_steps, dims)`, where `n_steps` will be the number of time steps in the process we want to model. To start, we'll generate simple examples in which the input trajectory consists of a single semantic pointer presented for some number of time steps, and the desired output trajectory involves maintaining a representation of that semantic pointer for some further number of time steps. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def get_memory_data(n_inputs, vec_d, vocab_seed, presentation_time, delay_time,\n",
+    "                    dt=0.001):\n",
+    "    int_steps = int(presentation_time / dt)\n",
+    "    mem_steps = int(delay_time / dt)\n",
+    "    n_steps = int_steps + mem_steps\n",
+    "    \n",
+    "    rng = np.random.RandomState(vocab_seed)\n",
+    "    vocab = spa.Vocabulary(dimensions=vec_d, rng=rng, max_similarity=1)\n",
+    "    \n",
+    "    # initialize arrays for input and output trajectories\n",
+    "    inputs = np.zeros((n_inputs, n_steps, vec_d))\n",
+    "    outputs = np.zeros((n_inputs, n_steps, vec_d))\n",
+    "    \n",
+    "    # iterate through examples to be generated, fill arrays\n",
+    "    for n in range(n_inputs):\n",
+    "        name = \"SP_%d\" % n\n",
+    "        vocab.add(name, vocab.create_pointer())\n",
+    "        \n",
+    "        # create inputs and target memory for first pair\n",
+    "        inputs[n, :int_steps, :] = vocab[name].v\n",
+    "        outputs[n, :, :] = vocab[name].v\n",
+    "\n",
+    "    # make scaling ramp for target output trajectories\n",
+    "    ramp = np.asarray([t / int_steps for t in range(int_steps)])\n",
+    "    ramp = np.concatenate((ramp, np.ones(n_steps - int_steps)))\n",
+    "    outputs = outputs * ramp[None, :, None]      \n",
+    "        \n",
+    "    return inputs, outputs, vocab "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Our first model will consist of a single input node and single recurrently connected memory ensemble. The input will present the input semantic pointer for a brief period, and then the task of the model will be to remember that semantic pointer over time.  "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "seed = 0\n",
+    "t_int = 0.01  # length of time for input presentation\n",
+    "t_mem = 0.04  # length of time for the network to store the input\n",
+    "dims = 32  # dimensionality of semantic pointer vectors\n",
+    "n_neurons = 5 * dims  # number of neurons for memory ensemble\n",
+    "minibatch_size = 32\n",
+    "\n",
+    "with nengo.Network(seed=seed) as net:\n",
+    "    net.config[nengo.Ensemble].neuron_type = nengo.RectifiedLinear()\n",
+    "    net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])\n",
+    "    net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])\n",
+    "    \n",
+    "    sp_input = nengo.Node(np.zeros(dims))\n",
+    "    memory = nengo.Ensemble(n_neurons, dims)\n",
+    "\n",
+    "    tau = 0.01  # synaptic time constant on recurrent connection\n",
+    "    nengo.Connection(sp_input, memory, transform=tau / t_int, \n",
+    "                     synapse=tau)\n",
+    "    nengo.Connection(memory, memory, transform=1, synapse=tau)\n",
+    "    \n",
+    "    sp_probe = nengo.Probe(sp_input)   \n",
+    "    memory_probe = nengo.Probe(memory)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Next, we'll run the model for the specified length of time in order to see how well the memory works."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# generate test data\n",
+    "test_inputs, test_targets, test_vocab = get_memory_data(\n",
+    "    minibatch_size, dims, seed, t_int, t_mem)\n",
+    "\n",
+    "# run with one example input\n",
+    "with nengo_dl.Simulator(\n",
+    "        net, seed=seed, minibatch_size=minibatch_size) as sim:\n",
+    "    sim.run(t_int+t_mem, data={sp_input: test_inputs})"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def plot_memory_example(plot_sim, vocab, example_input=0):\n",
+    "    plt.figure(figsize=(8, 8))\n",
+    "    \n",
+    "    name = \"SP_%d\" % example_input\n",
+    "    \n",
+    "    plt.subplot(3, 1, 1)\n",
+    "    plt.plot(plot_sim.trange(), nengo.spa.similarity(\n",
+    "        test_inputs[example_input], vocab), color=\"black\", alpha=0.2)\n",
+    "    plt.plot(plot_sim.trange(), nengo.spa.similarity(\n",
+    "        test_inputs[example_input], vocab[name].v), label=name)\n",
+    "    plt.legend(fontsize='x-small', loc='right')\n",
+    "    plt.ylim([-0.2, 1.1])\n",
+    "    plt.ylabel(\"Input\")\n",
+    "    \n",
+    "    plt.subplot(3, 1, 2)\n",
+    "    plt.plot(plot_sim.trange(), nengo.spa.similarity(\n",
+    "        test_targets[example_input], vocab), color=\"black\", alpha=0.2)\n",
+    "    plt.plot(plot_sim.trange(), nengo.spa.similarity(\n",
+    "        test_targets[example_input], vocab[name].v), label=name)\n",
+    "    plt.legend(fontsize='x-small', loc='right')\n",
+    "    plt.ylim([-0.2, 1.1])\n",
+    "    plt.ylabel(\"Target Memory\")\n",
+    "\n",
+    "    plt.subplot(3, 1, 3)\n",
+    "    plt.plot(\n",
+    "        plot_sim.trange(), nengo.spa.similarity(\n",
+    "            plot_sim.data[memory_probe][example_input], vocab),\n",
+    "        color=\"black\", alpha=0.2)\n",
+    "    plt.plot(\n",
+    "        plot_sim.trange(), nengo.spa.similarity(\n",
+    "            plot_sim.data[memory_probe][example_input], vocab[name].v),\n",
+    "        label=name)\n",
+    "    plt.legend(fontsize='x-small', loc='right')\n",
+    "    plt.ylim([-0.2, 1.1])\n",
+    "    plt.ylabel(\"Output Memory\")\n",
+    "    plt.xlabel(\"time [s]\")\n",
+    "\n",
+    "\n",
+    "plot_memory_example(sim, test_vocab)  "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "These plots show the similarity of the input/target/output vectors to all the items in the vocabulary.  The similarity to the correct vocabulary item is highlighted, and we can see that while the memory is storing the correct item, that storage is not particularly stable."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "To improve retention we can use Nengo DL to fine tune the model parameters. Training on temporally extended trajectories can be slow, so we'll download pretrained parameters by default. You can train your own parameters by setting `do_training=True` (allowing you to vary things like learning rate or the number of training epochs to see the impact of those hyperparameters). "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "do_training = False\n",
+    "if do_training:\n",
+    "    train_inputs, train_targets, _ = get_memory_data(\n",
+    "        4000, dims, seed, t_int, t_mem)\n",
+    "        \n",
+    "    with nengo_dl.Simulator(\n",
+    "            net, minibatch_size=minibatch_size, seed=seed) as sim:\n",
+    "        sim.compile(optimizer=tf.optimizers.RMSprop(1e-4), \n",
+    "                    loss={memory_probe: tf.losses.mse})\n",
+    "        \n",
+    "        print(\"Test loss before:\")\n",
+    "        sim.evaluate({sp_input: test_inputs}, \n",
+    "                     {memory_probe: test_targets})\n",
+    "        \n",
+    "        sim.fit({sp_input: train_inputs}, {memory_probe: train_targets},\n",
+    "                epochs=100)\n",
+    "        \n",
+    "        print(\"Test loss after:\")\n",
+    "        sim.evaluate({sp_input: test_inputs}, \n",
+    "                     {memory_probe: test_targets})\n",
+    "\n",
+    "        sim.save_params('./mem_params')\n",
+    "else:\n",
+    "    # download pretrained parameters\n",
+    "    urlretrieve(\n",
+    "        \"https://drive.google.com/uc?export=download&\"\n",
+    "        \"id=1uAPDNqHCkgxsuf6Amsl_hrq6xI8AG7de\",\n",
+    "        \"mem_params.npz\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo_dl.Simulator(\n",
+    "        net, seed=seed, minibatch_size=minibatch_size) as sim:\n",
+    "    sim.load_params('./mem_params')\n",
+    "    sim.run(t_int + t_mem, data={sp_input: test_inputs})\n",
+    "\n",
+    "plot_memory_example(sim, test_vocab)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can see that the training procedure significantly improves the stability of the memory. "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "collapsed": true
+   },
+   "source": [
+    "## Adding memory to the cognitive model\n",
+    "\n",
+    "Now we will return to the cued role/filler retrieval task from [this example](https://www.nengo.ai/nengo-dl/examples/spa-retrieval.html), and we will modify that task to include a memory aspect. Rather than presenting the complete trace as input all at once, we will present each $ROLE$/$FILLER$ pair one at a time.  The task of the network will be to bind each individual pair together, add them together to generate the full trace, store that trace in memory, and then when given one of the Roles as a cue, output the corresponding Filler.  For example, one pass through the task would consist of the following phases:\n",
+    "\n",
+    "| phase | role input | filler input | cue       | target output |\n",
+    "|-------|------------|--------------|-----------|---------------|\n",
+    "| 1     | $ROLE_0$   | $FILLER_0$   |     -     |       -       |\n",
+    "| 2     | $ROLE_1$   | $FILLER_1$   |     -     |       -       |\n",
+    "| ...   |     ...    |      ...     |    ...    |      ...      |\n",
+    "| $n$   | $ROLE_n$   | $FILLER_n$   |     -     |       -       |\n",
+    "| $n+1$ |      -     |       -      | $ROLE_x$  | $FILLER_x$    |\n",
+    "\n",
+    "First we will create a function to generate the input/target data for this task."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def get_binding_data(n_items, pairs_per_item, vec_d, rng_seed, \n",
+    "                     presentation_time, delay_time, dt=0.001):\n",
+    "    int_steps = int(presentation_time / dt)\n",
+    "    mem_steps = int(delay_time / dt)\n",
+    "    n_steps = int_steps * pairs_per_item + mem_steps\n",
+    "    \n",
+    "    rng = np.random.RandomState(rng_seed)\n",
+    "    vocab = spa.Vocabulary(dimensions=vec_d, rng=rng, max_similarity=1)\n",
+    "    \n",
+    "    # initialize arrays for input and output trajectories\n",
+    "    roles = np.zeros((n_items, n_steps, vec_d))\n",
+    "    fills = np.zeros((n_items, n_steps, vec_d))\n",
+    "    cues = np.zeros((n_items, n_steps, vec_d))\n",
+    "    binding = np.zeros((n_items, n_steps, vec_d))\n",
+    "    mem = np.zeros((n_items, n_steps, vec_d))\n",
+    "    output = np.zeros((n_items, n_steps, vec_d))\n",
+    "\n",
+    "    # iterate through examples to be generated, fill arrays\n",
+    "    for n in range(n_items):\n",
+    "        role_names = [\"ROLE_%d_%d\" % (n, i) for i in range(pairs_per_item)]\n",
+    "        filler_names = [\"FILLER_%d_%d\" % (n, i) for i in range(pairs_per_item)]\n",
+    "        \n",
+    "        # each role/filler pair is presented for presentation_time seconds\n",
+    "        for i in range(pairs_per_item):\n",
+    "            roles[n, i*int_steps:(i+1)*int_steps] = vocab.parse(\n",
+    "                role_names[i]).v\n",
+    "            fills[n, i*int_steps:(i+1)*int_steps] = vocab.parse(\n",
+    "                filler_names[i]).v\n",
+    "            binding[n, i*int_steps:(i+1)*int_steps] = vocab.parse(\n",
+    "                \"%s*%s\" % (role_names[i], filler_names[i])).v\n",
+    "            \n",
+    "        # randomly select a cue\n",
+    "        cue_idx = rng.randint(pairs_per_item)\n",
+    "        \n",
+    "        # cue is presented during the memorization period\n",
+    "        cues[n, -mem_steps:, :] = vocab[role_names[cue_idx]].v\n",
+    "        \n",
+    "        # the goal is to output the associated filler during the\n",
+    "        # memorization phase\n",
+    "        # note: we use nan for the target prior to the memorization\n",
+    "        # phase, to indicate that it doesn't matter what the network\n",
+    "        # output is during that phase\n",
+    "        output[n, -mem_steps:, :] = vocab[filler_names[cue_idx]].v\n",
+    "        output[n, :-mem_steps, :] = np.nan\n",
+    "        \n",
+    "    mem[...] = np.cumsum(binding, axis=1) * dt / presentation_time\n",
+    "\n",
+    "    return roles, fills, cues, binding, mem, output, vocab "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "In this more complicated model we'll add two circular convolution network to our previous memory model, one to convolve the role/filler inputs and one to deconvolve the cued answer from the memory trace."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "seed = 0\n",
+    "t_int = 0.01  # length of time to present each input pair\n",
+    "t_mem = 0.03  # length of memorization period\n",
+    "n_pairs = 2  # number of role/filler pairs in each input\n",
+    "t_run = n_pairs*t_int + t_mem  # total task time\n",
+    "dims = 64  # dimensionality of semantic pointer vectors\n",
+    "minibatch_size = 64\n",
+    "\n",
+    "with nengo.Network(seed=seed) as net:\n",
+    "    net.config[nengo.Ensemble].neuron_type = nengo.RectifiedLinear()\n",
+    "    net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])\n",
+    "    net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])\n",
+    "    net.config[nengo.Connection].synapse = None\n",
+    "    \n",
+    "    role_inp = nengo.Node(np.zeros(dims))\n",
+    "    fill_inp = nengo.Node(np.zeros(dims))\n",
+    "    cue_inp = nengo.Node(np.zeros(dims))\n",
+    "    \n",
+    "    # circular convolution network to combine roles/fillers\n",
+    "    cconv = nengo.networks.CircularConvolution(5, dims)\n",
+    "    nengo.Connection(role_inp, cconv.input_a)\n",
+    "    nengo.Connection(fill_inp, cconv.input_b)\n",
+    "    \n",
+    "    # memory network to store the role/filler pairs\n",
+    "    memory = nengo.Ensemble(5*dims, dims)\n",
+    "    tau = 0.01\n",
+    "    nengo.Connection(cconv.output, memory, transform=tau/t_int,\n",
+    "                     synapse=tau)\n",
+    "    nengo.Connection(memory, memory, transform=1, synapse=tau)\n",
+    "    \n",
+    "    # another circular convolution network to extract the cued filler\n",
+    "    ccorr = nengo.networks.CircularConvolution(5, dims, invert_b=True)\n",
+    "    nengo.Connection(memory, ccorr.input_a)\n",
+    "    nengo.Connection(cue_inp, ccorr.input_b)\n",
+    "    \n",
+    "    conv_probe = nengo.Probe(cconv.output, label=\"conv_probe\")\n",
+    "    memory_probe = nengo.Probe(memory, label=\"memory_probe\")\n",
+    "    output_probe = nengo.Probe(ccorr.output, label=\"output_probe\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We will use the same metric as in the previous [retrieval example](https://www.nengo.ai/nengo-dl/examples/spa-retrieval.html) in order to assess the accuracy of the system.  That is, we will say that the network has successfully retrieved the cued value if the output is more similar to the correct answer than to any other items in the vocabulary. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def accuracy(output, vocab, targets, t_step=-1):\n",
+    "    # provide the probed output data, the vocab,\n",
+    "    # the target vectors, and the time step at which to evaluate\n",
+    "\n",
+    "    # get output at the given time step\n",
+    "    output = output[:, t_step, :]\n",
+    "\n",
+    "    # compute similarity between each output and vocab item\n",
+    "    sims = np.dot(vocab.vectors, output.T)\n",
+    "    idxs = np.argmax(sims, axis=0)\n",
+    "\n",
+    "    # check that the output is most similar to the target\n",
+    "    acc = np.mean(np.all(vocab.vectors[idxs] == targets[:, -1], axis=1))\n",
+    "    return acc"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# generate test data\n",
+    "test_roles, test_fills, test_cues, _, _, test_targets, test_vocab = (\n",
+    "    get_binding_data(minibatch_size, n_pairs, dims, seed+1, t_int, \n",
+    "                     t_mem))\n",
+    "test_inputs = {role_inp: test_roles, fill_inp: test_fills,\n",
+    "               cue_inp: test_cues}\n",
+    "\n",
+    "with nengo_dl.Simulator(\n",
+    "        net, seed=seed, minibatch_size=minibatch_size) as sim:\n",
+    "    sim.run(t_run, data=test_inputs)\n",
+    "\n",
+    "print(\"Retrieval accuracy:\", accuracy(sim.data[output_probe], test_vocab,\n",
+    "                                      test_targets))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "As we can see, the initial retrieval accuracy of our model is poor. We can visualize the model's output trajectories to see what this accuracy looks like in practice."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def plot_retrieval_example(plot_sim, vocab, example_input=0):\n",
+    "    _, axes = plt.subplots(7, figsize=(10, 14), sharex=True, sharey=True)\n",
+    "\n",
+    "    axes[0].plot(plot_sim.trange(), nengo.spa.similarity(\n",
+    "        test_roles[example_input], vocab), color=\"black\", alpha=0.2)\n",
+    "    for i in range(n_pairs):\n",
+    "        name = \"ROLE_%d_%d\" % (example_input, i)\n",
+    "        axes[0].plot(plot_sim.trange(), nengo.spa.similarity(\n",
+    "            test_roles[example_input], vocab[name].v), label=name)\n",
+    "    axes[0].legend(fontsize='x-small', loc='right')\n",
+    "    axes[0].set_ylabel(\"Role Input\")\n",
+    "\n",
+    "    axes[1].plot(plot_sim.trange(), nengo.spa.similarity(\n",
+    "        test_fills[example_input], vocab), color=\"black\", alpha=0.2)\n",
+    "    for i in range(n_pairs):\n",
+    "        name = \"FILLER_%d_%d\" % (example_input, i)\n",
+    "        axes[1].plot(plot_sim.trange(), nengo.spa.similarity(\n",
+    "            test_fills[example_input], vocab[name].v), label=name)\n",
+    "    axes[1].legend(fontsize='x-small', loc='right')\n",
+    "    axes[1].set_ylabel(\"Filler Input\")\n",
+    "    \n",
+    "    axes[2].plot(plot_sim.trange(), nengo.spa.similarity(\n",
+    "        test_cues[example_input], vocab), color=\"black\", alpha=0.2)\n",
+    "    for i in range(n_pairs):\n",
+    "        name = \"ROLE_%d_%d\" % (example_input, i)\n",
+    "        axes[2].plot(plot_sim.trange(), nengo.spa.similarity(\n",
+    "            test_cues[example_input], vocab[name].v), label=name)\n",
+    "    axes[2].legend(fontsize='x-small', loc='right')\n",
+    "    axes[2].set_ylabel(\"Cue Input\")\n",
+    "    \n",
+    "    axes[3].plot(plot_sim.trange(), nengo.spa.similarity(\n",
+    "        test_targets[example_input], vocab), color=\"black\", alpha=0.2)\n",
+    "    for i in range(n_pairs):\n",
+    "        name = \"FILLER_%d_%d\" % (example_input, i)\n",
+    "        axes[3].plot(plot_sim.trange(), nengo.spa.similarity(\n",
+    "            test_targets[example_input], vocab[name].v), label=name)\n",
+    "    axes[3].legend(fontsize='x-small', loc='right')\n",
+    "    axes[3].set_ylabel(\"Target Output\")\n",
+    "\n",
+    "    axes[4].plot(\n",
+    "        plot_sim.trange(), nengo.spa.similarity(\n",
+    "            plot_sim.data[conv_probe][example_input], vocab),\n",
+    "        color=\"black\", alpha=0.2)\n",
+    "    for i in range(n_pairs):\n",
+    "        name = \"ROLE_%d_%d*FILLER_%d_%d\" % (example_input, i,\n",
+    "                                            example_input, i)\n",
+    "        axes[4].plot(\n",
+    "            plot_sim.trange(), nengo.spa.similarity(\n",
+    "                plot_sim.data[conv_probe][example_input],\n",
+    "                vocab.parse(name).v),\n",
+    "            label=name)\n",
+    "    axes[4].legend(fontsize='x-small', loc='right')\n",
+    "    axes[4].set_ylabel(\"Binding\")\n",
+    "\n",
+    "    axes[5].plot(\n",
+    "        plot_sim.trange(), nengo.spa.similarity(\n",
+    "            plot_sim.data[memory_probe][example_input], vocab),\n",
+    "        color=\"black\", alpha=0.5)\n",
+    "    name = \"+\".join([\"ROLE_%d_%d*FILLER_%d_%d\" % (example_input, i,\n",
+    "                                                  example_input, i) \n",
+    "                     for i in range(n_pairs)])\n",
+    "    axes[5].plot(\n",
+    "        plot_sim.trange(), nengo.spa.similarity(\n",
+    "            plot_sim.data[memory_probe][example_input],\n",
+    "            vocab.parse(name).v),\n",
+    "        label=name)\n",
+    "    axes[5].legend(fontsize='x-small', loc='right')\n",
+    "    axes[5].set_ylabel(\"Memory\")\n",
+    "\n",
+    "    axes[6].plot(\n",
+    "        plot_sim.trange(), nengo.spa.similarity(\n",
+    "            plot_sim.data[output_probe][example_input], vocab),\n",
+    "        color=\"black\", alpha=0.2)\n",
+    "    for i in range(n_pairs):\n",
+    "        name = \"FILLER_%d_%d\" % (example_input, i)\n",
+    "        axes[6].plot(\n",
+    "            plot_sim.trange(), nengo.spa.similarity(\n",
+    "                plot_sim.data[output_probe][example_input], vocab[name].v),\n",
+    "            label=name)\n",
+    "    axes[6].legend(fontsize='x-small', loc='right')\n",
+    "    axes[6].set_ylabel(\"Output\")\n",
+    "    axes[6].set_xlabel(\"time [s]\")\n",
+    "\n",
+    "\n",
+    "plot_retrieval_example(sim, test_vocab)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "In all of these plots we are showing the similarity of the input/target/output vectors to all the items in the vocabulary, over time (highlighting the vocabulary items of interest in each case).  The first three plots show the inputs to the model, and the fourth shows the desired output.  The fifth and sixth plots show intermediate outputs in the model, from the first circular convolution network (which computes $ROLE \\circledast FILLER$) and the memory (which stores a trace of all the $ROLE \\circledast FILLER$ pairs), respectively.  The final plot is the actual output of the system, the $FILLER$ corresponding to the cued $ROLE$.  Ideally this last plot should look like the \"Target Output\" plot, but we can see that the output accuracy is not great."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can improve the performance of the model by optimizing its parameters using Nengo DL.  As before we will download pre-trained parameters to save time, but you can run the training yourself by setting `do_training=True`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "do_training = False\n",
+    "if do_training:\n",
+    "    # generate training data\n",
+    "    (train_roles, train_fills, train_cues, train_binding, train_memory, \n",
+    "     train_targets, _) = get_binding_data(8000, n_pairs, dims, seed,\n",
+    "                                          t_int, t_mem)\n",
+    "    \n",
+    "    # note: when training we'll add targets for the intermediate outputs\n",
+    "    # as well, to help shape the training process\n",
+    "    train_inputs = {\n",
+    "        role_inp: train_roles, fill_inp: train_fills, \n",
+    "        cue_inp: train_cues}\n",
+    "    train_targets = {\n",
+    "        output_probe: train_targets, conv_probe: train_binding,\n",
+    "        memory_probe: train_memory}\n",
+    "\n",
+    "    with nengo_dl.Simulator(\n",
+    "            net, minibatch_size=minibatch_size, seed=seed) as sim:\n",
+    "\n",
+    "        print(\"Test loss before:\")\n",
+    "        sim.compile(loss={output_probe: nengo_dl.losses.nan_mse})\n",
+    "        sim.evaluate(test_inputs, {output_probe: test_targets})\n",
+    "        \n",
+    "        sim.compile(optimizer=tf.optimizers.RMSprop(1e-4),\n",
+    "                    loss=nengo_dl.losses.nan_mse,\n",
+    "                    loss_weights={output_probe: 1.0,\n",
+    "                                  conv_probe: 0.25,\n",
+    "                                  memory_probe: 0.25})\n",
+    "        sim.fit(train_inputs, train_targets, epochs=10)\n",
+    "\n",
+    "        print(\"Test loss after:\")\n",
+    "        sim.compile(loss={output_probe: nengo_dl.losses.nan_mse})\n",
+    "        sim.evaluate(test_inputs, {output_probe: test_targets})\n",
+    "\n",
+    "        sim.save_params('./mem_binding_params')\n",
+    "else:\n",
+    "    # download pretrained parameters\n",
+    "    urlretrieve(\n",
+    "        \"https://drive.google.com/uc?export=download&\"\n",
+    "        \"id=182toR0aSWv1uExA7F5kn8t2lEU1SVrx1\",\n",
+    "        \"mem_binding_params.npz\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Recomputing our accuracy measure on the test inputs demonstrates that our optimization procedure has significantly improved the performance of the model."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo_dl.Simulator(\n",
+    "        net, seed=seed, minibatch_size=minibatch_size) as sim:\n",
+    "    sim.load_params('./mem_binding_params')\n",
+    "    sim.run(t_run, data=test_inputs)\n",
+    "\n",
+    "print(\"Retrieval accuracy:\", accuracy(sim.data[output_probe], test_vocab,\n",
+    "                                      test_targets))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can visualize the change in performance by looking at the same plots as before, showing the model output for one example input trajectory."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "plot_retrieval_example(sim, test_vocab)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "While we can see that the output of the model is not perfect, it is much closer to the target values (the most similar vocabulary item is the correct filler).  You can modify various parameters of the model, such as the number of dimensions or the number of role/filler inputs, in order to see how that impacts performance."
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.8"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

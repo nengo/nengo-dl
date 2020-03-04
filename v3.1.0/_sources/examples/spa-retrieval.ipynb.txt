@@ -1,0 +1,330 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Optimizing a cognitive model\n",
+    "\n",
+    "[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nengo/nengo-dl/blob/master/docs/examples/spa-retrieval.ipynb)\n",
+    "\n",
+    "The purpose of this example is to illustrate how Nengo DL can be used to optimize a more complex cognitive model, involving the retrieval of information from highly structured [semantic pointers](http://compneuro.uwaterloo.ca/research/spa.html). We will create a network that takes a collection of information as input (encoded using semantic pointers), and train it to retrieve some specific element from that collection."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "\n",
+    "from urllib.request import urlretrieve\n",
+    "\n",
+    "import matplotlib.pyplot as plt\n",
+    "import nengo\n",
+    "import nengo.spa as spa\n",
+    "import numpy as np\n",
+    "import tensorflow as tf\n",
+    "\n",
+    "import nengo_dl"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The first thing to do is define a function that produces random examples of structured semantic pointers. Each example consists of a collection of role-filler pairs of the following form: \n",
+    "\n",
+    "$TRACE_0 = \\sum_{j=0}^N Role_{0,j} \\circledast Filler_{0,j}$\n",
+    "\n",
+    "where terms like $Role$ refer to simpler semantic pointers (i.e., random vectors), the $\\circledast$ symbol denotes circular convolution, and the summation means vector addition.  That is, we define different pieces of information consisting of Roles and Fillers, and then we sum the information together in order to generate the full trace.  As an example of how this might look in practice, we could encode information about a dog as \n",
+    "\n",
+    "$DOG = COLOUR \\circledast BROWN + LEGS \\circledast FOUR + TEXTURE \\circledast FURRY + ...$\n",
+    "\n",
+    "The goal of the system is then to retrieve a cued piece of information from the semantic pointer.  For example, if we gave the network the trace $DOG$ and the cue $COLOUR$ it should output $BROWN$."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def get_data(n_items, pairs_per_item, vec_d, vocab_seed):\n",
+    "    # the vocabulary object will handle the creation of semantic \n",
+    "    # pointers for us\n",
+    "    rng = np.random.RandomState(vocab_seed)\n",
+    "    vocab = spa.Vocabulary(dimensions=vec_d, rng=rng, max_similarity=1)\n",
+    "    \n",
+    "    # initialize arrays of shape (n_inputs, n_steps, vec_d)\n",
+    "    traces = np.zeros((n_items, 1, vec_d))\n",
+    "    cues = np.zeros((n_items, 1, vec_d))\n",
+    "    targets = np.zeros((n_items, 1, vec_d))\n",
+    "    \n",
+    "    # iterate through all of the examples to be generated\n",
+    "    for n in range(n_items):\n",
+    "        role_names = [\"ROLE_%d_%d\" % (n, i) for i in range(pairs_per_item)]\n",
+    "        filler_names = [\"FILLER_%d_%d\" % (n, i) for i in range(pairs_per_item)]\n",
+    "\n",
+    "        # create key for the 'trace' of bound pairs (i.e. a \n",
+    "        # structured semantic pointer)\n",
+    "        trace_key = 'TRACE_' + str(n)\n",
+    "        trace_ptr = vocab.parse('+'.join(\n",
+    "            \"%s * %s\" % (x, y) for x, y in zip(role_names, filler_names)))\n",
+    "        trace_ptr.normalize()\n",
+    "        vocab.add(trace_key, trace_ptr) \n",
+    "        \n",
+    "        # pick which element will be cued for retrieval\n",
+    "        cue_idx = rng.randint(pairs_per_item)\n",
+    "        \n",
+    "        # fill array elements correspond to this example\n",
+    "        traces[n, 0, :] = vocab[trace_key].v\n",
+    "        cues[n, 0, :] = vocab[\"ROLE_%d_%d\" % (n, cue_idx)].v\n",
+    "        targets[n, 0, :] = vocab[\"FILLER_%d_%d\" % (n, cue_idx)].v\n",
+    "\n",
+    "    return traces, cues, targets, vocab"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Next we'll define a Nengo model that retrieves cued items from structured semantic pointers. So, for a given trace (e.g., $TRACE_0$) and cue (e.g., $Role_{0,0}$), the correct output would be the corresponding filler ($Filler_{0,0}$). The model we'll build will perform such retrieval by implementing a computation of the form:\n",
+    "\n",
+    "$TRACE_0 \\:\\: \\circledast \\sim Role_{0,0} \\approx Filler_{0,0}$\n",
+    "\n",
+    "That is, convolving the trace with the inverse of the given cue will produce (approximately) the associated filler. More details about the mathematics of how/why this works can be found [here](https://www.semanticscholar.org/paper/Holographic-reduced-representations-Plate/564427596799f7967c91934966cd3c6bd31cb06d).\n",
+    "\n",
+    "We can create a model to perform this calculation by using the `nengo.networks.CircularConvolution` network that comes with Nengo."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "seed = 0\n",
+    "dims = 32\n",
+    "minibatch_size = 50\n",
+    "n_pairs = 2\n",
+    "\n",
+    "with nengo.Network(seed=seed) as net:\n",
+    "    # use rectified linear neurons\n",
+    "    net.config[nengo.Ensemble].neuron_type = nengo.RectifiedLinear()\n",
+    "    net.config[nengo.Connection].synapse = None\n",
+    "    \n",
+    "    # provide a pointer and a cue as input to the network\n",
+    "    trace_inp = nengo.Node(np.zeros(dims))\n",
+    "    cue_inp = nengo.Node(np.zeros(dims))\n",
+    "    \n",
+    "    # create a convolution network to perform the computation \n",
+    "    # specified above\n",
+    "    cconv = nengo.networks.CircularConvolution(5, dims, invert_b=True)\n",
+    "    \n",
+    "    # connect the trace and cue inputs to the circular\n",
+    "    # convolution network\n",
+    "    nengo.Connection(trace_inp, cconv.input_a)\n",
+    "    nengo.Connection(cue_inp, cconv.input_b)\n",
+    "\n",
+    "    # probe the output\n",
+    "    out = nengo.Probe(cconv.output)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "In order to assess the retrieval accuracy of the model we need a metric for success.  In this case we'll say that a cue has been successfully retrieved if the output vector is more similar to the correct filler vector than it is to any of the other vectors in the vocabulary."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def accuracy(output, vocab, targets, t_step=-1):\n",
+    "    # provide the probed output data, the vocab,\n",
+    "    # the target vectors, and the time step at which to evaluate\n",
+    "\n",
+    "    # get output at the given time step\n",
+    "    output = output[:, t_step, :]\n",
+    "\n",
+    "    # compute similarity between each output and vocab item\n",
+    "    sims = np.dot(vocab.vectors, output.T)\n",
+    "    idxs = np.argmax(sims, axis=0)\n",
+    "\n",
+    "    # check that the output is most similar to the target\n",
+    "    acc = np.mean(np.all(vocab.vectors[idxs] == targets[:, 0], axis=1))\n",
+    "\n",
+    "    return acc"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now we can run the model on some test data to check the baseline retrieval accuracy. Since we used only a small number of neurons in the circular convolution network, we should expect mediocre results."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# generate some test inputs\n",
+    "test_traces, test_cues, test_targets, test_vocab = get_data(\n",
+    "    minibatch_size, n_pairs, dims, vocab_seed=seed)\n",
+    "test_inputs = {trace_inp: test_traces, cue_inp: test_cues}\n",
+    "\n",
+    "# run the simulator for one time step to compute the network outputs \n",
+    "with nengo_dl.Simulator(\n",
+    "        net, minibatch_size=minibatch_size, seed=seed) as sim:\n",
+    "    sim.step(data=test_inputs)\n",
+    "\n",
+    "print(\"Retrieval accuracy:\", accuracy(sim.data[out], test_vocab, \n",
+    "                                      test_targets))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "These results indicate that the model is only rarely performing accurate retrieval, which means that this network is not very capable of manipulating structured semantic pointers in a useful way. \n",
+    "\n",
+    "We can visualize the similarity of the output for one of the traces to get a sense of what this accuracy looks like (the similarity to the correct output is shown in red). "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "plt.figure(figsize=(10, 5))\n",
+    "bars = plt.bar(np.arange(len(test_vocab.vectors)), \n",
+    "               np.dot(test_vocab.vectors, sim.data[out][0, 0]))\n",
+    "bars[np.where(np.all(test_vocab.vectors == test_targets[0, 0], \n",
+    "                     axis=1))[0][0]].set_color(\"r\")\n",
+    "plt.ylim([-1, 1])\n",
+    "plt.xlabel(\"Vocabulary items\")\n",
+    "plt.ylabel(\"Similarity\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can see that the actual output is not particularly similar to this desired output, which illustrates that the model is not performing accurate retrieval. "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now we'll train the network parameters to improve performance. We won't directly optimize retrieval accuracy, but will instead minimize the mean squared error between the model's output vectors and the vectors corresponding to the correct output items for each input cue. We'll use a large number of training examples that are distinct from our test data, so as to avoid explicitly fitting the model parameters to the test items. \n",
+    "\n",
+    "To make this example run a bit quicker we'll download some pretrained model parameters by default. Set `do_training=True` to train the model yourself."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sim = nengo_dl.Simulator(net, minibatch_size=minibatch_size, seed=seed)\n",
+    "\n",
+    "do_training = False\n",
+    "if do_training:\n",
+    "    # create training data and data feeds\n",
+    "    train_traces, train_cues, train_targets, _ = get_data(\n",
+    "        n_items=5000, pairs_per_item=n_pairs, vec_d=dims, vocab_seed=seed+1)\n",
+    "\n",
+    "    # train the model\n",
+    "    sim.compile(optimizer=tf.optimizers.RMSprop(2e-3),\n",
+    "                loss=tf.losses.mse)\n",
+    "    sim.fit({trace_inp: train_traces, cue_inp: train_cues}, \n",
+    "            {out: train_targets}, epochs=100)\n",
+    "\n",
+    "    sim.save_params(\"./spa_retrieval_params\")\n",
+    "\n",
+    "else:\n",
+    "    # download pretrained parameters\n",
+    "    urlretrieve(\n",
+    "        \"https://drive.google.com/uc?export=download&\"\n",
+    "        \"id=1V1Znt8X1RkP4Jl3eb5HcKXlHvdwgKDcl\",\n",
+    "        \"spa_retrieval_params.npz\")\n",
+    "        \n",
+    "    # load parameters\n",
+    "    sim.load_params(\"./spa_retrieval_params\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can now recompute the network outputs using the trained model on the test data. We can see that the retrieval accuracy is significantly improved. You can modify the dimensionality of the vectors and the number of bound pairs in each trace to explore how these variables influence the upper bound on retrieval accuracy."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sim.step(data=test_inputs)\n",
+    "print(\"Retrieval accuracy:\", accuracy(sim.data[out], test_vocab, \n",
+    "                                      test_targets))\n",
+    "sim.close()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "plt.figure(figsize=(10, 5))\n",
+    "bars = plt.bar(np.arange(len(test_vocab.vectors)), \n",
+    "               np.dot(test_vocab.vectors, sim.data[out][0, 0]))\n",
+    "bars[np.where(np.all(test_vocab.vectors == test_targets[0, 0], \n",
+    "                     axis=1))[0][0]].set_color(\"r\")\n",
+    "plt.ylim([-1, 1])\n",
+    "plt.xlabel(\"Vocabulary items\")\n",
+    "plt.ylabel(\"Similarity\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Check out [this example](https://www.nengo.ai/nengo-dl/examples/spa-memory.html) for a more complicated version of this task/model, in which a structured semantic pointer is built up over time by binding together sequentially presented input items. "
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.8"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

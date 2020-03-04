@@ -1,0 +1,295 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Legendre Memory Units in NengoDL\n",
+    "\n",
+    "[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nengo/nengo-dl/blob/master/docs/examples/lmu.ipynb)\n",
+    "\n",
+    "Legendre Memory Units (LMUs) are a novel memory cell for recurrent neural networks, described in [Voelker, Kajić, and Eliasmith (NeurIPS 2019)](https://papers.nips.cc/paper/9689-legendre-memory-units-continuous-time-representation-in-recurrent-neural-networks.pdf). We will not go into the underlying details of these methods here; for our purposes we can think of this as an alternative to something like LSTMs. LMUs have achieved state of the art performance on complex RNN tasks, which we will demonstrate here. See [the paper](https://papers.nips.cc/paper/9689-legendre-memory-units-continuous-time-representation-in-recurrent-neural-networks.pdf) for all the details!\n",
+    "\n",
+    "In this example we will show how an LMU can be built in NengoDL, and used to solve the Permuted Sequential MNIST (psMNIST) task.  \n",
+    "\n",
+    "First we need to set up the data for this task. We begin with the standard MNIST dataset of handwritten digits:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "\n",
+    "from urllib.request import urlretrieve\n",
+    "\n",
+    "import matplotlib.pyplot as plt\n",
+    "import nengo\n",
+    "from nengo.utils.filter_design import cont2discrete\n",
+    "import numpy as np\n",
+    "import tensorflow as tf\n",
+    "\n",
+    "import nengo_dl\n",
+    "\n",
+    "# set seed to ensure this example is reproducible\n",
+    "seed = 0\n",
+    "tf.random.set_seed(seed)\n",
+    "np.random.seed(seed)\n",
+    "rng = np.random.RandomState(seed)\n",
+    "\n",
+    "# load mnist dataset\n",
+    "(train_images, train_labels), (test_images, test_labels) = (\n",
+    "    tf.keras.datasets.mnist.load_data())\n",
+    "\n",
+    "# change inputs to 0--1 range\n",
+    "train_images = train_images / 255\n",
+    "test_images = test_images / 255\n",
+    "\n",
+    "# reshape the labels to rank 3 (as expected in Nengo)\n",
+    "train_labels = train_labels[:, None, None]\n",
+    "test_labels = test_labels[:, None, None]\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.imshow(np.reshape(train_images[0], (28, 28)), cmap=\"gray\")\n",
+    "plt.axis('off')\n",
+    "plt.title(str(train_labels[0, 0, 0]));"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "\"Sequential\" MNIST refers to taking the pixels of the images and flattening them into a sequence of single pixels. Each pixel will be presented to the network one at a time, and the goal of the network is to classify the sequence according to which digit it represents."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# flatten images into sequences\n",
+    "train_images = train_images.reshape((train_images.shape[0], -1, 1))\n",
+    "test_images = test_images.reshape((test_images.shape[0], -1, 1))\n",
+    "\n",
+    "# we'll display the sequence in 8 rows just so that it fits better on the screen\n",
+    "plt.figure()\n",
+    "plt.imshow(train_images[0].reshape(8, -1), cmap=\"gray\")\n",
+    "plt.axis('off')\n",
+    "plt.title(str(train_labels[0, 0, 0]));"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "As we can see, after flattening the image there is still a decent amount of structure remaining. \"Permuted\" sequential MNIST makes the task more difficult by applying a fixed permutation to all of the image sequences. This ensures that the information contained in the image is distributed evenly throughout the sequence, so the RNN really does need to process the whole length of the input sequence."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# apply permutation\n",
+    "perm = rng.permutation(train_images.shape[1])\n",
+    "train_images = train_images[:, perm]\n",
+    "test_images = test_images[:, perm]\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.imshow(train_images[0].reshape(8, -1), cmap=\"gray\")\n",
+    "plt.axis('off')\n",
+    "plt.title(str(train_labels[0, 0, 0]));"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Next we define the LMU cell.  This is a modified version of the implementation from https://github.com/abr/neurips2019; see that repository for more details. A single LMU cell is implementing this computational graph:\n",
+    "\n",
+    "![Computational graph](https://i.imgur.com/IJGUVg6.png)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class LMUCell(nengo.Network):\n",
+    "    def __init__(self, units, order, theta, input_d, **kwargs):\n",
+    "        super().__init__(**kwargs)\n",
+    "        \n",
+    "        # compute the A and B matrices according to the LMU's mathematical derivation\n",
+    "        # (see the paper for details)\n",
+    "        Q = np.arange(order, dtype=np.float64)\n",
+    "        R = (2 * Q + 1)[:, None] / theta\n",
+    "        j, i = np.meshgrid(Q, Q)\n",
+    "\n",
+    "        A = np.where(i < j, -1, (-1.0) ** (i - j + 1)) * R\n",
+    "        B = (-1.0) ** Q[:, None] * R\n",
+    "        C = np.ones((1, order))\n",
+    "        D = np.zeros((1,))\n",
+    "\n",
+    "        A, B, _, _, _ = cont2discrete((A, B, C, D), dt=1.0, method=\"zoh\")\n",
+    "\n",
+    "        with self:\n",
+    "            nengo_dl.configure_settings(trainable=None)\n",
+    "            \n",
+    "            # create objects corresponding to the x/u/m/h variables in the above diagram\n",
+    "            self.x = nengo.Node(size_in=input_d)\n",
+    "            self.u = nengo.Node(size_in=1)\n",
+    "            self.m = nengo.Node(size_in=order)\n",
+    "            self.h = nengo_dl.TensorNode(tf.nn.tanh, shape_in=(units,), pass_time=False)\n",
+    "\n",
+    "            # compute u_t from the above diagram.\n",
+    "            # note that setting synapse=0 (versus synapse=None) adds a one-timestep\n",
+    "            # delay, so we can think of any connections with synapse=0 as representing\n",
+    "            # value_{t-1}\n",
+    "            nengo.Connection(\n",
+    "                self.x, self.u, transform=np.ones((1, input_d)), synapse=None)\n",
+    "            nengo.Connection(self.h, self.u, transform=np.zeros((1, units)), synapse=0)\n",
+    "            nengo.Connection(self.m, self.u, transform=np.zeros((1, order)), synapse=0)\n",
+    "\n",
+    "            # compute m_t\n",
+    "            # in this implementation we'll make A and B non-trainable, but they\n",
+    "            # could also be optimized in the same way as the other parameters\n",
+    "            conn_A = nengo.Connection(self.m, self.m, transform=A, synapse=0)\n",
+    "            self.config[conn_A].trainable = False\n",
+    "            conn_B = nengo.Connection(self.u, self.m, transform=B, synapse=None)\n",
+    "            self.config[conn_B].trainable = False\n",
+    "\n",
+    "            # compute h_t\n",
+    "            nengo.Connection(\n",
+    "                self.x, self.h, transform=np.zeros((units, input_d)), synapse=None\n",
+    "            )\n",
+    "            nengo.Connection(\n",
+    "                self.h, self.h, transform=np.zeros((units, units)), synapse=0)\n",
+    "            nengo.Connection(\n",
+    "                self.m,\n",
+    "                self.h,\n",
+    "                transform=nengo_dl.dists.Glorot(distribution=\"normal\"),\n",
+    "                synapse=None,\n",
+    "            )"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "And then we construct a simple network consisting of an input node, a single LMU cell, and a dense linear readout. It is also possible to chain multiple LMU cells together, but that is not necessary in this task."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Network(seed=seed) as net:\n",
+    "    # remove some unnecessary features to speed up the training\n",
+    "    nengo_dl.configure_settings(\n",
+    "        trainable=None, stateful=False, keep_history=False,\n",
+    "    )\n",
+    "    \n",
+    "    # input node\n",
+    "    inp = nengo.Node(np.zeros(train_images.shape[-1]))\n",
+    "\n",
+    "    # lmu cell\n",
+    "    lmu = LMUCell(\n",
+    "        units=212, \n",
+    "        order=256, \n",
+    "        theta=train_images.shape[1], \n",
+    "        input_d=train_images.shape[-1]\n",
+    "    )\n",
+    "    conn = nengo.Connection(inp, lmu.x, synapse=None)\n",
+    "    net.config[conn].trainable = False\n",
+    "\n",
+    "    # dense linear readout\n",
+    "    out = nengo.Node(size_in=10)\n",
+    "    nengo.Connection(lmu.h, out, transform=nengo_dl.dists.Glorot(), synapse=None)\n",
+    "\n",
+    "    # record output. note that we set keep_history=False above, so this will\n",
+    "    # only record the output on the last timestep (which is all we need\n",
+    "    # on this task)\n",
+    "    p = nengo.Probe(out)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "And now we can train the model. To save time in this example we will download some pretrained weights, but you can set `do_training=True` below to run the training yourself.  Note that even with `do_training=True` we're only training for 5 epochs, which is dramatically less than many other solutions to this task.  We could train for longer if we wanted to really fine-tune performance."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "do_training = False\n",
+    "\n",
+    "with nengo_dl.Simulator(\n",
+    "        net, minibatch_size=100, unroll_simulation=16) as sim:\n",
+    "    sim.compile(\n",
+    "        loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True),\n",
+    "        optimizer=tf.optimizers.Adam(),\n",
+    "        metrics=[\"accuracy\"],\n",
+    "    )\n",
+    "\n",
+    "    print(\n",
+    "        \"Initial test accuracy: %.2f%%\" \n",
+    "        % (sim.evaluate(test_images, test_labels, verbose=0)[\"probe_accuracy\"] * 100)\n",
+    "    )\n",
+    "\n",
+    "    if do_training:\n",
+    "        sim.fit(train_images, train_labels, epochs=5)\n",
+    "        sim.save_params(\"./lmu_params\")\n",
+    "    else:\n",
+    "        urlretrieve(\n",
+    "            \"https://drive.google.com/uc?export=download&\"\n",
+    "            \"id=1qhKmpnipk8AK2bsilPlJBFQg1t7XAEZr\",\n",
+    "            \"lmu_params.npz\")\n",
+    "        sim.load_params(\"./lmu_params\")\n",
+    "\n",
+    "    print(\n",
+    "        \"Final test accuracy: %.2f%%\" \n",
+    "        % (sim.evaluate(test_images, test_labels, verbose=0)[\"probe_accuracy\"] * 100)\n",
+    "    )"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can see that the network is achieving >96% accuracy, which is state of the art performance on psMNIST."
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.8"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
