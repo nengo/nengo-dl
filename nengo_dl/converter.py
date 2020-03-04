@@ -488,7 +488,7 @@ class LayerConverter:
             The constructed Connection object.
         """
         conn = nengo.Connection(
-            self.get_input_obj(node_id, tensor_idx=input_idx),
+            self.get_input_obj(node_id, tensor_idx=input_idx, allow_none=False),
             obj,
             synapse=None,
             **kwargs,
@@ -501,7 +501,7 @@ class LayerConverter:
 
         return conn
 
-    def get_input_obj(self, node_id, tensor_idx=0):
+    def get_input_obj(self, node_id, tensor_idx=0, allow_none=True):
         """
         Returns the Nengo object corresponding to the given input of this layer.
 
@@ -531,8 +531,10 @@ class LayerConverter:
 
         if input_node_id in self.converter.layer_map[input_layer]:
             return self.converter.layer_map[input_layer][input_node_id][input_tensor_id]
-        else:
+        elif allow_none:
             return None
+        else:
+            raise ValueError("Input tensor %s has not been converted" % (tensor))
 
     def _get_shape(self, input_output, node_id, include_batch=False):
         """
