@@ -1111,8 +1111,8 @@ class ConvertBatchNormalization(LayerConverter):
         broadcast_bias = np.zeros(self.output_shape(node_id))
         for i in range(idxs.shape[axis]):
             slices[axis] = i
-            broadcast_scale[slices] = scale[i]
-            broadcast_bias[slices] = bias[i]
+            broadcast_scale[tuple(slices)] = scale[i]
+            broadcast_bias[tuple(slices)] = bias[i]
         broadcast_scale = np.ravel(broadcast_scale)
         broadcast_bias = np.ravel(broadcast_bias)
 
