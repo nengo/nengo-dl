@@ -364,9 +364,9 @@ class SubProgressBar(ProgressBar):  # pylint: disable=too-many-ancestors
     A progress bar representing a sub-task within an overall progress bar.
     """
 
-    def finish(self):
+    def finish(self, **kwargs):
         """Finishing a sub-progress bar doesn't start a new line."""
-        super().finish(end="\r")
+        super().finish(end="\r", **kwargs)
 
 
 class NullProgressBar(progressbar.NullBar):  # pylint: disable=too-many-ancestors

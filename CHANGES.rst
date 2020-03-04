@@ -56,10 +56,12 @@ Release history
   submodels. (`#119`_)
 - Keras Layers inside TensorNodes will be called with the ``training`` argument set
   correctly (previously it was always set to the default value). (`#119`_)
+- Fixed compatibility with ``progressbar2`` version 3.50.0. (`#136`_)
 
 .. _#119: https://github.com/nengo/nengo-dl/pull/119
 .. _#128: https://github.com/nengo/nengo-dl/pull/128
 .. _Nengo#1591: https://github.com/nengo/nengo/pull/1591
+.. _#136: https://github.com/nengo/nengo-dl/pull/136
 
 3.0.0 (December 17, 2019)
 -------------------------
@@ -423,7 +425,7 @@ details.
   ``sim.loss``/``sim.train`` data argument, if no input/target data is
   required.
 - The ``objective`` dict in ``sim.train``/``sim.loss`` can now contain
-  tuples of probes as the keys, in which case the objective function will be 
+  tuples of probes as the keys, in which case the objective function will be
   called with a corresponding tuple of probe/target values as each argument.
 - Added the ``sim.run_batch`` function.  This exposes all the functionality
   that the ``sim.run``/``sim.train``/``sim.loss`` functions are based on,
@@ -750,7 +752,7 @@ details.
 - Fixed a bug where input nodes that were only read as a view were not
   feedable
 - Updated ``tensorflow-gpu`` installation check
-- Improved numerical stability of ``LIFRate`` gradients  (`#26 
+- Improved numerical stability of ``LIFRate`` gradients  (`#26
   <https://github.com/nengo/nengo-dl/issues/26>`_)
 - Added more informative error message when data is provided with fewer items
   than ``sim.minibatch_size`` (`#30 <https://github.com/nengo/nengo-dl/issues/30>`_)
