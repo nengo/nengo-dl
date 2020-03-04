@@ -1228,8 +1228,27 @@ class ConvertConv(LayerConverter):
             # conv layer biases are per-output-channel, rather than per-output-element,
             # so we need to set up a nengo connection structure that will have one
             # bias parameter shared across all the spatial dimensions
-            if self.layer.data_format == "channels_first":
-                spatial_size = np.prod(self.output_shape(node_id)[1:])
+            channels_first = self.layer.data_format == "channels_first"
+            output_shape = self.output_shape(node_id)
+            spatial_size = np.prod(
+                output_shape[1:] if channels_first else output_shape[:-1]
+            )
+
+            if self.converter.inference_only:
+                ones = np.ones(spatial_size, dtype=biases.dtype)
+                broadcast_biases = (
+                    np.outer(biases, ones).ravel()
+                    if channels_first
+                    else np.outer(ones, biases).ravel()
+                )
+                bias_node = nengo.Node(np.ones(1), label="conv_bias")
+                nengo.Connection(
+                    bias_node,
+                    output,
+                    transform=broadcast_biases[:, np.newaxis],
+                    synapse=None,
+                )
+            elif channels_first:
                 bias_node = nengo.Node(np.ones(spatial_size), label="conv_bias")
                 offset = 0
                 for i in range(self.output_shape(node_id)[0]):
@@ -1241,7 +1260,6 @@ class ConvertConv(LayerConverter):
                     )
                     offset += spatial_size
             else:
-                spatial_size = np.prod(self.output_shape(node_id)[:-1])
                 bias_node = nengo.Node(np.ones(spatial_size), label="conv_bias")
                 idxs = np.arange(np.prod(self.output_shape(node_id))).reshape(
                     (-1, self.output_shape(node_id)[-1])
