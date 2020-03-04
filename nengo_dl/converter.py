@@ -1117,7 +1117,7 @@ class ConvertBatchNormalization(LayerConverter):
         broadcast_bias = np.ravel(broadcast_bias)
 
         # connect up bias node to output
-        bias_node = nengo.Node(broadcast_bias)
+        bias_node = nengo.Node(broadcast_bias, label="batchnorm_bias")
         conn = nengo.Connection(bias_node, output, synapse=None)
         self.converter.net.config[conn].trainable = False
 
