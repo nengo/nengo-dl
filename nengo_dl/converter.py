@@ -726,18 +726,6 @@ class ConvertModel(LayerConverter):
         # that need to be built into the Nengo network
         source_tensors = self.trace_tensors(self.layer.outputs)
 
-        def sort_key(x):
-            # sort tensors so that order of model inputs/outputs is preserved
-            for i, y in enumerate(self.layer.inputs):
-                if x is y:
-                    return -(len(self.layer.inputs) - i)
-            for i, y in enumerate(self.layer.outputs):
-                if x is y:
-                    return i + 1
-            return 0
-
-        source_tensors = sorted(source_tensors, key=sort_key)
-
         for tensor in source_tensors:
             # look up the layer/node to be converted
             model_layer, model_node_id, _ = self.get_history(tensor)
