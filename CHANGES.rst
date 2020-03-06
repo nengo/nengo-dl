@@ -54,6 +54,10 @@ Release history
   ``Simulator.save_params(..., include_state=False)`` will still include those
   parameters, and the results of any online learning will persist between calls even
   with ``stateful=False``. (`#140`_)
+- Added ``include_probes``, ``include_trainable``, and ``include_processes`` arguments
+  to ``Simulator.reset`` to provide more fine-grained control over Simulator
+  resetting. This replicates the previous functionality in ``Simulator.soft_reset``.
+  (`#139`_)
 
 **Fixed**
 
@@ -64,6 +68,9 @@ Release history
 
 - Renamed ``Simulator.save/load_params`` ``include_non_trainable`` parameter to
   ``include_state``. (`#140`_)
+- ``Simulator.soft_reset`` has been deprecated. Use
+  ``Simulator.reset(include_probes=False, include_trainable=False,
+  include_processes=False)`` instead. (`#139`_)
 
 .. _#126: https://github.com/nengo/nengo-dl/pull/126
 .. _#129: https://github.com/nengo/nengo-dl/pull/129

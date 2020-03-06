@@ -55,11 +55,13 @@ def test_predict(Simulator, seed):
 
         sim.run_steps(n_steps)
         data_noinput = sim.data[p]
-        sim.soft_reset(include_probes=True)
+        sim.reset(include_trainable=False, include_processes=False)
 
         sim.run_steps(n_steps, data={a: a_vals[:4]})
         data_tile = np.tile(sim.data[p], (n_batches, 1, 1))
-        sim.soft_reset()
+        sim.reset(
+            include_probes=False, include_trainable=False, include_processes=False
+        )
 
         # no input (also checking batch_size is ignored)
         with pytest.warns(UserWarning, match="Batch size is determined statically"):

@@ -268,7 +268,11 @@ def test_train_recurrent(Simulator, truncation, use_loop, seed):
                 # note: this works because each epoch is a single minibatch. otherwise
                 # we would also have to reset after each minibatch (which is what
                 # the callback approach is trying to do)
-                sim.soft_reset()
+                sim.reset(
+                    include_probes=False,
+                    include_trainable=False,
+                    include_processes=False,
+                )
         else:
             sim.fit({inp: x}, {p: y}, epochs=200, verbose=0)
 
@@ -1348,7 +1352,7 @@ def test_direct_grads(Simulator, mixed):
                 assert np.allclose(sim.data[p], sim.data[p2])
 
             sim.fit({a: np.ones((1, n_steps, 1))}, data)
-            sim.soft_reset(include_probes=True)
+            sim.reset(include_trainable=False, include_processes=False)
 
         sim.run_steps(n_steps)
         assert np.allclose(sim.data[p], 2)
@@ -1742,3 +1746,12 @@ def test_progress_bar(Simulator, capsys, monkeypatch):
         # can be explicitly enabled
         sim.run_steps(10, progress_bar=True)
         assert "Simulating" in capsys.readouterr().out
+
+
+def test_soft_reset(Simulator):
+    with Simulator(nengo.Network()) as sim:
+        sim.run_steps(10)
+        assert sim.n_steps == 10
+        with pytest.warns(DeprecationWarning, match="use Simulator.reset"):
+            sim.soft_reset()
+        assert sim.n_steps == 0

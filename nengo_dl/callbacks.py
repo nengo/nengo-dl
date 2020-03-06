@@ -145,7 +145,9 @@ class IsolateState(tf.keras.callbacks.Callback):
         """Resets the simulation state to the saved state."""
 
         if self.saved_state is None:
-            self.sim.soft_reset()
+            self.sim.reset(
+                include_probes=False, include_trainable=False, include_processes=False
+            )
         else:
             tf.keras.backend.batch_set_value(
                 list(zip(self.sim.tensor_graph.saved_state.values(), self.saved_state))

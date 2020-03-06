@@ -314,7 +314,7 @@ def fill_docs(*args, **kwargs):
             # begins in state2, terminates in state4
             sim.{{ func_name }}(..., stateful=True)
 
-        Note that `.Simulator.soft_reset` can be used to reset the state to initial
+        Note that `.Simulator.reset` can be used to reset the state to initial
         conditions at any point.
         """,
     }
@@ -568,7 +568,13 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
     @require_open
     @with_self
-    def reset(self, seed=None):
+    def reset(
+        self,
+        seed=None,
+        include_trainable=True,
+        include_probes=True,
+        include_processes=True,
+    ):
         """
         Resets the simulator to initial conditions.
 
@@ -577,58 +583,29 @@ class Simulator:  # pylint: disable=too-many-public-methods
         seed : int
             If not None, overwrite the default simulator seed with this value
             (note: this becomes the new default simulator seed).
+        include_trainable : bool
+            If True (default), also reset any online or offline training that has been
+            performed on simulator parameters (e.g., connection weights).
+        include_probes : bool
+            If True (default), also clear probe data.
+        include_processes: bool
+            If True (default), also reset all `nengo.Process` objects in the model.
 
         Notes
         -----
         Changing the TensorFlow seed only affects ops created from then on; it has
         no impact on existing ops (either changing their seed or resetting their random
-        state). So calling `.reset` will likely have no impact on any TensorFlow
-        randomness (it will still affect numpy randomness, such as in a
+        state). So calling `.Simulator.reset` will likely have no impact on any
+        TensorFlow randomness (it will still affect numpy randomness, such as in a
         `nengo.Process`, as normal).
         """
 
-        # reset variables and internal simulation state
-        self.soft_reset(include_trainable=True, include_probes=True)
-
-        # update rng
-        if seed is not None:
-            warnings.warn(
-                "Changing the seed will not affect any TensorFlow operations "
-                "created before the seed was updated"
-            )
-            self.tensor_graph.seed = seed
-
-        # execute post-build processes
-        self.tensor_graph.build_post()
-
-    @require_open
-    @with_self
-    def soft_reset(self, include_trainable=False, include_probes=False):
-        """
-        Resets the internal state of the simulation, but doesn't
-        rebuild the graph.
-
-        Parameters
-        ----------
-        include_trainable : bool
-            If True, also reset any online or offline training that has been performed
-            on simulator parameters (e.g., connection weights).
-        include_probes : bool
-            If True, also clear probe data.
-
-        Notes
-        -----
-        This will not affect any parameters created inside TensorNodes.
-        """
-
         if self.stateful:
-            # reset saved state
             tf.keras.backend.batch_get_value(
                 [var.initializer for var in self.tensor_graph.saved_state.values()]
             )
 
         if include_trainable:
-            # reset base params
             tf.keras.backend.batch_get_value(
                 [var.initializer for var in self.tensor_graph.base_params.values()]
             )
@@ -638,6 +615,37 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 self.model.params[p] = []
 
         self._update_steps()
+
+        # update rng
+        if seed is not None:
+            warnings.warn(
+                "Changing the seed will not affect any TensorFlow operations "
+                "created before the seed was updated"
+            )
+            self.tensor_graph.seed = seed
+
+        if include_processes:
+            self.tensor_graph.build_post()
+
+    @require_open
+    @with_self
+    def soft_reset(self, include_trainable=False, include_probes=False):
+        """
+        Deprecated, use `.Simulator.reset` instead.
+        """
+
+        warnings.warn(
+            "Simulator.soft_reset is deprecated, use Simulator.reset("
+            "include_trainable=False, include_probes=False, include_processes=False) "
+            "instead",
+            DeprecationWarning,
+        )
+        self.reset(
+            seed=None,
+            include_trainable=include_trainable,
+            include_probes=include_probes,
+            include_processes=False,
+        )
 
     @require_open
     @fill_docs("x", "n_steps", "stateful")
@@ -1546,7 +1554,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
             return out
 
-        self.soft_reset()
+        self.reset(
+            include_probes=False, include_trainable=False, include_processes=False
+        )
 
         grads = dict()
         for output in outputs:
