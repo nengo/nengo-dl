@@ -1755,3 +1755,15 @@ def test_soft_reset(Simulator):
         with pytest.warns(DeprecationWarning, match="use Simulator.reset"):
             sim.soft_reset()
         assert sim.n_steps == 0
+
+
+def test_sim_close(Simulator):
+    with Simulator(nengo.Network()) as sim:
+        assert sim.graph
+
+    with pytest.raises(SimulatorClosed, match="access Simulator.graph"):
+        assert sim.graph
+
+    with pytest.raises(SimulatorClosed, match="simulator is closed"):
+        with sim:
+            pass

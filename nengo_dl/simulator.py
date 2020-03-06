@@ -1628,6 +1628,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             self.keras_model = None
             self.tensor_graph = None
             self.graph = None
+            self._closed_attrs = ["keras_model", "tensor_graph", "graph"]
 
             self.closed = True
 
@@ -2004,6 +2005,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         """The simulation random seed."""
         return self.tensor_graph.seed
 
+    @require_open
     def __enter__(self):
         self._graph_context = self.graph.as_default()
         self._device_context = self.graph.device(self.tensor_graph.device)
@@ -2016,6 +2018,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         return self
 
+    @require_open
     def __exit__(self, *args):
         tf.keras.backend.set_floatx(self._keras_dtype)
 
@@ -2045,6 +2048,16 @@ class Simulator:  # pylint: disable=too-many-public-methods
             "#saving-and-loading-parameters "
             "for information on how to save/load a NengoDL model."
         )
+
+    def __getattribute__(self, name):
+        if super().__getattribute__("closed") and name in super().__getattribute__(
+            "_closed_attrs"
+        ):
+            raise SimulatorClosed(
+                "Cannot access Simulator.%s after Simulator is closed" % name
+            )
+
+        return super().__getattribute__(name)
 
 
 class SimulationData(collections.Mapping):

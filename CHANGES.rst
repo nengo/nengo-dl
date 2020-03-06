@@ -58,6 +58,8 @@ Release history
   to ``Simulator.reset`` to provide more fine-grained control over Simulator
   resetting. This replicates the previous functionality in ``Simulator.soft_reset``.
   (`#139`_)
+- More informative error messages when accessing invalid Simulator functionality after
+  the Simulator has been closed. (`#139`_)
 
 **Fixed**
 
