@@ -973,9 +973,9 @@ def test_check_data(Simulator):
             sim._check_data({"pa": zeros2}, n_steps=2, nodes=False)
 
         # data with batch size < minibatch_size
-        with pytest.raises(ValidationError, match="Size of minibatch"):
+        with pytest.raises(ValidationError, match=r"Batch size of data \(1\)"):
             sim._check_data({"inpa": zeros2[[0]], "n_steps": n_steps})
-        with pytest.raises(ValidationError, match="Size of minibatch"):
+        with pytest.raises(ValidationError, match=r"Batch size of data \(1\)"):
             sim._check_data({"pa": zeros2[[0]]}, nodes=False)
 
         # data with incorrect rank

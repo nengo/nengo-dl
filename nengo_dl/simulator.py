@@ -1836,7 +1836,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 # v is a scalar
                 continue
 
-            if data_batch % self.minibatch_size != 0:
+            if (
+                data_batch > self.minibatch_size
+                and data_batch % self.minibatch_size != 0
+            ):
                 warnings.warn(
                     "Number of elements in input data (%d) is not evenly divisible by "
                     "Simulator.minibatch_size (%d); input data will be truncated."
@@ -1881,7 +1884,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 )
             if x.shape[0] < self.minibatch_size:
                 raise ValidationError(
-                    "Size of minibatch (%d) less than Simulation `minibatch_size` (%d)"
+                    "Batch size of data (%d) less than Simulator `minibatch_size` (%d)"
                     % (x.shape[0], self.minibatch_size),
                     "%s data" % name,
                 )

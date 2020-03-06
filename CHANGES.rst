@@ -55,6 +55,11 @@ Release history
   parameters, and the results of any online learning will persist between calls even
   with ``stateful=False``. (`#140`_)
 
+**Fixed**
+
+- Fixed bug in error message when passing data with batch size less than Simulator
+  minibatch size. (`#139`_)
+
 **Deprecated**
 
 - Renamed ``Simulator.save/load_params`` ``include_non_trainable`` parameter to
@@ -64,6 +69,7 @@ Release history
 .. _#129: https://github.com/nengo/nengo-dl/pull/129
 .. _#130: https://github.com/nengo/nengo-dl/pull/130
 .. _#134: https://github.com/nengo/nengo-dl/pull/134
+.. _#139: https://github.com/nengo/nengo-dl/pull/139
 .. _#140: https://github.com/nengo/nengo-dl/pull/140
 
 3.1.0 (March 4, 2020)
