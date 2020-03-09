@@ -1,7 +1,7 @@
 # pylint: disable=missing-docstring
 
 import nengo
-from nengo.exceptions import BuildError
+from nengo.exceptions import BuildError, ValidationError
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -410,3 +410,24 @@ def test_multi_input_warning(Simulator):
         # matches the number of target placeholders
         with pytest.raises(ValueError, match="data for each key"):
             sim.evaluate([np.zeros((1, 10, 1))] * 2, np.zeros((1, 10, 1)))
+
+
+@pytest.mark.training
+def test_uneven_validation_split(Simulator):
+    net, _, _ = dummies.linear_net()
+
+    with Simulator(net, minibatch_size=2) as sim:
+        sim.compile(optimizer=tf.optimizers.SGD(0), loss=tf.losses.mse)
+
+        sim.fit(np.zeros((10, 10, 1)), np.zeros((10, 10, 1)), validation_split=0.2)
+
+        with pytest.raises(ValidationError, match="not evenly divisible"):
+            sim.fit(np.zeros((10, 10, 1)), np.zeros((10, 10, 1)), validation_split=0.3)
+
+        # regular keras error message when trying to use validation_split with
+        # a generator
+        with pytest.raises(ValueError, match="cannot use `validation_split`"):
+            sim.fit(
+                ((x, y) for x, y in zip(np.zeros((10, 10, 1)), np.zeros((10, 10, 1)))),
+                validation_split=0.7,
+            )

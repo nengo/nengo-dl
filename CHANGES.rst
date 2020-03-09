@@ -70,6 +70,8 @@ Release history
 
 - Fixed bug in error message when passing data with batch size less than Simulator
   minibatch size. (`#139`_)
+- More informative error message when ``validation_split`` does not result in batch
+  sizes evenly divisible by minibatch size. (`#139`_)
 
 **Deprecated**
 

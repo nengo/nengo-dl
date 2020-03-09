@@ -970,13 +970,28 @@ class Simulator:  # pylint: disable=too-many-public-methods
             input_batch = x["n_steps"].shape[0]
         else:
             input_steps = None
-            input_batch = (self.minibatch_size if "on_batch" in func_type else None,)
+            input_batch = self.minibatch_size if "on_batch" in func_type else None
 
         if y is not None:
             y = self._standardize_data(y, self.model.probes)
             # we set n_steps=None because targets do not necessarily need to have
             # the same number of timesteps as input (depending on the loss function)
             self._check_data(y, n_steps=None, batch_size=input_batch, nodes=False)
+
+        if kwargs.get("validation_split", 0) != 0 and input_batch is not None:
+            # validation_split is only a kwarg in `fit`, but we do it here because
+            # we need to know `input_batch`.
+            # split math set up to match
+            # `keras.engine.training_utils.split_training_and_validation_data`.
+            split = int(input_batch * (1 - kwargs["validation_split"]))
+            if (
+                split % self.minibatch_size != 0
+                or (input_batch - split) % self.minibatch_size != 0
+            ):
+                raise ValidationError(
+                    "Split data is not evenly divisible by minibatch size",
+                    "validation_split",
+                )
 
         # warn for synapses with n_steps=1
         # note: we don't warn if stateful, since there could be effects across runs
