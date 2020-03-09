@@ -372,3 +372,41 @@ def test_save_load_weights(Simulator, tmpdir):
         sim1.keras_model.load_weights(str(tmpdir.join("tmp")))
 
         assert np.allclose(sim1.data[net.connections[0]].weights, 2)
+
+
+@pytest.mark.training
+def test_multi_input_warning(Simulator):
+    with nengo.Network() as net:
+        inp0 = nengo.Node([0])
+        inp1 = nengo.Node([1])
+        nengo.Probe(inp0)
+        nengo.Probe(inp1)
+
+    with Simulator(net) as sim:
+        with pytest.warns(UserWarning, match="does not match number of Nodes"):
+            sim.predict(np.zeros((1, 10, 1)))
+
+        with pytest.warns(UserWarning, match="does not match number of Nodes"):
+            sim.predict([np.zeros((1, 10, 1))])
+
+        with pytest.warns(None) as recwarn:
+            sim.predict([np.zeros((1, 10, 1))] * 2)
+        assert not recwarn
+
+        with pytest.warns(None) as recwarn:
+            sim.predict({inp1: np.zeros((1, 10, 1))})
+        assert not recwarn
+
+        sim.compile(optimizer=tf.optimizers.SGD(0), loss=tf.losses.mse)
+        with pytest.warns(UserWarning, match="does not match number of Nodes"):
+            sim.fit(np.zeros((1, 10, 1)), [np.zeros((1, 10, 1))] * 2)
+
+        sim.compile(optimizer=tf.optimizers.SGD(0), loss=tf.losses.mse)
+        with pytest.warns(UserWarning, match="does not match number of Nodes"):
+            sim.evaluate(np.zeros((1, 10, 1)), [np.zeros((1, 10, 1))] * 2)
+
+        # we do not need to worry about ambiguous number of target arguments,
+        # because keras already ensures that the the number of target values exactly
+        # matches the number of target placeholders
+        with pytest.raises(ValueError, match="data for each key"):
+            sim.evaluate([np.zeros((1, 10, 1))] * 2, np.zeros((1, 10, 1)))

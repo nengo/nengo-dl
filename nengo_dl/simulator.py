@@ -1699,20 +1699,24 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 data *= len(objects)
 
         if isinstance(data, (list, tuple)):
+            if len(data) != len(objects):
+                warnings.warn(
+                    "Number of data values (%d) does not match number of %ss (%d); "
+                    "it is recommended to use an explicit input dictionary in this "
+                    "case, so that the assignment of data to objects is unambiguous."
+                    % (len(data), type(objects[0]).__name__, len(objects))
+                )
+
             # convert list to named dict
             data = collections.OrderedDict(
                 (self.get_name(obj), val) for obj, val in zip(objects, data)
             )
         elif isinstance(data, dict):
             # convert objects to string names
-            new_data = collections.OrderedDict()
-            for obj, val in data.items():
-                if isinstance(obj, str):
-                    name = obj
-                else:
-                    name = self.get_name(obj)
-                new_data[name] = val
-            data = new_data
+            data = collections.OrderedDict(
+                (obj if isinstance(obj, str) else self.get_name(obj), val)
+                for obj, val in data.items()
+            )
 
         return data
 
@@ -1751,7 +1755,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
             return data
 
-        data = self._standardize_data(data, self.node_inputs)
+        data = self._standardize_data(data, list(self.node_inputs.keys()))
 
         if len(data) == 0:
             data_batch = data_steps = None

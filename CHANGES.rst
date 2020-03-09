@@ -60,6 +60,11 @@ Release history
   (`#139`_)
 - More informative error messages when accessing invalid Simulator functionality after
   the Simulator has been closed. (`#139`_)
+- A warning is now raised when the number of input data items passed to the simulator
+  does not match the number of input nodes, to help avoid unintentionally passing
+  data to the wrong input node. This warning can be avoided by passing data for
+  all nodes, or using the dictionary input style if you want to only pass data for
+  a specific node. (`#139`_)
 
 **Fixed**
 
