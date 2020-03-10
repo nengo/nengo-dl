@@ -21,6 +21,27 @@ Release history
 3.1.1 (unreleased)
 ------------------
 
+**Changed**
+
+- Saved simulator state will no longer be included in ``Simulator.keras_model.weights``.
+  This means that ``Simulator.keras_model.save/load_weights`` will not include the
+  saved simulator state, making it easier to reuse weights between models (as long as
+  the models have the same weights, they do not need to have the same state variables).
+  ``Simulator.save/load_params(..., include_state=True)`` can be used to explicitly
+  save the simulator state, if desired. (`#140`_)
+- Model parameters (e.g., connection weights) that are not trainable (because they've
+  been marked non-trainable by user or targeted by an online learning rule) will now
+  be treated separately from simulator state. For example,
+  ``Simulator.save_params(..., include_state=False)`` will still include those
+  parameters, and the results of any online learning will persist between calls even
+  with ``stateful=False``. (`#140`_)
+
+**Deprecated**
+
+- Renamed ``Simulator.save/load_params`` ``include_non_trainable`` parameter to
+  ``include_state``. (`#140`_)
+
+.. _#140: https://github.com/nengo/nengo-dl/pull/140
 
 3.1.0 (March 4, 2020)
 ---------------------

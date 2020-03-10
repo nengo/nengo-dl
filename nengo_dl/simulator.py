@@ -614,8 +614,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
         Parameters
         ----------
         include_trainable : bool
-            If True, also reset any training that has been performed on
-            simulator parameters (e.g., connection weights).
+            If True, also reset any online or offline training that has been performed
+            on simulator parameters (e.g., connection weights).
         include_probes : bool
             If True, also clear probe data.
 
@@ -1160,7 +1160,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
     @require_open
     @with_self
-    def save_params(self, path, include_non_trainable=False):
+    def save_params(self, path, include_state=False, include_non_trainable=None):
         """
         Save network parameters to the given ``path``.
 
@@ -1168,10 +1168,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
         ----------
         path : str
             Filepath of parameter output file.
-        include_non_trainable : bool
-            If True (default False) also save information representing
-            non-trainable parameters of the network (this includes the internal
-            simulation state).
+        include_state : bool
+            If True (default False) also save the internal simulation state.
+
+            .. versionchanged:: 3.1.1
+               Renamed from ``include_non_trainable`` to ``include_state``.
 
         Notes
         -----
@@ -1180,19 +1181,24 @@ class Simulator:  # pylint: disable=too-many-public-methods
         `.get_nengo_params`.
         """
 
-        vars = (
-            self.keras_model.weights
-            if include_non_trainable
-            else self.keras_model.trainable_weights
-        )
+        if include_non_trainable is not None:
+            warnings.warn(
+                "include_non_trainable is deprecated, use include_state instead",
+                DeprecationWarning,
+            )
+            include_state = include_non_trainable
 
-        np.savez_compressed(path + ".npz", *tf.keras.backend.batch_get_value(vars))
+        params = list(self.keras_model.weights)
+        if include_state:
+            params.extend(self.tensor_graph.saved_state.values())
+
+        np.savez_compressed(path + ".npz", *tf.keras.backend.batch_get_value(params))
 
         logger.info("Model parameters saved to %s.npz", path)
 
     @require_open
     @with_self
-    def load_params(self, path, include_non_trainable=False):
+    def load_params(self, path, include_state=False, include_non_trainable=None):
         """
         Load network parameters from the given ``path``.
 
@@ -1200,10 +1206,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
         ----------
         path : str
             Filepath of parameter input file.
-        include_non_trainable : bool
-            If True (default False) also load information representing
-            non-trainable parameters of the network (this includes the internal
-            simulation state).
+        include_state : bool
+            If True (default False) also save the internal simulation state.
+
+            .. versionchanged:: 3.1.1
+               Renamed from ``include_non_trainable`` to ``include_state``.
 
         Notes
         -----
@@ -1212,20 +1219,25 @@ class Simulator:  # pylint: disable=too-many-public-methods
         `.get_nengo_params`.
         """
 
-        vars = (
-            self.keras_model.weights
-            if include_non_trainable
-            else self.keras_model.trainable_weights
-        )
+        if include_non_trainable is not None:
+            warnings.warn(
+                "include_non_trainable is deprecated, use include_state instead",
+                DeprecationWarning,
+            )
+            include_state = include_non_trainable
+
+        params = list(self.keras_model.weights)
+        if include_state:
+            params.extend(self.tensor_graph.saved_state.values())
 
         with np.load(path + ".npz") as vals:
-            if len(vars) != len(vals.files):
+            if len(params) != len(vals.files):
                 raise SimulationError(
                     "Number of saved parameters in %s (%d) != number of variables in "
-                    "the model (%d)" % (path, len(vals.files), len(vars))
+                    "the model (%d)" % (path, len(vals.files), len(params))
                 )
             tf.keras.backend.batch_set_value(
-                zip(vars, (vals["arr_%d" % i] for i in range(len(vals.files))))
+                zip(params, (vals["arr_%d" % i] for i in range(len(vals.files))))
             )
 
         logger.info("Model parameters loaded from %s.npz", path)

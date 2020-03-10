@@ -515,9 +515,8 @@ def test_generate_inputs(Simulator, seed):
             sim._generate_inputs(data={p[0]: np.zeros((minibatch_size, n_steps, 1))})
 
 
-@pytest.mark.parametrize("include_non_trainable", (True, False))
-@pytest.mark.training
-def test_save_load_params(Simulator, include_non_trainable, tmpdir):
+@pytest.mark.parametrize("include_state", (True, False))
+def test_save_load_params(Simulator, include_state, tmpdir):
     def get_network(seed):
         with nengo.Network(seed=seed) as net:
             configure_settings(simplifications=[])
@@ -543,7 +542,7 @@ def test_save_load_params(Simulator, include_non_trainable, tmpdir):
 
         sim_save.run_steps(10)
 
-        sim_save.save_params(str(tmpdir), include_non_trainable=include_non_trainable)
+        sim_save.save_params(str(tmpdir), include_state=include_state)
 
         sim_save.run_steps(10)
 
@@ -560,24 +559,20 @@ def test_save_load_params(Simulator, include_non_trainable, tmpdir):
         )
         assert not np.allclose(weights0, weights1)
         assert not np.allclose(enc0, enc1)
+        assert not np.allclose(bias0, bias1)
 
         pre_model = sim_load.keras_model
 
-        sim_load.load_params(str(tmpdir), include_non_trainable=include_non_trainable)
+        sim_load.load_params(str(tmpdir), include_state=include_state)
 
         weights2, enc2, bias2 = sim_load.data.get_params(
             (conn1, "weights"), (ens1, "encoders"), (ens1, "bias")
         )
 
-        # check if weights match
+        # check if params match
         assert np.allclose(weights0, weights2)
-
-        if include_non_trainable:
-            assert np.allclose(enc0, enc2)
-            assert np.allclose(bias0, bias2)
-        else:
-            assert np.allclose(enc1, enc2)
-            assert np.allclose(bias1, bias2)
+        assert np.allclose(enc0, enc2)
+        assert np.allclose(bias0, bias2)
 
         # check if a new model was created or one was modified in-place
         assert sim_load.keras_model is pre_model
@@ -586,14 +581,43 @@ def test_save_load_params(Simulator, include_non_trainable, tmpdir):
         sim_load.run_steps(10)
 
         # check if simulation state resumed correctly
-        if include_non_trainable:
+        if include_state:
+            # state saved, so we should match the point at which that state was saved
             assert np.allclose(sim_load.data[p1], sim_save.data[p0][10:])
         else:
-            assert not np.allclose(sim_load.data[p1], sim_save.data[p0][10:])
+            # state not saved, but other seeded params are, so we should match the first
+            # timesteps of `sim_save` (despite the networks not having the same seeds)
+            assert np.allclose(sim_load.data[p1], sim_save.data[p0][:10])
 
     with Simulator(nengo.Network()) as sim:
         with pytest.raises(SimulationError, match="!= number of variables"):
             sim.load_params(str(tmpdir))
+
+
+def test_save_load_params_deprecation(Simulator, tmpdir):
+    with nengo.Network() as net:
+        a = nengo.Node([1])
+        p = nengo.Probe(a, synapse=0.1)
+
+    with Simulator(net) as sim0:
+        sim0.run_steps(5)
+
+        with pytest.warns(
+            DeprecationWarning, match="include_non_trainable is deprecated"
+        ):
+            sim0.save_params(str(tmpdir.join("tmp")), include_non_trainable=True)
+
+        sim0.run_steps(5)
+
+    with Simulator(net) as sim1:
+        with pytest.warns(
+            DeprecationWarning, match="include_non_trainable is deprecated"
+        ):
+            sim1.load_params(str(tmpdir.join("tmp")), include_non_trainable=True)
+
+        sim1.run_steps(5)
+
+    assert np.allclose(sim0.data[p][-5:], sim1.data[p])
 
 
 def test_model_passing(Simulator, seed):
@@ -1120,10 +1144,7 @@ def test_simulation_data(Simulator, seed):
         sig = sim.model.sig[a]["encoders"]
         tensor_sig = sim.tensor_graph.signals[sig]
 
-        if sim.tensor_graph.inference_only:
-            base = sim.tensor_graph.saved_state[tensor_sig.key]
-        else:
-            base = sim.tensor_graph.base_params[tensor_sig.key]
+        base = sim.tensor_graph.base_params[tensor_sig.key]
         tf.keras.backend.set_value(
             base, np.ones(base.shape, dtype=base.dtype.as_numpy_dtype())
         )

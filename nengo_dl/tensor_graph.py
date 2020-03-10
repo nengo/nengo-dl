@@ -173,8 +173,8 @@ class TensorGraph(tf.keras.layers.Layer):
 
         logger.info("Optimized plan length: %d", len(self.plan))
         logger.info(
-            "Number of base arrays: %d, %d",
-            *tuple(len(x) for x in self.base_arrays_init),
+            "Number of base arrays: (%s, %d), (%s, %d), (%s, %d)",
+            *tuple((k, len(x)) for k, x in self.base_arrays_init.items()),
         )
 
     def build_inputs(self):
@@ -256,16 +256,18 @@ class TensorGraph(tf.keras.layers.Layer):
         with trackable.no_automatic_dependency_tracking_scope(self):
             self.base_params = OrderedDict()
         assert len(self.base_params) == 0
-        for k, v in self.base_arrays_init[True].items():
-            initializer, shape, dtype = get_initializer(v)
-            assert initializer is not None  # trainable params should never be set
-            self.base_params[k] = self.add_weight(
-                initializer=initializer,
-                shape=shape,
-                dtype=dtype,
-                trainable=True,
-                name="base_params/%s_%s" % (dtype, "_".join(str(x) for x in shape)),
-            )
+        for sig_type in ("trainable", "non_trainable"):
+            for k, v in self.base_arrays_init[sig_type].items():
+                initializer, shape, dtype = get_initializer(v)
+                assert initializer is not None  # params should never be set
+                self.base_params[k] = self.add_weight(
+                    initializer=initializer,
+                    shape=shape,
+                    dtype=dtype,
+                    trainable=sig_type == "trainable",
+                    name="base_params/%s_%s_%s"
+                    % (sig_type, dtype, "_".join(str(x) for x in shape)),
+                )
 
         logger.debug("created base param variables")
         logger.debug([str(x) for x in self.base_params.values()])
@@ -273,13 +275,13 @@ class TensorGraph(tf.keras.layers.Layer):
         # variables to save the internal state of simulation between runs
         with trackable.no_automatic_dependency_tracking_scope(self):
             self.saved_state = OrderedDict()
-        for k, v in self.base_arrays_init[False].items():
+        for k, v in self.base_arrays_init["state"].items():
             initializer, shape, dtype = get_initializer(v)
             if initializer is not None:
                 # don't need to save the state for signals where the initial value
                 # doesn't matter
-                self.saved_state[k] = self.add_weight(
-                    initializer=initializer,
+                self.saved_state[k] = tf.Variable(
+                    initial_value=lambda: initializer(shape=shape, dtype=dtype),
                     shape=shape,
                     dtype=dtype,
                     trainable=False,
@@ -367,6 +369,17 @@ class TensorGraph(tf.keras.layers.Layer):
 
             tf.keras.backend.batch_set_value(zip(weight_sets, weight_vals))
 
+        # initialize state variables (need to do this manually because we're not
+        # adding them to self.weights)
+        # note: don't need to do this in eager mode, since variables are
+        # initialized on creation
+        # TODO: why does this cause problems if it is done before the tensornode
+        #  weight get/sets above?
+        if not context.executing_eagerly():
+            tf.keras.backend.batch_get_value(
+                [var.initializer for var in self.saved_state.values()]
+            )
+
     # @tf.function  # TODO: get this working? does this help?
     @tf.autograph.experimental.do_not_convert
     def call(self, inputs, training=None, progress=None, stateful=False):
@@ -446,7 +459,7 @@ class TensorGraph(tf.keras.layers.Layer):
 
         # build stage
         with progress.sub("build stage", max_value=len(self.plan) * self.unroll) as sub:
-            steps_run, probe_arrays, final_internal_state = (
+            steps_run, probe_arrays, final_internal_state, final_base_params = (
                 self._build_loop(sub) if self.use_loop else self._build_no_loop(sub)
             )
 
@@ -455,6 +468,7 @@ class TensorGraph(tf.keras.layers.Layer):
             self.steps_run = steps_run
             self.probe_arrays = probe_arrays
             self.final_internal_state = final_internal_state
+            self.final_base_params = final_base_params
 
         # logging
         logger.info(
@@ -472,13 +486,31 @@ class TensorGraph(tf.keras.layers.Layer):
         # number of steps, even if there are no output probes
         outputs = list(probe_arrays.values()) + [steps_run]
 
+        updates = []
         if stateful:
             # update saved state
-            state_updates = [
+            updates.extend(
                 var.assign(val)
                 for var, val in zip(self.saved_state.values(), final_internal_state)
-            ]
-            with tf.control_dependencies(state_updates):
+            )
+
+        # if any of the base params have changed (due to online learning rules) then we
+        # also need to assign those back to the original variable (so that their
+        # values will persist). any parameters targeted by online learning rules
+        # will be minibatched, so we only need to update the minibatched params.
+        for (key, var), val in zip(self.base_params.items(), final_base_params):
+            try:
+                minibatched = self.base_arrays_init["non_trainable"][key][-1]
+            except KeyError:
+                minibatched = self.base_arrays_init["trainable"][key][-1]
+
+            if minibatched:
+                updates.append(var.assign(val))
+
+        logger.info("Number of variable updates: %d", len(updates))
+
+        if len(updates) > 0:
+            with tf.control_dependencies(updates):
                 outputs = [tf.identity(x) for x in outputs]
 
         return outputs
@@ -501,7 +533,7 @@ class TensorGraph(tf.keras.layers.Layer):
             self.signals.bases[key] = tf.identity(val)
         for key, val in base_params.items():
             self.signals.bases[key] = tf.identity(val)
-        for key, (_, shapes, _, minibatched) in self.base_arrays_init[False].items():
+        for key, (_, shapes, _, minibatched) in self.base_arrays_init["state"].items():
             if key not in self.signals.bases:
                 # no saved state for this base, so we just temporarily insert
                 # the shape information so that future scatters will know
@@ -607,8 +639,9 @@ class TensorGraph(tf.keras.layers.Layer):
             probe_arrays[p] = x
 
         final_internal_state = loop_vars[3]
+        final_base_params = loop_vars[4]
 
-        return steps_run, probe_arrays, final_internal_state
+        return steps_run, probe_arrays, final_internal_state, final_base_params
 
     def _build_no_loop(self, progress):
         """
@@ -668,8 +701,9 @@ class TensorGraph(tf.keras.layers.Layer):
         final_internal_state = tuple(
             self.signals.bases[key] for key in self.saved_state
         )
+        final_base_params = tuple(self.signals.bases[key] for key in self.base_params)
 
-        return steps_run, probe_arrays, final_internal_state
+        return steps_run, probe_arrays, final_internal_state, final_base_params
 
     def _build_inner_loop(self, loop_i, update_probes, progress):
         """
@@ -836,7 +870,14 @@ class TensorGraph(tf.keras.layers.Layer):
 
         Users can manually specify whether signals are trainable or not using
         the config system (e.g.,
-        ``net.config[nengo.Ensemble].trainable = False``)
+        ``net.config[nengo.Ensemble].trainable = False``).
+
+        The trainable attribute will be set to one of three values:
+
+        - ``True``: Signal is trainable
+        - ``False``: Signal could be trainable, but has been set to non-trainable
+          (e.g., because the user manually configured that object not to be trainable).
+        - ``None``: Signal is never trainable (e.g., simulator state)
         """
 
         def get_trainable(parent_configs, obj):
@@ -845,19 +886,22 @@ class TensorGraph(tf.keras.layers.Layer):
             if self.inference_only:
                 return False
 
-            trainable = None
+            # default to 1 (so that we can distinguish between an object being
+            # set to trainable vs defaulting to trainable)
+            trainable = 1
 
             # we go from top down (so lower level settings will override)
             for cfg in parent_configs:
                 try:
-                    trainable = getattr(cfg[obj], "trainable", trainable)
+                    cfg_trainable = getattr(cfg[obj], "trainable", None)
                 except ConfigError:
                     # object not configured in this network config
-                    pass
+                    cfg_trainable = None
 
-            # default to 1 (so that we can distinguish between an object being
-            # set to trainable vs defaulting to trainable)
-            return 1 if trainable is None else trainable
+                if cfg_trainable is not None:
+                    trainable = cfg_trainable
+
+            return trainable
 
         def mark_network(parent_configs, net):
             """Recursively marks the signals for objects within each subnetwork."""
@@ -941,13 +985,13 @@ class TensorGraph(tf.keras.layers.Layer):
             for obj, seed in self.model.seeds.items():
                 if isinstance(obj, Connection) and seed in probe_seeds:
                     if compat.conn_has_weights(obj):
-                        self.model.sig[obj]["weights"].trainable = False
+                        self.model.sig[obj]["weights"].trainable = None
                         self.model.sig[obj]["weights"].minibatched = False
 
         # time/step are not minibatched and not trainable
-        self.model.step.trainable = False
+        self.model.step.trainable = None
         self.model.step.minibatched = False
-        self.model.time.trainable = False
+        self.model.time.trainable = None
         self.model.time.minibatched = False
 
         # fill in defaults for all other signals
@@ -956,7 +1000,7 @@ class TensorGraph(tf.keras.layers.Layer):
         for op in self.model.operators:
             for sig in op.all_signals:
                 if not hasattr(sig.base, "trainable"):
-                    sig.base.trainable = False
+                    sig.base.trainable = None
 
                 if not hasattr(sig.base, "minibatched"):
                     sig.base.minibatched = not sig.base.trainable
@@ -980,7 +1024,13 @@ class TensorGraph(tf.keras.layers.Layer):
             memory (e.g., output from `.graph_optimizer.order_signals`)
         """
 
-        base_arrays = [OrderedDict(), OrderedDict()]
+        base_arrays = OrderedDict(
+            [
+                ("trainable", OrderedDict()),
+                ("non_trainable", OrderedDict()),
+                ("state", OrderedDict()),
+            ]
+        )
         curr_keys = {}
         sig_idxs = {s: i for i, s in enumerate(sigs)}
 
@@ -1092,18 +1142,25 @@ class TensorGraph(tf.keras.layers.Layer):
             if sig.minibatched:
                 shape = (self.minibatch_size,) + shape
 
-            if key in base_arrays[sig.trainable]:
-                base_arrays[sig.trainable][key][0].append(initial_value)
-                base_arrays[sig.trainable][key][1].append(shape)
+            if sig.trainable is None:
+                sig_type = "state"
+            elif sig.trainable:
+                sig_type = "trainable"
             else:
-                base_arrays[sig.trainable][key] = [
+                sig_type = "non_trainable"
+
+            if key in base_arrays[sig_type]:
+                base_arrays[sig_type][key][0].append(initial_value)
+                base_arrays[sig_type][key][1].append(shape)
+            else:
+                base_arrays[sig_type][key] = [
                     [initial_value],
                     [shape],
                     dtype,
                     sig.minibatched,
                 ]
 
-            n = sum(x[sig.minibatched] for x in base_arrays[sig.trainable][key][1])
+            n = sum(x[sig.minibatched] for x in base_arrays[sig_type][key][1])
             slices = [(n - shape[sig.minibatched], n)]
 
             tensor_sig = self.signals.get_tensor_signal(

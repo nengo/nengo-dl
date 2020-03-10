@@ -262,11 +262,13 @@ def test_reuse_vars(Simulator, pytestconfig):
 
         # note: when inference-only=True the weights will be marked as non-trainable
         if sim.tensor_graph.inference_only:
-            assert len(sim.keras_model.non_trainable_variables) == 4
-            assert len(sim.keras_model.trainable_variables) == 0
-            vars = sim.keras_model.non_trainable_variables[-2:]
-        else:
+            assert len(sim.tensor_graph.saved_state) == 2
             assert len(sim.keras_model.non_trainable_variables) == 2
+            assert len(sim.keras_model.trainable_variables) == 0
+            vars = sim.keras_model.non_trainable_variables
+        else:
+            assert len(sim.tensor_graph.saved_state) == 2
+            assert len(sim.keras_model.non_trainable_variables) == 0
             assert len(sim.keras_model.trainable_variables) == 2
             vars = sim.keras_model.trainable_variables
 

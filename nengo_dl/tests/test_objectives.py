@@ -9,7 +9,6 @@ from nengo_dl import losses
 
 
 @pytest.mark.parametrize("axis, order", [(None, 1), (None, "euclidean"), (1, 2)])
-@pytest.mark.training
 def test_regularize(axis, order, rng):
     x_init = rng.randn(2, 3, 4, 5)
 

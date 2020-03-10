@@ -1,5 +1,7 @@
 # pylint: disable=missing-docstring
 
+import logging
+
 import nengo
 from nengo.builder.operator import Reset
 import numpy as np
@@ -224,7 +226,7 @@ def test_signal_order_deterministic(Simulator, seed):
 
     with Simulator(net, seed=seed) as sim1:
         with Simulator(net, seed=seed) as sim2:
-            for trainable in (True, False):
+            for trainable in ("trainable", "non_trainable", "state"):
                 for v, v2 in zip(
                     sim1.tensor_graph.base_arrays_init[trainable].values(),
                     sim2.tensor_graph.base_arrays_init[trainable].values(),
@@ -292,11 +294,11 @@ def test_create_signals():
     plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
-    assert graph.base_arrays_init[False][graph.signals[sigs[0]].key][1] == [
+    assert graph.base_arrays_init["non_trainable"][graph.signals[sigs[0]].key][1] == [
         (10, 10),
         (10, 5),
     ]
-    assert graph.base_arrays_init[False][graph.signals[sigs[2]].key][1] == [
+    assert graph.base_arrays_init["non_trainable"][graph.signals[sigs[2]].key][1] == [
         (10, 10, 1),
         (10, 5, 1),
     ]
@@ -314,8 +316,11 @@ def test_create_signals():
     plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
-    assert graph.base_arrays_init[True][graph.signals[sigs[0]].key][1] == [(1,), (1,)]
-    assert graph.base_arrays_init[False][graph.signals[sigs[2]].key][1] == [
+    assert graph.base_arrays_init["trainable"][graph.signals[sigs[0]].key][1] == [
+        (1,),
+        (1,),
+    ]
+    assert graph.base_arrays_init["non_trainable"][graph.signals[sigs[2]].key][1] == [
         (10, 1),
         (10, 1),
     ]
@@ -328,14 +333,17 @@ def test_create_signals():
     plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
-    assert list(graph.base_arrays_init[False].values())[0][1] == [(10, 1), (10, 4)]
+    assert list(graph.base_arrays_init["non_trainable"].values())[0][1] == [
+        (10, 1),
+        (10, 4),
+    ]
 
     # check that boolean signals are handled correctly
     sigs = [dummies.Signal(dtype=np.bool, shape=())]
     plan = [(dummies.Op(reads=sigs),)]
     graph = dummies.TensorGraph(plan, tf.float32, 1)
     graph.create_signals(sigs)
-    assert list(graph.base_arrays_init[False].values())[0][2] == "bool"
+    assert list(graph.base_arrays_init["non_trainable"].values())[0][2] == "bool"
 
 
 def test_create_signals_views():
@@ -347,7 +355,10 @@ def test_create_signals_views():
     plan = [tuple(dummies.Op(reads=[x]) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs[2:])
-    assert list(graph.base_arrays_init[False].values())[0][1] == [(10, 4), (10, 4)]
+    assert list(graph.base_arrays_init["non_trainable"].values())[0][1] == [
+        (10, 4),
+        (10, 4),
+    ]
     assert graph.signals[sigs[0]].key == graph.signals[sigs[1]].key
     assert graph.signals[sigs[1]].key == graph.signals[sigs[2]].key
     assert graph.signals[sigs[2]].key == graph.signals[sigs[3]].key
@@ -391,7 +402,7 @@ def test_create_signals_partition():
     plan = [tuple(Reset(x) for x in sigs)]
     graph = dummies.TensorGraph(plan, tf.float32, 10)
     graph.create_signals(sigs)
-    assert len(graph.base_arrays_init[False]) == 4
+    assert len(graph.base_arrays_init["non_trainable"]) == 4
 
 
 @pytest.mark.parametrize("use_loop", (True, False))
@@ -465,7 +476,12 @@ def test_build(trainable, rng):
     graph.create_signals(sigs)
     graph.build()
 
-    assert len(graph.weights) == 3
+    if trainable:
+        assert len(graph.trainable_weights) == 3
+        assert len(graph.non_trainable_weights) == 0
+    else:
+        assert len(graph.trainable_weights) == 0
+        assert len(graph.non_trainable_weights) == 3
 
     init0 = graph.weights[0].numpy()
     assert init0.shape == (5, 1) if trainable else (16, 5, 1)
@@ -484,3 +500,37 @@ def test_build(trainable, rng):
         assert init2.shape == (16, 13, 1)
         assert np.allclose(init2[:, :6], sigs[4].initial_value)
         assert np.allclose(init2[:, 6:], sigs[5].initial_value)
+
+
+@pytest.mark.parametrize("use_loop", (True, False))
+def test_conditional_update(Simulator, use_loop, caplog):
+    caplog.set_level(logging.INFO)
+
+    with nengo.Network() as net:
+        config.configure_settings(stateful=False, use_loop=use_loop)
+
+        a = nengo.Ensemble(10, 1)
+        b = nengo.Node(size_in=1)
+        conn = nengo.Connection(a, b)
+
+    with Simulator(net):
+        pass
+
+    assert "Number of variable updates: 0" in caplog.text
+    caplog.clear()
+
+    conn.learning_rule_type = nengo.PES()
+
+    with Simulator(net):
+        pass
+
+    assert "Number of variable updates: 1" in caplog.text
+    caplog.clear()
+
+    with net:
+        config.configure_settings(trainable=True)
+
+    with Simulator(net):
+        pass
+
+    assert "Number of variable updates: 1" in caplog.text

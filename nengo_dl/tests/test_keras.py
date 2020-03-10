@@ -7,6 +7,7 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl import config, dists
+from nengo_dl.tests import dummies
 
 
 @pytest.mark.parametrize("minibatch_size", (None, 1, 3))
@@ -351,3 +352,21 @@ def test_learning_phase_warning(Simulator):
         with tf.keras.backend.learning_phase_scope(1):
             with Simulator(net):
                 pass
+
+
+def test_save_load_weights(Simulator, tmpdir):
+    net = dummies.linear_net()[0]
+
+    net.connections[0].transform = 2
+
+    with Simulator(net, minibatch_size=1) as sim0:
+        sim0.keras_model.save_weights(str(tmpdir.join("tmp")))
+
+    net.connections[0].transform = 3
+
+    with Simulator(net, minibatch_size=2) as sim1:
+        assert np.allclose(sim1.data[net.connections[0]].weights, 3)
+
+        sim1.keras_model.load_weights(str(tmpdir.join("tmp")))
+
+        assert np.allclose(sim1.data[net.connections[0]].weights, 2)

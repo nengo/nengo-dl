@@ -22,7 +22,7 @@ def configure_settings(**kwargs):
     Parameters
     ----------
     trainable : bool or None
-        Adds a parameter to Nengo Ensembles/Connections/Networks that controls
+        Adds a parameter to Nengo Ensembles/Connections that controls
         whether or not they will be optimized by `.Simulator.fit`.
         Passing ``None`` will use the default ``nengo_dl`` trainable settings,
         or True/False will override the default for all objects.  In either
