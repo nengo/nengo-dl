@@ -809,16 +809,18 @@ def test_profile(Simulator, mode, tmpdir):
     net, a, p = dummies.linear_net()
 
     with Simulator(net) as sim:
+        # note: TensorFlow bug if using profile_batch=1, see
+        # https://github.com/tensorflow/tensorflow/issues/37543
         callback = callbacks.TensorBoard(
-            log_dir=str(tmpdir.join("profile")), profile_batch=1
+            log_dir=str(tmpdir.join("profile")), profile_batch=2
         )
 
         if mode == "predict":
-            sim.predict(n_steps=5, callbacks=[callback])
+            sim.predict(np.zeros((2, 5, 1)), callbacks=[callback])
         else:
             sim.compile(tf.optimizers.SGD(1), loss=tf.losses.mse)
             sim.fit(
-                {a: np.zeros((1, 5, 1))}, {p: np.zeros((1, 5, 1))}, callbacks=[callback]
+                {a: np.zeros((2, 5, 1))}, {p: np.zeros((2, 5, 1))}, callbacks=[callback]
             )
 
         assert os.path.exists(str(tmpdir.join("profile", "train")))

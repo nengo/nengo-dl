@@ -10,6 +10,8 @@ from distutils.version import LooseVersion
 import nengo
 from nengo._vendor.scipy.sparse import linalg_interface, linalg_onenormest
 import tensorflow as tf
+from tensorflow.python.keras import backend
+from tensorflow.python.keras.engine import network
 
 # TensorFlow compatibility
 
@@ -73,6 +75,37 @@ class TFLogFilter:
 
 
 tf.get_logger().addFilter(TFLogFilter(err_on_deprecation=False))
+
+if LooseVersion(tf.__version__) < "2.2.0":
+
+    def global_learning_phase():
+        """Returns the global (eager) Keras learning phase."""
+
+        return backend._GRAPH_LEARNING_PHASES.get(backend._DUMMY_EAGER_GRAPH, None)
+
+
+else:
+
+    def global_learning_phase():
+        """Returns the global (eager) Keras learning phase."""
+
+        return backend._GRAPH_LEARNING_PHASES.get(backend._DUMMY_EAGER_GRAPH.key, None)
+
+    # monkeypatch to fix bug in TF2.2, see
+    # https://github.com/tensorflow/tensorflow/issues/37548
+    old_conform = network.Network._conform_to_reference_input
+
+    def _conform_to_reference_input(self, tensor, ref_input):
+        keras_history = getattr(tensor, "_keras_history", None)
+
+        tensor = old_conform(self, tensor, ref_input)
+
+        if keras_history is not None:
+            tensor._keras_history = keras_history
+
+        return tensor
+
+    network.Network._conform_to_reference_input = _conform_to_reference_input
 
 # Nengo compatibility
 

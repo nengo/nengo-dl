@@ -28,7 +28,6 @@ from nengo.solvers import NoSolver
 from nengo.utils.magic import decorator
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras import backend
 
 from nengo_dl import callbacks, compat, config, utils
 from nengo_dl.builder import NengoBuilder, NengoModel
@@ -550,9 +549,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             inputs,
             stateful=self.stateful,
             # if the global learning phase is set, use that
-            training=backend._GRAPH_LEARNING_PHASES.get(
-                backend._DUMMY_EAGER_GRAPH, None
-            ),
+            training=compat.global_learning_phase(),
             progress=progress,
         )
 

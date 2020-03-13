@@ -712,7 +712,7 @@ class LayerConverter:
         """
         Returns the Keras history (layer/node_idx/tensor_idx) that defined this tensor.
 
-        This function contains additional logic so that if ``tensor`` is the output of
+        This function contains additional logic so that if ``tensor`` is associated with
         a Model then the history will trace into the internal layers of that Model
         (rather than skipping to the input of that Model, which is the default Keras
         history).
@@ -735,11 +735,9 @@ class LayerConverter:
         layer, node_index, tensor_index = tensor._keras_history
 
         while isinstance(layer, tf.keras.Model):
-            # models have an output Identity transform that stores the history that
-            # "skips" the internals of the model; we want to traverse into the internals
-            # of the model, so we go back to the input of that identity op (which
-            # is the real output tensor from the model)
-            assert tensor.op.type == "Identity"
+            # models may have internal tensors representing some transforms on the
+            # input/output of the model. but we want to know the actual internal layer
+            # that generated this tensor, so we skip past these "model" tensors
             tensor = tensor.op.inputs[0]
             layer, node_index, tensor_index = tensor._keras_history
 
@@ -877,7 +875,8 @@ class ConvertModel(LayerConverter):
         -------
         results : list of ``tf.Tensor``
             The same as the ``results`` parameter (returned so that the top-level call,
-            which may not have a reference to the ``results`` list can get the results).
+            which may not have a reference to the ``results`` list, can get the
+            results).
         """
         # brief intro to the keras functional graph structure:
         # - a node represents the application of some layer to an input tensor

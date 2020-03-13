@@ -21,6 +21,10 @@ Release history
 3.1.1 (unreleased)
 ------------------
 
+**Added**
+
+- Compatible with TensorFlow 2.2.0. (`#140`_)
+
 **Changed**
 
 - Saved simulator state will no longer be included in ``Simulator.keras_model.weights``.
