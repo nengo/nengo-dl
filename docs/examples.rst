@@ -33,6 +33,7 @@ These examples illustrate some different possible use cases for NengoDL:
 
     examples/tensorflow-models
     examples/spiking-mnist
+    examples/keras-to-snn
     examples/lmu
     examples/spa-retrieval
     examples/spa-memory

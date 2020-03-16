@@ -37,6 +37,9 @@ Release history
 - Added a new ``synapse`` argument to the Converter, which can be used to automatically
   add synaptic filters on the output of neural layers during the conversion process.
   (`#141`_)
+- Added a `new example <https://www.nengo.ai/nengo-dl/examples/keras-to-snn.html>`__
+  demonstrating how to use the NengoDL Converter to convert a Keras model to a spiking
+  Nengo network. (`#141`_)
 
 **Changed**
 

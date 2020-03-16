@@ -60,8 +60,9 @@ adds a number of unique features, such as:
 - optimizing the parameters of a model through deep learning
   training methods (using the Keras API)
 - faster simulation speed, on both CPU and GPU
-- inserting networks defined using TensorFlow (such as
-  deep learning architectures) directly into a Nengo model
+- automatic conversion from Keras models to Nengo networks
+- inserting  TensorFlow code (individual functions or whole
+  network architectures) directly into a Nengo model
 
 **Documentation**
 

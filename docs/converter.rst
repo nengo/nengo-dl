@@ -151,3 +151,9 @@ successfully transformed into a native Nengo network:
 
     converter = nengo_dl.Converter(model, allow_fallback=False)
     assert converter.verify()
+
+Examples
+--------
+
+* :doc:`examples/keras-to-snn`
+* :doc:`examples/tensorflow-models`
