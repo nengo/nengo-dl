@@ -217,7 +217,7 @@ However, although ``LIFRate`` is generally differentiable, it has a sharp
 discontinuity at the firing threshold.  In some cases this can lead to
 difficulties during the training process, and performance can be improved by
 smoothing the ``LIFRate`` response around the firing threshold.  This is
-known as the `~.neurons.SoftLIFRate` neuron model.
+known as the `.SoftLIFRate` neuron model.
 
 ``SoftLIFRate`` has a parameter ``sigma`` that controls the degree of smoothing
 (``SoftLIFRate`` approaches ``LIFRate`` as ``sigma`` goes to zero).  Setting

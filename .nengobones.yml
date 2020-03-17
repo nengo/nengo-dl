@@ -126,6 +126,12 @@ docs_conf_py:
     examples/spiking_mnist.html: examples/spiking-mnist.html
     examples/pretrained-model.html: examples/tensorflow-models.html
     training.html: simulator.html
+  autoautosummary_change_modules:
+    nengo_dl:
+      - nengo_dl.config.configure_settings
+      - nengo_dl.neurons.SoftLIFRate
+      - nengo_dl.neurons.LeakyReLU
+      - nengo_dl.neurons.SpikingLeakyReLU
 
 ci_scripts:
   - template: static
@@ -227,7 +233,7 @@ setup_py:
     - jupyter>=1.0.0
     - matplotlib>=2.0.0
     - nbsphinx>=0.3.5
-    - nengo-sphinx-theme>=1.2.0
+    - nengo-sphinx-theme>=1.2.1
     - numpydoc>=0.6.0
     - Pillow>=4.1.1
     - sphinx>=1.8.0

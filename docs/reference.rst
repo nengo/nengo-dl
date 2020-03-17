@@ -28,6 +28,11 @@ Simulator
     .. autoautosummary:: nengo_dl.Simulator
         :nosignatures:
 
+        nengo_dl.Simulator
+
+    .. autosummary::
+        :nosignatures:
+
         nengo_dl.simulator.SimulationData
 
     .. autoclass:: nengo_dl.Simulator

@@ -48,7 +48,7 @@ def configure_settings(**kwargs):
         no calls to `.Simulator.fit`).  This may result in a small
         increase in the inference speed.
     lif_smoothing : float
-        If specified, use the smoothed `~.neurons.SoftLIFRate` neuron
+        If specified, use the smoothed `.SoftLIFRate` neuron
         model, with the given smoothing parameter (``sigma``),
         to compute the gradient for `~nengo.LIF` neurons (as
         opposed to using `~nengo.LIFRate`).

@@ -53,6 +53,16 @@ numpydoc_show_class_members = False
 # -- nbsphinx
 nbsphinx_timeout = -1
 
+# -- nengo_sphinx_theme.ext.autoautosummary
+autoautosummary_change_modules = {
+    "nengo_dl": [
+        "nengo_dl.config.configure_settings",
+        "nengo_dl.neurons.SoftLIFRate",
+        "nengo_dl.neurons.LeakyReLU",
+        "nengo_dl.neurons.SpikingLeakyReLU",
+    ],
+}
+
 # -- sphinx
 nitpicky = True
 exclude_patterns = [
