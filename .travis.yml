@@ -82,14 +82,15 @@ jobs:
         distributions: "sdist "
         on:
           all_branches: true
+          tags: false
           condition: $TRAVIS_BRANCH =~ ^release-candidate-*
-          condition: $TRAVIS_TAG = ""
       - provider: pypi
         user: drasmuss
         password: $PYPI_TOKEN
         distributions: "sdist "
         on:
           all_branches: true
+          tags: true
           condition: $TRAVIS_TAG =~ ^v[0-9]*
 
 before_install:
