@@ -72,6 +72,9 @@ Release history
   minibatch size. (`#139`_)
 - More informative error message when ``validation_split`` does not result in batch
   sizes evenly divisible by minibatch size. (`#139`_)
+- Added ``tensorflow-cpu`` distributions to installation checks (so Nengo DL will
+  not attempt to reinstall TensorFlow if ``tensorflow-cpu`` is already installed).
+  (`#142`_)
 
 **Deprecated**
 
@@ -87,6 +90,7 @@ Release history
 .. _#134: https://github.com/nengo/nengo-dl/pull/134
 .. _#139: https://github.com/nengo/nengo-dl/pull/139
 .. _#140: https://github.com/nengo/nengo-dl/pull/140
+.. _#142: https://github.com/nengo/nengo-dl/pull/142
 
 3.1.0 (March 4, 2020)
 ---------------------

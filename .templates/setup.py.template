@@ -7,7 +7,7 @@ import sys
 # determine which tensorflow package to require
 if "bdist_wheel" in sys.argv:
     # when building wheels we have to pick a requirement ahead of time (can't
-    # check it at install time). so we'll go with tensorflow (non-gpu), since
+    # check it at install time). so we'll go with tensorflow, since
     # that is the safest option
     tf_req = "tensorflow"
 else:
@@ -27,7 +27,13 @@ else:
         # fallback if we're not in an isolated environment (i.e. pip<10.0)
         source_path = sys.path
     installed_dists = [d.project_name for d in pkg_resources.WorkingSet(source_path)]
-    for d in ["tf-nightly-gpu", "tf-nightly", "tensorflow-gpu"]:
+    for d in [
+        "tf-nightly-gpu",
+        "tf-nightly",
+        "tf-nightly-cpu",
+        "tensorflow-gpu",
+        "tensorflow-cpu",
+    ]:
         if d in installed_dists:
             tf_req = d
             break

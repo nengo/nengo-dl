@@ -181,7 +181,7 @@ travis_yml:
   python: 3.6
   global_vars:
     NUMPY_VERSION: numpy>=1.16.0
-    TF_VERSION: tensorflow
+    TF_VERSION: tensorflow-cpu
     NENGO_VERSION: nengo[tests]
     SCIPY_VERSION: noop
   jobs:
@@ -197,7 +197,6 @@ travis_yml:
     - script: test-coverage
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
-        TF_VERSION: tensorflow
         SCIPY_VERSION: scipy
       dist: bionic
       python: 3.7
