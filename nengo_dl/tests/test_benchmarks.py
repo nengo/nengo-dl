@@ -196,10 +196,10 @@ def test_lmu(Simulator, native_nengo, pytestconfig):
 @pytest.mark.parametrize(
     "net, train, minibatch_size, min, max",
     [
-        (benchmarks.cconv(128, 64, nengo.RectifiedLinear()), False, 64, 0.6, 0.75),
-        (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, 1.4, 1.6),
-        (benchmarks.integrator(128, 32, nengo.RectifiedLinear()), True, 64, 0.55, 0.9),
-        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 0.95, 1.25),
+        (benchmarks.cconv(128, 64, nengo.RectifiedLinear()), False, 64, 0.95, 1.1),
+        (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, 2.3, 2.5),
+        (benchmarks.integrator(128, 32, nengo.RectifiedLinear()), True, 64, 0.6, 0.9),
+        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 1.25, 1.45),
         (
             benchmarks.random_network(
                 64,
@@ -211,18 +211,18 @@ def test_lmu(Simulator, native_nengo, pytestconfig):
             ),
             False,
             None,
-            0.35,
-            0.55,
+            0.5,
+            0.7,
         ),
-        (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, 0.85, 1.15),
+        (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, 1.05, 1.25),
     ],
 )
 def test_performance(net, train, minibatch_size, min, max):
-    # performance is based on ABR GPU server
-    # CPU: Intel Xeon E5-1650 v3 @ 3.50GHz
-    # GPU: GeForce GTX Titan X
-    # Python version: 3.6.8
-    # TensorFlow GPU version: 2.0.0
+    # performance is based on Azure NC6 VM
+    # CPU: Intel Xeon E5-2690 v3 @ 2.60Ghz
+    # GPU: Nvidia Tesla K80
+    # Python version: 3.6.10
+    # TensorFlow GPU version: 2.1.0
     # Nengo version: 3.1.0
     # NengoDL version: 3.1.0
 

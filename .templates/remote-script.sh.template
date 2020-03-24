@@ -1,5 +1,20 @@
 {% extends "templates/remote.sh.template" %}
 
+{% block before_script %}
+{{ super() }}
+    if ssh {{ host }} -q exit; then
+        echo "VM already running"
+    else
+        echo "Starting VM"
+        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+        exe chmod 400 ~/.ssh/azure.pem
+        exe az login --service-principal -u http://travis-ci -p ~/.ssh/azure.pem --tenant appliedbrainresearch.com
+        exe az vm start --resource-group nengo-ci --name nengo-dl-{{ remote_script }}
+    fi
+
+    ssh {{ host }} -q "echo 'Connected to {{ host }}'"
+{% endblock %}
+
 {% block remote_install %}
 {{ super() }}
         # copy environment variables into remote environment
@@ -10,7 +25,7 @@
 
         pip install nengo-bones
         bones-generate --output-dir .ci ci-scripts || REMOTE_STATUS=1
-        conda install -y cudatoolkit=10.0 cudnn
+        conda install -y cudatoolkit=10.1 cudnn
         bash .ci/{{ remote_script }}.sh install || REMOTE_STATUS=1
 {% endblock %}
 
@@ -32,4 +47,5 @@
     exe rsync -azh "{{ host }}:./tmp/{{ pkg }}-$TRAVIS_JOB_NUMBER/{{ pkg }}-docs" ..
     {% endif %}
     exe bash .ci/{{ remote_script }}.sh after_script
+{{ super() }}
 {% endblock %}

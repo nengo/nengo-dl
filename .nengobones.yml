@@ -162,18 +162,18 @@ ci_scripts:
       - $TF_VERSION
       - $NUMPY_VERSION
   - template: gpu
-    host: abrgpu
+    host: azure
     travis_var_key: fcdbeb54a1c4
     coverage: true
   - template: remote-script
     remote_script: docs
     output_name: remote-docs
-    host: abrgpu
+    host: azure-docs
     travis_var_key: fcdbeb54a1c4
   - template: remote-script
     remote_script: examples
     output_name: remote-examples
-    host: abrgpu
+    host: azure-examples
     travis_var_key: fcdbeb54a1c4
   - template: deploy
 
@@ -193,7 +193,7 @@ travis_yml:
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
         TF_VERSION: tensorflow-gpu
-        GPU_NUM: 3
+        GPU_NUM: 0
     - script: test-coverage
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
@@ -210,11 +210,11 @@ travis_yml:
       script: remote-docs
       env:
         TF_VERSION: tensorflow-gpu
-        GPU_NUM: 3
+        GPU_NUM: 0
     - script: remote-examples
       env:
         TF_VERSION: tensorflow-gpu
-        GPU_NUM: 2
+        GPU_NUM: 0
     - test_args: --unroll-simulation 5 --simulator-only
     - test_args: --dtype float64 --simulator-only
     - test_args: --inference-only --simulator-only

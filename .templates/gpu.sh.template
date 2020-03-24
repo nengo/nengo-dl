@@ -1,5 +1,20 @@
 {% extends "templates/remote.sh.template" %}
 
+{% block before_script %}
+{{ super() }}
+    if ssh {{ host }} -q exit; then
+        echo "VM already running"
+    else
+        echo "Starting VM"
+        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+        exe chmod 400 ~/.ssh/azure.pem
+        exe az login --service-principal -u http://travis-ci -p ~/.ssh/azure.pem --tenant appliedbrainresearch.com
+        exe az vm start --resource-group nengo-ci --name nengo-dl
+    fi
+
+    ssh {{ host }} -q "echo 'Connected to {{ host }}'"
+{% endblock %}
+
 {% block remote_install %}
 {{ super() }}
         conda install -y "$TF_VERSION" "$NUMPY_VERSION"
@@ -14,14 +29,9 @@
         (
             flock -x -w 540 200 || exit 1
             export CUDA_VISIBLE_DEVICES="$GPU_NUM"
-            export TF_FORCE_GPU_ALLOW_GROWTH=true
             pytest $TEST_ARGS nengo_dl/tests/test_benchmarks.py::test_performance --performance -v --durations 20 --color=yes || exit 1
+            export TF_FORCE_GPU_ALLOW_GROWTH=true
             pytest $TEST_ARGS nengo_dl -v -n 2 --durations 20 --color=yes --cov=nengo_dl --cov-report=xml --cov-report=term-missing || exit 1
             pytest $TEST_ARGS --pyargs nengo -v -n 2 --durations 20 --color=yes --cov=nengo_dl --cov-report=xml --cov-report=term-missing --cov-append || exit 1
         ) 200>/var/lock/.travis-ci.exclusivelock."$GPU_NUM" || REMOTE_STATUS=1
-{% endblock %}
-
-{% block remote_cleanup %}
-          # same as super, but extending the number of old folders we keep
-          ls -tp | grep '{{ pkg }}-' | tail -n +10 | xargs -I {} rm -r -- {}
 {% endblock %}

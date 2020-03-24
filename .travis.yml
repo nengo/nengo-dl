@@ -32,7 +32,7 @@ jobs:
     env:
       NENGO_VERSION="git+https://github.com/nengo/nengo.git#egg=nengo[tests]"
       TF_VERSION="tensorflow-gpu"
-      GPU_NUM="3"
+      GPU_NUM="0"
       SCRIPT="gpu"
       TEST_ARGS="--device /gpu:0"
   -
@@ -52,13 +52,13 @@ jobs:
   -
     env:
       TF_VERSION="tensorflow-gpu"
-      GPU_NUM="3"
+      GPU_NUM="0"
       SCRIPT="remote-docs"
     stage: advanced
   -
     env:
       TF_VERSION="tensorflow-gpu"
-      GPU_NUM="2"
+      GPU_NUM="0"
       SCRIPT="remote-examples"
   -
     env:
