@@ -11,6 +11,7 @@ import tensorflow as tf
 from tensorflow.python.keras.layers import BatchNormalization, BatchNormalizationV2
 from tensorflow.python.util import nest
 
+from nengo_dl import compat
 from nengo_dl.config import configure_settings
 from nengo_dl.neurons import LeakyReLU
 from nengo_dl.simulator import Simulator
@@ -389,7 +390,7 @@ class Converter:
 
             if isinstance(key, tf.Tensor):
                 # get hashable key
-                key = key.experimental_ref()
+                key = compat.tensor_ref(key)
 
             return key
 

@@ -83,6 +83,11 @@ if LooseVersion(tf.__version__) < "2.2.0":
 
         return backend._GRAPH_LEARNING_PHASES.get(backend._DUMMY_EAGER_GRAPH, None)
 
+    def tensor_ref(tensor):
+        """Return (experimental) Tensor ref (can be used as dict key)."""
+
+        return tensor.experimental_ref()
+
 
 else:
 
@@ -90,6 +95,11 @@ else:
         """Returns the global (eager) Keras learning phase."""
 
         return backend._GRAPH_LEARNING_PHASES.get(backend._DUMMY_EAGER_GRAPH.key, None)
+
+    def tensor_ref(tensor):
+        """Return Tensor ref (can be used as dict key)."""
+
+        return tensor.ref()
 
     # monkeypatch to fix bug in TF2.2, see
     # https://github.com/tensorflow/tensorflow/issues/37548
