@@ -499,13 +499,6 @@ class LayerConverter:
                 obj = nengo.Node(
                     size_in=np.prod(self.output_shape(node_id)), label=name,
                 )
-                if biases is not None:
-                    # use a connection from a constant node (so that the bias
-                    # values will be trainable)
-                    bias_node = nengo.Node([1], label="%s.bias" % name)
-                    nengo.Connection(
-                        bias_node, obj, transform=biases[:, None], synapse=None
-                    )
             else:
                 # use ensemble to implement the appropriate neuron type
 
@@ -563,12 +556,18 @@ class LayerConverter:
             )
             obj = TensorNode(
                 activation,
-                shape_in=self.input_shape(node_id),
+                shape_in=self.output_shape(node_id),
                 pass_time=False,
                 label=name,
             )
         else:
             raise TypeError("Unsupported activation type (%s)" % self.layer.activation)
+
+        if biases is not None and isinstance(obj, (nengo.Node, TensorNode)):
+            # obj doesn't have its own biases, so use a connection from a constant node
+            # (so that the bias values will be trainable)
+            bias_node = nengo.Node([1], label="%s.bias" % name)
+            nengo.Connection(bias_node, obj, transform=biases[:, None], synapse=None)
 
         logger.info("Created %s (size=%d)", obj, obj.size_out)
 

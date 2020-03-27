@@ -84,6 +84,8 @@ Release history
   (`#142`_)
 - Fixed bug when applying the Converter to Keras models that re-use intermediate
   layers as output layers. (`#137`_)
+- Fixed bug in conversion of Keras Dense layers with non-native activation functions.
+  (`#144`_)
 
 **Deprecated**
 
@@ -102,6 +104,7 @@ Release history
 .. _#140: https://github.com/nengo/nengo-dl/pull/140
 .. _#141: https://github.com/nengo/nengo-dl/pull/141
 .. _#142: https://github.com/nengo/nengo-dl/pull/142
+.. _#144: https://github.com/nengo/nengo-dl/pull/144
 
 3.1.0 (March 4, 2020)
 ---------------------

@@ -741,3 +741,21 @@ def test_synapse():
     assert conv.outputs[dense0].synapse == nengo.Lowpass(0.1)
     # not set on non-neuron probe
     assert conv.outputs[dense1].synapse is None
+
+
+def test_dense_fallback_bias():
+    def relu(x):
+        return tf.maximum(x, 0)
+
+    inp = tf.keras.Input((1,))
+    out = tf.keras.layers.Dense(units=10, activation=relu)(inp)
+
+    _test_convert(inp, out, allow_fallback=True)
+
+    # double check that extra biases aren't added when we _are_ using an Ensemble
+    conv = converter.Converter(
+        tf.keras.Model(inp, out),
+        allow_fallback=False,
+        swap_activations={relu: nengo.RectifiedLinear()},
+    )
+    assert conv.verify(training=True)
