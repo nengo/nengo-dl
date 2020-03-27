@@ -718,3 +718,26 @@ def test_mid_model_output(Simulator):
     x2 = tf.keras.layers.ReLU()(x1)
 
     _test_convert(inp, [x0, x2], inp_vals=[np.ones((4, 1))])
+
+
+def test_synapse():
+    inp = tf.keras.Input(shape=(1,))
+    dense0 = tf.keras.layers.Dense(units=10, activation=tf.nn.relu)(inp)
+    dense1 = tf.keras.layers.Dense(units=10, activation=None)(dense0)
+
+    model = tf.keras.Model(inp, [dense0, dense1])
+
+    conv = converter.Converter(model, synapse=0.1)
+
+    for conn in conv.net.all_connections:
+        if conn.pre is conv.layers[dense0]:
+            # synapse set on outputs from neurons
+            assert conn.synapse == nengo.Lowpass(0.1)
+        else:
+            # synapse not set on other connections
+            assert conn.synapse is None
+
+    # synapse set on neuron probe
+    assert conv.outputs[dense0].synapse == nengo.Lowpass(0.1)
+    # not set on non-neuron probe
+    assert conv.outputs[dense1].synapse is None

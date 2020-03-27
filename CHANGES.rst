@@ -34,6 +34,9 @@ Release history
   the converted Nengo objects, to make it easier to access converted components.
   (`#134`_)
 - Compatible with TensorFlow 2.2.0. (`#140`_)
+- Added a new ``synapse`` argument to the Converter, which can be used to automatically
+  add synaptic filters on the output of neural layers during the conversion process.
+  (`#141`_)
 
 **Changed**
 
@@ -93,6 +96,7 @@ Release history
 .. _#137: https://github.com/nengo/nengo-dl/pull/137
 .. _#139: https://github.com/nengo/nengo-dl/pull/139
 .. _#140: https://github.com/nengo/nengo-dl/pull/140
+.. _#141: https://github.com/nengo/nengo-dl/pull/141
 .. _#142: https://github.com/nengo/nengo-dl/pull/142
 
 3.1.0 (March 4, 2020)

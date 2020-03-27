@@ -76,6 +76,12 @@ class Converter:
         be applied to all layers in the model, or as a dictionary mapping Keras model
         layers to a scale factor, allowing different scale factors to be applied to
         different layers.
+    synapse : float or `nengo.synapses.Synapse`
+        Synaptic filter to be applied on the output of all neurons. This can be useful
+        to smooth out the noise introduced by spiking neurons. Note, however, that
+        increasing the synaptic filtering will make the network less responsive to
+        rapid changes in the input, and you may need to present each input value
+        for more timesteps in order to allow the network output to settle.
 
     Attributes
     ----------
@@ -106,6 +112,7 @@ class Converter:
         split_shared_weights=False,
         swap_activations=None,
         scale_firing_rates=None,
+        synapse=None,
     ):
         self.allow_fallback = allow_fallback
         self.inference_only = inference_only
@@ -113,6 +120,7 @@ class Converter:
         self.split_shared_weights = split_shared_weights
         self.swap_activations = swap_activations or {}
         self.scale_firing_rates = scale_firing_rates
+        self.synapse = synapse
         self.layer_map = collections.defaultdict(dict)
         self._layer_converters = {}
 
@@ -157,7 +165,12 @@ class Converter:
 
                 # add probes to outputs
                 logger.info("Probing %s (%s)", output_obj, output)
-                self.outputs[output] = nengo.Probe(output_obj)
+                self.outputs[output] = nengo.Probe(
+                    output_obj,
+                    synapse=self.synapse
+                    if isinstance(output_obj, nengo.ensemble.Neurons)
+                    else None,
+                )
 
             self.layers = Converter.KerasTensorDict()
             for layer in self.model.layers:
@@ -585,10 +598,14 @@ class LayerConverter:
         conn : `nengo.Connection`
             The constructed Connection object.
         """
+
+        pre = self.get_input_obj(node_id, tensor_idx=input_idx)
         conn = nengo.Connection(
-            self.get_input_obj(node_id, tensor_idx=input_idx),
+            pre,
             obj,
-            synapse=None,
+            synapse=self.converter.synapse
+            if isinstance(pre, nengo.ensemble.Neurons)
+            else None,
             **kwargs,
         )
         self.converter.net.config[conn].trainable = trainable
@@ -1216,13 +1233,7 @@ class ConvertBatchNormalization(LayerConverter):
         self.converter.net.config[conn].trainable = False
 
         # connect input to output, scaled by the batch normalization scale
-        conn = nengo.Connection(
-            self.get_input_obj(node_id),
-            output,
-            synapse=None,
-            transform=broadcast_scale,
-        )
-        self.converter.net.config[conn].trainable = False
+        self.add_connection(node_id, output, transform=broadcast_scale)
 
         return output
 
@@ -1569,10 +1580,13 @@ class ConvertUpSampling(LayerConverter):
             idxs = idxs[:, nearest]
 
         # connect from pre, using idxs to perform upsampling
+        pre = self.get_input_obj(node_id, tensor_idx=0)[np.ravel(idxs)]
         conn = nengo.Connection(
-            self.get_input_obj(node_id, tensor_idx=0)[np.ravel(idxs)],
+            pre,
             output,
-            synapse=None,
+            synapse=self.converter.synapse
+            if isinstance(pre, nengo.ensemble.Neurons)
+            else None,
         )
         self.converter.net.config[conn].trainable = False
 
