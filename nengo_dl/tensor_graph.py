@@ -617,7 +617,6 @@ class TensorGraph(tf.keras.layers.Layer):
             body=loop_body,
             loop_vars=loop_vars,
             parallel_iterations=1,  # TODO: parallel iterations work in eager mode
-            back_prop=not self.inference_only,
         )
 
         # change to shape (minibatch_size,) (required by keras) instead of a scalar
