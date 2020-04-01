@@ -1040,10 +1040,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
             # reorganize results (will be flattened) back into dict
             if not isinstance(outputs, list):
                 outputs = [outputs]
-            return dict(zip(self.model.probes, outputs))
+            return collections.OrderedDict(zip(self.model.probes, outputs))
         elif func_type.startswith("evaluate"):
             # return outputs as named dict
-            return dict(zip(self.keras_model.metrics_names, outputs))
+            return collections.OrderedDict(zip(self.keras_model.metrics_names, outputs))
         else:
             # return training history
             return outputs

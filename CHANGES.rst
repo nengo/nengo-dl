@@ -68,6 +68,7 @@ Release history
   data to the wrong input node. This warning can be avoided by passing data for
   all nodes, or using the dictionary input style if you want to only pass data for
   a specific node. (`#139`_)
+- Dictionaries returned by ``sim.predict/evaluate`` will now be ordered. (`#141`_)
 
 **Fixed**
 
