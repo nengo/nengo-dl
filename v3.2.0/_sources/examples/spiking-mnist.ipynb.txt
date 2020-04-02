@@ -1,0 +1,307 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Optimizing a spiking neural network\n",
+    "\n",
+    "[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nengo/nengo-dl/blob/master/docs/examples/spiking-mnist.ipynb)\n",
+    "\n",
+    "Almost all deep learning methods are based on [gradient descent](https://en.wikipedia.org/wiki/Gradient_descent), which means that the network being optimized needs to be differentiable.  Deep neural networks are usually built using rectified linear or sigmoid neurons, as these are differentiable nonlinearities.  However, in neurmorphic modelling we often want to use spiking neurons, which are not differentiable.  So the challenge is how to apply deep learning methods to spiking neural networks.\n",
+    "\n",
+    "A method for accomplishing this is presented in [Hunsberger and Eliasmith (2016)](https://arxiv.org/abs/1611.05141).  The basic idea is to use a differentiable approximation of the spiking neurons during the training process, and the actual spiking neurons during inference.  NengoDL will perform these transformations automatically if the user tries to optimize a model containing a spiking neuron model that has an equivalent, differentiable rate-based implementation.  In this example we will use these techniques to develop a network to classify handwritten digits ([MNIST](http://yann.lecun.com/exdb/mnist/)) in a spiking convolutional network.  "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "\n",
+    "from urllib.request import urlretrieve\n",
+    "\n",
+    "import nengo\n",
+    "import tensorflow as tf\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "import nengo_dl"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "First we'll load the training data, the MNIST digits/labels."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "(train_images, train_labels), (test_images, test_labels) = (\n",
+    "    tf.keras.datasets.mnist.load_data())\n",
+    "\n",
+    "# flatten images\n",
+    "train_images = train_images.reshape((train_images.shape[0], -1))\n",
+    "test_images = test_images.reshape((test_images.shape[0], -1))\n",
+    "\n",
+    "for i in range(3):\n",
+    "    plt.figure()\n",
+    "    plt.imshow(np.reshape(train_images[i], (28, 28)),\n",
+    "               cmap=\"gray\")\n",
+    "    plt.axis('off')\n",
+    "    plt.title(str(train_labels[i]));"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Next we'll build a simple convolutional network. This architecture is chosen to be a quick and easy solution for this task; other tasks would likely require a different architecture, but the same general principles will apply.\n",
+    "\n",
+    "We will use [TensorNodes](https://www.nengo.ai/nengo-dl/tensor-node.html) to construct the network, as they allow us to directly insert TensorFlow code into Nengo. We could use native Nengo objects instead, but in this example we'll use TensorNodes to make the parallels with standard deep networks as clear as possible. To make things even easier, we'll use ``nengo_dl.Layer``. This is a utility function for constructing TensorNodes that mimics the Keras functional API.\n",
+    "\n",
+    "`nengo_dl.Layer` is used to build a sequence of layers, where each layer takes the output of the previous layer and applies some transformation to it. When working with TensorFlow's Keras API, we can create Keras Layers and then simply pass those layer objects to ``nengo_dl.Layer`` to encapsulate them in a ``TensorNode``.\n",
+    "\n",
+    "Normally all signals in a Nengo model are (batched) vectors. However, certain layer functions, such as convolutional layers, may expect a different shape for their inputs. If the `shape_in` argument is specified when applying a `Layer` to some input, then the inputs will automatically be reshaped to the given shape. Note that this shape does not include the batch dimension on the first axis, as that will be set automatically by the simulation.\n",
+    "\n",
+    "`Layer` can also be passed a Nengo NeuronType, instead of a Tensor function. In this case `Layer` will construct an Ensemble implementing the given neuron nonlinearity (the rest of the arguments work the same).\n",
+    "\n",
+    "Note that `Layer` is just a syntactic wrapper for constructing TensorNodes or Ensembles; anything we build with a `Layer` we could instead construct directly using those underlying components. `Layer` just simplifies the construction of this common layer-based pattern.  The full documentation for this class can be found [here](https://www.nengo.ai/nengo-dl/tensor-node.html)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Network(seed=0) as net:\n",
+    "    # set some default parameters for the neurons that will make\n",
+    "    # the training progress more smoothly\n",
+    "    net.config[nengo.Ensemble].max_rates = nengo.dists.Choice([100])\n",
+    "    net.config[nengo.Ensemble].intercepts = nengo.dists.Choice([0])\n",
+    "    net.config[nengo.Connection].synapse = None\n",
+    "    neuron_type = nengo.LIF(amplitude=0.01)\n",
+    "    \n",
+    "    # this is an optimization to improve the training speed,\n",
+    "    # since we won't require stateful behaviour in this example\n",
+    "    nengo_dl.configure_settings(stateful=False)\n",
+    "\n",
+    "    # the input node that will be used to feed in input images \n",
+    "    inp = nengo.Node(np.zeros(28 * 28))\n",
+    "    \n",
+    "    # add the first convolutional layer\n",
+    "    x = nengo_dl.Layer(tf.keras.layers.Conv2D(\n",
+    "        filters=32, kernel_size=3))(inp, shape_in=(28, 28, 1))\n",
+    "    x = nengo_dl.Layer(neuron_type)(x)\n",
+    "    \n",
+    "    # add the second convolutional layer\n",
+    "    x = nengo_dl.Layer(tf.keras.layers.Conv2D(\n",
+    "        filters=64, strides=2, kernel_size=3))(x, shape_in=(26, 26, 32))\n",
+    "    x = nengo_dl.Layer(neuron_type)(x)\n",
+    "    \n",
+    "    # add the third convolutional layer\n",
+    "    x = nengo_dl.Layer(tf.keras.layers.Conv2D(\n",
+    "        filters=128, strides=2, kernel_size=3))(x, shape_in=(12, 12, 64))\n",
+    "    x = nengo_dl.Layer(neuron_type)(x)\n",
+    "\n",
+    "    # linear readout\n",
+    "    out = nengo_dl.Layer(tf.keras.layers.Dense(units=10))(x)\n",
+    "\n",
+    "    # we'll create two different output probes, one with a filter\n",
+    "    # (for when we're simulating the network over time and\n",
+    "    # accumulating spikes), and one without (for when we're\n",
+    "    # training the network using a rate-based approximation)\n",
+    "    out_p = nengo.Probe(out, label=\"out_p\")\n",
+    "    out_p_filt = nengo.Probe(out, synapse=0.1, label=\"out_p_filt\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Next we can construct a Simulator for that network."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "minibatch_size = 200\n",
+    "sim = nengo_dl.Simulator(net, minibatch_size=minibatch_size)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Next we set up our training/testing data. We need to incorporate time into this data, since Nengo models (and spiking neural networks in general) always run over time. When training the model we'll be using a rate-based approximation, so we can run that for a single timestep.  But when testing the model we'll be using the spiking neuron models, so we need to run the model for multiple timesteps in order to collect the spike data over time."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# add single timestep to training data\n",
+    "train_images = train_images[:, None, :]\n",
+    "train_labels = train_labels[:, None, None]\n",
+    "\n",
+    "# when testing our network with spiking neurons we will need to run it \n",
+    "# over time, so we repeat the input/target data for a number of \n",
+    "# timesteps.\n",
+    "n_steps = 30\n",
+    "test_images = np.tile(test_images[:, None, :], (1, n_steps, 1))\n",
+    "test_labels = np.tile(test_labels[:, None, None], (1, n_steps, 1))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "In order to quantify the network's performance we'll use a classification accuracy function (the percentage of test images classified correctly). We're using a custom function here, because we only want to evaluate the output from the network on the final timestep (as we are simulating the network over time)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def classification_accuracy(y_true, y_pred):\n",
+    "    return tf.metrics.sparse_categorical_accuracy(\n",
+    "        y_true[:, -1], y_pred[:, -1])\n",
+    "\n",
+    "\n",
+    "# note that we use `out_p_filt` when testing (to reduce the spike noise)\n",
+    "sim.compile(loss={out_p_filt: classification_accuracy})\n",
+    "print(\"accuracy before training:\",\n",
+    "      sim.evaluate(test_images, {out_p_filt: test_labels}, verbose=0)[\"loss\"])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now we are ready to train the network.  For training we'll use the standard categorical cross entropy loss function, and the RMSprop optimizer.\n",
+    "\n",
+    "In order to keep this example relatively quick we are going to download some pretrained weights.  However, if you'd like to run the training yourself set `do_training=True` below."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "do_training = False\n",
+    "if do_training:\n",
+    "    # run training\n",
+    "    sim.compile(\n",
+    "        optimizer=tf.optimizers.RMSprop(0.001),\n",
+    "        loss={out_p: tf.losses.SparseCategoricalCrossentropy(from_logits=True)}\n",
+    "    )\n",
+    "    sim.fit(train_images, {out_p: train_labels}, epochs=10)\n",
+    "    \n",
+    "    # save the parameters to file\n",
+    "    sim.save_params(\"./mnist_params\")\n",
+    "else:\n",
+    "    # download pretrained weights\n",
+    "    urlretrieve(\n",
+    "        \"https://drive.google.com/uc?export=download&\"\n",
+    "        \"id=1l5aivQljFoXzPP5JVccdFXbOYRv3BCJR\", \n",
+    "        \"mnist_params.npz\")\n",
+    "        \n",
+    "    # load parameters\n",
+    "    sim.load_params(\"./mnist_params\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now we can check the classification accuracy again, with the trained parameters."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sim.compile(loss={out_p_filt: classification_accuracy})\n",
+    "print(\"accuracy after training:\",\n",
+    "      sim.evaluate(test_images, {out_p_filt: test_labels}, verbose=0)[\"loss\"])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can see that the spiking neural network is achieving ~99% accuracy, which is what we would expect for MNIST. `n_steps` could be increased to further improve performance, since we would get a more accurate measure of each spiking neuron's output.\n",
+    "\n",
+    "We can also plot some example outputs from the network, to see how it is performing over time."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "data = sim.predict(test_images[:minibatch_size])\n",
+    "\n",
+    "for i in range(5):\n",
+    "    plt.figure()\n",
+    "    plt.subplot(1, 2, 1)\n",
+    "    plt.imshow(test_images[i, 0].reshape((28, 28)), cmap=\"gray\")\n",
+    "    plt.axis('off')\n",
+    "\n",
+    "    plt.subplot(1, 2, 2)\n",
+    "    plt.plot(data[out_p_filt][i])\n",
+    "    plt.legend([str(i) for i in range(10)], loc=\"upper left\")\n",
+    "    plt.xlabel(\"timesteps\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sim.close()"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.8"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

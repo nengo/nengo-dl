@@ -1,0 +1,507 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Integrating a Keras model into a Nengo network\n",
+    "\n",
+    "Often we may want to define one part of our model in Nengo, and another part in TensorFlow.  For example, suppose we are building a biological reinforcement learning model, but we'd like the inputs to our model to be natural images rather than artificial vectors.  We could load a vision network from TensorFlow, insert it into our model using NengoDL, and then build the rest of our model using normal Nengo syntax.\n",
+    "\n",
+    "NengoDL supports this through the [TensorNode](https://www.nengo.ai/nengo-dl/tensor_node.html) class.  This allows us to write code directly in TensorFlow, and then insert it easily into Nengo.  In this example we will demonstrate how to integrate a Keras network into a Nengo model in a series of stages. First, inserting an entire Keras model, second, inserting individual Keras layers, and third, using native Nengo objects."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "import tensorflow as tf\n",
+    "\n",
+    "import nengo\n",
+    "import nengo_dl\n",
+    "\n",
+    "# keras uses the global random seeds, so we set those here to\n",
+    "# ensure the example is reproducible\n",
+    "seed = 0\n",
+    "np.random.seed(seed)\n",
+    "tf.random.set_seed(seed)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Introduction to TensorNodes**\n",
+    "\n",
+    "`nengo_dl.TensorNode` works very similarly to `nengo.Node`, except instead of using the node to insert Python code into our model we will use it to insert TensorFlow code.  \n",
+    "\n",
+    "The first thing we need to do is define our TensorNode output.  This is a function that accepts the current simulation time (and, optionally, a batch of vectors) as input, and produces a batch of vectors as output.  All of these variables will be represented as `tf.Tensor` objects, and the internal operations of the TensorNode will be implemented with TensorFlow operations. For example, we could use a TensorNode to output a `sin` function:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Network() as net:\n",
+    "    def sin_func(t):\n",
+    "        # compute sin wave (based on simulation time)\n",
+    "        output = tf.sin(t)\n",
+    "        \n",
+    "        # convert output to the expected batched vector shape\n",
+    "        # (with batch size of 1 and vector dimensionality 1)\n",
+    "        output = tf.reshape(output, (1, 1))\n",
+    "        \n",
+    "        return output\n",
+    "    \n",
+    "    node = nengo_dl.TensorNode(sin_func)\n",
+    "    p = nengo.Probe(node)\n",
+    "\n",
+    "with nengo_dl.Simulator(net) as sim:\n",
+    "    sim.run(5.0)\n",
+    "    \n",
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[p]);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "However, outputting a `sin` function is something we could do more easily with a regular `nengo.Node`.  The main use case for `nengo_dl.TensorNode` is to allow us to write more complex TensorFlow code and insert it into a NengoDL model. For example, one thing we often want to do is take a deep network written in TensorFlow/Keras, and add it into a Nengo model, which is what we will focus on in this notebook."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Inserting a whole Keras model\n",
+    "\n",
+    "[Keras](https://www.tensorflow.org/guide/keras) is a popular software package for building and training deep learning style networks.  It is a higher-level API within TensorFlow to make it easier to construct and train deep networks.  And because it is all implemented as a TensorFlow network under the hood, we can define a network using Keras and then insert it into NengoDL using a TensorNode.\n",
+    "\n",
+    "This example assumes familiarity with the Keras API. Specifically it is based on the [introduction in the Tensorflow documentation](https://www.tensorflow.org/tutorials/keras/classification), so if you are not yet familiar with Keras, you may find it helpful to read those tutorials first.\n",
+    "\n",
+    "In this example we'll train a neural network to classify the fashion MNIST dataset.  This dataset contains images of clothing, and the goal of the network is to identify what type of clothing it is (e.g. t-shirt, trouser, coat, etc.)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "(train_images, train_labels), (test_images, test_labels) = (\n",
+    "    tf.keras.datasets.fashion_mnist.load_data())\n",
+    "\n",
+    "# normalize images so values are between 0 and 1\n",
+    "train_images = train_images / 255.0\n",
+    "test_images = test_images / 255.0\n",
+    "\n",
+    "# flatten images\n",
+    "train_images = train_images.reshape((train_images.shape[0], -1))\n",
+    "test_images = test_images.reshape((test_images.shape[0], -1))\n",
+    "\n",
+    "class_names = [\"T-shirt/top\", \"Trouser\", \"Pullover\", \"Dress\", \"Coat\", \n",
+    "               \"Sandal\", \"Shirt\", \"Sneaker\", \"Bag\", \"Ankle boot\"]\n",
+    "num_classes = len(class_names)\n",
+    "\n",
+    "plt.figure(figsize=(10, 10))\n",
+    "for i in range(25):\n",
+    "    plt.subplot(5, 5, i + 1)\n",
+    "    plt.imshow(train_images[i].reshape((28, 28)), cmap=plt.cm.binary)\n",
+    "    plt.axis(\"off\")\n",
+    "    plt.title(class_names[train_labels[i]])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Next we build and train a simple neural network, using Keras.  In this case we're building a simple two layer, densely connected network.\n",
+    "\n",
+    "Note that alternatively we could define the network in Keras and then train it in NengoDL (using the `Simulator.fit` function).  But for now we'll show how to do everything in Keras."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "inp = tf.keras.Input(train_images.shape[1:])\n",
+    "hidden = tf.keras.layers.Dense(units=128, activation=tf.nn.relu)(inp)\n",
+    "out = tf.keras.layers.Dense(units=num_classes)(hidden)\n",
+    "\n",
+    "model = tf.keras.Model(inputs=inp, outputs=out)\n",
+    "\n",
+    "model.compile(optimizer=tf.optimizers.Adam(), \n",
+    "              loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True),\n",
+    "              metrics=[\"accuracy\"])\n",
+    "model.fit(train_images, train_labels, epochs=5)\n",
+    "\n",
+    "print(\"Test accuracy:\", model.evaluate(test_images, test_labels, verbose=0)[1])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We'll save the trained weights, so that we can load them later within our TensorNode."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model_weights = \"keras_weights\"\n",
+    "model.save_weights(model_weights)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now we're ready to create our TensorNode.  Our TensorNode needs to be a bit more complicated in this case, since we need to load in the model from above and the pretrained weights.  We can accomplish this by creating a custom Keras Layer, which allows us to define `build` and `call` methods.\n",
+    "\n",
+    "We'll use the `build` function to call the Keras `clone_model` function.  This effectively reruns the Keras model definition from above, but because we're calling it within the `build` stage it will be naturally integrated into the NengoDL model that is being built.\n",
+    "\n",
+    "The `call` function is where we do the main job of constructing the TensorFlow elements that will implement our node.  It will take TensorFlow Tensors as input and produce a `tf.Tensor` as output, as with the `tf.sin` example above.  In this case we apply the Keras model to the TensorNode inputs.  This adds the TensorFlow elements that implement that Keras model into the simulation graph."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class KerasWrapper(tf.keras.layers.Layer):\n",
+    "    def __init__(self, keras_model):\n",
+    "        super().__init__()\n",
+    "        \n",
+    "        self.model = keras_model\n",
+    "        \n",
+    "    def build(self, input_shapes):\n",
+    "        super().build(input_shapes)\n",
+    "        \n",
+    "        # we use clone_model to re-build the model\n",
+    "        # within the TensorNode context\n",
+    "        self.model = tf.keras.models.clone_model(self.model)\n",
+    "        \n",
+    "        # load the weights we saved above\n",
+    "        self.model.load_weights(model_weights)\n",
+    "        \n",
+    "    def call(self, inputs):\n",
+    "        # apply the model to the inputs\n",
+    "        return self.model(inputs)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now that we have our `KerasWrapper` class, we can use it to insert our Keras model into a Nengo network via a `TensorNode`. We simply instantiate a `KerasWrapper` (passing in our Keras model from above), and then pass that Layer object to the `TensorNode`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Network() as net:\n",
+    "    # create a normal input node to feed in our test image.\n",
+    "    # the `np.ones` array is a placeholder, these\n",
+    "    # values will be replaced with the Fashion MNIST images\n",
+    "    # when we run the Simulator.\n",
+    "    input_node = nengo.Node(output=np.ones(28 * 28))\n",
+    "\n",
+    "    # create an instance of the custom layer class we created,\n",
+    "    # passing it the Keras model\n",
+    "    layer = KerasWrapper(model)\n",
+    "    \n",
+    "    # create a TensorNode and pass it the new layer\n",
+    "    keras_node = nengo_dl.TensorNode(\n",
+    "        layer,\n",
+    "        shape_in=(28*28,),  # shape of input (the flattened images)\n",
+    "        shape_out=(num_classes,),  # shape of output (# of classes)\n",
+    "        pass_time=False,  # this node doesn't require time as input\n",
+    "    )\n",
+    "\n",
+    "    # connect up our input to our keras node\n",
+    "    nengo.Connection(input_node, keras_node, synapse=None)\n",
+    "\n",
+    "    # add a probe to collect output of keras node\n",
+    "    keras_p = nengo.Probe(keras_node)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "At this point we could add any other Nengo components we like to the network, and connect them up to the Keras node (for example, if we wanted to take the classified image labels and use them as input to a spiking neural model).  But to keep things simple, we'll stop here.\n",
+    "\n",
+    "Now we can evaluate the performance of the Nengo network, to see if we have successfully loaded the source Keras model."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# unlike in Keras, NengoDl simulations always run over time.\n",
+    "# so we need to add the time dimension to our data (even though\n",
+    "# in this case we'll just run for a single timestep).\n",
+    "train_images = train_images[:, None, :]\n",
+    "train_labels = train_labels[:, None, None]\n",
+    "\n",
+    "test_images = test_images[:, None, :]\n",
+    "test_labels = test_labels[:, None, None]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "minibatch_size = 20\n",
+    "with nengo_dl.Simulator(net, minibatch_size=minibatch_size) as sim:\n",
+    "    # call compile and evaluate, as we did with the Keras model\n",
+    "    sim.compile(loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True),\n",
+    "                metrics=[\"accuracy\"])\n",
+    "    print(\"Test accuracy:\", sim.evaluate(\n",
+    "        test_images, test_labels, verbose=0)[\"probe_accuracy\"])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can see that we're getting the same performance in Nengo as we were in Keras, indicating that we have successfully inserted the Keras model into Nengo."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Inserting Keras layers\n",
+    "\n",
+    "Rather than inserting an entire Keras model as a single block, we might want to integrate a Keras model into Nengo by inserting the individual layers.  This requires more manual translation work, but it makes it easier to make changes to the model later on (for example, adding some spiking neuron layers).\n",
+    "\n",
+    "We'll keep everything the same as above (same data, same network structure), but this time we will recreate the Keras model one layer at a time.\n",
+    "\n",
+    "As we saw above, we can wrap Keras Layers in a TensorNode by passing the layer object to the TensorNode.  However, we can make this construction process even simpler by using `nengo_dl.Layer`.  This is a different syntax for creating TensorNodes that mimics the Keras functional layer API. Under the hood it's doing the same thing (creating TensorNodes and Connections), but it allows us to define the model in a way that looks very similar to the original Keras model definition."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Network(seed=seed) as net:\n",
+    "    # input node, same as before\n",
+    "    inp = nengo.Node(output=np.ones(28 * 28))\n",
+    "\n",
+    "    # add the Dense layers, as in the Keras model\n",
+    "    hidden = nengo_dl.Layer(\n",
+    "        tf.keras.layers.Dense(units=128, activation=tf.nn.relu))(inp)\n",
+    "    out = nengo_dl.Layer(\n",
+    "        tf.keras.layers.Dense(units=num_classes))(hidden)\n",
+    "\n",
+    "    # add a probe to collect output\n",
+    "    out_p = nengo.Probe(out)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Since we're rebuilding the network within Nengo, we'll need to train it within NengoDL this time. Fortunately, the API is essentially the same:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# we'll disable some features we don't need in this example, to improve\n",
+    "# the training speed\n",
+    "with net:\n",
+    "    nengo_dl.configure_settings(stateful=False, use_loop=False)\n",
+    "\n",
+    "with nengo_dl.Simulator(net, minibatch_size=minibatch_size) as sim:\n",
+    "    # call compile and fit with the same arguments as we used\n",
+    "    # in the original Keras model\n",
+    "    sim.compile(optimizer=tf.optimizers.Adam(), \n",
+    "                loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True),\n",
+    "                metrics=[\"accuracy\"])\n",
+    "    sim.fit(train_images, train_labels, epochs=5)\n",
+    "    \n",
+    "    print(\"Test accuracy:\", sim.evaluate(\n",
+    "        test_images, test_labels, verbose=0)[\"probe_accuracy\"])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can see that we're getting basically the same performance as before (with minor differences due to a different random initialization)."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Building an equivalent network with Nengo objects\n",
+    "\n",
+    "In the above examples we used TensorNodes to insert TensorFlow code into Nengo, starting with a whole model and then with individual layers. The next thing we might want to do is directly define an equivalent network using native Nengo objects, rather than doing everything through TensorNodes.  One advantage of this approach is that a native Nengo network will be able to run on any Nengo-supported platform (e.g., custom neuromorphic hardware), whereas TensorNodes will only work within NengoDL.\n",
+    "\n",
+    "We can create the same network structure (two densely connected layers), by using `nengo.Ensemble` and `nengo.Connection`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Network(seed=seed) as net:\n",
+    "    # set up some default parameters to match the Keras defaults\n",
+    "    net.config[nengo.Ensemble].gain = nengo.dists.Choice([1])\n",
+    "    net.config[nengo.Ensemble].bias = nengo.dists.Choice([0])\n",
+    "    net.config[nengo.Connection].synapse = None\n",
+    "    net.config[nengo.Connection].transform = nengo_dl.dists.Glorot()\n",
+    "    \n",
+    "    # input node, same as before\n",
+    "    inp = nengo.Node(output=np.ones(28 * 28))\n",
+    "\n",
+    "    # add the first dense layer\n",
+    "    hidden = nengo.Ensemble(128, 1, neuron_type=nengo.RectifiedLinear()).neurons\n",
+    "    nengo.Connection(inp, hidden)\n",
+    "    \n",
+    "    # add the linear output layer (using nengo.Node since there is\n",
+    "    # no nonlinearity)\n",
+    "    out = nengo.Node(size_in=num_classes)\n",
+    "    nengo.Connection(hidden, out)\n",
+    "\n",
+    "    # add a probe to collect output\n",
+    "    out_p = nengo.Probe(out)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "And then the training works exactly the same as before:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with net:\n",
+    "    nengo_dl.configure_settings(stateful=False, use_loop=False)\n",
+    "\n",
+    "with nengo_dl.Simulator(net, minibatch_size=minibatch_size) as sim:\n",
+    "    sim.compile(optimizer=tf.optimizers.Adam(), \n",
+    "                loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True),\n",
+    "                metrics=[\"accuracy\"])\n",
+    "    sim.fit(train_images, train_labels, epochs=5)\n",
+    "    \n",
+    "    print(\"Test accuracy:\", sim.evaluate(\n",
+    "        test_images, test_labels, verbose=0)[\"probe_accuracy\"])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Again we can see that we're getting roughly the same accuracy as before.\n",
+    "\n",
+    "We could also use the ``nengo_dl.Converter`` tool to automatically perform this translation from Keras to native Nengo objects.  Under the hood this is doing the same thing as we did above (creating Nodes, Ensembles, Connections, and Probes), but ``nengo_dl.Converter`` removes some of the manual effort in that translation process."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "converter = nengo_dl.Converter(model)\n",
+    "\n",
+    "with nengo_dl.Simulator(converter.net, minibatch_size=minibatch_size) as sim:\n",
+    "    # the Converter will copy the parameters from the Keras model, so we don't\n",
+    "    # need to do any further training (although we could if we wanted)\n",
+    "    sim.compile(loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True),\n",
+    "                metrics=[\"accuracy\"])\n",
+    "    \n",
+    "    print(\"Test accuracy:\", sim.evaluate(\n",
+    "        test_images, test_labels, verbose=0)[\"probe_accuracy\"])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Note that in this case the performance of the Nengo network exactly matches the original Keras model, since the Converter copied over the parameter values. See [the documentation](https://www.nengo.ai/nengo-dl/converter.html) for more details on using ``nengo_dl.Converter``."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Conclusion\n",
+    "\n",
+    "We have seen three different methods for integrating a Keras model into NengoDL: inserting a whole model, inserting individual layers, or building an equivalent native Nengo model. Each method reproduces the same behaviour as the original Keras model, but requires differing levels of effort and supports different functionality.  The most appropriate method will depend on your use case, but here are some rough guidelines.\n",
+    "\n",
+    "\n",
+    "**Inserting a whole model**\n",
+    "\n",
+    "The main advantage of this approach is that we can use exactly the same model definition.  The disadvantage is that the model is essentially still just a Keras model, so it won't be able to incorporate any of the unique features of NengoDL (like spiking neurons).  But if you just need to add a standard deep network into your Nengo model, then this is probably the way to go!\n",
+    "\n",
+    "**Inserting individual layers**\n",
+    "\n",
+    "This approach strikes a balance: we can still use the familiar Keras Layer syntax, but we have increased flexibility to modify the network architecture. If inserting a whole model doesn't meet your needs, but you don't care about running your model in any Nengo frameworks other than NengoDL, then try this method.\n",
+    "\n",
+    "**Building a native Nengo model**\n",
+    "\n",
+    "This approach requires the most modification of the original model, as it requires us to translate Keras syntax into Nengo syntax.  However, by building a native Nengo model we gain the full advantages of the Nengo framework, such as cross-platform compatibility. That allows us to do things like train a network in NengoDL and then run it on custom neuromorphic hardware. And we can use the ``nengo_dl.Converter`` tool to automate this translation process. If neither of the above approaches are meeting your needs, then dive fully into Nengo!"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.8"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 1
+}

@@ -1,0 +1,1565 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Converting a Keras model to a spiking neural network &#8212; NengoDL 3.2.0 docs</title>
+    <link rel="stylesheet" href="../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+<link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,400i,600|Rajdhani:700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
+<link rel="stylesheet" href="https://www.nengo.ai/css/bootstrap.css" type="text/css">
+<style>
+  body .title-bar,
+  body .documentation-source h1:after {
+    background-color: #ff6600;
+  }
+</style>
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-41658423-2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'UA-41658423-2');
+</script>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/scrollreveal"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stickyfill/2.1.0/stickyfill.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+<!-- From basic/layout.html -->
+<script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+  
+  
+<script src="../_static/underscore.js"></script>
+  
+  
+<script src="../_static/doctools.js"></script>
+  
+  
+<script src="../_static/language_data.js"></script>
+  
+  
+<script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+  
+  
+<script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+  
+<script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+  
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Legendre Memory Units in NengoDL" href="lmu.html" />
+    <link rel="prev" title="Optimizing a spiking neural network" href="spiking-mnist.html" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  </head><body class="bg-dark">
+
+<header class="fixed-top header-top shadow-sm">
+  <nav class="navbar navbar-expand-md navbar-light bg-white">
+    <a class="navbar-brand" href="https://www.nengo.ai/">
+      <img
+        src="https://www.nengo.ai/design/_images/general-full-light.svg"
+        alt="Nengo"
+        class="logo"
+      />
+    </a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-toggle="collapse"
+      data-target="#navbar-collapse"
+      aria-controls="navbar-collapse"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-collapse">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/">What is Nengo?</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/examples/">Examples</a>
+        </li>
+        <li class="nav-item dropdown active">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-docs"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Documentation</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-docs"
+          >
+            
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo/">Nengo Core</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-gui/">Nengo GUI</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-dl/">Nengo DL</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-spa/">Nengo SPA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-extras/">Nengo Extras</a>
+            <a class="dropdown-item" href="https://arvoelke.github.io/nengolib-docs/">Nengolib</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-fpga/">Nengo FPGA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-loihi/">Nengo Loihi</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-ocl">Nengo OpenCL</a>
+            <a class="dropdown-item" href="https://github.com/project-rig/nengo_spinnaker">Nengo SpiNNaker</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-mpi">Nengo MPI</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/documentation/"
+              >All documentation</a
+            >
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-community"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Community</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-community"
+          >
+            <a class="dropdown-item" href="https://forum.nengo.ai">Forum</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/people/"
+              >People</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/summer-school/"
+              >Summer school</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/contributing/"
+              >Contributing</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/publications/"
+              >Publications</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/videos/"
+              >Videos</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/conduct/"
+              >Code of conduct</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/caa/">CAA</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link btn btn-success btn-sm text-white"
+            href="https://www.nengo.ai/getting-started/"
+            >Getting started</a
+          >
+        </li>
+      </ul>
+    </div>
+  </nav>
+</header>
+<div class="main-content gradient-top">
+  <div class="container-fluid">
+    <div class="row"><a class="toggle-sidenav d-block d-md-none" href="#"
+  ><i class="icon-close fa fa-fw fa-arrow-left"></i
+  ><i class="icon-open fa fa-fw fa-arrow-right"></i
+></a>
+<div role="complementary" class="sidenav col-4 col-xl-3 p-0 border-right">
+  <h3 class="pt-5 px-5">
+    <a href="../index.html">
+      <img
+        class="img-fluid documentation-image"
+        src="https://www.nengo.ai/design/_images/nengo-dl-full-light.svg"
+        alt="NengoDL"
+      />
+    </a>
+  </h3>
+  
+  <form class="px-5 pb-5 mb-0 mt-3 border-bottom">
+    <div class="form-group">
+      <label class="text-gray">Version:</label>
+      <select class="custom-select" onchange="switchVersion(this);">
+        
+        
+        <option value="../../examples/keras-to-snn.html">latest</option>
+        
+        
+          
+        <option selected>v3.2.0</option>
+          
+        
+          
+        <option value="../../v3.1.0/examples/keras-to-snn.html">
+          v3.1.0
+        </option>
+          
+        
+          
+        <option value="../../v3.0.0/examples/keras-to-snn.html">
+          v3.0.0
+        </option>
+          
+        
+          
+        <option value="../../v2.2.2/examples/keras-to-snn.html">
+          v2.2.2
+        </option>
+          
+        
+          
+        <option value="../../v2.2.1/examples/keras-to-snn.html">
+          v2.2.1
+        </option>
+          
+        
+          
+        <option value="../../v2.2.0/examples/keras-to-snn.html">
+          v2.2.0
+        </option>
+          
+        
+          
+        <option value="../../v2.1.1/examples/keras-to-snn.html">
+          v2.1.1
+        </option>
+          
+        
+          
+        <option value="../../v2.1.0/examples/keras-to-snn.html">
+          v2.1.0
+        </option>
+          
+        
+          
+        <option value="../../v2.0.0/examples/keras-to-snn.html">
+          v2.0.0
+        </option>
+          
+        
+          
+        <option value="../../v1.2.1/examples/keras-to-snn.html">
+          v1.2.1
+        </option>
+          
+        
+          
+        <option value="../../v1.2.0/examples/keras-to-snn.html">
+          v1.2.0
+        </option>
+          
+        
+          
+        <option value="../../v1.1.0/examples/keras-to-snn.html">
+          v1.1.0
+        </option>
+          
+        
+          
+        <option value="../../v1.0.0/examples/keras-to-snn.html">
+          v1.0.0
+        </option>
+          
+        
+          
+        <option value="../../v0.6.2/examples/keras-to-snn.html">
+          v0.6.2
+        </option>
+          
+        
+          
+        <option value="../../v0.6.1/examples/keras-to-snn.html">
+          v0.6.1
+        </option>
+          
+        
+          
+        <option value="../../v0.6.0/examples/keras-to-snn.html">
+          v0.6.0
+        </option>
+          
+        
+          
+        <option value="../../v0.5.2/examples/keras-to-snn.html">
+          v0.5.2
+        </option>
+          
+        
+          
+        <option value="../../v0.5.1/examples/keras-to-snn.html">
+          v0.5.1
+        </option>
+          
+        
+          
+        <option value="../../v0.5.0/examples/keras-to-snn.html">
+          v0.5.0
+        </option>
+          
+        
+          
+        <option value="../../v0.4.0/examples/keras-to-snn.html">
+          v0.4.0
+        </option>
+          
+        
+          
+        <option value="../../v0.3.1/examples/keras-to-snn.html">
+          v0.3.1
+        </option>
+          
+        
+          
+        <option value="../../v0.3.0/examples/keras-to-snn.html">
+          v0.3.0
+        </option>
+          
+        
+          
+        <option value="../../v0.2.0/examples/keras-to-snn.html">
+          v0.2.0
+        </option>
+          
+        
+      </select>
+    </div>
+  </form>
+  
+  <div class="p-5 toctree">
+    <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user-guide.html">User guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference.html">API reference</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="from-nengo.html">Coming from Nengo to NengoDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="from-tensorflow.html">Coming from TensorFlow to NengoDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tensorflow-models.html">Integrating a Keras model into a Nengo network</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spiking-mnist.html">Optimizing a spiking neural network</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Converting a Keras model to a spiking neural network</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Converting-a-Keras-model-to-a-Nengo-network">Converting a Keras model to a Nengo network</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Converting-to-a-spiking-neural-network">Converting to a spiking neural network</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Conclusions">Conclusions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="lmu.html">Legendre Memory Units in NengoDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spa-retrieval.html">Optimizing a cognitive model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spa-memory.html">Optimizing a cognitive model with temporal dynamics</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../project.html">Project information</a></li>
+</ul>
+
+  </div>
+<form class="p-5 my-0 border-top" action="../search.html" method="get">
+  <div class="form-group form-group-single">
+    <input type="text" name="q" class="form-control" placeholder="Search" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+    <button type="submit" class="btn btn-link">
+      <img src="https://www.nengo.ai/img/icon-search.svg" alt="Go" />
+    </button>
+  </div>
+</form></div>
+      
+
+      <div class="col-12 col-md-8 col-xl-9">
+        <div class="container">
+          <div class="row">
+            <div class="col-10 offset-1 pb-5 documentation-source" role="main">
+              
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput.container,
+div.nbinput.container div.prompt,
+div.nbinput.container div.input_area,
+div.nbinput.container div[class*=highlight],
+div.nbinput.container div[class*=highlight] pre,
+div.nboutput.container,
+div.nboutput.container div.prompt,
+div.nboutput.container div.output_area,
+div.nboutput.container div[class*=highlight],
+div.nboutput.container div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput.container div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput.container,
+div.nboutput.container {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput.container,
+    div.nboutput.container {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput.container {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast.container {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput.container div.prompt pre {
+    color: #307FC1;
+}
+
+/* output prompt */
+div.nboutput.container div.prompt pre {
+    color: #BF5B3D;
+}
+
+/* all prompts */
+div.nbinput.container div.prompt,
+div.nboutput.container div.prompt {
+    min-width: 7ex;
+    padding-top: 0.3rem;
+    padding-right: 0.3rem;
+    text-align: right;
+    flex: 0;
+}
+@media (max-width: 540px) {
+    div.nbinput.container div.prompt,
+    div.nboutput.container div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput.container div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput.container div.prompt pre,
+div.nboutput.container div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput.container div.input_area,
+div.nboutput.container div.output_area {
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput.container div.input_area,
+    div.nboutput.container div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput.container div.input_area {
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    background: #f5f5f5;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput.container div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput.container div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput.container div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+
+div.nbinput.container div.input_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight].math,
+div.nboutput.container div.output_area.rendered_html,
+div.nboutput.container div.output_area > div.output_javascript,
+div.nboutput.container div.output_area:not(.rendered_html) > img{
+    padding: 0.3rem;
+}
+
+/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
+div.nbinput.container div.input_area > div[class^='highlight'],
+div.nboutput.container div.output_area > div[class^='highlight']{
+    overflow-y: hidden;
+}
+
+/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
+.prompt a.copybtn {
+    display: none;
+}
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+div.rendered_html th {
+  font-weight: bold;
+}
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+</style>
+<div class="section" id="Converting-a-Keras-model-to-a-spiking-neural-network">
+<h1>Converting a Keras model to a spiking neural network<a class="headerlink" href="#Converting-a-Keras-model-to-a-spiking-neural-network" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference external" href="https://colab.research.google.com/github/nengo/nengo-dl/blob/master/docs/examples/keras-to-snn.ipynb"><img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a></p>
+<p>A key feature of NengoDL is the ability to convert non-spiking networks into spiking networks. We can build both spiking and non-spiking networks in NengoDL, but often we may have an existing non-spiking network defined in a framework like Keras that we want to convert to a spiking network. The <a class="reference external" href="https://www.nengo.ai/nengo-dl/converter.html">NengoDL Converter</a> is designed to assist in that kind of translation. By default, the converter takes in a Keras model and outputs an exactly equivalent
+Nengo network (so the Nengo network will be non-spiking). However, the converter can also apply various transformations during this conversion process, in particular aimed at converting a non-spiking Keras model into a spiking Nengo model.</p>
+<p>The goal of this notebook is to familiarize you with the process of converting a Keras network to a spiking neural network. Swapping to spiking neurons is a significant change to a model, which will have far-reaching impacts on the model’s behaviour; we cannot simply change the neuron type and expect the model to perform the same without making any other changes to the model. This example will walk through some steps to take to help tune a spiking model to more closely match the performance of
+the original non-spiking network.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+
+<span class="kn">from</span> <span class="nn">urllib.request</span> <span class="kn">import</span> <span class="n">urlretrieve</span>
+
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">nengo</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+
+<span class="kn">import</span> <span class="nn">nengo_dl</span>
+
+<span class="n">seed</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+<span class="n">tf</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">set_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>In this example we’ll use the standard <a class="reference external" href="http://yann.lecun.com/exdb/mnist/">MNIST dataset</a>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="p">(</span><span class="n">train_images</span><span class="p">,</span> <span class="n">train_labels</span><span class="p">),</span> <span class="p">(</span><span class="n">test_images</span><span class="p">,</span> <span class="n">test_labels</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">mnist</span><span class="o">.</span><span class="n">load_data</span><span class="p">())</span>
+
+<span class="c1"># flatten images and add time dimension</span>
+<span class="n">train_images</span> <span class="o">=</span> <span class="n">train_images</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">train_images</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">train_labels</span> <span class="o">=</span> <span class="n">train_labels</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">train_labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">test_images</span> <span class="o">=</span> <span class="n">test_images</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">test_images</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">test_labels</span> <span class="o">=</span> <span class="n">test_labels</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">test_labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">train_images</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)),</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;gray&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">train_labels</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]));</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_3_0.png" src="../_images/examples_keras-to-snn_3_0.png" />
+</div>
+</div>
+<div class="section" id="Converting-a-Keras-model-to-a-Nengo-network">
+<h2>Converting a Keras model to a Nengo network<a class="headerlink" href="#Converting-a-Keras-model-to-a-Nengo-network" title="Permalink to this headline">¶</a></h2>
+<p>Next we’ll build a simple convolutional network. This architecture is chosen to be a quick and easy solution for this task; other tasks would likely require a different architecture, but the same general principles will apply.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># input</span>
+<span class="n">inp</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+<span class="c1"># convolutional layers</span>
+<span class="n">conv0</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Conv2D</span><span class="p">(</span>
+    <span class="n">filters</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+    <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="n">activation</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">,</span>
+<span class="p">)(</span><span class="n">inp</span><span class="p">)</span>
+
+<span class="n">conv1</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Conv2D</span><span class="p">(</span>
+    <span class="n">filters</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span>
+    <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="n">strides</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">activation</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">,</span>
+<span class="p">)(</span><span class="n">conv0</span><span class="p">)</span>
+
+<span class="c1"># fully connected layer</span>
+<span class="n">flatten</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Flatten</span><span class="p">()(</span><span class="n">conv1</span><span class="p">)</span>
+<span class="n">dense</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Dense</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="mi">10</span><span class="p">)(</span><span class="n">flatten</span><span class="p">)</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">Model</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="n">inp</span><span class="p">,</span> <span class="n">outputs</span><span class="o">=</span><span class="n">dense</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Once the Keras model is created, we can pass it into the NengoDL Converter. The Converter tool is designed to automate the translation from Keras to Nengo as much as possible. You can see the full list of arguments the Converter accepts in the <a class="reference external" href="https://www.nengo.ai/nengo-dl/reference.html?highlight=converter#nengo_dl.Converter">documentation</a>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">converter</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Converter</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Now we are ready to train the network. It’s important to note that we are using standard (non-spiking) ReLU neurons at this point.</p>
+<p>To make this example run a bit more quickly we’ve provided some pre-trained weights that will be downloaded below; set <code class="docutils literal notranslate"><span class="pre">do_training=True</span></code> to run the training yourself.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">do_training</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="k">if</span> <span class="n">do_training</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">converter</span><span class="o">.</span><span class="n">net</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+        <span class="c1"># run training</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+            <span class="n">optimizer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">optimizers</span><span class="o">.</span><span class="n">RMSprop</span><span class="p">(</span><span class="mf">0.001</span><span class="p">),</span>
+            <span class="n">loss</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">SparseCategoricalCrossentropy</span><span class="p">(</span><span class="n">from_logits</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="n">tf</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">sparse_categorical_accuracy</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+            <span class="p">{</span><span class="n">converter</span><span class="o">.</span><span class="n">inputs</span><span class="p">[</span><span class="n">inp</span><span class="p">]:</span> <span class="n">train_images</span><span class="p">},</span>
+            <span class="p">{</span><span class="n">converter</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="n">dense</span><span class="p">]:</span> <span class="n">train_labels</span><span class="p">},</span>
+            <span class="n">validation_data</span><span class="o">=</span><span class="p">(</span>
+                <span class="p">{</span><span class="n">converter</span><span class="o">.</span><span class="n">inputs</span><span class="p">[</span><span class="n">inp</span><span class="p">]:</span> <span class="n">test_images</span><span class="p">},</span>
+                <span class="p">{</span><span class="n">converter</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="n">dense</span><span class="p">]:</span> <span class="n">test_labels</span><span class="p">},</span>
+            <span class="p">),</span>
+            <span class="n">epochs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># save the parameters to file</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">save_params</span><span class="p">(</span><span class="s2">&quot;./keras_to_snn_params&quot;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="c1"># download pretrained weights</span>
+    <span class="n">urlretrieve</span><span class="p">(</span>
+        <span class="s2">&quot;https://drive.google.com/uc?export=download&amp;&quot;</span>
+        <span class="s2">&quot;id=1lBkR968AQo__t8sMMeDYGTQpBJZIs2_T&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;keras_to_snn_params.npz&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Loaded pretrained weights&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Loaded pretrained weights
+</pre></div></div>
+</div>
+<p>After training for 2 epochs the non-spiking network is achieving ~98% accuracy on the test data, which is what we’d expect for a network this simple.</p>
+<p>Now that we have our trained weights, we can begin the conversion to spiking neurons. To help us in this process we’re going to first define a helper function that will build the network for us, load weights from a specified file, and make it easy to play around with some other features of the network.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">run_network</span><span class="p">(</span><span class="n">activation</span><span class="p">,</span> <span class="n">params_file</span><span class="o">=</span><span class="s2">&quot;keras_to_snn_params&quot;</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+                <span class="n">scale_firing_rates</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">synapse</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_test</span><span class="o">=</span><span class="mi">400</span><span class="p">):</span>
+    <span class="c1"># convert the keras model to a nengo network</span>
+    <span class="n">nengo_converter</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Converter</span><span class="p">(</span>
+        <span class="n">model</span><span class="p">,</span>
+        <span class="n">swap_activations</span><span class="o">=</span><span class="p">{</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">:</span> <span class="n">activation</span><span class="p">},</span>
+        <span class="n">scale_firing_rates</span><span class="o">=</span><span class="n">scale_firing_rates</span><span class="p">,</span>
+        <span class="n">synapse</span><span class="o">=</span><span class="n">synapse</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># get input/output objects</span>
+    <span class="n">nengo_input</span> <span class="o">=</span> <span class="n">nengo_converter</span><span class="o">.</span><span class="n">inputs</span><span class="p">[</span><span class="n">inp</span><span class="p">]</span>
+    <span class="n">nengo_output</span> <span class="o">=</span> <span class="n">nengo_converter</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="n">dense</span><span class="p">]</span>
+
+    <span class="c1"># add a probe to the first convolutional layer to record activity</span>
+    <span class="k">with</span> <span class="n">nengo_converter</span><span class="o">.</span><span class="n">net</span><span class="p">:</span>
+        <span class="n">conv0_probe</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">nengo_converter</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">conv0</span><span class="p">])</span>
+
+    <span class="c1"># repeat inputs for some number of timesteps</span>
+    <span class="n">tiled_test_images</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">test_images</span><span class="p">[:</span><span class="n">n_test</span><span class="p">],</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+    <span class="c1"># set some options to speed up simulation</span>
+    <span class="k">with</span> <span class="n">nengo_converter</span><span class="o">.</span><span class="n">net</span><span class="p">:</span>
+        <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">stateful</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># build network, load in trained weights, run inference on test images</span>
+    <span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span>
+            <span class="n">nengo_converter</span><span class="o">.</span><span class="n">net</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+            <span class="n">progress_bar</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">nengo_sim</span><span class="p">:</span>
+        <span class="n">nengo_sim</span><span class="o">.</span><span class="n">load_params</span><span class="p">(</span><span class="n">params_file</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">nengo_sim</span><span class="o">.</span><span class="n">predict</span><span class="p">({</span><span class="n">nengo_input</span><span class="p">:</span> <span class="n">tiled_test_images</span><span class="p">})</span>
+
+    <span class="c1"># compute accuracy on test data, using output of network on</span>
+    <span class="c1"># last timestep</span>
+    <span class="n">predictions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">nengo_output</span><span class="p">][:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">accuracy</span> <span class="o">=</span> <span class="p">(</span><span class="n">predictions</span> <span class="o">==</span> <span class="n">test_labels</span><span class="p">[:</span><span class="n">n_test</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Test accuracy: </span><span class="si">%.2f%%</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="mi">100</span> <span class="o">*</span> <span class="n">accuracy</span><span class="p">))</span>
+
+    <span class="c1"># plot the results</span>
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Input image&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">test_images</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)),</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;gray&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">sample_neurons</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
+            <span class="mi">0</span><span class="p">,</span>
+            <span class="n">data</span><span class="p">[</span><span class="n">conv0_probe</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+            <span class="mi">1000</span><span class="p">,</span>
+            <span class="n">endpoint</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">scaled_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">conv0_probe</span><span class="p">][</span><span class="n">ii</span><span class="p">,</span> <span class="p">:,</span> <span class="n">sample_neurons</span><span class="p">]</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">scale_firing_rates</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">activation</span><span class="p">,</span> <span class="n">nengo</span><span class="o">.</span><span class="n">SpikingRectifiedLinear</span><span class="p">):</span>
+            <span class="n">scaled_data</span> <span class="o">*=</span> <span class="mf">0.001</span>
+            <span class="n">rates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">scaled_data</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">n_steps</span> <span class="o">*</span> <span class="n">nengo_sim</span><span class="o">.</span><span class="n">dt</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Number of spikes&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">rates</span> <span class="o">=</span> <span class="n">scaled_data</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Firing rates (Hz)&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Timestep&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span>
+            <span class="s2">&quot;Neural activities (conv0 mean=</span><span class="si">%d</span><span class="s2">Hz max=</span><span class="si">%d</span><span class="s2">Hz)&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                <span class="n">rates</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="n">rates</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+        <span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">scaled_data</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Output predictions&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">softmax</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">nengo_output</span><span class="p">][</span><span class="n">ii</span><span class="p">]))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)],</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Timestep&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Probability&quot;</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>Now to run our trained network all we have to do is:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">run_network</span><span class="p">(</span><span class="n">activation</span><span class="o">=</span><span class="n">nengo</span><span class="o">.</span><span class="n">RectifiedLinear</span><span class="p">(),</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Test accuracy: 98.25%
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_13_1.png" src="../_images/examples_keras-to-snn_13_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_13_2.png" src="../_images/examples_keras-to-snn_13_2.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_13_3.png" src="../_images/examples_keras-to-snn_13_3.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_13_4.png" src="../_images/examples_keras-to-snn_13_4.png" />
+</div>
+</div>
+<p>Note that we’re plotting the output over time for consistency with future plots, but since our network doesn’t have any temporal elements (e.g. spiking neurons), the output is constant for each digit.</p>
+</div>
+<div class="section" id="Converting-to-a-spiking-neural-network">
+<h2>Converting to a spiking neural network<a class="headerlink" href="#Converting-to-a-spiking-neural-network" title="Permalink to this headline">¶</a></h2>
+<p>Now that we have the non-spiking version working in Nengo, we can start converting the network into spikes. Using the NengoDL converter, we can swap all the <code class="docutils literal notranslate"><span class="pre">relu</span></code> activation functions to <code class="docutils literal notranslate"><span class="pre">nengo.SpikingRectifiedLinear</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">run_network</span><span class="p">(</span><span class="n">activation</span><span class="o">=</span><span class="n">nengo</span><span class="o">.</span><span class="n">SpikingRectifiedLinear</span><span class="p">(),</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Test accuracy: 14.25%
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_16_1.png" src="../_images/examples_keras-to-snn_16_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_16_2.png" src="../_images/examples_keras-to-snn_16_2.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_16_3.png" src="../_images/examples_keras-to-snn_16_3.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_16_4.png" src="../_images/examples_keras-to-snn_16_4.png" />
+</div>
+</div>
+<p>In this naive conversion we are getting random accuracy (~10%), which indicates that the network is not functioning well. Next, we will look at various steps we can take to improve the performance of the spiking model.</p>
+<div class="section" id="Presentation-time">
+<h3>Presentation time<a class="headerlink" href="#Presentation-time" title="Permalink to this headline">¶</a></h3>
+<p>If we look at the neural activity plots above, we can see one thing that’s going wrong: the activities are all zero! (The non-zero final output is just a result of the internal biases). Referring back to the neural activity plot from our non-spiking network further up, we can gain a bit of insight into why this occurs. We can see that the firing rates are all below 100 Hz. 100 Hz means that a neuron is emitting approximately 1 spike every 10 timesteps (given the simulator timestep of 1ms). We’re
+simulating for 10 time steps for each image, so we wouldn’t really expect many of our neurons to be spiking within that 10 timestep window. If we present each image for longer we should start seeing some activity.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">run_network</span><span class="p">(</span>
+    <span class="n">activation</span><span class="o">=</span><span class="n">nengo</span><span class="o">.</span><span class="n">SpikingRectifiedLinear</span><span class="p">(),</span>
+    <span class="n">n_steps</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Test accuracy: 27.25%
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_19_1.png" src="../_images/examples_keras-to-snn_19_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_19_2.png" src="../_images/examples_keras-to-snn_19_2.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_19_3.png" src="../_images/examples_keras-to-snn_19_3.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_19_4.png" src="../_images/examples_keras-to-snn_19_4.png" />
+</div>
+</div>
+<p>We can see now that while initially there’s no network activity, eventually we do start getting some spikes. Note that although we start seeing spikes in the <code class="docutils literal notranslate"><span class="pre">conv0</span></code> layer around the 10th timestep, we don’t start seeing activity in the output layer until around the 40th timestep. That is because each layer in the network is adding a similar delay as we see in <code class="docutils literal notranslate"><span class="pre">conv0</span></code>, so when you put those all together in series it takes time for the activity to propagate through to the final output layer.</p>
+</div>
+<div class="section" id="Synaptic-smoothing">
+<h3>Synaptic smoothing<a class="headerlink" href="#Synaptic-smoothing" title="Permalink to this headline">¶</a></h3>
+<p>Even with the increased presentation time, the test accuracy is still very low. This is because, as we can see in the output prediction plots, the network output is very noisy. Spikes are discrete events that exist for only a single time step and then disappear; we can see the literal “spikes” in the plots. Even if the neuron corresponding to the correct output is spiking quite rapidly, it’s still not guaranteed that it will spike on exactly the last timestep (which is when we are checking the
+test accuracy).</p>
+<p>One way that we can compensate for this rapid fluctuation in the network output is to apply some smoothing to the spikes. This can be achieved in Nengo through the use of synaptic filters. The default <code class="docutils literal notranslate"><span class="pre">synapse</span></code> used in Nengo is a low-pass filter, and when we specify a value for the <code class="docutils literal notranslate"><span class="pre">synapse</span></code> parameter, that value is used as the low-pass filter time constant. When we pass a <code class="docutils literal notranslate"><span class="pre">synapse</span></code> value in the <code class="docutils literal notranslate"><span class="pre">run_network</span></code> function, it will create a low-pass filter with that time constant on the
+output of all the spiking neurons.</p>
+<p>Intuitively, we can think of this as computing a running average of each neuron’s activity over a short window of time (rather than just looking at the spikes on the last timestep).</p>
+<p>Below we show results from the network running with three different low-pass filters. Note that adding synaptic filters will further increase the delay before neurons start spiking, because the filters will add their own “ramp up” time on each layer. So we’ll run the network for even longer in these tests.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="p">[</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.005</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Synapse=</span><span class="si">%.3f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">s</span><span class="p">)</span>
+    <span class="n">run_network</span><span class="p">(</span>
+        <span class="n">activation</span><span class="o">=</span><span class="n">nengo</span><span class="o">.</span><span class="n">SpikingRectifiedLinear</span><span class="p">(),</span>
+        <span class="n">n_steps</span><span class="o">=</span><span class="mi">120</span><span class="p">,</span>
+        <span class="n">synapse</span><span class="o">=</span><span class="n">s</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Synapse=0.001
+Test accuracy: 26.25%
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_22_1.png" src="../_images/examples_keras-to-snn_22_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_22_2.png" src="../_images/examples_keras-to-snn_22_2.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_22_3.png" src="../_images/examples_keras-to-snn_22_3.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_22_4.png" src="../_images/examples_keras-to-snn_22_4.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Synapse=0.005
+Test accuracy: 74.75%
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_22_6.png" src="../_images/examples_keras-to-snn_22_6.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_22_7.png" src="../_images/examples_keras-to-snn_22_7.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_22_8.png" src="../_images/examples_keras-to-snn_22_8.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_22_9.png" src="../_images/examples_keras-to-snn_22_9.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Synapse=0.010
+Test accuracy: 79.25%
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_22_11.png" src="../_images/examples_keras-to-snn_22_11.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_22_12.png" src="../_images/examples_keras-to-snn_22_12.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_22_13.png" src="../_images/examples_keras-to-snn_22_13.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_22_14.png" src="../_images/examples_keras-to-snn_22_14.png" />
+</div>
+</div>
+<p>We can see that adding synaptic filtering smooths the output of the model and thereby improves the accuracy. With <code class="docutils literal notranslate"><span class="pre">synapse=0.01</span></code> we’re achieving ~80% test accuracy; still not great, but significantly better than what we started with.</p>
+<p>However, increasing the magnitude of the synaptic filtering also increases the latency before we start seeing output activity. We can see that with <code class="docutils literal notranslate"><span class="pre">synapse=0.01</span></code> we don’t start seeing output activity until around the 70th timestep. This means that with more synaptic filtering we have to present the input images for a longer period of time, which takes longer to simulate and adds more latency to the model’s predictions. This is a common tradeoff in spiking networks (latency versus accuracy).</p>
+</div>
+<div class="section" id="Firing-rates">
+<h3>Firing rates<a class="headerlink" href="#Firing-rates" title="Permalink to this headline">¶</a></h3>
+<p>Another way that we can improve network performance is by increasing the firing rates of the neurons. Neurons that spike more frequently update their output signal more often. This means that as firing rates increase, the behaviour of the spiking model will more closely match the original non-spiking model (where the neuron is directly outputting its true firing rate every timestep).</p>
+<div class="section" id="Post-training-scaling">
+<h4>Post-training scaling<a class="headerlink" href="#Post-training-scaling" title="Permalink to this headline">¶</a></h4>
+<p>We can increase firing rates without retraining the model by applying a linear scale to the input of all the neurons (and then dividing their output by the same scale factor). Note that because we’re applying a linear scale to the input and output, this will likely only work well with linear activation functions (like ReLU). To apply this scaling using the NengoDL Converter, we can use the <code class="docutils literal notranslate"><span class="pre">scale_firing_rates</span></code> parameter.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">for</span> <span class="n">scale</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Scale=</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">scale</span><span class="p">)</span>
+    <span class="n">run_network</span><span class="p">(</span>
+        <span class="n">activation</span><span class="o">=</span><span class="n">nengo</span><span class="o">.</span><span class="n">SpikingRectifiedLinear</span><span class="p">(),</span>
+        <span class="n">scale_firing_rates</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
+        <span class="n">synapse</span><span class="o">=</span><span class="mf">0.01</span>
+    <span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Scale=2
+Test accuracy: 14.25%
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_25_1.png" src="../_images/examples_keras-to-snn_25_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_25_2.png" src="../_images/examples_keras-to-snn_25_2.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_25_3.png" src="../_images/examples_keras-to-snn_25_3.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_25_4.png" src="../_images/examples_keras-to-snn_25_4.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Scale=10
+Test accuracy: 96.25%
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_25_6.png" src="../_images/examples_keras-to-snn_25_6.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_25_7.png" src="../_images/examples_keras-to-snn_25_7.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_25_8.png" src="../_images/examples_keras-to-snn_25_8.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_25_9.png" src="../_images/examples_keras-to-snn_25_9.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Scale=20
+Test accuracy: 98.25%
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_25_11.png" src="../_images/examples_keras-to-snn_25_11.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_25_12.png" src="../_images/examples_keras-to-snn_25_12.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_25_13.png" src="../_images/examples_keras-to-snn_25_13.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_25_14.png" src="../_images/examples_keras-to-snn_25_14.png" />
+</div>
+</div>
+<p>We can see that as the frequency of spiking increases, the accuracy also increases. And we’re able to achieve good accuracy (very close to the original non-spiking network) without adding too much latency.</p>
+<p>Note that if we increase the firing rates enough, the spiking model eventually becomes equivalent to a non-spiking model:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">run_network</span><span class="p">(</span>
+    <span class="n">activation</span><span class="o">=</span><span class="n">nengo</span><span class="o">.</span><span class="n">SpikingRectifiedLinear</span><span class="p">(),</span>
+    <span class="n">scale_firing_rates</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">n_steps</span><span class="o">=</span><span class="mi">10</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Test accuracy: 98.25%
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_27_1.png" src="../_images/examples_keras-to-snn_27_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_27_2.png" src="../_images/examples_keras-to-snn_27_2.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_27_3.png" src="../_images/examples_keras-to-snn_27_3.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_27_4.png" src="../_images/examples_keras-to-snn_27_4.png" />
+</div>
+</div>
+<p>While this looks good from an accuracy perspective, it also means that we have lost many of the advantages of a spiking model (e.g. sparse communication, as indicated by the very high firing rates). This is another common tradeoff (accuracy versus firing rates) that can be customized depending on the demands of a particular application.</p>
+</div>
+<div class="section" id="Regularizing-during-training">
+<h4>Regularizing during training<a class="headerlink" href="#Regularizing-during-training" title="Permalink to this headline">¶</a></h4>
+<p>Rather than using <code class="docutils literal notranslate"><span class="pre">scale_firing_rates</span></code> to upscale the firing rates after training, we can also directly optimize the firing rates during training. We’ll add loss functions that compute the mean squared error (MSE) between the output activity of each of the convolutional layers and some target firing rates we specify. We can think of this as applying L2 regularization to the firing rates, but we’ve shifted the regularization point from 0 to some target value. One of the benefits of this method
+is that it is also effective for neurons with non-linear activation functions, such as LIF neurons.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># we&#39;ll encourage the neurons to spike at around 250Hz</span>
+<span class="n">target_rate</span> <span class="o">=</span> <span class="mi">250</span>
+
+<span class="c1"># convert keras model to nengo network</span>
+<span class="n">converter</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Converter</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+
+<span class="c1"># add probes to the convolutional layers, which</span>
+<span class="c1"># we&#39;ll use to apply the firing rate regularization</span>
+<span class="k">with</span> <span class="n">converter</span><span class="o">.</span><span class="n">net</span><span class="p">:</span>
+    <span class="n">output_p</span> <span class="o">=</span> <span class="n">converter</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="n">dense</span><span class="p">]</span>
+    <span class="n">conv0_p</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">converter</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">conv0</span><span class="p">])</span>
+    <span class="n">conv1_p</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">converter</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">conv1</span><span class="p">])</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">converter</span><span class="o">.</span><span class="n">net</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="c1"># add regularization loss functions to the convolutional layers</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+        <span class="n">optimizer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">optimizers</span><span class="o">.</span><span class="n">RMSprop</span><span class="p">(</span><span class="mf">0.001</span><span class="p">),</span>
+        <span class="n">loss</span><span class="o">=</span><span class="p">{</span>
+            <span class="n">output_p</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">SparseCategoricalCrossentropy</span><span class="p">(</span><span class="n">from_logits</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="n">conv0_p</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">mse</span><span class="p">,</span>
+            <span class="n">conv1_p</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">mse</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="n">loss_weights</span><span class="o">=</span><span class="p">{</span><span class="n">output_p</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="n">conv0_p</span><span class="p">:</span> <span class="mf">1e-3</span><span class="p">,</span> <span class="n">conv1_p</span><span class="p">:</span> <span class="mf">1e-3</span><span class="p">}</span>
+    <span class="p">)</span>
+
+    <span class="n">do_training</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">do_training</span><span class="p">:</span>
+        <span class="c1"># run training (specifying the target rates for the convolutional layers)</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+            <span class="p">{</span><span class="n">converter</span><span class="o">.</span><span class="n">inputs</span><span class="p">[</span><span class="n">inp</span><span class="p">]:</span> <span class="n">train_images</span><span class="p">},</span>
+            <span class="p">{</span>
+                <span class="n">output_p</span><span class="p">:</span> <span class="n">train_labels</span><span class="p">,</span>
+                <span class="n">conv0_p</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">train_labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="n">conv0_p</span><span class="o">.</span><span class="n">size_in</span><span class="p">))</span>
+                <span class="o">*</span> <span class="n">target_rate</span><span class="p">,</span>
+                <span class="n">conv1_p</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">train_labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="n">conv1_p</span><span class="o">.</span><span class="n">size_in</span><span class="p">))</span>
+                <span class="o">*</span> <span class="n">target_rate</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="n">epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+        <span class="c1"># save the parameters to file</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">save_params</span><span class="p">(</span><span class="s2">&quot;./keras_to_snn_regularized_params&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># download pretrained weights</span>
+        <span class="n">urlretrieve</span><span class="p">(</span>
+            <span class="s2">&quot;https://drive.google.com/uc?export=download&amp;&quot;</span>
+            <span class="s2">&quot;id=1xvIIIQjiA4UM9Mg_4rq_ttBH3wIl0lJx&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;keras_to_snn_regularized_params.npz&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Loaded pretrained weights&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Build finished in 0:00:00
+Optimization finished in 0:00:00
+Construction finished in 0:00:00
+Loaded pretrained weights
+</pre></div></div>
+</div>
+<p>Now we can examine the firing rates in the non-spiking network.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">run_network</span><span class="p">(</span>
+    <span class="n">activation</span><span class="o">=</span><span class="n">nengo</span><span class="o">.</span><span class="n">RectifiedLinear</span><span class="p">(),</span>
+    <span class="n">params_file</span><span class="o">=</span><span class="s2">&quot;keras_to_snn_regularized_params&quot;</span><span class="p">,</span>
+    <span class="n">n_steps</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Test accuracy: 98.50%
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_32_1.png" src="../_images/examples_keras-to-snn_32_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_32_2.png" src="../_images/examples_keras-to-snn_32_2.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_32_3.png" src="../_images/examples_keras-to-snn_32_3.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_32_4.png" src="../_images/examples_keras-to-snn_32_4.png" />
+</div>
+</div>
+<p>In the neuron activity plot we can see that the firing rates are around the magnitude we specified (we could adjust the regularization function/weighting to refine this further). Now we can convert it to spiking neurons, without applying any scaling.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">run_network</span><span class="p">(</span>
+    <span class="n">activation</span><span class="o">=</span><span class="n">nengo</span><span class="o">.</span><span class="n">SpikingRectifiedLinear</span><span class="p">(),</span>
+    <span class="n">params_file</span><span class="o">=</span><span class="s2">&quot;keras_to_snn_regularized_params&quot;</span><span class="p">,</span>
+    <span class="n">synapse</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Test accuracy: 98.25%
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_34_1.png" src="../_images/examples_keras-to-snn_34_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_34_2.png" src="../_images/examples_keras-to-snn_34_2.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_34_3.png" src="../_images/examples_keras-to-snn_34_3.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_keras-to-snn_34_4.png" src="../_images/examples_keras-to-snn_34_4.png" />
+</div>
+</div>
+<p>We can see that this network, because we trained it with spiking neurons in mind, can be converted to a spiking network without losing much performance or requiring any further tweaking.</p>
+</div>
+</div>
+</div>
+<div class="section" id="Conclusions">
+<h2>Conclusions<a class="headerlink" href="#Conclusions" title="Permalink to this headline">¶</a></h2>
+<p>In this example we’ve gone over the process of converting a non-spiking Keras model to a spiking Nengo network. We’ve shown some of the common issues that crop up, and how to go about diagnosing/addressing them. In particular, we looked at presentation time, synaptic filtering, and firing rates, and how adjusting those factors can affect various properties of the model (such as accuracy, latency, and temporal sparsity). Note that a lot of these factors represent tradeoffs that are application
+dependent. The particular parameters that we used in this example may not work or make sense in other applications, but this same workflow and thought process should apply to converting any kind of network to a spiking Nengo model.</p>
+</div>
+</div>
+
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div><footer class="text-light footer-main gradient-bottom">
+  <p class="small text-center mb-0">
+    <a class="no-hover-line" href="https://appliedbrainresearch.com">
+      <img
+        src="https://appliedbrainresearch.com/img/logo-blue-notext.svg"
+        height="48"
+      />
+    </a>
+    <a href="https://www.nengo.ai/">What is Nengo?</a>
+    <a href="https://www.nengo.ai/examples/">Examples</a>
+    <a href="https://www.nengo.ai/documentation/">Documentation</a>
+    <a href="https://www.nengo.ai/getting-started/">Getting started</a>
+    <a href="https://www.nengo.ai/privacy/">Privacy</a>
+  </p>
+  <p class="small text-center mb-0">&copy; Applied Brain Research</p>
+</footer>
+<script>
+  function switchVersion(select) {
+    var option = select.selectedOptions[0];
+    if (option.hasAttribute("value")) {
+      window.location = option.value;
+    }
+  }
+</script>
+
+<script>
+  var elements = document.querySelectorAll('.sidenav');
+  Stickyfill.add(elements);
+</script>
+<script>
+  ScrollReveal().reveal(".fade-in", {
+      scale: 0.85,
+      duration: 1000,
+      delay: 250,
+      interval: 50
+  });
+</script>
+<script>
+  $('a.toggle-sidenav').on('click', function(e) {
+    e.preventDefault();
+    if ( $(this).hasClass('active') ) {
+      $(this).removeClass('active');
+      $('.sidenav').removeClass('open');
+    } else {
+      $(this).addClass('active');
+      $('.sidenav').addClass('open');
+    }
+  });
+</script>
+<script>
+  var lists = document.querySelectorAll('.toctree ul');
+  lists.forEach((ul) => {
+      ul.classList.add("nav");
+  });
+  var links = document.querySelectorAll('.toctree a');
+  links.forEach((link) => {
+      link.classList.add("nav-link");
+  });
+  $("body").scrollspy({target: ".sidenav"});
+</script>
+  </body>
+</html>
