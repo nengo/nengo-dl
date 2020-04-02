@@ -1191,7 +1191,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         include_state : bool
             If True (default False) also save the internal simulation state.
 
-            .. versionchanged:: 3.1.1
+            .. versionchanged:: 3.2.0
                Renamed from ``include_non_trainable`` to ``include_state``.
 
         Notes
@@ -1229,7 +1229,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         include_state : bool
             If True (default False) also save the internal simulation state.
 
-            .. versionchanged:: 3.1.1
+            .. versionchanged:: 3.2.0
                Renamed from ``include_non_trainable`` to ``include_state``.
 
         Notes
