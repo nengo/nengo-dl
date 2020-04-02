@@ -6,6 +6,13 @@ notifications:
   email:
     on_success: change
     on_failure: change
+  slack:
+    if: branch = master
+    on_pull_requests: false
+    on_success: change
+    on_failure: always
+    rooms:
+      - secure: "u7LEiuoLupKwd/p4C3MXaojqvkBvZKlSw6UaBr2C6ZJINRD2N/34bHtv6Qc1wihhLnRzPt3rlWxRGM+Lh2A4LGLqnSqdZqjF+Qn9geCBBn1vXHVNJCTEdDxNQWcjnrHPYSsoeNIvr+y/NwEhFLT8qkRc4mjjV12Vd0qTtHzlyEFbXb/F/jVTohel5DyCIGL0kysEerLumWTxa02ySSkkRtZG5nfhkmMbuHwomdl9oXAmO8DvfPD2C9A4djDQ93BCzZh8Q0TjWzDl3cbSmG1eom9MFmqxpIIuY9gESGLWhva/I01NKoxsZrA9CM5VO4bVKspVRjtip2wtdwwxt9SKkmqPZ7mkGpaIHtzRlFgH4rDzcFM5K9AmkwQUnO2qx9IiBSAzl0IgAJX6tgb7nA5coUpSRWPUJ3tqvown41BO9z5KVopQd5mg/dwIip0yUpZhF6ItJZ69f3RYmWOY4XIU1NDX01EnCzuFhye03XfQ+I2ChwYYrE6uzftn7tQEYexwVqDqEI9HhqKhDXtfGAJYOrbguyH/a2u2ioa0CkEhzDnOmW6KvVAGg9mUCNfbWR2uIehtXCjgJRqng+ztedRsoelktlOCMT4RTLc1sV3tRWwEppsMByrqDCjiOQxLhQVJ+X1bFjMhZWKqoGFJQxOI5tRU+lUV3p8UimBbaCZruTU="
 cache: pip
 
 dist: xenial
@@ -105,7 +112,7 @@ before_install:
   # upgrade pip
   - pip install pip --upgrade
   # install/run nengo-bones
-  - pip install nengo-bones
+  - pip install git+https://github.com/nengo/nengo-bones#egg=nengo-bones
   - bones-generate --output-dir .ci ci-scripts
   - if [[ "$TRAVIS_PYTHON_VERSION" < "3.6" ]]; then
         echo "Skipping bones-check because Python $TRAVIS_PYTHON_VERSION < 3.6";

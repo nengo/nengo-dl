@@ -221,6 +221,15 @@ travis_yml:
   pypi_user: drasmuss
   deploy_dists:
     - sdist
+  slack_notifications: "u7LEiuoLupKwd/p4C3MXaojqvkBvZKlSw6UaBr2C6ZJINRD2N/34bHtv6Qc1wi\
+    hhLnRzPt3rlWxRGM+Lh2A4LGLqnSqdZqjF+Qn9geCBBn1vXHVNJCTEdDxNQWcjnrHPYSsoeNIvr+y/NwEh\
+    FLT8qkRc4mjjV12Vd0qTtHzlyEFbXb/F/jVTohel5DyCIGL0kysEerLumWTxa02ySSkkRtZG5nfhkmMbuH\
+    womdl9oXAmO8DvfPD2C9A4djDQ93BCzZh8Q0TjWzDl3cbSmG1eom9MFmqxpIIuY9gESGLWhva/I01NKoxs\
+    ZrA9CM5VO4bVKspVRjtip2wtdwwxt9SKkmqPZ7mkGpaIHtzRlFgH4rDzcFM5K9AmkwQUnO2qx9IiBSAzl0\
+    IgAJX6tgb7nA5coUpSRWPUJ3tqvown41BO9z5KVopQd5mg/dwIip0yUpZhF6ItJZ69f3RYmWOY4XIU1NDX\
+    01EnCzuFhye03XfQ+I2ChwYYrE6uzftn7tQEYexwVqDqEI9HhqKhDXtfGAJYOrbguyH/a2u2ioa0CkEhzD\
+    nOmW6KvVAGg9mUCNfbWR2uIehtXCjgJRqng+ztedRsoelktlOCMT4RTLc1sV3tRWwEppsMByrqDCjiOQxL\
+    hQVJ+X1bFjMhZWKqoGFJQxOI5tRU+lUV3p8UimBbaCZruTU="
 
 codecov_yml:
   abs_target: 100%
