@@ -751,10 +751,12 @@ def test_tensorboard(Simulator, tmpdir):
             ],
         )
 
-    event_file = os.path.join(
-        str(tmpdir), "a_run", "train", os.listdir(os.path.join(log_dir, "train"))[0]
-    )
-
+    # look up name of event file
+    event_file = [
+        x for x in os.listdir(os.path.join(log_dir, "train")) if x.endswith(".v2")
+    ]
+    assert len(event_file) == 1
+    event_file = os.path.join(log_dir, "train", event_file[0])
     assert os.path.exists(event_file)
 
     summaries = ["epoch_loss", "epoch_probe_loss", "epoch_probe_1_loss"]
@@ -774,10 +776,12 @@ def test_tensorboard(Simulator, tmpdir):
 
     assert i == len(summaries) * n_epochs + 1  # pylint: disable=undefined-loop-variable
 
-    event_file = os.path.join(
-        str(tmpdir), "a_run", "nengo", os.listdir(os.path.join(log_dir, "nengo"))[0]
-    )
-
+    # look up name of event file
+    event_file = [
+        x for x in os.listdir(os.path.join(log_dir, "nengo")) if x.endswith(".v2")
+    ]
+    assert len(event_file) == 1
+    event_file = os.path.join(log_dir, "nengo", event_file[0])
     assert os.path.exists(event_file)
 
     summaries = [
