@@ -1392,7 +1392,7 @@ def remove_identity_muls(operators):
 
         return (
             x.shape == (d, d)
-            and np.allclose(np.diag(x), 1)
+            and np.allclose(x.diagonal(), 1)
             and np.allclose(np.sum(np.abs(x)), d)  # all non-diagonal elements are 0
         )
 

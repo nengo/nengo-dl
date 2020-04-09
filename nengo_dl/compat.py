@@ -134,6 +134,8 @@ else:
 linalg_onenormest.aslinearoperator = linalg_interface.aslinearoperator
 
 if version.parse(nengo.__version__) < version.parse("3.1.0.dev0"):
+    NoTransform = type(None)
+
     default_transform = 1
 
     def conn_has_weights(conn):
@@ -142,6 +144,8 @@ if version.parse(nengo.__version__) < version.parse("3.1.0.dev0"):
 
 
 else:
+    from nengo.transforms import NoTransform
+
     default_transform = None
 
     def conn_has_weights(conn):

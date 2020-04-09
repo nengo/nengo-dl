@@ -21,6 +21,11 @@ Release history
 3.2.1 (unreleased)
 ------------------
 
+**Fixed**
+
+- Support Sparse transforms in ``Simulator.get_nengo_params``. (`#149`_)
+
+.. _#149: https://github.com/nengo/nengo-dl/pull/149
 
 3.2.0 (April 2, 2020)
 ---------------------

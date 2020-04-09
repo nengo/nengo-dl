@@ -1323,6 +1323,57 @@ def test_get_nengo_params(Simulator, seed):
         assert np.allclose(sim.data[p], sim2.data[p2])
 
 
+@pytest.mark.parametrize("use_scipy", (True, False))
+def test_get_nengo_params_sparse(Simulator, use_scipy, rng):
+    if use_scipy:
+        scipy_sparse = pytest.importorskip("scipy.sparse")
+
+    with nengo.Network() as net:
+        node0 = nengo.Node([1] * 10)
+        node1 = nengo.Node(size_in=10)
+        data = rng.uniform(-1, 1, size=10)
+        if use_scipy:
+            conn = nengo.Connection(
+                node0,
+                node1,
+                synapse=None,
+                transform=nengo.Sparse(
+                    (10, 10),
+                    init=scipy_sparse.coo_matrix(
+                        (data, (np.arange(10), np.arange(10)))
+                    ),
+                ),
+            )
+        else:
+            conn = nengo.Connection(
+                node0,
+                node1,
+                synapse=None,
+                transform=nengo.Sparse(
+                    (10, 10), indices=[[i] * 2 for i in range(10)], init=data
+                ),
+            )
+
+        p0 = nengo.Probe(node1)
+
+    with Simulator(net) as sim0:
+        params = sim0.get_nengo_params(conn)
+        assert np.allclose(params["transform"].init.data, data)
+
+        sim0.run_steps(10)
+
+    with nengo.Network() as net:
+        node0 = nengo.Node([1] * 10)
+        node1 = nengo.Node(size_in=10)
+        nengo.Connection(node0, node1, synapse=None, **params)
+        p1 = nengo.Probe(node1)
+
+    with Simulator(net) as sim1:
+        sim1.run_steps(10)
+
+    assert np.allclose(sim0.data[p0], sim1.data[p1])
+
+
 @pytest.mark.parametrize("mixed", (False, True))
 @pytest.mark.training
 def test_direct_grads(Simulator, mixed):

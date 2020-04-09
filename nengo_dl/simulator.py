@@ -12,7 +12,14 @@ import textwrap
 import warnings
 
 import jinja2
-from nengo import Connection, Direct, Ensemble, Network, Node, Probe, Convolution
+from nengo import (
+    Connection,
+    Direct,
+    Ensemble,
+    Network,
+    Node,
+    Probe,
+)
 from nengo import rc as nengo_rc
 from nengo.builder.connection import BuiltConnection
 from nengo.builder.ensemble import BuiltEnsemble
@@ -25,6 +32,7 @@ from nengo.exceptions import (
     ValidationError,
 )
 from nengo.solvers import NoSolver
+from nengo.transforms import Convolution, Dense, Sparse, SparseMatrix
 from nengo.utils.magic import decorator
 import numpy as np
 import tensorflow as tf
@@ -1358,6 +1366,12 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 e = nengo.Ensemble(10, 1, **params[1])
                 f = nengo.Connection(d, e, **params[2])
 
+        Note that this function only returns trainable parameters (e.g. connection
+        weights, biases, or encoders), or parameters that directly interact with
+        those parameters (e.g. gains). Other arguments that are independent of the
+        trainable parameters (e.g. ``Ensemble.neuron_type`` or ``Connection.synapse``)
+        should be specified manually (since they may change between models).
+
         Parameters
         ----------
         nengo_objs : (list of) `~nengo.Ensemble` or `~nengo.Connection`
@@ -1427,27 +1441,47 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
                 weights = data[idx]
                 idx += 1
-                if isinstance(obj.pre_obj, Ensemble):
-                    params.append(
-                        {
-                            "solver": NoSolver(weights.T, weights=False),
-                            "function": lambda x, weights=weights: np.zeros(
-                                weights.shape[0]
-                            ),
-                            "transform": compat.default_transform,
-                        }
-                    )
-                elif isinstance(obj.transform, Convolution):
+                if isinstance(obj.transform, Convolution):
                     transform = copy.copy(obj.transform)
                     # manually bypass the read-only check (we are sure that
                     # nothing else has a handle to the new transform at this
                     # point, so this won't cause any problems)
                     Convolution.init.data[transform] = weights
                     params.append({"transform": transform})
+                elif isinstance(obj.transform, Sparse):
+                    transform = copy.copy(obj.transform)
+                    if isinstance(transform.init, SparseMatrix):
+                        init = SparseMatrix(
+                            transform.init.indices, weights, transform.init.shape
+                        )
+                    else:
+                        init = transform.init.tocoo()
+                        init = SparseMatrix(
+                            np.stack((init.row, init.col), axis=-1), weights, init.shape
+                        )
+                    Sparse.init.data[transform] = init
+                    params.append({"transform": transform})
+                elif isinstance(obj.transform, (Dense, compat.NoTransform)):
+                    if isinstance(obj.pre_obj, Ensemble):
+                        # decoded connection
+                        params.append(
+                            {
+                                "solver": NoSolver(weights.T, weights=False),
+                                "function": lambda x, weights=weights: np.zeros(
+                                    weights.shape[0]
+                                ),
+                                "transform": compat.default_transform,
+                            }
+                        )
+                    else:
+                        if all(x == 1 for x in weights.shape):
+                            weights = np.squeeze(weights)
+                        params.append({"transform": weights})
                 else:
-                    if all(x == 1 for x in weights.shape):
-                        weights = np.squeeze(weights)
-                    params.append({"transform": weights})
+                    raise NotImplementedError(
+                        "Cannot get parameters of Connections with transform type '%s'"
+                        % type(obj.transform).__name__
+                    )
             else:
                 # note: we don't want to change the original gain (even though
                 # it is rolled into the encoder values), because connections
