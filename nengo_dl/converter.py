@@ -8,7 +8,6 @@ import warnings
 import nengo
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras.layers import BatchNormalization, BatchNormalizationV2
 from tensorflow.python.util import nest
 
 from nengo_dl import compat
@@ -1170,8 +1169,8 @@ class ConvertAvgPool3D(ConvertAvgPool):
         return super().convert(node_id, dimensions=3)
 
 
-@Converter.register(BatchNormalization)
-@Converter.register(BatchNormalizationV2)
+@Converter.register(compat.BatchNormalizationV1)
+@Converter.register(compat.BatchNormalizationV2)
 class ConvertBatchNormalization(LayerConverter):
     """Convert ``tf.keras.layers.BatchNormalization`` to Nengo objects."""
 
@@ -1308,7 +1307,10 @@ class ConvertConv(LayerConverter):
 
             # add trainable bias weights
             bias_node = nengo.Node([1], label="%s.%d.bias" % (self.layer.name, node_id))
-            bias_relay = nengo.Node(size_in=len(biases))
+            bias_relay = nengo.Node(
+                size_in=len(biases),
+                label="%s.%d.bias_relay" % (self.layer.name, node_id),
+            )
             nengo.Connection(
                 bias_node, bias_relay, transform=biases[:, None], synapse=None
             )

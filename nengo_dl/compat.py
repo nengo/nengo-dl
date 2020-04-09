@@ -117,6 +117,17 @@ else:
 
     network.Network._conform_to_reference_input = _conform_to_reference_input
 
+if version.parse(tf.__version__) < version.parse("2.1.0rc0"):
+    from tensorflow.python.keras.layers import (
+        BatchNormalization as BatchNormalizationV1,
+    )
+    from tensorflow.python.keras.layers import BatchNormalizationV2
+else:
+    from tensorflow.python.keras.layers import (
+        BatchNormalizationV1,
+        BatchNormalizationV2,
+    )
+
 # Nengo compatibility
 
 # monkeypatch fix for https://github.com/nengo/nengo/pull/1587
