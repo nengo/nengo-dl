@@ -1,9 +1,8 @@
 # pylint: disable=missing-docstring
 
-from distutils.version import LooseVersion
-
 import nengo
 import numpy as np
+from packaging import version
 import pytest
 import tensorflow as tf
 from tensorflow.python.keras.layers import BatchNormalization
@@ -175,12 +174,18 @@ def test_batch_normalization(rng):
     # TF<2.1 doesn't support axis!=-1 for fused batchnorm
     out.append(
         tf.keras.layers.BatchNormalization(
-            axis=1, fused=None if LooseVersion(tf.__version__) >= "2.1.0" else False
+            axis=1,
+            fused=False
+            if version.parse(tf.__version__) < version.parse("2.1.0rc0")
+            else None,
         )(inp)
     )
     out.append(
         tf.keras.layers.BatchNormalization(
-            axis=2, fused=None if LooseVersion(tf.__version__) >= "2.1.0" else False
+            axis=2,
+            fused=False
+            if version.parse(tf.__version__) < version.parse("2.1.0rc0")
+            else None,
         )(inp)
     )
     out.append(tf.keras.layers.BatchNormalization()(inp))

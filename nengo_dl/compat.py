@@ -5,10 +5,10 @@ Utilities to ease cross-compatibility between different versions of upstream
 dependencies.
 """
 
-from distutils.version import LooseVersion
 
 import nengo
 from nengo._vendor.scipy.sparse import linalg_interface, linalg_onenormest
+from packaging import version
 import tensorflow as tf
 from tensorflow.python.keras import backend
 from tensorflow.python.keras.engine import network
@@ -76,7 +76,7 @@ class TFLogFilter:
 
 tf.get_logger().addFilter(TFLogFilter(err_on_deprecation=False))
 
-if LooseVersion(tf.__version__) < "2.2.0":
+if version.parse(tf.__version__) < version.parse("2.2.0rc0"):
 
     def global_learning_phase():
         """Returns the global (eager) Keras learning phase."""
@@ -122,7 +122,7 @@ else:
 # monkeypatch fix for https://github.com/nengo/nengo/pull/1587
 linalg_onenormest.aslinearoperator = linalg_interface.aslinearoperator
 
-if LooseVersion(nengo.__version__) < "3.1.0":
+if version.parse(nengo.__version__) < version.parse("3.1.0.dev0"):
     default_transform = 1
 
     def conn_has_weights(conn):

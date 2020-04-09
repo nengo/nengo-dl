@@ -2,7 +2,6 @@
 Utility objects used throughout the code base.
 """
 
-from distutils.version import LooseVersion
 import logging
 import re
 import subprocess
@@ -12,6 +11,7 @@ import time
 
 from nengo.exceptions import SimulationError
 import numpy as np
+from packaging import version
 import progressbar
 import tensorflow as tf
 
@@ -29,7 +29,11 @@ tf_gpu_installed = not subprocess.call(
         "import sys; "
         "import tensorflow as tf; "
         "sys.exit(len(tf.config%s.list_physical_devices('GPU')) == 0)"
-        % (".experimental" if LooseVersion(tf.__version__) < "2.1.0" else ""),
+        % (
+            ".experimental"
+            if version.parse(tf.__version__) < version.parse("2.1.0rc0")
+            else ""
+        ),
     ]
 )
 

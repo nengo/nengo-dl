@@ -1,7 +1,6 @@
 # pylint: disable=missing-docstring
 
 from collections import OrderedDict
-from distutils.version import LooseVersion
 import logging
 import os
 import pickle
@@ -16,6 +15,7 @@ from nengo.exceptions import (
     ValidationError,
 )
 import numpy as np
+from packaging import version
 import pytest
 import tensorflow as tf
 from tensorflow.core.util import event_pb2
@@ -806,7 +806,7 @@ def test_tensorboard(Simulator, tmpdir):
     with pytest.raises(ValidationError, match="Unknown summary object"):
         callbacks.NengoSummaries(log_dir=log_dir + "/nengo", sim=sim, objects=[a])
 
-    if LooseVersion(nengo.__version__) >= "3.1.0":
+    if version.parse(nengo.__version__) >= version.parse("3.1.0.dev0"):
         with pytest.raises(ValidationError, match="does not have any weights"):
             callbacks.NengoSummaries(log_dir=log_dir + "/nengo", sim=sim, objects=[c0])
 

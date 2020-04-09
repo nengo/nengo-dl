@@ -1,7 +1,5 @@
 # pylint: disable=missing-docstring
 
-from distutils.version import LooseVersion
-
 import nengo
 from nengo.exceptions import BuildError
 from nengo.neurons import LIF, LIFRate, Izhikevich, AdaptiveLIF
@@ -20,6 +18,7 @@ from nengo.builder.processes import SimProcess
 from nengo.builder.signal import Signal
 from nengo.builder.transforms import ConvInc
 import numpy as np
+from packaging import version
 import pytest
 
 from nengo_dl import config, op_builders, transform_builders
@@ -1183,7 +1182,7 @@ def test_remove_reset_inc_functional(Simulator, seed):
         p = nengo.Probe(node1)
 
     with Simulator(net) as sim:
-        extra_op = LooseVersion(nengo.__version__) < "3.1.0"
+        extra_op = version.parse(nengo.__version__) < version.parse("3.1.0.dev0")
 
         assert len(sim.tensor_graph.plan) == 8 + extra_op
 

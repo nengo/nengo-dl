@@ -1,8 +1,7 @@
 # pylint: disable=missing-docstring
 
-from distutils.version import LooseVersion
-
 import numpy as np
+from packaging import version
 import tensorflow as tf
 
 from nengo_dl import utils
@@ -78,7 +77,7 @@ def test_progress_bar():
 
 
 def test_gpu_check():
-    if LooseVersion(tf.__version__) < "2.1.0":
+    if version.parse(tf.__version__) < version.parse("2.1.0rc0"):
         gpus_available = tf.config.experimental.list_physical_devices("GPU")
     else:
         gpus_available = tf.config.list_physical_devices("GPU")

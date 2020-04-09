@@ -80,6 +80,7 @@ setup_cfg:
   pylint:
     known_third_party:
       - PIL
+      - packaging
       - progressbar
       - tensorflow
   coverage:
