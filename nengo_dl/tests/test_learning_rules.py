@@ -79,8 +79,8 @@ def test_merged_learning(Simulator, rule, weights, seed):
             assert np.allclose(sim.data[p1][i], canonical[1])
 
 
-def test_online_learning_reset(Simulator, tmpdir):
-    with nengo.Network() as net:
+def test_online_learning_reset(Simulator, tmpdir, seed):
+    with nengo.Network(seed=seed) as net:
         inp = nengo.Ensemble(10, 1)
         out = nengo.Node(size_in=1)
         conn = nengo.Connection(inp, out, learning_rule_type=nengo.PES(1))
@@ -98,12 +98,12 @@ def test_online_learning_reset(Simulator, tmpdir):
         # test that learning has changed weights
         assert not np.allclose(w0, w1)
 
-        # test that soft reset does NOT reset the online learning weights
-        sim.soft_reset()
+        # test that include_trainable=False does NOT reset the online learning weights
+        sim.reset(include_trainable=False)
         assert np.allclose(w1, sim.data[conn].weights)
 
         # test that full reset DOES reset the online learning weights
-        sim.reset()
+        sim.reset(include_trainable=True)
         assert np.allclose(w0, sim.data[conn].weights)
 
     # test that weights load correctly
