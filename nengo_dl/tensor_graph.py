@@ -174,7 +174,7 @@ class TensorGraph(tf.keras.layers.Layer):
         logger.info("Optimized plan length: %d", len(self.plan))
         logger.info(
             "Number of base arrays: (%s, %d), (%s, %d), (%s, %d)",
-            *tuple((k, len(x)) for k, x in self.base_arrays_init.items()),
+            *sum(((k, len(x)) for k, x in self.base_arrays_init.items()), ()),
         )
 
     def build_inputs(self):

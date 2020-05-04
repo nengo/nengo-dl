@@ -1822,3 +1822,19 @@ def test_sim_close(Simulator):
     with pytest.raises(SimulatorClosed, match="simulator is closed"):
         with sim:
             pass
+
+
+def test_logging(Simulator, caplog):
+    with nengo.Network() as net:
+        inp = nengo.Node([0])
+        ens = nengo.Ensemble(10, 1)
+        nengo.Connection(inp, ens)
+        nengo.Probe(ens)
+
+    # run a simulation with logging to verify that there are no errors
+    with caplog.at_level(logging.NOTSET):
+        with Simulator(net) as sim:
+            sim.run_steps(10)
+
+    for rec in caplog.records:
+        assert rec.getMessage(), "Record %s has empty message" % rec

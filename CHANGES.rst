@@ -24,8 +24,10 @@ Release history
 **Fixed**
 
 - Support Sparse transforms in ``Simulator.get_nengo_params``. (`#149`_)
+- Fixed bug in TensorGraph log message when logging was enabled. (`#151`_)
 
 .. _#149: https://github.com/nengo/nengo-dl/pull/149
+.. _#151: https://github.com/nengo/nengo-dl/pull/151
 
 3.2.0 (April 2, 2020)
 ---------------------
