@@ -271,7 +271,8 @@ class Converter:
                 logger.info("Nengo:\n%s", nengo_vals[fails])
                 raise ValueError(
                     "Output of Keras model does not match output of converted "
-                    "Nengo network"
+                    "Nengo network (max difference=%.2E; set log level to INFO to see "
+                    "all failures)" % max(abs(keras_vals[fails] - nengo_vals[fails]))
                 )
 
         return True
