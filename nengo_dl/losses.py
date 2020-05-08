@@ -52,28 +52,30 @@ class Regularize(tf.losses.Loss):
 
         with nengo_dl.Simulator(net) as sim:
             sim.compile(loss={p: nengo_dl.losses.Regularize()})
-
-    Parameters
-    ----------
-    order : int or str
-        Order of the regularization norm (e.g. ``1`` for L1 norm, ``2`` for
-        L2 norm).  See https://www.tensorflow.org/api_docs/python/tf/norm for
-        a full description of the possible values for this parameter.
-    axis : int or None
-        The axis of the probed signal along which to compute norm.  If None
-        (the default), the signal is flattened and the norm is computed across
-        the resulting vector.  Note that these are only the axes with respect
-        to the output on a single timestep (i.e. batch/time dimensions are not
-        included).
-
-    Notes
-    -----
-    The mean will be computed across all the non-``axis`` dimensions after
-    computing the norm (including batch/time) in order to compute the overall
-    objective value.
     """
 
     def __init__(self, order=2, axis=None):
+        """
+        Parameters
+        ----------
+        order : int or str
+            Order of the regularization norm (e.g. ``1`` for L1 norm, ``2`` for
+            L2 norm).  See https://www.tensorflow.org/api_docs/python/tf/norm for
+            a full description of the possible values for this parameter.
+        axis : int or None
+            The axis of the probed signal along which to compute norm.  If None
+            (the default), the signal is flattened and the norm is computed across
+            the resulting vector.  Note that these are only the axes with respect
+            to the output on a single timestep (i.e. batch/time dimensions are not
+            included).
+
+        Notes
+        -----
+        The mean will be computed across all the non-``axis`` dimensions after
+        computing the norm (including batch/time) in order to compute the overall
+        objective value.
+        """
+
         super().__init__()
 
         self.order = order

@@ -83,7 +83,7 @@ docs_req = [
     "nengo-sphinx-theme>=1.2.1",
     "numpydoc>=0.6.0",
     "Pillow>=4.1.1",
-    "sphinx>=1.8.0",
+    "sphinx>=3.0.0",
     "sphinx-click>=1.4.1",
 ]
 optional_req = []

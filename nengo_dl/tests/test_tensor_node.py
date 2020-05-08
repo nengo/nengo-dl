@@ -1,6 +1,7 @@
 # pylint: disable=missing-docstring
 
 from functools import partial
+import threading
 
 import nengo
 from nengo.exceptions import ValidationError, SimulationError
@@ -390,3 +391,45 @@ def test_training_arg(Simulator):
     with tf.keras.backend.learning_phase_scope(True):
         with Simulator(net) as sim:
             sim.predict(n_steps=10)
+
+
+def test_wrapped_model(Simulator):
+    inp0 = tf.keras.Input((1,))
+    out0 = tf.keras.layers.Dense(units=10)(inp0)
+    model0 = tf.keras.Model(inp0, out0)
+
+    model0.compile(loss="mse", metrics=["accuracy"])
+
+    class KerasWrapper(tf.keras.layers.Layer):
+        def __init__(self, model):
+            super().__init__()
+
+            self.model = model
+
+        def build(self, input_shape):
+            super().build(input_shape)
+
+            self.model = tf.keras.models.clone_model(self.model)
+
+            # TODO: this shouldn't be necessary once we're running natively in eager
+            #  mode
+            if not hasattr(self.model, "_metrics_lock"):
+                self.model._metrics_lock = threading.Lock()
+                for layer in self.model.layers:
+                    layer._metrics_lock = threading.Lock()
+
+        def call(self, inputs):
+            return self.model(inputs)
+
+    with nengo.Network() as net:
+        layer = KerasWrapper(model0)
+        keras_node = TensorNode(layer, shape_in=(1,), shape_out=(10,), pass_time=False)
+        nengo.Probe(keras_node)
+
+    with Simulator(net) as sim:
+        # this caused an error at one point, so testing it here (even though it
+        # seems irrelevant)
+        sim.compile(loss="mse", metrics=["accuracy"])
+
+        # assert layer.model.layers[0] in sim.tensor_graph.layers
+        assert layer.model.weights[0] in sim.keras_model.weights
