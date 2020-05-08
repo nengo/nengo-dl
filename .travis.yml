@@ -58,13 +58,13 @@ jobs:
     python: 3.5
   -
     env:
-      TF_VERSION="tensorflow-gpu"
+      TF_VERSION="tensorflow-gpu<2.2"
       GPU_NUM="0"
       SCRIPT="remote-docs"
     stage: advanced
   -
     env:
-      TF_VERSION="tensorflow-gpu"
+      TF_VERSION="tensorflow-gpu<2.2"
       GPU_NUM="0"
       SCRIPT="remote-examples"
   -
