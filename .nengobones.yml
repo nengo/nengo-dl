@@ -210,11 +210,11 @@ travis_yml:
     - stage: advanced
       script: remote-docs
       env:
-        TF_VERSION: tensorflow-gpu<2.2
+        TF_VERSION: tensorflow-gpu
         GPU_NUM: 0
     - script: remote-examples
       env:
-        TF_VERSION: tensorflow-gpu<2.2
+        TF_VERSION: tensorflow-gpu
         GPU_NUM: 0
     - test_args: --unroll-simulation 5 --simulator-only
     - test_args: --dtype float64 --simulator-only
