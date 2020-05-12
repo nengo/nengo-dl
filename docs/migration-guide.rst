@@ -98,11 +98,6 @@ Simulator changes
             sim.evaluate(
                 x={node: np.zeros((1, 1, 1))}, y={probe: np.zeros((1, 1, 1))})
 
-    .. testoutput::
-        :hide:
-
-        ...
-
 3.  **Extra simulator steps will no longer be hidden**.  When simulating a number of
     timesteps that is not evenly divisible by ``Simulator.unroll_simulation``,
     extra simulation steps will be executed (this is true in both 2 and 3).
@@ -201,11 +196,6 @@ Simulator changes
                     x={node: np.zeros((1, 1, 1))}, y={probe: np.zeros((1, 1, 1))})
 
                 sim.run(1.0)
-
-    .. testoutput::
-        :hide:
-
-        ...
 
 6.  **TensorBoard functionality replaced by Keras TensorBoard callback**.  NengoDL
     allows data about training metrics or model parameters to be output and displayed in

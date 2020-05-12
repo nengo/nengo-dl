@@ -134,7 +134,7 @@ def fill_docs(*args, **kwargs):
                     {{ param_name }}=np.ones(({{ batch_size }}, 10, 1)))
                 {% endif %}
 
-        {% if uses_y %}
+        {% if func_name == "fit" %}
         .. testoutput::
             :hide:
 
@@ -178,7 +178,7 @@ def fill_docs(*args, **kwargs):
                 )
                 {% endif %}
 
-        {% if uses_y %}
+        {% if func_name == "fit" %}
         .. testoutput::
             :hide:
 
@@ -234,7 +234,7 @@ def fill_docs(*args, **kwargs):
                 sim.{{ func_name }}({{ param_name }}=dataset)
                 {% endif %}
 
-        {% if uses_y %}
+        {% if func_name == "fit" %}
         .. testoutput::
             :hide:
 
@@ -260,10 +260,12 @@ def fill_docs(*args, **kwargs):
                 sim.{{ func_name }}(
                     x={a: np.zeros((50, 10, 1))}, y={p: np.zeros((50, 10, 1))})
 
+        {% if func_name == "fit" %}
         .. testoutput::
             :hide:
 
             ...
+        {% endif %}
 
         Note that data is only specified for the probes used in the loss function
         (specified when calling `.Simulator.compile`).  For example, if we have two
@@ -286,10 +288,12 @@ def fill_docs(*args, **kwargs):
                 sim.{{ func_name }}(
                     x={a: np.zeros((50, 10, 1))},  y={p_a: np.zeros((50, 10, 1))})
 
+        {% if func_name == "fit" %}
         .. testoutput::
             :hide:
 
             ...
+        {% endif %}
 
         ``y`` is not used if ``x`` is a generator. Instead, the generator passed to
         ``x`` should yield ``(x, y)`` tuples, where ``y`` is in one of the formats

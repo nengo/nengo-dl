@@ -21,6 +21,13 @@ Release history
 3.2.1 (unreleased)
 ------------------
 
+**Changed**
+
+- ``Simulator.evaluate`` no longer prints any information to stdout in TensorFlow
+  2.2 (due to a TensorFlow issue, see
+  https://github.com/tensorflow/tensorflow/issues/39456). Loss/metric values
+  will still be returned from the function as normal. (`#153`_)
+
 **Fixed**
 
 - Support Sparse transforms in ``Simulator.get_nengo_params``. (`#149`_)
