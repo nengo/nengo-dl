@@ -527,7 +527,7 @@ def test_save_load_params(Simulator, include_state, tmpdir):
 
             inp = nengo.Node([0])
             out = nengo.Node(size_in=1)
-            ens = nengo.Ensemble(10, 1)
+            ens = nengo.Ensemble(10, 1, neuron_type=dummies.DeterministicLIF())
             nengo.Connection(inp, ens)
             conn = nengo.Connection(ens, out)
             p = nengo.Probe(out)
@@ -1263,6 +1263,8 @@ def test_multiple_objective(Simulator, seed):
 
 def test_get_nengo_params(Simulator, seed):
     with nengo.Network(seed=seed) as net:
+        net.config[nengo.Ensemble].neuron_type = dummies.DeterministicLIF()
+
         a = nengo.Ensemble(12, 3, label="a")
         b = nengo.Ensemble(10, 4, label="b", radius=2)
         n = nengo.Node([1])
@@ -1308,6 +1310,8 @@ def test_get_nengo_params(Simulator, seed):
         sim.run_steps(100)
 
     with nengo.Network(seed=seed + 1) as net:
+        net.config[nengo.Ensemble].neuron_type = dummies.DeterministicLIF()
+
         a2 = nengo.Ensemble(12, 3, **params["a"])
         b2 = nengo.Ensemble(10, 4, radius=2, **params["b"])
         n2 = nengo.Node([1])

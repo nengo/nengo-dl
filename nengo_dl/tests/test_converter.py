@@ -399,7 +399,9 @@ def test_sequential(seed):
         (tf.nn.relu, nengo.LIF(), {nengo.RectifiedLinear(): nengo.LIF()}),
     ],
 )
-def test_activation_swap(Simulator, keras_activation, nengo_activation, swap, rng):
+def test_activation_swap(
+    Simulator, keras_activation, nengo_activation, swap, rng, seed
+):
     inp = x = tf.keras.Input(shape=(100,))
     x = tf.keras.layers.Activation(activation=keras_activation)(x)
     x = tf.keras.layers.Dense(
@@ -427,6 +429,10 @@ def test_activation_swap(Simulator, keras_activation, nengo_activation, swap, rn
         p = nengo.Probe(ens1.neurons)
 
     inp_vals = rng.uniform(size=(20, 50, 100))
+
+    # set the seed so that initial voltages will be the same
+    net.seed = seed
+    conv.net.seed = seed
 
     with Simulator(net) as sim0:
         data0 = sim0.predict(inp_vals)

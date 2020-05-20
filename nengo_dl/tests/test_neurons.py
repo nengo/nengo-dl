@@ -2,6 +2,7 @@
 
 import nengo
 import numpy as np
+from packaging import version
 import pytest
 
 from nengo_dl import (
@@ -194,19 +195,24 @@ def test_leaky_relu(Simulator, Neurons):
         [[-0.02], [0.2]],
     )
 
+    if Neurons.spiking and version.parse(nengo.__version__) > version.parse("3.0.0"):
+        kwargs = dict(initial_state={"voltage": nengo.dists.Choice([0])})
+    else:
+        kwargs = dict()
+
     with nengo.Network() as net:
         vals = np.linspace(-400, 400, 10)
         ens0 = nengo.Ensemble(
             10,
             1,
-            neuron_type=Neurons(negative_slope=0.1, amplitude=2),
+            neuron_type=Neurons(negative_slope=0.1, amplitude=2, **kwargs),
             gain=nengo.dists.Choice([1]),
             bias=vals,
         )
         ens1 = nengo.Ensemble(
             10,
             1,
-            neuron_type=Neurons(negative_slope=0.5),
+            neuron_type=Neurons(negative_slope=0.5, **kwargs),
             gain=nengo.dists.Choice([1]),
             bias=vals,
         )
