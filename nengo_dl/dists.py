@@ -47,7 +47,7 @@ class TruncatedNormal(Distribution):
             The number of dimensions to return. If this is an int, the return
             value will be of shape ``(n, d)``. If None, the return
             value will be of shape ``(n,)``.
-        rng : `~numpy.random.mtrand.RandomState`
+        rng : `~numpy.random.RandomState`
             Random number generator state (if None, will use the default
             numpy random number generator).
 
@@ -109,7 +109,7 @@ class VarianceScaling(Distribution):
             The number of dimensions to return. If this is an int, the return
             value will be of shape ``(n, d)``. If None, the return
             value will be of shape ``(n,)``.
-        rng : `~numpy.random.mtrand.RandomState`
+        rng : `~numpy.random.RandomState`
             Random number generator state (if None, will use the default
             numpy random number generator).
 

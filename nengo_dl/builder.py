@@ -182,7 +182,7 @@ class BuildConfig(
     cpu_only : bool
         True if TensorFlow is only running on the CPU (because that was
         specified by the user or because ``tensorflow-gpu`` is not installed).
-    rng : `~numpy.random.mtrand.RandomState`
+    rng : `~numpy.random.RandomState`
         Seeded random number generator.
     training : ``tf.Tensor`` (bool)
         True if building in training mode, False for inference mode.
