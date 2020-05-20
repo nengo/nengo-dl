@@ -21,7 +21,7 @@ import numpy as np
 from packaging import version
 import pytest
 
-from nengo_dl import config, op_builders, transform_builders
+from nengo_dl import compat, config, op_builders, transform_builders
 from nengo_dl.graph_optimizer import (
     greedy_planner,
     mergeable,
@@ -167,19 +167,26 @@ def test_mergeable():
         SimNeurons(Izhikevich(), dummies.Signal(), dummies.Signal()),
         [SimNeurons(AdaptiveLIF(), dummies.Signal(), dummies.Signal())],
     )
+
+    def get_state(sig):
+        if version.parse(nengo.__version__) <= version.parse("3.0.0"):
+            return dict(states=[sig])
+        else:
+            return dict(state={"voltage": sig})
+
     assert not mergeable(
         SimNeurons(
             Izhikevich(),
             dummies.Signal(),
             dummies.Signal(),
-            states=[dummies.Signal(dtype=np.float32)],
+            **get_state(dummies.Signal(dtype=np.float32)),
         ),
         [
             SimNeurons(
                 Izhikevich(),
                 dummies.Signal(),
                 dummies.Signal(),
-                states=[dummies.Signal(dtype=np.int32)],
+                **get_state(dummies.Signal(dtype=np.int32)),
             )
         ],
     )
@@ -188,14 +195,14 @@ def test_mergeable():
             Izhikevich(),
             dummies.Signal(),
             dummies.Signal(),
-            states=[dummies.Signal(shape=(3,))],
+            **get_state(dummies.Signal(shape=(3,))),
         ),
         [
             SimNeurons(
                 Izhikevich(),
                 dummies.Signal(),
                 dummies.Signal(),
-                states=[dummies.Signal(shape=(2,))],
+                **get_state(dummies.Signal(shape=(2,))),
             )
         ],
     )
@@ -204,14 +211,14 @@ def test_mergeable():
             Izhikevich(),
             dummies.Signal(),
             dummies.Signal(),
-            states=[dummies.Signal(shape=(2, 1))],
+            **get_state(dummies.Signal(shape=(2, 1))),
         ),
         [
             SimNeurons(
                 Izhikevich(),
                 dummies.Signal(),
                 dummies.Signal(),
-                states=[dummies.Signal(shape=(2, 2))],
+                **get_state(dummies.Signal(shape=(2, 2))),
             )
         ],
     )
@@ -404,7 +411,7 @@ def ordered(ops, all_signals, block=None):
     for op in ops:
         reads[op] = op.reads.copy()
         if type(op) == SimNeurons:
-            reads[op] += op.states
+            reads[op] += list(compat.neuron_state(op).values())
         elif type(op) == SimProcess and isinstance(op.process, Lowpass):
             reads[op] += op.updates
 
@@ -608,7 +615,7 @@ def test_order_signals_views():
         for i in range(5)
     ]
     for v in views:
-        v.base = base
+        v._base = base
     plan = [
         (
             dummies.Op(reads=[base]),
@@ -663,9 +670,26 @@ def test_order_signals_neuron_states():
     # test with neuron states (should be treated as reads)
 
     inputs = [dummies.Signal(label=str(i)) for i in range(10)]
+
+    def get_state(sig):
+        if version.parse(nengo.__version__) <= version.parse("3.0.0"):
+            return dict(states=[sig])
+        else:
+            return dict(state={"voltage": sig})
+
     plan = [
-        tuple(SimNeurons(None, inputs[0], inputs[1], states=[x]) for x in inputs[2::2]),
-        tuple(SimNeurons(None, inputs[0], inputs[1], states=[x]) for x in inputs[3::2]),
+        tuple(
+            SimNeurons(
+                nengo.SpikingRectifiedLinear(), inputs[0], inputs[1], **get_state(x)
+            )
+            for x in inputs[2::2]
+        ),
+        tuple(
+            SimNeurons(
+                nengo.SpikingRectifiedLinear(), inputs[0], inputs[1], **get_state(x)
+            )
+            for x in inputs[3::2]
+        ),
     ]
     sigs, new_plan = order_signals(plan)
 

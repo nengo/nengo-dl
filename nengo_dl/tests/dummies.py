@@ -4,11 +4,12 @@ from collections import defaultdict
 
 import nengo
 import numpy as np
+from packaging import version
 
 from nengo_dl import builder, tensor_graph, signals
 
 
-class Signal:
+class Signal(nengo.builder.signal.Signal):
     """
     Mock-up for `nengo.builder.Signal`.
     """
@@ -24,32 +25,65 @@ class Signal:
         initial_value=0,
         sparse=False,
     ):
-        self.shape = (1,) if shape is None else shape
-        self.dtype = np.float32 if dtype is None else dtype
-        self.base = (
+        self._shape = (1,) if shape is None else shape
+        self._dtype = np.float32 if dtype is None else dtype
+        self._base = (
             self
             if base_shape is None
             else Signal(shape=base_shape, dtype=self.dtype, label="%s.base" % label)
         )
-        self.elemoffset = offset
+        self._elemoffset = offset
         self.name = label
-        self.ndim = len(self.shape)
-        self.is_view = base_shape is not None
-        self.size = np.prod(self.shape)
+        self._ndim = len(self.shape)
+        self._is_view = base_shape is not None
+        self._size = np.prod(self.shape)
         self.trainable = trainable
         self.minibatched = not trainable
         self.init = initial_value
-        self.sparse = sparse
+        self._sparse = sparse
 
     @property
     def initial_value(self):
-        """Initial value for signal."""
-
+        """Initial signal value."""
         return np.full(self.base.shape, self.init, dtype=self.dtype)
+
+    @property
+    def shape(self):
+        """Signal shape."""
+        return self._shape
+
+    @property
+    def dtype(self):
+        """Signal dtype."""
+        return self._dtype
+
+    @property
+    def elemoffset(self):
+        """Signal offset."""
+        return self._elemoffset
+
+    @property
+    def ndim(self):
+        """Number of dimensions."""
+        return self._ndim
+
+    @property
+    def is_view(self):
+        """Whether or not this signal is a view of a base signal."""
+        return self._is_view
+
+    @property
+    def size(self):
+        """Size of signal."""
+        return self._size
+
+    @property
+    def sparse(self):
+        """Whether or not signal is sparse."""
+        return self._sparse
 
     def may_share_memory(self, _):
         """Whether or not this signal shares memory with another."""
-
         return False
 
     def __repr__(self):
@@ -161,3 +195,16 @@ def linear_net():
         p = nengo.Probe(b)
 
     return net, a, p
+
+
+def DeterministicLIF(**kwargs):
+    """
+    A LIF neuron with fixed initial voltages (useful in tests where we want neurons
+    to always have the same output given the same parameters, but don't want to
+    fix the seed).
+    """
+
+    if version.parse(nengo.__version__) <= version.parse("3.0.0"):
+        return nengo.LIF(**kwargs)
+    else:
+        return nengo.LIF(initial_state={"voltage": nengo.dists.Choice([0])}, **kwargs)

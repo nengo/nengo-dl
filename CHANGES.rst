@@ -21,6 +21,10 @@ Release history
 3.2.1 (unreleased)
 ------------------
 
+**Added**
+
+- Added support for new Nengo core ``NeuronType`` state implementation. (`#159`_)
+
 **Changed**
 
 - ``Simulator.evaluate`` no longer prints any information to stdout in TensorFlow
@@ -38,6 +42,7 @@ Release history
 .. _#149: https://github.com/nengo/nengo-dl/pull/149
 .. _#151: https://github.com/nengo/nengo-dl/pull/151
 .. _#153: https://github.com/nengo/nengo-dl/pull/153
+.. _#159: https://github.com/nengo/nengo-dl/pull/159
 
 3.2.0 (April 2, 2020)
 ---------------------

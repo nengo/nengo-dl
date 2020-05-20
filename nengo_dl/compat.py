@@ -5,6 +5,8 @@ Utilities to ease cross-compatibility between different versions of upstream
 dependencies.
 """
 
+from collections import OrderedDict
+import inspect
 
 import nengo
 from nengo._vendor.scipy.sparse import linalg_interface, linalg_onenormest
@@ -149,6 +151,18 @@ if version.parse(nengo.__version__) < version.parse("3.1.0.dev0"):
         """All connections have weights."""
         return True
 
+    def neuron_state(neuron_op):
+        """Look up keys from function signature."""
+        names = list(inspect.signature(neuron_op.neurons.step_math).parameters.keys())[
+            3:
+        ]
+        assert len(names) == len(neuron_op.states)
+        return OrderedDict((n, s) for n, s in zip(names, neuron_op.states))
+
+    def neuron_step(neuron_op, dt, J, output, state):  # pragma: no cover (runs in TF)
+        """Call step_math instead of step."""
+        neuron_op.neurons.step_math(dt, J, output, *state.values())
+
 
 else:
     from nengo.transforms import NoTransform
@@ -158,3 +172,11 @@ else:
     def conn_has_weights(conn):
         """Equivalent to conn.has_weights."""
         return conn.has_weights
+
+    def neuron_state(neuron_op):
+        """Equivalent to neuron_op.state."""
+        return neuron_op.state
+
+    def neuron_step(neuron_op, dt, J, output, state):  # pragma: no cover (runs in TF)
+        """Equivalent to neuron_op.step."""
+        neuron_op.neurons.step(dt, J, output, **state)

@@ -62,10 +62,10 @@ class SoftLIFRate(LIFRate):
         J = gain * x
         J += bias
         out = np.zeros_like(J)
-        self.step_math(dt=1, J=J, output=out)
+        self.step(dt=1, J=J, output=out)
         return out
 
-    def step_math(self, dt, J, output):
+    def step(self, dt, J, output):
         """Compute rates in Hz for input current (incl. bias)"""
 
         j = J - 1
@@ -76,6 +76,17 @@ class SoftLIFRate(LIFRate):
 
         q = np.where(j_valid, np.log1p(1 / z), -js - np.log(self.sigma))
         output[:] = self.amplitude / (self.tau_ref + self.tau_rc * q)
+
+    # note: need to specify these (even though they're defined in the base class)
+    # so that this works with Nengo<3.1.0 (where these attributes won't be defined)
+    # TODO: remove if we increase the minimum nengo version
+    negative = False
+    spiking = False
+
+    @property
+    def step_math(self):
+        """Backwards compatibility alias for ``self.step``."""
+        return self.step
 
 
 class LeakyReLU(RectifiedLinear):
@@ -91,15 +102,26 @@ class LeakyReLU(RectifiedLinear):
         multiplicatively with ``negative_slope`` for values < 0.
     """
 
-    def __init__(self, negative_slope=0.3, amplitude=1):
-        super().__init__(amplitude=amplitude)
+    def __init__(self, negative_slope=0.3, amplitude=1, **kwargs):
+        super().__init__(amplitude=amplitude, **kwargs)
 
         self.negative_slope = negative_slope
 
-    def step_math(self, dt, J, output):
+    def step(self, dt, J, output):
         """Implement the leaky relu nonlinearity."""
 
         output[...] = self.amplitude * np.where(J < 0, self.negative_slope * J, J)
+
+    # note: need to specify these (even though they're defined in the base class)
+    # so that this works with Nengo<3.1.0 (where these attributes won't be defined)
+    # TODO: remove if we increase the minimum nengo version
+    negative = False
+    spiking = False
+
+    @property
+    def step_math(self):
+        """Backwards compatibility alias for ``self.step``."""
+        return self.step
 
 
 class SpikingLeakyReLU(SpikingRectifiedLinear):
@@ -117,8 +139,8 @@ class SpikingLeakyReLU(SpikingRectifiedLinear):
         multiplicatively with ``negative_slope`` for values < 0.
     """
 
-    def __init__(self, negative_slope=0.3, amplitude=1):
-        super().__init__(amplitude=amplitude)
+    def __init__(self, negative_slope=0.3, amplitude=1, **kwargs):
+        super().__init__(amplitude=amplitude, **kwargs)
 
         self.negative_slope = negative_slope
 
@@ -127,15 +149,26 @@ class SpikingLeakyReLU(SpikingRectifiedLinear):
 
         J = self.current(x, gain, bias)
         out = np.zeros_like(J)
-        LeakyReLU.step_math(self, dt=1, J=J, output=out)
+        LeakyReLU.step(self, dt=1, J=J, output=out)
         return out
 
-    def step_math(self, dt, J, spiked, voltage):
+    def step(self, dt, J, output, voltage):
         """
         Implement the spiking leaky relu nonlinearity.
         """
 
         voltage += np.where(J < 0, self.negative_slope * J, J) * dt
         n_spikes = np.trunc(voltage)
-        spiked[:] = (self.amplitude / dt) * n_spikes
+        output[:] = (self.amplitude / dt) * n_spikes
         voltage -= n_spikes
+
+    # note: need to specify these (even though they're defined in the base class)
+    # so that this works with Nengo<3.1.0 (where these attributes won't be defined)
+    # TODO: remove if we increase the minimum nengo version
+    negative = False
+    spiking = True
+
+    @property
+    def step_math(self):
+        """Backwards compatibility alias for ``self.step``."""
+        return self.step
