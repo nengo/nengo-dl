@@ -30,7 +30,7 @@ Licensed code
 NengoDL imports several open source libraries:
 
 * `NumPy <https://numpy.org/>`_ - Used under
-  `BSD license <https://numpy.org/license.html>`__
+  `BSD license <https://numpy.org/doc/stable/license.html>`__
 * `TensorFlow <https://www.tensorflow.org/>`_ - Used under
   `Apache license <https://github.com/tensorflow/tensorflow/blob/master/LICENSE>`__
 * `Jinja2 <https://palletsprojects.com/p/jinja/>`_ - Used under
