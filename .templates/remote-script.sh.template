@@ -23,7 +23,7 @@
         export NENGO_VERSION="$NENGO_VERSION"
         export SCIPY_VERSION="$SCIPY_VERSION"
 
-        pip install nengo-bones
+        pip install git+https://github.com/nengo/nengo-bones#egg=nengo-bones
         bones-generate --output-dir .ci ci-scripts || REMOTE_STATUS=1
         conda install -y cudatoolkit=10.1 cudnn
         bash .ci/{{ remote_script }}.sh install || REMOTE_STATUS=1
