@@ -9,8 +9,8 @@ normal).
 
 In addition, the Simulator exposes features unique to the
 NengoDL backend.  In many cases these features are accessed through something very
-similar to the `Keras API <https://www.tensorflow.org/guide/keras/overview>`_, which
-will be familiar to many deep learning practitioners.  For example,
+similar to the `Keras API <https://www.tensorflow.org/guide/keras/train_and_evaluate>`_,
+which will be familiar to many deep learning practitioners.  For example,
 the Simulator has `~.Simulator.predict`, `~.Simulator.fit`, `~.Simulator.compile`, and
 `~.Simulator.evaluate` functions, which work in the same way as the corresponding
 functions of a `Keras Model

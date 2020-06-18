@@ -3,7 +3,8 @@ User guide
 
 The NengoDL API can be thought of as a combination of two high level frameworks:
 `Nengo <https://www.nengo.ai/nengo/>`_ and
-`Keras <https://www.tensorflow.org/guide/keras>`_.  We can define a network using the
+`Keras <https://www.tensorflow.org/guide/keras/train_and_evaluate>`_.  We can define a
+network using the
 standard Nengo API, such as `nengo.Ensemble` and `nengo.Connection`. This is augmented
 by `nengo_dl.Layer`/`nengo_dl.TensorNode`, which allow us to add standard TensorFlow
 components, such as Keras Layers, to the Nengo network.
