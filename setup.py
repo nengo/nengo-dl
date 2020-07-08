@@ -73,6 +73,7 @@ install_req = [
     "numpy>=1.16.0",
     "%s>=2.0.0" % tf_req,
     "jinja2>=2.10.1",
+    "packaging>=20.0",
     "progressbar2>=3.39.0",
 ]
 docs_req = [

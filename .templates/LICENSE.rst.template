@@ -11,6 +11,8 @@ NengoDL imports several open source libraries:
   `Apache license <https://github.com/tensorflow/tensorflow/blob/master/LICENSE>`__
 * `Jinja2 <https://palletsprojects.com/p/jinja/>`_ - Used under
   `BSD license <https://palletsprojects.com/license/>`__
+* `Packaging <https://packaging.pypa.io/en/latest/>`__ - Used under
+  `BSD license <https://github.com/pypa/packaging/blob/master/LICENSE.BSD>`__
 * `Progressbar 2 <https://progressbar-2.readthedocs.io/en/latest/>`_ - Used under
   `BSD license <https://github.com/WoLpH/python-progressbar/blob/develop/LICENSE>`__
 
