@@ -11,7 +11,7 @@ from nengo._vendor.scipy.sparse import linalg_interface, linalg_onenormest
 from packaging import version
 import tensorflow as tf
 from tensorflow.python.keras import backend
-from tensorflow.python.keras.engine import network
+
 
 # TensorFlow compatibility
 
@@ -101,21 +101,28 @@ else:
 
         return tensor.ref()
 
-    # monkeypatch to fix bug in TF2.2, see
-    # https://github.com/tensorflow/tensorflow/issues/37548
-    old_conform = network.Network._conform_to_reference_input
+    if (
+        version.parse("2.2.0")
+        <= version.parse(tf.__version__)
+        < version.parse("2.3.0rc0")
+    ):
+        from tensorflow.python.keras.engine import network
 
-    def _conform_to_reference_input(self, tensor, ref_input):
-        keras_history = getattr(tensor, "_keras_history", None)
+        # monkeypatch to fix bug in TF2.2, see
+        # https://github.com/tensorflow/tensorflow/issues/37548
+        old_conform = network.Network._conform_to_reference_input
 
-        tensor = old_conform(self, tensor, ref_input)
+        def _conform_to_reference_input(self, tensor, ref_input):
+            keras_history = getattr(tensor, "_keras_history", None)
 
-        if keras_history is not None:
-            tensor._keras_history = keras_history
+            tensor = old_conform(self, tensor, ref_input)
 
-        return tensor
+            if keras_history is not None:
+                tensor._keras_history = keras_history
 
-    network.Network._conform_to_reference_input = _conform_to_reference_input
+            return tensor
+
+        network.Network._conform_to_reference_input = _conform_to_reference_input
 
 if version.parse(tf.__version__) < version.parse("2.1.0rc0"):
     from tensorflow.python.keras.layers import (
