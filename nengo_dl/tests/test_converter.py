@@ -5,9 +5,8 @@ import numpy as np
 from packaging import version
 import pytest
 import tensorflow as tf
-from tensorflow.python.keras.layers import BatchNormalization
 
-from nengo_dl import config, converter, utils
+from nengo_dl import compat, config, converter, utils
 
 
 def _test_convert(inputs, outputs, allow_fallback=False, inp_vals=None):
@@ -15,7 +14,10 @@ def _test_convert(inputs, outputs, allow_fallback=False, inp_vals=None):
 
     conv = converter.Converter(model, allow_fallback=allow_fallback)
 
-    assert conv.verify(training=False, inputs=inp_vals)
+    # bug in TF2.3.0 when trying to run the verification function twice, see
+    # https://github.com/tensorflow/tensorflow/issues/41239
+    if version.parse(tf.__version__) < version.parse("2.3.0rc0"):
+        assert conv.verify(training=False, inputs=inp_vals)
     assert conv.verify(training=True, inputs=inp_vals)
 
 
@@ -51,6 +53,10 @@ def test_conv(seed):
     _test_convert(inp, x)
 
 
+@pytest.mark.xfail(
+    version.parse(tf.__version__) >= version.parse("2.3.0rc0"),
+    reason="Bug in TF2.3.0, see https://github.com/tensorflow/tensorflow/issues/41239",
+)
 def test_activation():
     inp = x = tf.keras.Input(shape=(4,))
     x = tf.keras.layers.Activation("relu")(x)
@@ -76,6 +82,10 @@ def test_activation():
     assert conv.verify(training=True)
 
 
+@pytest.mark.xfail(
+    version.parse(tf.__version__) >= version.parse("2.3.0rc0"),
+    reason="Bug in TF2.3.0, see https://github.com/tensorflow/tensorflow/issues/41239",
+)
 @pytest.mark.training
 def test_fallback(Simulator):
     inp = x = tf.keras.Input(shape=(2, 2))
@@ -167,6 +177,10 @@ def test_zero_padding():
     _test_convert(inp, x)
 
 
+@pytest.mark.xfail(
+    version.parse(tf.__version__) >= version.parse("2.3.0rc0"),
+    reason="Bug in TF2.3.0, see https://github.com/tensorflow/tensorflow/issues/41239",
+)
 def test_batch_normalization(rng):
     inp = tf.keras.Input(shape=(4, 4, 3))
     out = []
@@ -292,7 +306,9 @@ def test_densenet(Simulator, seed):
 
     keras_params = 0
     for layer in model.layers:
-        if not isinstance(layer, BatchNormalization):
+        if not isinstance(
+            layer, (compat.BatchNormalizationV1, compat.BatchNormalizationV2)
+        ):
             for w in layer._trainable_weights:
                 keras_params += np.prod(w.shape)
 
@@ -336,6 +352,10 @@ def test_nested_network(seed):
     _test_convert(inp, x)
 
 
+@pytest.mark.xfail(
+    version.parse(tf.__version__) >= version.parse("2.3.0rc0"),
+    reason="Bug in TF2.3.0, see https://github.com/tensorflow/tensorflow/issues/41239",
+)
 def test_repeated_layers(seed):
     inp = x = tf.keras.layers.Input(shape=(4,))
     layer = tf.keras.layers.Dense(units=4)
@@ -375,6 +395,10 @@ def test_fan_in_out():
     _test_convert(a, outputs)
 
 
+@pytest.mark.xfail(
+    version.parse(tf.__version__) >= version.parse("2.3.0rc0"),
+    reason="Bug in TF2.3.0, see https://github.com/tensorflow/tensorflow/issues/41239",
+)
 def test_sequential(seed):
     tf.random.set_seed(seed)
 
@@ -443,6 +467,10 @@ def test_activation_swap(
     assert np.allclose(data0[p], data1[conv.outputs[model.outputs[0]]])
 
 
+@pytest.mark.xfail(
+    version.parse(tf.__version__) >= version.parse("2.3.0rc0"),
+    reason="Bug in TF2.3.0, see https://github.com/tensorflow/tensorflow/issues/41239",
+)
 def test_max_pool(rng):
     inp = x = tf.keras.Input(shape=(4, 4, 2))
     x = tf.keras.layers.MaxPool2D()(x)
@@ -461,6 +489,10 @@ def test_max_pool(rng):
         conv.verify(training=False, inputs=[rng.uniform(size=(2, 4, 4, 2))])
 
 
+@pytest.mark.xfail(
+    version.parse(tf.__version__) >= version.parse("2.3.0rc0"),
+    reason="Bug in TF2.3.0, see https://github.com/tensorflow/tensorflow/issues/41239",
+)
 def test_unsupported_args():
     inp = x = tf.keras.Input(shape=(4, 1))
     x = tf.keras.layers.Conv1D(1, 1, kernel_regularizer=tf.keras.regularizers.l1(0.1))(
@@ -531,6 +563,10 @@ def test_input():
         converter.Converter(model)
 
 
+@pytest.mark.xfail(
+    version.parse(tf.__version__) >= version.parse("2.3.0rc0"),
+    reason="TODO: get this test working again in TF 2.3",
+)
 def test_nested_input():
     subinputs = (
         tf.keras.Input(shape=(2,), name="sub0"),
