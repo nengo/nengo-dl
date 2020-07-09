@@ -7,8 +7,10 @@ import warnings
 
 import nengo
 import numpy as np
+from packaging import version
 import tensorflow as tf
 from tensorflow.python.util import nest
+from tensorflow.python.keras import engine
 
 from nengo_dl import compat
 from nengo_dl.config import configure_settings
@@ -815,7 +817,11 @@ class LayerConverter:
         raise NotImplementedError("Subclasses must implement convert")
 
 
-@Converter.register(tf.keras.Model)
+@Converter.register(
+    tf.keras.Model
+    if version.parse(tf.__version__) < version.parse("2.3.0rc0")
+    else engine.functional.Functional
+)
 class ConvertModel(LayerConverter):
     """Convert ``tf.keras.Model`` to Nengo objects."""
 

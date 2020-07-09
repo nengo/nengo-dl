@@ -24,6 +24,7 @@ Release history
 **Added**
 
 - Added support for new Nengo core ``NeuronType`` state implementation. (`#159`_)
+- Compatible with TensorFlow 2.3.0. (`#159`_)
 
 **Changed**
 

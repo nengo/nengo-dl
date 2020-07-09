@@ -752,29 +752,37 @@ def test_tensorboard(Simulator, tmpdir):
         )
 
     # look up name of event file
+    if version.parse(tf.__version__) < version.parse("2.3.0rc0"):
+        event_dir = os.path.join(log_dir, "train")
+    else:
+        event_dir = log_dir
     event_file = [
-        x for x in os.listdir(os.path.join(log_dir, "train")) if x.endswith(".v2")
+        x
+        for x in os.listdir(event_dir)
+        if x.startswith("events.out.tfevents") and not x.endswith(".profile-empty")
     ]
     assert len(event_file) == 1
-    event_file = os.path.join(log_dir, "train", event_file[0])
+    event_file = os.path.join(event_dir, event_file[0])
     assert os.path.exists(event_file)
 
     summaries = ["epoch_loss", "epoch_probe_loss", "epoch_probe_1_loss"]
+    # metadata stuff in event file
+    meta_steps = 2 if version.parse(tf.__version__) < version.parse("2.3.0rc0") else 3
     for i, record in enumerate(tf.data.TFRecordDataset(event_file)):
         event = event_pb2.Event.FromString(record.numpy())
 
-        if i < 2:
-            # metadata stuff
-            continue
+        if i >= meta_steps:
+            curr_step = (i - meta_steps) // len(summaries)
+            assert event.step == curr_step
 
-        curr_step = (i - 2) // len(summaries)
-        assert event.step == curr_step
+            # assert event.summary.value[0].tag == summaries[(i - 2) % len(summaries)]
+            # log order non-deterministic in python 3.5 so we use this less
+            # stringent check
+            assert event.summary.value[0].tag in summaries
 
-        # assert event.summary.value[0].tag == summaries[(i - 2) % len(summaries)]
-        # log order non-deterministic in python 3.5 so we use this less stringent check
-        assert event.summary.value[0].tag in summaries
-
-    assert i == len(summaries) * n_epochs + 1  # pylint: disable=undefined-loop-variable
+    assert i == len(summaries) * n_epochs + (  # pylint: disable=undefined-loop-variable
+        meta_steps - 1
+    )
 
     # look up name of event file
     event_file = [
@@ -831,7 +839,13 @@ def test_profile(Simulator, mode, tmpdir):
                 {a: np.zeros((2, 5, 1))}, {p: np.zeros((2, 5, 1))}, callbacks=[callback]
             )
 
-        assert os.path.exists(str(tmpdir.join("profile", "train")))
+        assert os.path.exists(
+            str(
+                tmpdir.join("profile", "train")
+                if version.parse(tf.__version__) < version.parse("2.3.0rc0")
+                else tmpdir.join("profile")
+            )
+        )
 
 
 def test_dt_readonly(Simulator):
