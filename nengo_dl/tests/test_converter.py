@@ -65,6 +65,10 @@ def test_activation():
     x = tf.keras.layers.Activation("sigmoid")(x)
     x = tf.keras.layers.Activation(tf.nn.sigmoid)(x)
     x = tf.keras.layers.Activation(tf.keras.activations.sigmoid)(x)
+    if version.parse(nengo.__version__) >= version.parse("3.1.0.dev0"):
+        x = tf.keras.layers.Activation("tanh")(x)
+        x = tf.keras.layers.Activation(tf.nn.tanh)(x)
+        x = tf.keras.layers.Activation(tf.keras.activations.tanh)(x)
 
     _test_convert(inp, x)
 

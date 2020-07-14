@@ -447,6 +447,13 @@ class LayerConverter:
         tf.keras.activations.sigmoid: nengo.Sigmoid(tau_ref=1),
         tf.nn.sigmoid: nengo.Sigmoid(tau_ref=1),
     }
+    if version.parse(nengo.__version__) > version.parse("3.0.0"):
+        activation_map.update(
+            {
+                tf.keras.activations.tanh: compat.Tanh(tau_ref=1),
+                tf.nn.tanh: compat.Tanh(tau_ref=1),
+            }
+        )
 
     # attributes of the Keras layer that are not supported for non-default values.
     # the default value is assumed to be None, or a tuple of

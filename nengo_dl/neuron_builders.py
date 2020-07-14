@@ -235,6 +235,27 @@ class SigmoidBuilder(OpBuilder):
         signals.scatter(self.output_data, tf.nn.sigmoid(J) / self.tau_ref)
 
 
+class TanhBuilder(OpBuilder):
+    """Build a group of `~nengo.Tanh` neuron operators."""
+
+    def __init__(self, ops, signals, config):
+        super().__init__(ops, signals, config)
+
+        self.J_data = signals.combine([op.J for op in ops])
+        self.output_data = signals.combine([op.output for op in ops])
+
+        self.tau_ref = signals.op_constant(
+            [op.neurons for op in ops],
+            [op.J.shape[0] for op in ops],
+            "tau_ref",
+            signals.dtype,
+        )
+
+    def build_step(self, signals):
+        J = signals.gather(self.J_data)
+        signals.scatter(self.output_data, tf.nn.tanh(J) / self.tau_ref)
+
+
 class LIFRateBuilder(OpBuilder):
     """Build a group of `~nengo.LIFRate` neuron operators."""
 
@@ -439,6 +460,7 @@ class SimNeuronsBuilder(OpBuilder):
         LeakyReLU: RectifiedLinearBuilder,
         SpikingLeakyReLU: SpikingRectifiedLinearBuilder,
         Sigmoid: SigmoidBuilder,
+        compat.Tanh: TanhBuilder,
         LIF: LIFBuilder,
         LIFRate: LIFRateBuilder,
         SoftLIFRate: SoftLIFRateBuilder,
