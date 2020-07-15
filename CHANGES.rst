@@ -43,11 +43,13 @@ Release history
   a compatibility issue in TensorFlow 2.2. (`#153`_)
 - Handle Nodes that are not connected to anything else, but are probed (this only
   occurs in Nengo>=3.1.0). (`#159`_)
+- More robust support for converting nested Keras models in TensorFlow 2.3. (`#161`_)
 
 .. _#149: https://github.com/nengo/nengo-dl/pull/149
 .. _#151: https://github.com/nengo/nengo-dl/pull/151
 .. _#153: https://github.com/nengo/nengo-dl/pull/153
 .. _#159: https://github.com/nengo/nengo-dl/pull/159
+.. _#161: https://github.com/nengo/nengo-dl/pull/161
 
 3.2.0 (April 2, 2020)
 ---------------------

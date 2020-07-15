@@ -9,7 +9,6 @@ import nengo
 import numpy as np
 from packaging import version
 import tensorflow as tf
-from tensorflow.python.util import nest
 from tensorflow.python.keras import engine
 
 from nengo_dl import compat
@@ -123,49 +122,34 @@ class Converter:
         self.swap_activations = swap_activations or {}
         self.scale_firing_rates = scale_firing_rates
         self.synapse = synapse
-        self.layer_map = collections.defaultdict(dict)
         self._layer_converters = {}
 
-        with nengo.Network(label=model.name) as self.net:
-            # add the "trainable" attribute to all objects
-            configure_settings(trainable=None, inference_only=self.inference_only)
+        # convert model
+        self.net = self.get_converter(model).convert(None)
 
-            # convert model
-            self.get_converter(model).convert(None)
+        # set model from the converter in case the converter has changed the model type
+        # (i.e. if the model is sequential, it will be converted to a functional model)
+        self.model = self.get_converter(model).layer
 
-            if isinstance(model, tf.keras.Sequential):
-                # if someone passes a sequential model we convert it to a functional
-                # model and then convert that to a nengo model, so make the functional
-                # model accessible here
-                warnings.warn("Converting sequential model to functional model")
-                self.model = self.get_converter(model).layer
-            else:
-                self.model = model
+        self.layers = self.net.layers
 
-            # data structures to track converted objects
+        with self.net:
+            configure_settings(inference_only=self.inference_only)
+
+            # convert inputs to input nodes
             self.inputs = Converter.KerasTensorDict()
             for input in self.model.inputs:
-                (
-                    input_layer,
-                    input_node_id,
-                    input_tensor_id,
-                ) = LayerConverter.get_history(input)
-                self.inputs[input] = self.layer_map[input_layer][input_node_id][
-                    input_tensor_id
-                ]
+                input_obj = self.net.inputs[input]
+                logger.info("Setting input node %s (%s)", input_obj, input)
+                input_size = input_obj.size_in
+                input_obj.size_in = 0
+                input_obj.output = np.zeros(input_size)
+                self.inputs[input] = input_obj
 
+            # add probes to outputs
             self.outputs = Converter.KerasTensorDict()
             for output in self.model.outputs:
-                (
-                    output_layer,
-                    output_node_id,
-                    output_tensor_id,
-                ) = LayerConverter.get_history(output)
-                output_obj = self.layer_map[output_layer][output_node_id][
-                    output_tensor_id
-                ]
-
-                # add probes to outputs
+                output_obj = self.net.outputs[output]
                 logger.info("Probing %s (%s)", output_obj, output)
                 self.outputs[output] = nengo.Probe(
                     output_obj,
@@ -173,19 +157,6 @@ class Converter:
                     if isinstance(output_obj, nengo.ensemble.Neurons)
                     else None,
                 )
-
-            self.layers = Converter.KerasTensorDict()
-            for layer in self.model.layers:
-                for node_id, node_outputs in self.layer_map[layer].items():
-                    for nengo_obj in node_outputs:
-                        output_tensor = layer.inbound_nodes[node_id].output_tensors
-
-                        # assuming layers with only one output (for now)
-                        if isinstance(output_tensor, list):
-                            assert len(output_tensor) == 1
-                            output_tensor = output_tensor[0]
-
-                        self.layers[output_tensor] = nengo_obj
 
     def verify(self, training=False, inputs=None, atol=1e-8, rtol=1e-5):
         """
@@ -378,21 +349,20 @@ class Converter:
 
         def _get_key(self, key):
             if isinstance(key, tf.keras.layers.Layer):
-                if len(key.inbound_nodes) > 1 or (
-                    isinstance(key.inbound_nodes[0].output_tensors, list)
-                    and len(key.inbound_nodes[0].output_tensors) > 1
-                ):
+                if len(key.inbound_nodes) > 1:
                     raise KeyError(
-                        "Layer %s is ambiguous because it has multiple output tensors; "
-                        "use a specific tensor as key instead" % key
+                        "Layer %s is ambiguous because it has been called multiple "
+                        "times; use a specific set of layer outputs as key instead"
+                        % key
                     )
 
                 # get output tensor
                 key = key.output
 
-            if isinstance(key, tf.Tensor):
-                # get hashable key
-                key = compat.tensor_ref(key)
+            key = tuple(
+                compat.tensor_ref(x) if isinstance(x, tf.Tensor) else x
+                for x in tf.nest.flatten(key)
+            )
 
             return key
 
@@ -403,7 +373,7 @@ class Converter:
             return self.dict[self._get_key(key)]
 
         def __iter__(self):
-            return iter(ref._wrapped for ref in self.dict)
+            return iter(self.dict)
 
         def __len__(self):
             return len(self.dict)
@@ -557,7 +527,7 @@ class LayerConverter:
                 if biases is None:
                     # ensembles always have biases, so if biases=None we just use
                     # all-zero biases and mark them as non-trainable
-                    self.converter.net.config[obj].trainable = False
+                    self.set_trainable(obj, False)
         elif self.converter.allow_fallback:
             warnings.warn(
                 "Activation type %s does not have a native Nengo equivalent; "
@@ -617,7 +587,7 @@ class LayerConverter:
             else None,
             **kwargs,
         )
-        self.converter.net.config[conn].trainable = trainable
+        self.set_trainable(conn, trainable)
 
         logger.info(
             "Connected %s to %s (trainable=%s)", conn.pre, conn.post, trainable,
@@ -651,9 +621,11 @@ class LayerConverter:
             assert tensor_idx == 0
             tensor = input_tensors
 
-        input_layer, input_node_id, input_tensor_id = self.get_history(tensor)
+        input_layer, input_node_id, input_tensor_id = tensor._keras_history
 
-        return self.converter.layer_map[input_layer][input_node_id][input_tensor_id]
+        return nengo.Network.context[-1].layer_map[input_layer][input_node_id][
+            input_tensor_id
+        ]
 
     def _get_shape(self, input_output, node_id, include_batch=False):
         """
@@ -731,40 +703,19 @@ class LayerConverter:
         return self._get_shape("output", node_id, include_batch=include_batch)
 
     @staticmethod
-    def get_history(tensor):
+    def set_trainable(obj, trainable):
         """
-        Returns the Keras history (layer/node_idx/tensor_idx) that defined this tensor.
-
-        This function contains additional logic so that if ``tensor`` is associated with
-        a Model then the history will trace into the internal layers of that Model
-        (rather than skipping to the input of that Model, which is the default Keras
-        history).
+        Set trainable config attribute of object.
 
         Parameters
         ----------
-        tensor : ``tf.Tensor``
-            The tensor whose Keras history we want to look up.
-
-        Returns
-        -------
-        layer : ``tf.keras.layers.Layer``
-            The Layer object that created this Tensor.
-        node_index : int
-            The index of the outbound node of ``layer`` that created this Tensor.
-        tensor_index : int
-            The index in the output of the Node corresponding to this Tensor (for
-            Nodes with multiple outputs).
+        obj : ``NengoObject``
+            The object to be assigned.
+        trainable: bool
+            Trainability value of ``obj``.
         """
-        layer, node_index, tensor_index = tensor._keras_history
 
-        while isinstance(layer, tf.keras.Model):
-            # models may have internal tensors representing some transforms on the
-            # input/output of the model. but we want to know the actual internal layer
-            # that generated this tensor, so we skip past these "model" tensors
-            tensor = tensor.op.inputs[0]
-            layer, node_index, tensor_index = tensor._keras_history
-
-        return layer, node_index, tensor_index
+        nengo.Network.context[-1].config[obj].trainable = trainable
 
     @classmethod
     def convertible(cls, layer, converter):
@@ -833,9 +784,6 @@ class ConvertModel(LayerConverter):
     """Convert ``tf.keras.Model`` to Nengo objects."""
 
     def convert(self, node_id):
-        # should never be building a model except in the top-level converter
-        assert node_id is None
-
         logger.info("=" * 30)
         logger.info("Converting model %s", self.layer.name)
 
@@ -843,120 +791,77 @@ class ConvertModel(LayerConverter):
         # was instantiated
         assert self.layer.built
 
-        # trace the model to find all the tensors (which correspond to layers/nodes)
-        # that need to be built into the Nengo network
-        source_tensors = self.trace_tensors(self.layer.outputs)
+        # trace the model to find all the nodes that need to be built into
+        # the Nengo network
+        ordered_nodes, _ = compat._build_map(self.layer.outputs)
+        layer_ids = [
+            (node.layer, node.layer.inbound_nodes.index(node)) for node in ordered_nodes
+        ]
 
-        for tensor in source_tensors:
-            # look up the layer/node to be converted
-            model_layer, model_node_id, _ = self.get_history(tensor)
-            if model_node_id in self.converter.layer_map[model_layer]:
-                # already built this node
-                continue
+        with nengo.Network(
+            label=self.layer.name + ("" if node_id is None else ".%d" % node_id)
+        ) as net:
+            # add the "trainable" attribute to all objects
+            configure_settings(trainable=None)
 
-            logger.info("-" * 30)
-            logger.info("Converting layer %s node %d", model_layer.name, model_node_id)
+            net.layer_map = collections.defaultdict(dict)
 
-            # get the layerconverter object
-            layer_converter = self.converter.get_converter(model_layer)
+            for layer, layer_node_id in layer_ids:
+                # should never be rebuilding the same node
+                assert layer_node_id not in net.layer_map[layer]
 
-            # build the Nengo objects
-            nengo_layer = layer_converter.convert(model_node_id)
-            assert isinstance(
-                nengo_layer, (nengo.Node, nengo.ensemble.Neurons, TensorNode),
-            )
+                logger.info("-" * 30)
+                logger.info("Converting layer %s node %d", layer.name, layer_node_id)
 
-            # add output of layer_converter to layer_map
-            self.converter.layer_map[model_layer][model_node_id] = [nengo_layer]
+                # get the layerconverter object
+                layer_converter = self.converter.get_converter(layer)
+
+                # build the Nengo objects
+                nengo_layer = layer_converter.convert(layer_node_id)
+                assert isinstance(
+                    nengo_layer,
+                    (nengo.Node, nengo.ensemble.Neurons, TensorNode, nengo.Network),
+                )
+
+                # add output of layer_converter to layer_map
+                net.layer_map[layer][layer_node_id] = (
+                    list(nengo_layer.outputs.values())
+                    if isinstance(nengo_layer, nengo.Network)
+                    else [nengo_layer]
+                )
+
+            # data structures to track converted objects
+            net.inputs = Converter.KerasTensorDict()
+            for input in self.layer.inputs:
+                input_layer, input_node_id, input_tensor_id = input._keras_history
+                net.inputs[input] = net.layer_map[input_layer][input_node_id][
+                    input_tensor_id
+                ]
+
+            net.outputs = Converter.KerasTensorDict()
+            for output in self.layer.outputs:
+                output_layer, output_node_id, output_tensor_id = output._keras_history
+                net.outputs[output] = net.layer_map[output_layer][output_node_id][
+                    output_tensor_id
+                ]
+
+            net.layers = Converter.KerasTensorDict()
+            for layer in self.layer.layers:
+                for layer_node_id, node_outputs in net.layer_map[layer].items():
+                    for nengo_obj in node_outputs:
+                        output_tensors = layer.inbound_nodes[
+                            layer_node_id
+                        ].output_tensors
+                        net.layers[output_tensors] = nengo_obj
+
+        if node_id is not None:
+            # add incoming connections in parent network
+            for i, inp in enumerate(net.inputs.values()):
+                self.add_connection(node_id, inp, input_idx=i)
 
         logger.info("=" * 30)
 
-        # note: not returning anything, because we don't need to store anything in
-        # the layer map (this network is only used by the top-level converter class)
-
-    def trace_tensors(self, tensors, results=None):
-        """
-        Recursively trace all the upstream layer tensors, starting from ``tensors``.
-
-        Parameters
-        ----------
-        tensors : list of ``tf.Tensor``
-            Tensors representing the output of some layers.
-        results : list of ``tf.Tensor``
-            Output tensors for all the layers leading up to and including ``tensors``.
-            This will be populated in-place during the recursive execution.
-
-        Returns
-        -------
-        results : list of ``tf.Tensor``
-            The same as the ``results`` parameter (returned so that the top-level call,
-            which may not have a reference to the ``results`` list, can get the
-            results).
-        """
-        # brief intro to the keras functional graph structure:
-        # - a node represents the application of some layer to an input tensor
-        # - whenever a layer B is applied to the output of layer A a new Node is
-        #   created; this Node is added to A.outbound_nodes and B.inbound_nodes
-        # - every Node has input tensors x (which will be the input to B) and output
-        #   tensors y (the output of B)
-        # - every tensor tracks the layer/node that created it in _keras_history
-        #   (so the _keras_history of y would be (B, 0) (where 0 is the index within
-        #   B.inbound_nodes corresponding to the node that created y); note that x was
-        #   created whenever A was applied to some other layer, so its _keras_history is
-        #   unrelated to the application of B
-
-        # for example, if we apply multiple layers B/C/D to the output of some
-        # layer A:
-        #  b = B(a)
-        #  c = C(a)
-        #  d = D(a)
-        # each time will create a new Node. so we will have 3 nodes total;
-        # A will have 3 outbound nodes, and B/C/D will each have one inbound node.
-        # every node will have the same input tensor (a), but a different
-        # output tensor (the output of B/C/D) with keras_history (B, 0), (C, 0), and
-        # (D, 0).
-
-        # on the other hand, if we take one layer and apply it to multiple inputs:
-        #  d0 = D(a)
-        #  d1 = D(b)
-        #  d2 = D(c)
-        # again we will have 3 nodes total. D will 3 inbound nodes, and A/B/C will each
-        # have one outbound node. each node will have a different input tensor (the
-        # output of A/B/C), but _also a different output tensor_ (the result of applying
-        # D to each one of those inputs) with keras history (D, 0), (D, 1), (D, 2)
-
-        if results is None:
-            results = []
-
-        logger.debug("===starting trace_tensors===")
-        logger.debug("Tracing tensors %s", tensors)
-
-        for tensor in tensors:
-            if any(tensor is y for y in results):
-                # already traced this tensor
-                continue
-
-            layer, node_index, _ = self.get_history(tensor)
-
-            logger.debug("---")
-            logger.debug("Layer %s node %s", layer.name, node_index)
-
-            if layer.inbound_nodes:
-                node = layer.inbound_nodes[node_index]
-                if node.inbound_layers:
-                    logger.debug("Input layers %s", node.inbound_layers)
-                    logger.debug("Input tensors %s", node.input_tensors)
-
-                    # not an input layer, so continue recursion
-                    self.trace_tensors(
-                        nest.flatten(node.input_tensors), results=results
-                    )
-
-            results.append(tensor)
-
-        logger.debug("===done trace_tensors===")
-
-        return results
+        return net
 
 
 @Converter.register(tf.keras.Sequential)
@@ -965,6 +870,11 @@ class ConvertSequential(ConvertModel):
 
     def __init__(self, seq_model, converter):
         # convert sequential model to functional model
+        warnings.warn(
+            "Converting sequential model to functional model; "
+            "use `Converter.model` to refer to the functional model (rather than the "
+            "original sequential model) when working with the output of the Converter"
+        )
         input_shape = seq_model.layers[0].input_shape
 
         inp = x = tf.keras.Input(batch_shape=input_shape)
@@ -1243,7 +1153,7 @@ class ConvertBatchNormalization(LayerConverter):
             broadcast_bias, label="%s.%d.bias" % (self.layer.name, node_id)
         )
         conn = nengo.Connection(bias_node, output, synapse=None)
-        self.converter.net.config[conn].trainable = False
+        self.set_trainable(conn, False)
 
         # connect input to output, scaled by the batch normalization scale
         self.add_connection(node_id, output, transform=broadcast_scale)
@@ -1355,7 +1265,7 @@ class ConvertConv(LayerConverter):
                 ),
                 synapse=None,
             )
-            self.converter.net.config[conn].trainable = False
+            self.set_trainable(conn, False)
 
         # set up a convolutional transform that matches the layer parameters
         transform = nengo.Convolution(
@@ -1479,20 +1389,12 @@ class ConvertInput(LayerConverter):
     """Convert ``tf.keras.layers.InputLayer`` to Nengo objects."""
 
     def convert(self, node_id):
-        try:
-            # if this input layer has an input obj, that means it is a passthrough
-            # (so we just return the input)
-            output = self.get_input_obj(node_id)
-        except KeyError:
-            # not a passthrough input, so create input node
-            shape = self.output_shape(node_id)
-            if any(x is None for x in shape):
-                raise ValueError(
-                    "Input shapes must be fully specified; got %s" % (shape,)
-                )
-            output = nengo.Node(np.zeros(np.prod(shape)), label=self.layer.name)
+        shape = self.output_shape(node_id)
+        if any(x is None for x in shape):
+            raise ValueError("Input shapes must be fully specified; got %s" % (shape,))
+        output = nengo.Node(size_in=np.prod(shape), label=self.layer.name)
 
-            logger.info("Created %s", output)
+        logger.info("Created %s", output)
 
         return output
 
@@ -1604,7 +1506,7 @@ class ConvertUpSampling(LayerConverter):
             if isinstance(pre, nengo.ensemble.Neurons)
             else None,
         )
-        self.converter.net.config[conn].trainable = False
+        self.set_trainable(conn, False)
 
         return output
 

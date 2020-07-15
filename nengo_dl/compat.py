@@ -78,6 +78,85 @@ class TFLogFilter:
 
 tf.get_logger().addFilter(TFLogFilter(err_on_deprecation=False))
 
+if version.parse(tf.__version__) < version.parse("2.3.0rc0"):
+
+    def _build_map(outputs):
+        """
+        Vendored from ``tensorflow.python.keras.engine.functional._build_map``
+        in TF 2.3.0 (with a few changes noted below).
+        """
+        finished_nodes = set()
+        nodes_in_progress = set()
+        nodes_in_decreasing_depth = []  # nodes from inputs -> outputs.
+        layer_indices = {}  # layer -> in traversal order.
+        for output in tf.nest.flatten(outputs):
+            _build_map_helper(
+                output,
+                finished_nodes,
+                nodes_in_progress,
+                nodes_in_decreasing_depth,
+                layer_indices,
+            )
+
+        # CHANGED: add `node.layer` alias for `node.outbound_layer`
+        for node in nodes_in_decreasing_depth:
+            node.layer = node.outbound_layer
+
+        return nodes_in_decreasing_depth, layer_indices
+
+    def _build_map_helper(
+        tensor,
+        finished_nodes,
+        nodes_in_progress,
+        nodes_in_decreasing_depth,
+        layer_indices,
+    ):
+        """Recursive helper for `_build_map`."""
+        layer, node_index, _ = tensor._keras_history  # pylint: disable=protected-access
+        node = layer._inbound_nodes[node_index]  # pylint: disable=protected-access
+
+        # Don't repeat work for shared subgraphs
+        if node in finished_nodes:
+            return
+
+        # Prevent cycles.
+        if node in nodes_in_progress:  # pragma: no cover
+            raise ValueError(
+                "The tensor "
+                + str(tensor)
+                + ' at layer "'
+                + layer.name
+                + '" is part of a cycle.'
+            )
+
+        # Store the traversal order for layer sorting.
+        if layer not in layer_indices:
+            layer_indices[layer] = len(layer_indices)
+
+        # Propagate to all previous tensors connected to this node.
+        nodes_in_progress.add(node)
+        # CHANGED: `not node.is_input` to `node.inbound_layers`
+        if node.inbound_layers:
+            # CHANGED: `node.keras_inputs` to `tf.nest.flatten(node.input_tensors)`
+            # CHANGED: `tensor` to `input_tensor` (for pylint)
+            for input_tensor in tf.nest.flatten(node.input_tensors):
+                _build_map_helper(
+                    input_tensor,
+                    finished_nodes,
+                    nodes_in_progress,
+                    nodes_in_decreasing_depth,
+                    layer_indices,
+                )
+
+        finished_nodes.add(node)
+        nodes_in_progress.remove(node)
+        nodes_in_decreasing_depth.append(node)
+
+
+else:
+    from tensorflow.python.keras.engine.functional import _build_map
+
+
 if version.parse(tf.__version__) < version.parse("2.2.0rc0"):
 
     def global_learning_phase():

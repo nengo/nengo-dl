@@ -338,7 +338,7 @@ def test_nested_network(seed):
 
     sub_sub_inp = tf.keras.Input(shape=(10, 1, 1))
     sub_sub_out = tf.keras.layers.Flatten()(sub_sub_inp)
-    sub_sub_model = tf.keras.Model(sub_sub_inp, sub_sub_out)
+    sub_sub_model = tf.keras.Model(sub_sub_inp, sub_sub_out, name="subsubmodel")
 
     sub_inp0 = tf.keras.Input(shape=(10, 1))
     sub_inp1 = tf.keras.Input(shape=(10, 1))
@@ -546,7 +546,7 @@ def test_custom_converter():
 
             bias = nengo.Node([1] * output.size_in)
             conn = nengo.Connection(bias, output, synapse=None)
-            self.converter.net.config[conn].trainable = False
+            self.set_trainable(conn, False)
 
             return output
 
@@ -567,10 +567,6 @@ def test_input():
         converter.Converter(model)
 
 
-@pytest.mark.xfail(
-    version.parse(tf.__version__) >= version.parse("2.3.0rc0"),
-    reason="TODO: get this test working again in TF 2.3",
-)
 def test_nested_input():
     subinputs = (
         tf.keras.Input(shape=(2,), name="sub0"),
@@ -734,8 +730,8 @@ def test_layer_dicts():
     assert isinstance(conv.layers[model.layers[-1]], nengo.ensemble.Neurons)
 
     # iterating over dict works as expected
-    for i, tensor in enumerate(conv.layers):
-        assert model.layers.index(tensor._keras_history.layer) == i
+    for i, key in enumerate(conv.layers):
+        assert model.layers.index(key[0]._wrapped._keras_history.layer) == i
 
     # applying the same layer multiple times
     inp = tf.keras.Input(shape=(1,))
@@ -747,7 +743,7 @@ def test_layer_dicts():
 
     conv = converter.Converter(model, split_shared_weights=True)
 
-    with pytest.raises(KeyError, match="multiple output tensors"):
+    with pytest.raises(KeyError, match="has been called multiple times"):
         assert conv.layers[layer]
 
     assert conv.outputs[x0].target is conv.layers[x0]

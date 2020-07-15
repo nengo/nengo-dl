@@ -140,7 +140,7 @@ As an example, here is how we might translate the ``AddOne`` layer:
             # mark the above connection as non-trainable (since we didn't have any
             # trainable parameters in the AddOne layer, we don't want any in the
             # converted Nengo equivalent either)
-            self.converter.net.config[conn].trainable = False
+            self.set_trainable(conn, False)
 
             return output
 
