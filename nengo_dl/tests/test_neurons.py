@@ -9,6 +9,7 @@ from nengo_dl import (
     LeakyReLU,
     SoftLIFRate,
     SpikingLeakyReLU,
+    compat,
     config,
     dists,
     neuron_builders,
@@ -132,6 +133,22 @@ def test_neuron_gradients(Simulator, neuron_type, seed, rng):
         (nengo.RectifiedLinear, nengo.SpikingRectifiedLinear),
         (nengo.LIFRate, nengo.LIF),
         (SoftLIFRate, nengo.LIF),
+        pytest.param(
+            nengo.LIFRate,
+            lambda **kwargs: nengo.PoissonSpiking(nengo.LIFRate(**kwargs)),
+            marks=pytest.mark.skipif(
+                version.parse(nengo.__version__) < version.parse("3.1.0dev0"),
+                reason="PoissonSpiking does not exist",
+            ),
+        ),
+        pytest.param(
+            nengo.LIFRate,
+            lambda **kwargs: nengo.RegularSpiking(nengo.LIFRate(), **kwargs),
+            marks=pytest.mark.skipif(
+                version.parse(nengo.__version__) < version.parse("3.1.0dev0"),
+                reason="RegularSpiking does not exist",
+            ),
+        ),
     ],
 )
 def test_spiking_swap(Simulator, rate, spiking, seed):
@@ -180,7 +197,10 @@ def test_spiking_swap(Simulator, rate, spiking, seed):
         with nengo.Simulator(net) as sim2:
             sim2.run(0.5)
 
-            assert np.allclose(sim.data[p], sim2.data[p])
+            if not isinstance(neuron_type(), compat.PoissonSpiking):
+                # we don't expect these to match for poissonspiking, since we have
+                # different rng implementations in numpy vs tensorflow
+                assert np.allclose(sim.data[p], sim2.data[p])
 
     # check that the gradients match
     assert all(np.allclose(g0, g1) for g0, g1 in zip(*grads))
@@ -261,3 +281,80 @@ def test_leaky_relu(Simulator, Neurons):
             np.where(vals < 0, vals * 0.5, vals),
             atol=1,
         )
+
+
+@pytest.mark.xfail(
+    version.parse(nengo.__version__) < version.parse("3.1.0.dev0"),
+    reason="RegularSpiking does not exist",
+)
+@pytest.mark.parametrize("inference_only", (True, False))
+def test_regular_spiking(Simulator, inference_only, seed):
+    with nengo.Network() as net:
+        config.configure_settings(inference_only=inference_only)
+
+        inp = nengo.Node([1])
+        ens0 = nengo.Ensemble(
+            100, 1, neuron_type=nengo.SpikingRectifiedLinear(amplitude=2), seed=seed
+        )
+        ens1 = nengo.Ensemble(
+            100,
+            1,
+            neuron_type=nengo.RegularSpiking(nengo.RectifiedLinear(), amplitude=2),
+            seed=seed,
+        )
+
+        nengo.Connection(inp, ens0)
+        nengo.Connection(inp, ens1)
+
+        p0 = nengo.Probe(ens0.neurons)
+        p1 = nengo.Probe(ens1.neurons)
+
+    with pytest.warns(None) as recwarns:
+        with Simulator(net) as sim:
+            sim.run_steps(50)
+
+    assert np.allclose(sim.data[p0], sim.data[p1])
+    # check that it is actually using the tensorflow implementation
+    assert not any(
+        "native TensorFlow implementation" in str(w.message) for w in recwarns
+    )
+
+
+@pytest.mark.skipif(
+    version.parse(nengo.__version__) < version.parse("3.1.0.dev0"),
+    reason="Stochastic/PoissonSpiking do not exist",
+)
+@pytest.mark.parametrize("inference_only", (True, False))
+def test_random_spiking(Simulator, inference_only, seed):
+    with nengo.Network() as net:
+        config.configure_settings(inference_only=inference_only)
+
+        inp = nengo.Node([1])
+        ens0 = nengo.Ensemble(100, 1, neuron_type=nengo.Tanh(), seed=seed)
+        ens1 = nengo.Ensemble(
+            100, 1, neuron_type=nengo.StochasticSpiking(nengo.Tanh()), seed=seed,
+        )
+        ens2 = nengo.Ensemble(
+            100, 1, neuron_type=nengo.PoissonSpiking(nengo.Tanh()), seed=seed,
+        )
+
+        nengo.Connection(inp, ens0, synapse=None)
+        nengo.Connection(inp, ens1, synapse=None)
+        nengo.Connection(inp, ens2, synapse=None)
+
+        p0 = nengo.Probe(ens0.neurons)
+        p1 = nengo.Probe(ens1.neurons)
+        p2 = nengo.Probe(ens2.neurons)
+
+    with pytest.warns(None) as recwarns:
+        with Simulator(net, seed=seed) as sim:
+            sim.run_steps(10000)
+
+    assert not any(
+        "native TensorFlow implementation" in str(w.message) for w in recwarns
+    )
+
+    assert np.allclose(
+        sim.data[p0][0], np.mean(sim.data[p1], axis=0), atol=1, rtol=2e-1
+    )
+    assert np.allclose(sim.data[p0], np.mean(sim.data[p2], axis=0), atol=1, rtol=1e-1)

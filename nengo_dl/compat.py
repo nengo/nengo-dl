@@ -143,8 +143,9 @@ else:
 linalg_onenormest.aslinearoperator = linalg_interface.aslinearoperator
 
 if version.parse(nengo.__version__) < version.parse("3.1.0.dev0"):
-    Tanh = None
-    NoTransform = type(None)
+    PoissonSpiking = RegularSpiking = StochasticSpiking = Tanh = NoTransform = type(
+        None
+    )
 
     default_transform = 1
 
@@ -166,7 +167,7 @@ if version.parse(nengo.__version__) < version.parse("3.1.0.dev0"):
 
 
 else:
-    from nengo.neurons import Tanh
+    from nengo.neurons import PoissonSpiking, RegularSpiking, StochasticSpiking, Tanh
     from nengo.transforms import NoTransform
 
     default_transform = None

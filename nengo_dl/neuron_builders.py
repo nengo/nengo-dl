@@ -2,7 +2,9 @@
 Build classes for Nengo neuron operators.
 """
 
+from collections import OrderedDict
 import logging
+import warnings
 
 from nengo.builder.neurons import SimNeurons
 from nengo.neurons import RectifiedLinear, SpikingRectifiedLinear, Sigmoid, LIF, LIFRate
@@ -19,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 class GenericNeuronBuilder(OpBuilder):
     """
-    Builds all neuron types for which there is no custom Tensorflow
+    Builds all neuron types for which there is no custom TensorFlow
     implementation.
 
     Notes
@@ -120,8 +122,7 @@ class GenericNeuronBuilder(OpBuilder):
 
 
 class RectifiedLinearBuilder(OpBuilder):
-    """Build a group of `~nengo.RectifiedLinear`
-    neuron operators."""
+    """Build a group of `~nengo.RectifiedLinear` neuron operators."""
 
     def __init__(self, ops, signals, config):
         super().__init__(ops, signals, config)
@@ -164,8 +165,7 @@ class RectifiedLinearBuilder(OpBuilder):
 
 
 class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
-    """Build a group of `~nengo.SpikingRectifiedLinear` neuron
-       operators."""
+    """Build a group of `~nengo.SpikingRectifiedLinear` neuron operators."""
 
     def __init__(self, ops, signals, config):
         super().__init__(ops, signals, config)
@@ -439,6 +439,104 @@ class LIFBuilder(SoftLIFRateBuilder):
         signals.scatter(self.voltage_data, voltage)
 
 
+class RatesToSpikesBuilder(OpBuilder):
+    """Build a group of `~nengo.neurons.RatesToSpikesNeuronType` operators."""
+
+    def __init__(self, ops, signals, config):
+        super().__init__(ops, signals, config)
+
+        if all(op.neurons.amplitude == 1 for op in ops):
+            self.amplitude = None
+        else:
+            self.amplitude = signals.op_constant(
+                [op.neurons for op in ops],
+                [op.J.shape[0] for op in ops],
+                "amplitude",
+                signals.dtype,
+            )
+        self.alpha = 1 if self.amplitude is None else self.amplitude
+        self.alpha /= signals.dt
+
+        self.J_data = signals.combine([op.J for op in ops])
+        self.output_data = signals.combine([op.output for op in ops])
+
+        self.state_data = OrderedDict(
+            (state, signals.combine([compat.neuron_state(op)[state] for op in ops]))
+            for state in compat.neuron_state(ops[0])
+        )
+
+    def build_step(self, signals, **step_kwargs):
+        J = signals.gather(self.J_data)
+
+        state = OrderedDict((s, signals.gather(d)) for s, d in self.state_data.items())
+
+        step_output = self._step(J, signals.dt, **state)
+        # we use stop_gradient to avoid propagating any nans (those get
+        # propagated through the cond even if the spiking version isn't
+        # being used at all)
+        step_output = tuple(tf.stop_gradient(x) for x in tf.nest.flatten(step_output))
+
+        if self.config.inference_only:
+            out = step_output
+        else:
+            out = tf.nest.flatten(
+                tf_utils.smart_cond(
+                    self.config.training,
+                    true_fn=lambda: (
+                        J if self.amplitude is None else J * self.amplitude,
+                    )
+                    + tuple(state.values()),
+                    false_fn=lambda: step_output,
+                )
+            )
+
+        signals.scatter(self.output_data, out[0])
+        for state_data, v in zip(self.state_data.values(), out[1:]):
+            signals.scatter(state_data, v)
+
+
+class RegularSpikingBuilder(RatesToSpikesBuilder):
+    """Build a group of `~nengo.RegularSpiking` neuron operators."""
+
+    def _step(self, J, dt, voltage):
+        voltage += J * dt
+        n_spikes = tf.floor(voltage)
+
+        voltage -= n_spikes
+        out = n_spikes * self.alpha
+
+        return out, voltage
+
+
+class StochasticSpikingBuilder(RatesToSpikesBuilder):
+    """Build a group of `~nengo.StochasticSpiking` neuron operators."""
+
+    def _step(self, J, dt):
+        x = dt * tf.math.abs(J)
+        n_spikes = tf.floor(x)
+        frac = x - n_spikes
+
+        n_spikes += tf.cast(tf.random.uniform(frac.shape) < frac, n_spikes.dtype)
+
+        n_spikes *= self.alpha * tf.math.sign(J)
+
+        return n_spikes
+
+
+class PoissonSpikingBuilder(RatesToSpikesBuilder):
+    """Build a group of `~nengo.PoissonSpiking` neuron operators."""
+
+    def _step(self, J, dt):
+        n_spikes = (
+            self.alpha
+            * tf.random.poisson((), tf.math.abs(J) * dt, dtype=J.dtype)
+            * tf.math.sign(J)
+        )
+        n_spikes.set_shape(J.shape)
+
+        return n_spikes
+
+
 @Builder.register(SimNeurons)
 class SimNeuronsBuilder(OpBuilder):
     """
@@ -464,6 +562,9 @@ class SimNeuronsBuilder(OpBuilder):
         LIF: LIFBuilder,
         LIFRate: LIFRateBuilder,
         SoftLIFRate: SoftLIFRateBuilder,
+        compat.RegularSpiking: RegularSpikingBuilder,
+        compat.StochasticSpiking: StochasticSpikingBuilder,
+        compat.PoissonSpiking: PoissonSpikingBuilder,
     }
 
     def __init__(self, ops, signals, config):
@@ -479,6 +580,10 @@ class SimNeuronsBuilder(OpBuilder):
         if neuron_type in self.TF_NEURON_IMPL:
             self.built_neurons = self.TF_NEURON_IMPL[neuron_type](ops, signals, config)
         else:
+            warnings.warn(
+                "%s does not have a native TensorFlow implementation; "
+                "falling back to Python implementation" % neuron_type
+            )
             self.built_neurons = GenericNeuronBuilder(ops, signals, config)
 
     def build_step(self, signals):
