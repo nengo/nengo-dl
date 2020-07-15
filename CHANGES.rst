@@ -25,7 +25,8 @@ Release history
 
 - Added support for new Nengo core ``NeuronType`` state implementation. (`#159`_)
 - Compatible with TensorFlow 2.3.0. (`#159`_)
-- Added support for ``nengo.Tanh`` neuron type. (`#159`_)
+- Added support for ``nengo.Tanh``, ``nengo.RegularSpiking``,
+  ``nengo.StochasticSpiking``, and ``nengo.PoissonSpiking`` neuron types. (`#159`_)
 
 **Changed**
 
