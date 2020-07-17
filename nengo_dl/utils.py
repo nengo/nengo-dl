@@ -90,17 +90,14 @@ def function_name(func, sanitize=True):
     return name
 
 
-def align_func(output_shape, output_dtype):
+def align_func(output_dtype):
     """
-    Decorator that ensures the output of ``func`` is an
-    `~numpy.ndarray` with the given shape and dtype.
+    Decorator that ensures the output of ``func`` is a valid
+    `~numpy.ndarray` with the given dtype.
 
     Parameters
     ----------
-    output_shape : (list of) tuple of int
-        Desired shape for function output(s) (must have the same size as actual
-        function output)
-    output_dtype : (list of) ``tf.DType`` or `~numpy.dtype`
+    output_dtype : str or ``tf.DType`` or `~numpy.dtype`
         Desired dtype of function output(s)
 
     Raises
@@ -109,15 +106,8 @@ def align_func(output_shape, output_dtype):
         If the function returns ``None`` or a non-finite value.
     """
 
-    single_output = isinstance(output_shape, tuple)
-
-    if single_output:
-        output_shape = [output_shape]
-        output_dtype = [output_dtype]
-
-    for i, dtype in enumerate(output_dtype):
-        if isinstance(dtype, tf.DType):
-            output_dtype[i] = dtype.as_numpy_dtype
+    if isinstance(output_dtype, tf.DType):
+        output_dtype = output_dtype.as_numpy_dtype
 
     def apply_align(func):
         def aligned_func(*args):
@@ -128,67 +118,24 @@ def align_func(output_shape, output_dtype):
                     "Function %r returned None" % function_name(func, sanitize=False)
                 )
 
-            if single_output:
-                output = [output]
-
-            for i, o in enumerate(output):
-                try:
-                    if not np.all(np.isfinite(o)):
-                        raise SimulationError(
-                            "Function %r returned invalid value %r"
-                            % (function_name(func, sanitize=False), o)
-                        )
-                except (TypeError, ValueError):
+            try:
+                if not np.all(np.isfinite(output)):
                     raise SimulationError(
-                        "Function %r returned a value %r of invalid type %r"
-                        % (function_name(func, sanitize=False), o, type(o))
+                        "Function %r returned invalid value %r"
+                        % (function_name(func, sanitize=False), output)
                     )
-                o = np.asarray(o, dtype=output_dtype[i])
-                o = o.reshape(output_shape[i])
-                output[i] = o
-
-            if single_output:
-                output = output[0]
+            except (TypeError, ValueError):
+                raise SimulationError(
+                    "Function %r returned a value %r of invalid type %r"
+                    % (function_name(func, sanitize=False), output, type(output))
+                )
+            output = np.asarray(output, dtype=output_dtype)
 
             return output
 
         return aligned_func
 
     return apply_align
-
-
-def print_op(input, message):
-    """
-    Inserts a print statement into the TensorFlow graph.
-
-    Parameters
-    ----------
-    input : ``tf.Tensor``
-        The value of this tensor will be printed whenever it is computed
-        in the graph
-    message : str
-        String prepended to the value of ``input``, to help with logging
-
-    Returns
-    -------
-    op : ``tf.Tensor``
-        New tensor representing the print operation applied to ``input``
-
-    Notes
-    -----
-    This is what ``tf.Print`` is supposed to do, but it doesn't seem to work
-    consistently.
-    """
-
-    def print_func(x):  # pragma: no cover (runs in TF)
-        print(message, str(x))
-        return x
-
-    with tf.device("/cpu:0"):
-        output = tf.numpy_function(print_func, [input], input.dtype)
-    output.set_shape(input.shape)
-
-    return output
 
 
 class MessageBar(progressbar.BouncingBar):

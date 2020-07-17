@@ -18,7 +18,6 @@ from nengo.synapses import Lowpass
 from nengo.transforms import SparseMatrix
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.eager import context
 from tensorflow.python.training.tracking import base as trackable
 
 from nengo_dl import (
@@ -171,6 +170,10 @@ class TensorGraph(tf.keras.layers.Layer):
             self.io_names[obj] = name
             name_count[key] += 1
 
+        # set up op builder
+        self.op_builder = builder.Builder(self.plan)
+
+        # logging
         logger.info("Optimized plan length: %d", len(self.plan))
         logger.info(
             "Number of base arrays: (%s, %d), (%s, %d), (%s, %d)",
@@ -252,6 +255,10 @@ class TensorGraph(tf.keras.layers.Layer):
 
             return initializer, tuple(shape), dtype
 
+        # save initializers so that we can reset the model later
+        with trackable.no_automatic_dependency_tracking_scope(self):
+            self.initial_values = {}
+
         # variables for model parameters
         with trackable.no_automatic_dependency_tracking_scope(self):
             self.base_params = OrderedDict()
@@ -268,6 +275,8 @@ class TensorGraph(tf.keras.layers.Layer):
                     name="base_params/%s_%s_%s"
                     % (sig_type, dtype, "_".join(str(x) for x in shape)),
                 )
+
+                self.initial_values[k] = initializer
 
         logger.debug("created base param variables")
         logger.debug([str(x) for x in self.base_params.values()])
@@ -287,6 +296,8 @@ class TensorGraph(tf.keras.layers.Layer):
                     trainable=False,
                     name="saved_state/%s_%s" % (dtype, "_".join(str(x) for x in shape)),
                 )
+
+                self.initial_values[k] = initializer
 
         logger.debug("created saved state variables")
         logger.debug([str(x) for x in self.saved_state.values()])
@@ -359,28 +370,10 @@ class TensorGraph(tf.keras.layers.Layer):
 
         if len(weight_gets) > 0:
             # do all the weight getting/setting in one go, for efficiency reasons
-            ctx = (
-                weight_gets[0].graph.as_default()
-                if hasattr(weight_gets[0], "graph")
-                else context.eager_mode()
-            )
-            with ctx:
-                weight_vals = tf.keras.backend.batch_get_value(weight_gets)
+            weight_vals = tf.keras.backend.batch_get_value(weight_gets)
 
             tf.keras.backend.batch_set_value(zip(weight_sets, weight_vals))
 
-        # initialize state variables (need to do this manually because we're not
-        # adding them to self.weights)
-        # note: don't need to do this in eager mode, since variables are
-        # initialized on creation
-        # TODO: why does this cause problems if it is done before the tensornode
-        #  weight get/sets above?
-        if not context.executing_eagerly():
-            tf.keras.backend.batch_get_value(
-                [var.initializer for var in self.saved_state.values()]
-            )
-
-    # @tf.function  # TODO: get this working? does this help?
     @tf.autograph.experimental.do_not_convert
     def call(self, inputs, training=None, progress=None, stateful=False):
         """
@@ -408,11 +401,14 @@ class TensorGraph(tf.keras.layers.Layer):
             instantiated).
         """
 
+        override_training = config.get_setting(self.model, "learning_phase", None)
+        training = training if override_training is None else override_training
+
         super().call(inputs, training=training)
 
-        if training == 1 and self.inference_only:
+        if training is True and self.inference_only:
             raise BuildError(
-                "TensorGraph was created with inference_only=True; cannot be built "
+                "TensorGraph was created with inference_only=True; cannot be called "
                 "with training=%s" % training
             )
 
@@ -441,7 +437,9 @@ class TensorGraph(tf.keras.layers.Layer):
 
         self.steps_to_run = inputs[-1][0, 0]
 
-        # initialize op builder
+        # set up build config
+        # TODO: it would be nicer if buildconfig was static (i.e. find a separate
+        #  way to pass around `training`)
         build_config = builder.BuildConfig(
             inference_only=self.inference_only,
             lif_smoothing=config.get_setting(self.model, "lif_smoothing"),
@@ -451,11 +449,10 @@ class TensorGraph(tf.keras.layers.Layer):
                 tf.keras.backend.learning_phase() if training is None else training
             ),
         )
-        self.op_builder = builder.Builder(self.plan, self.signals, build_config)
 
         # pre-build stage
         with progress.sub("pre-build stage", max_value=len(self.plan)) as sub:
-            self.op_builder.build_pre(sub)
+            self.op_builder.build_pre(self.signals, build_config, sub)
 
         # build stage
         with progress.sub("build stage", max_value=len(self.plan) * self.unroll) as sub:
@@ -486,13 +483,12 @@ class TensorGraph(tf.keras.layers.Layer):
         # number of steps, even if there are no output probes
         outputs = list(probe_arrays.values()) + [steps_run]
 
-        updates = []
+        n_state = 0
         if stateful:
             # update saved state
-            updates.extend(
+            for var, val in zip(self.saved_state.values(), final_internal_state):
                 var.assign(val)
-                for var, val in zip(self.saved_state.values(), final_internal_state)
-            )
+                n_state += 1
 
         # if any of the base params have changed (due to online learning rules) then we
         # also need to assign those back to the original variable (so that their
@@ -505,13 +501,10 @@ class TensorGraph(tf.keras.layers.Layer):
                 minibatched = self.base_arrays_init["trainable"][key][-1]
 
             if minibatched:
-                updates.append(var.assign(val))
+                var.assign(val)
+                n_state += 1
 
-        logger.info("Number of variable updates: %d", len(updates))
-
-        if len(updates) > 0:
-            with tf.control_dependencies(updates):
-                outputs = [tf.identity(x) for x in outputs]
+        logger.info("Number of state updates: %d", n_state)
 
         return outputs
 
@@ -616,7 +609,7 @@ class TensorGraph(tf.keras.layers.Layer):
             cond=loop_condition,
             body=loop_body,
             loop_vars=loop_vars,
-            parallel_iterations=1,  # TODO: parallel iterations work in eager mode
+            parallel_iterations=1,  # TODO: check performance impact
         )
 
         # change to shape (minibatch_size,) (required by keras) instead of a scalar
@@ -759,7 +752,7 @@ class TensorGraph(tf.keras.layers.Layer):
                 # starts
                 with tf.control_dependencies([loop_i]):
                     # build operators
-                    side_effects = self.op_builder.build(progress)
+                    side_effects = self.op_builder.build_step(self.signals, progress)
 
                     logger.debug("collecting probe tensors")
                     probe_tensors = []
@@ -819,16 +812,14 @@ class TensorGraph(tf.keras.layers.Layer):
                     for _ in range(self.minibatch_size)
                 ]
             elif n.size_out > 0:
-                self.input_funcs[n] = [
-                    utils.align_func((n.size_out,), self.dtype)(output)
-                ]
+                self.input_funcs[n] = [utils.align_func(self.dtype)(output)]
             else:
                 # a node with no inputs and no outputs, but it can still
                 # have side effects
                 self.input_funcs[n] = [output]
 
         # execute build_post on all the op builders
-        self.op_builder.build_post()
+        self.op_builder.build_post(self.signals)
 
     def get_tensor(self, sig):
         """

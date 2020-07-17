@@ -98,6 +98,11 @@ Simulator changes
             sim.evaluate(
                 x={node: np.zeros((1, 1, 1))}, y={probe: np.zeros((1, 1, 1))})
 
+    .. testoutput::
+        :hide:
+
+        ...
+
 3.  **Extra simulator steps will no longer be hidden**.  When simulating a number of
     timesteps that is not evenly divisible by ``Simulator.unroll_simulation``,
     extra simulation steps will be executed (this is true in both 2 and 3).
@@ -169,8 +174,8 @@ Simulator changes
     equivalents during training.  However, sometimes it is useful to manually enable
     this swapping in other functions (for example, in order to evaluate the loss
     function on test data but with the swapped rate neuron models).  There were a couple
-    ways to do this in NengoDL 2; in NengoDL 3 it is all controlled through the Keras
-    ``learning_phase``.
+    ways to do this in NengoDL 2; in NengoDL 3 it is all controlled through the
+    ``learning_phase`` configuration option.
 
     NengoDL 2:
 
@@ -189,13 +194,20 @@ Simulator changes
 
     .. testcode::
 
-        with tf.keras.backend.learning_phase_scope(1):
-            with nengo_dl.Simulator(example_net) as sim:
-                sim.compile(loss=tf.losses.mse)
-                sim.evaluate(
-                    x={node: np.zeros((1, 1, 1))}, y={probe: np.zeros((1, 1, 1))})
+        with example_net:
+            nengo_dl.configure_settings(learning_phase=True)
 
-                sim.run(1.0)
+        with nengo_dl.Simulator(example_net) as sim:
+            sim.compile(loss=tf.losses.mse)
+            sim.evaluate(
+                x={node: np.zeros((1, 1, 1))}, y={probe: np.zeros((1, 1, 1))})
+
+            sim.run(1.0)
+
+    .. testoutput::
+        :hide:
+
+        ...
 
 6.  **TensorBoard functionality replaced by Keras TensorBoard callback**.  NengoDL
     allows data about training metrics or model parameters to be output and displayed in

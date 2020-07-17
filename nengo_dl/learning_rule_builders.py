@@ -24,30 +24,34 @@ class SimBCMBuilder(OpBuilder):
     """Build a group of `~nengo.builder.learning_rules.SimBCM`
     operators."""
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        self.post_data = signals.combine([op.post_filtered for op in ops])
+        self.post_data = signals.combine([op.post_filtered for op in self.ops])
         self.post_data = self.post_data.reshape(self.post_data.shape + (1,))
-        self.theta_data = signals.combine([op.theta for op in ops])
+        self.theta_data = signals.combine([op.theta for op in self.ops])
         self.theta_data = self.theta_data.reshape(self.theta_data.shape + (1,))
 
         self.pre_data = signals.combine(
-            [op.pre_filtered for op in ops for _ in range(op.post_filtered.shape[0])]
+            [
+                op.pre_filtered
+                for op in self.ops
+                for _ in range(op.post_filtered.shape[0])
+            ]
         )
         self.pre_data = self.pre_data.reshape(
-            (self.post_data.shape[0], ops[0].pre_filtered.shape[0])
+            (self.post_data.shape[0], self.ops[0].pre_filtered.shape[0])
         )
 
         self.learning_rate = signals.op_constant(
-            ops,
-            [op.post_filtered.shape[0] for op in ops],
+            self.ops,
+            [op.post_filtered.shape[0] for op in self.ops],
             "learning_rate",
             signals.dtype,
             shape=(1, -1, 1),
         )
 
-        self.output_data = signals.combine([op.delta for op in ops])
+        self.output_data = signals.combine([op.delta for op in self.ops])
 
     def build_step(self, signals):
         pre = signals.gather(self.pre_data)
@@ -70,33 +74,37 @@ class SimOjaBuilder(OpBuilder):
     """Build a group of `~nengo.builder.learning_rules.SimOja`
         operators."""
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        self.post_data = signals.combine([op.post_filtered for op in ops])
+        self.post_data = signals.combine([op.post_filtered for op in self.ops])
         self.post_data = self.post_data.reshape(self.post_data.shape + (1,))
 
         self.pre_data = signals.combine(
-            [op.pre_filtered for op in ops for _ in range(op.post_filtered.shape[0])]
+            [
+                op.pre_filtered
+                for op in self.ops
+                for _ in range(op.post_filtered.shape[0])
+            ]
         )
         self.pre_data = self.pre_data.reshape(
-            (self.post_data.shape[0], ops[0].pre_filtered.shape[0])
+            (self.post_data.shape[0], self.ops[0].pre_filtered.shape[0])
         )
 
-        self.weights_data = signals.combine([op.weights for op in ops])
-        self.output_data = signals.combine([op.delta for op in ops])
+        self.weights_data = signals.combine([op.weights for op in self.ops])
+        self.output_data = signals.combine([op.delta for op in self.ops])
 
         self.learning_rate = signals.op_constant(
-            ops,
-            [op.post_filtered.shape[0] for op in ops],
+            self.ops,
+            [op.post_filtered.shape[0] for op in self.ops],
             "learning_rate",
             signals.dtype,
             shape=(1, -1, 1),
         )
 
         self.beta = signals.op_constant(
-            ops,
-            [op.post_filtered.shape[0] for op in ops],
+            self.ops,
+            [op.post_filtered.shape[0] for op in self.ops],
             "beta",
             signals.dtype,
             shape=(1, -1, 1),
@@ -127,34 +135,42 @@ class SimVojaBuilder(OpBuilder):
     """Build a group of `~nengo.builder.learning_rules.SimVoja`
         operators."""
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        self.post_data = signals.combine([op.post_filtered for op in ops])
+        self.post_data = signals.combine([op.post_filtered for op in self.ops])
         self.post_data = self.post_data.reshape(self.post_data.shape + (1,))
 
         self.pre_data = signals.combine(
-            [op.pre_decoded for op in ops for _ in range(op.post_filtered.shape[0])]
+            [
+                op.pre_decoded
+                for op in self.ops
+                for _ in range(op.post_filtered.shape[0])
+            ]
         )
         self.pre_data = self.pre_data.reshape(
-            (self.post_data.shape[0], ops[0].pre_decoded.shape[0])
+            (self.post_data.shape[0], self.ops[0].pre_decoded.shape[0])
         )
 
         self.learning_data = signals.combine(
-            [op.learning_signal for op in ops for _ in range(op.post_filtered.shape[0])]
+            [
+                op.learning_signal
+                for op in self.ops
+                for _ in range(op.post_filtered.shape[0])
+            ]
         )
         self.learning_data = self.learning_data.reshape(self.learning_data.shape + (1,))
-        self.encoder_data = signals.combine([op.scaled_encoders for op in ops])
-        self.output_data = signals.combine([op.delta for op in ops])
+        self.encoder_data = signals.combine([op.scaled_encoders for op in self.ops])
+        self.output_data = signals.combine([op.delta for op in self.ops])
 
         self.scale = tf.constant(
-            np.concatenate([op.scale[None, :, None] for op in ops], axis=1),
+            np.concatenate([op.scale[None, :, None] for op in self.ops], axis=1),
             dtype=signals.dtype,
         )
 
         self.learning_rate = signals.op_constant(
-            ops,
-            [op.post_filtered.shape[0] for op in ops],
+            self.ops,
+            [op.post_filtered.shape[0] for op in self.ops],
             "learning_rate",
             signals.dtype,
             shape=(1, -1, 1),
@@ -246,24 +262,30 @@ def build_pes(model, pes, rule):
 class SimPESBuilder(OpBuilder):
     """Build a group of `~nengo.builder.learning_rules.SimPES` operators."""
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        self.error_data = signals.combine([op.error for op in ops])
-        self.error_data = self.error_data.reshape((len(ops), ops[0].error.shape[0], 1))
+        self.error_data = signals.combine([op.error for op in self.ops])
+        self.error_data = self.error_data.reshape(
+            (len(self.ops), self.ops[0].error.shape[0], 1)
+        )
 
-        self.pre_data = signals.combine([op.pre_filtered for op in ops])
+        self.pre_data = signals.combine([op.pre_filtered for op in self.ops])
         self.pre_data = self.pre_data.reshape(
-            (len(ops), 1, ops[0].pre_filtered.shape[0])
+            (len(self.ops), 1, self.ops[0].pre_filtered.shape[0])
         )
 
         self.alpha = signals.op_constant(
-            ops, [1 for _ in ops], "learning_rate", signals.dtype, shape=(1, -1, 1, 1)
-        ) * (-signals.dt_val / ops[0].pre_filtered.shape[0])
+            self.ops,
+            [1 for _ in self.ops],
+            "learning_rate",
+            signals.dtype,
+            shape=(1, -1, 1, 1),
+        ) * (-signals.dt_val / self.ops[0].pre_filtered.shape[0])
 
-        assert all(op.encoders is None for op in ops)
+        assert all(op.encoders is None for op in self.ops)
 
-        self.output_data = signals.combine([op.delta for op in ops])
+        self.output_data = signals.combine([op.delta for op in self.ops])
 
     def build_step(self, signals):
         pre_filtered = signals.gather(self.pre_data)

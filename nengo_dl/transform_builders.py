@@ -35,12 +35,12 @@ class ConvIncBuilder(OpBuilder):
     Build a group of `nengo.builder.transforms.ConvInc` operators.
     """
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        self.conv = ops[0].conv
-        self.n_ops = len(ops)
-        self.mode = "inc" if type(ops[0]) == ConvInc else "update"
+        self.conv = self.ops[0].conv
+        self.n_ops = len(self.ops)
+        self.mode = "inc" if type(self.ops[0]) == ConvInc else "update"
 
         if not self.conv.channels_last and config.cpu_only:
             # TensorFlow doesn't support channels first on CPU, so if
@@ -69,11 +69,11 @@ class ConvIncBuilder(OpBuilder):
             "N" + fmt + "C" if self.conv.channels_last or force_last else "NC" + fmt
         )
 
-        self.W_data = signals.combine([op.W for op in ops])
+        self.W_data = signals.combine([op.W for op in self.ops])
         # all the ops have the same input, so we just use one
-        self.X_data = signals[ops[0].X]
+        self.X_data = signals[self.ops[0].X]
         self.X_data = self.X_data.reshape(self.conv.input_shape.shape)
-        self.Y_data = signals.combine([op.Y for op in ops])
+        self.Y_data = signals.combine([op.Y for op in self.ops])
 
         assert self.X_data.minibatched
         if self.W_data.minibatched:
@@ -94,13 +94,13 @@ class ConvIncBuilder(OpBuilder):
             self.perm_x = None
 
         # set up Y transformations
-        if len(ops) > 1:
+        if len(self.ops) > 1:
             if self.conv.channels_last or force_last:
                 # separate channel dimension into output for each op
                 reshape_y = (
                     (signals.minibatch_size,)
                     + self.conv.output_shape.spatial_shape
-                    + (-1, len(ops))
+                    + (-1, len(self.ops))
                 )
 
                 # move ops to second axis (after batch)
@@ -117,7 +117,7 @@ class ConvIncBuilder(OpBuilder):
                 reshape_y = (
                     signals.minibatch_size,
                     -1,
-                    len(ops),
+                    len(self.ops),
                 ) + self.conv.output_shape.spatial_shape
 
                 # move ops to second axis (after batch)
@@ -139,9 +139,9 @@ class ConvIncBuilder(OpBuilder):
                 self.perm_y = None
 
         # set up W transformations
-        if len(ops) > 1:
+        if len(self.ops) > 1:
             # move ops to end
-            self.W_data = self.W_data.reshape((len(ops),) + self.conv.kernel_shape)
+            self.W_data = self.W_data.reshape((len(self.ops),) + self.conv.kernel_shape)
             self.perm_w = tf.constant(np.roll(np.arange(self.conv.dimensions + 3), -1))
 
             # concatenate weights for each op along output channel dimension

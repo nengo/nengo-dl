@@ -16,12 +16,11 @@ def test_custom_builder():
         updates = None
 
     ops = (TestOp(),)
-    builder = Builder([ops], None, None)
     progress = NullProgressBar()
 
     # error if no builder registered
-    with pytest.raises(BuildError):
-        builder.build_pre()
+    with pytest.raises(BuildError, match="No registered builder"):
+        Builder([ops])
 
     # warning if builder doesn't subclass OpBuilder
     with pytest.warns(UserWarning):
@@ -38,8 +37,8 @@ def test_custom_builder():
             pre_built = False
             post_built = False
 
-            def __init__(self, ops, signals, config):
-                super().__init__(ops, signals, config)
+            def build_pre(self, signals, config):
+                super().build_pre(signals, config)
                 self.pre_built = True
 
             def build_step(self, signals):
@@ -48,29 +47,31 @@ def test_custom_builder():
 
                 return 0, 1
 
-            def build_post(self, ops, signals, config):
+            def build_post(self, signals):
                 self.post_built = True
 
-    builder.build_pre(progress)
+    builder = Builder([ops])
 
-    result = builder.build(progress)
+    builder.build_pre(signals=None, config=None, progress=progress)
+
+    result = builder.build_step(signals=None, progress=progress)
 
     assert len(result) == 2
     assert result[0] == 0
     assert result[1] == 1
 
-    builder.build_post(progress)
+    builder.build_post(signals=None, progress=progress)
     assert builder.op_builds[ops].post_built
 
     # error if builder doesn't define build_step
     @Builder.register(TestOp)  # pylint: disable=unused-variable
     class TestOpBuilder2(OpBuilder):
-        def __init__(self, *_):
-            super().__init__([], None, None)
+        pass
 
-    builder.build_pre(progress)
-    with pytest.raises(BuildError):
-        builder.build(progress)
+    builder = Builder([ops])
+    builder.build_pre(signals=None, config=None, progress=progress)
+    with pytest.raises(BuildError, match="must implement a `build_step` function"):
+        builder.build_step(signals=None, progress=progress)
 
 
 @pytest.mark.parametrize("fail_fast", (True, False))

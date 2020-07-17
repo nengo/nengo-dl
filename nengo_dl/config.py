@@ -70,6 +70,17 @@ def configure_settings(**kwargs):
         simulation iterations are explicitly built into the model, avoiding the
         while loop. This can improve performance, but the simulation can only run
         for exactly ``Simulator.unroll_simulation`` iterations.
+    learning_phase : bool
+        The learning phase is used for models that have different behaviour in inference
+        versus training mode (for example, spiking neurons swap their behaviour during
+        training). Normally the learning phase is set automatically depending on
+        what function is being called (e.g. ``sim.predict`` will run in inference
+        mode and ``sim.fit`` will run in training mode). However, sometimes it can
+        be useful to override this behaviour (for example if we want to check
+        what the output of the model looks like during training, we might want to
+        run ``sim.predict`` in training mode).  Set ``learning_phase=True`` to
+        always run the model in training mode (or ``False`` to always run in inference
+        mode). Set ``learning_phase=None`` to use the default behaviour.
     """
 
     # get the toplevel network
@@ -113,6 +124,7 @@ def configure_settings(**kwargs):
             "dtype",
             "stateful",
             "use_loop",
+            "learning_phase",
         ):
             params.set_param(attr, Parameter(attr, val))
         else:

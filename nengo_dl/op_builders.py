@@ -101,22 +101,22 @@ class ResetBuilder(OpBuilder):
     Build a group of `~nengo.builder.operator.Reset` operators.
     """
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        logger.debug("val %s", [op.value for op in ops])
-        logger.debug("dst %s", [op.dst for op in ops])
+        logger.debug("val %s", [op.value for op in self.ops])
+        logger.debug("dst %s", [op.dst for op in self.ops])
 
-        self.mode = "inc" if type(ops[0]) == ResetInc else "update"
+        self.mode = "inc" if type(self.ops[0]) == ResetInc else "update"
 
-        dtype = np.asarray(ops[0].value).dtype
+        dtype = np.asarray(self.ops[0].value).dtype
         if np.issubdtype(dtype, np.floating):
             dtype = signals.dtype.as_numpy_dtype
 
         # Reset signals might be spread across multiple bases, so group them
         # by the ones that do share a base
         scatters = defaultdict(list)
-        for op in ops:
+        for op in self.ops:
             scatters[signals[op.dst].key].append(op)
         self.scatters = []
         for group in scatters.values():
@@ -150,18 +150,26 @@ class CopyBuilder(OpBuilder):
     Build a group of `~nengo.builder.operator.Copy` operators.
     """
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        logger.debug("src %s", [op.src for op in ops])
-        logger.debug("src_slice %s", [getattr(op, "src_slice", None) for op in ops])
-        logger.debug("dst %s", [op.dst for op in ops])
-        logger.debug("dst_slice %s", [getattr(op, "dst_slice", None) for op in ops])
+        logger.debug("src %s", [op.src for op in self.ops])
+        logger.debug(
+            "src_slice %s", [getattr(op, "src_slice", None) for op in self.ops]
+        )
+        logger.debug("dst %s", [op.dst for op in self.ops])
+        logger.debug(
+            "dst_slice %s", [getattr(op, "dst_slice", None) for op in self.ops]
+        )
 
-        self.src_data = signals.combine([signals[op.src][op.src_slice] for op in ops])
-        self.dst_data = signals.combine([signals[op.dst][op.dst_slice] for op in ops])
+        self.src_data = signals.combine(
+            [signals[op.src][op.src_slice] for op in self.ops]
+        )
+        self.dst_data = signals.combine(
+            [signals[op.dst][op.dst_slice] for op in self.ops]
+        )
 
-        self.mode = "inc" if ops[0].inc else "update"
+        self.mode = "inc" if self.ops[0].inc else "update"
 
     def build_step(self, signals):
         src = signals.gather(self.src_data)
@@ -181,26 +189,30 @@ class ElementwiseIncBuilder(OpBuilder):
     Build a group of `~nengo.builder.operator.ElementwiseInc` operators.
     """
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        logger.debug("dst %s", [op.Y for op in ops])
-        logger.debug("A %s", [op.A for op in ops])
-        logger.debug("X %s", [op.X for op in ops])
+        logger.debug("dst %s", [op.Y for op in self.ops])
+        logger.debug("A %s", [op.A for op in self.ops])
+        logger.debug("X %s", [op.X for op in self.ops])
 
-        self.mode = "inc" if type(ops[0]) == ElementwiseInc else "update"
+        self.mode = "inc" if type(self.ops[0]) == ElementwiseInc else "update"
 
-        self.Y_data = signals.combine([op.Y for op in ops])
+        self.Y_data = signals.combine([op.Y for op in self.ops])
 
         # group all the A's and X's
-        self.A_data = signals.combine([op.A for op in ops])
-        self.X_data = signals.combine([op.X for op in ops])
+        self.A_data = signals.combine([op.A for op in self.ops])
+        self.X_data = signals.combine([op.X for op in self.ops])
 
         # separate data from each op along the first dimension
         # (we only need to do this if they don't have the same length already)
         if self.A_data.shape[0] != self.X_data.shape[0]:
-            self.A_data = self.A_data.reshape((len(ops), -1) + self.A_data.shape[1:])
-            self.X_data = self.X_data.reshape((len(ops), -1) + self.X_data.shape[1:])
+            self.A_data = self.A_data.reshape(
+                (len(self.ops), -1) + self.A_data.shape[1:]
+            )
+            self.X_data = self.X_data.reshape(
+                (len(self.ops), -1) + self.X_data.shape[1:]
+            )
 
         # add empty trailing dimensions for elementwise broadcasting
         while self.A_data.ndim < self.X_data.ndim:
@@ -290,24 +302,24 @@ class DotIncBuilder(OpBuilder):
     Build a group of `~nengo.builder.operator.DotInc` operators.
     """
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        logger.debug("dst %s", [op.Y for op in ops])
-        logger.debug("A %s", [op.A for op in ops])
-        logger.debug("X %s", [op.X for op in ops])
+        logger.debug("dst %s", [op.Y for op in self.ops])
+        logger.debug("A %s", [op.A for op in self.ops])
+        logger.debug("X %s", [op.X for op in self.ops])
 
-        self.mode = "inc" if type(ops[0]) == DotInc else "update"
+        self.mode = "inc" if type(self.ops[0]) == DotInc else "update"
 
-        self.Y_data = signals.combine([op.Y for op in ops])
+        self.Y_data = signals.combine([op.Y for op in self.ops])
 
         # group all the A's and X's
-        A_data = signals.combine([op.A for op in ops])
-        X_data = signals.combine([op.X for op in ops])
+        A_data = signals.combine([op.A for op in self.ops])
+        X_data = signals.combine([op.X for op in self.ops])
 
         # separate data from each op along the first dimension
-        self.A_data = A_data.reshape((len(ops), -1, A_data.shape[1]))
-        self.X_data = X_data.reshape((len(ops), -1))
+        self.A_data = A_data.reshape((len(self.ops), -1, A_data.shape[1]))
+        self.X_data = X_data.reshape((len(self.ops), -1))
 
         if self.A_data.minibatched:
             # change X to matrix
@@ -358,18 +370,20 @@ class SimPyFuncBuilder(OpBuilder):
     Build a group of `~nengo.builder.operator.SimPyFunc` operators.
     """
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        logger.debug("t %s", [op.t for op in ops])
-        logger.debug("x %s", [op.x for op in ops])
-        logger.debug("fn %s", [op.fn for op in ops])
+        logger.debug("t %s", [op.t for op in self.ops])
+        logger.debug("x %s", [op.x for op in self.ops])
+        logger.debug("fn %s", [op.fn for op in self.ops])
 
-        self.time_data = None if ops[0].t is None else signals[ops[0].t].reshape(())
-        self.input_data = signals.combine([op.x for op in ops])
+        self.time_data = (
+            None if self.ops[0].t is None else signals[self.ops[0].t].reshape(())
+        )
+        self.input_data = signals.combine([op.x for op in self.ops])
 
-        if ops[0].output is not None:
-            self.output_data = signals.combine([op.output for op in ops])
+        if self.ops[0].output is not None:
+            self.output_data = signals.combine([op.output for op in self.ops])
             self.output_dtype = self.output_data.dtype
         else:
             self.output_data = None
@@ -378,11 +392,11 @@ class SimPyFuncBuilder(OpBuilder):
         def merged_func(time, inputs):  # pragma: no cover (runs in TF)
             outputs = []
             offset = 0
-            for op in ops:
+            for op in self.ops:
                 if op.output is None:
                     func = op.fn
                 else:
-                    func = utils.align_func(op.output.shape, self.output_dtype)(op.fn)
+                    func = utils.align_func(self.output_dtype)(op.fn)
 
                 func_input = inputs[:, offset : offset + op.x.shape[0]]
                 offset += op.x.shape[0]
@@ -394,6 +408,8 @@ class SimPyFuncBuilder(OpBuilder):
                     else:
                         func_out = func(time, func_input[j])
 
+                    func_out = np.atleast_1d(func_out)
+
                     if op.output is None:
                         # just return time as a noop (since we need to
                         # return something)
@@ -404,23 +420,24 @@ class SimPyFuncBuilder(OpBuilder):
             return np.concatenate(outputs, axis=1)
 
         self.merged_func = merged_func
-        self.merged_func.__name__ = "_".join([utils.function_name(op.fn) for op in ops])
+        self.merged_func.__name__ = "_".join(
+            [utils.function_name(op.fn) for op in self.ops]
+        )
         self.output_shape = (signals.minibatch_size,)
         self.output_shape += (
-            (len(ops),) if self.output_data is None else self.output_data.shape
+            (len(self.ops),) if self.output_data is None else self.output_data.shape
         )
 
     def build_step(self, signals):
         time = [] if self.time_data is None else signals.gather(self.time_data)
         inputs = [] if self.input_data is None else signals.gather(self.input_data)
 
-        with tf.device("/cpu:0"):
-            node_outputs = tf.numpy_function(
-                self.merged_func,
-                [time, inputs],
-                self.output_dtype,
-                name=self.merged_func.__name__,
-            )
+        node_outputs = tf.numpy_function(
+            self.merged_func,
+            [time, inputs],
+            self.output_dtype,
+            name=self.merged_func.__name__,
+        )
         node_outputs.set_shape(self.output_shape)
 
         if self.output_data is not None:
@@ -447,16 +464,16 @@ class SparseDotIncBuilder(OpBuilder):
     Build a group of `~nengo.builder.operator.SparseDotInc` operators.
     """
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        self.mode = "inc" if type(ops[0]) == SparseDotInc else "update"
+        self.mode = "inc" if type(self.ops[0]) == SparseDotInc else "update"
 
-        self.Y_data = signals.combine([op.Y for op in ops])
+        self.Y_data = signals.combine([op.Y for op in self.ops])
 
         # group all the A's and X's
-        self.A_data = signals.combine([op.A for op in ops])
-        self.X_data = signals.combine([op.X for op in ops])
+        self.A_data = signals.combine([op.A for op in self.ops])
+        self.X_data = signals.combine([op.X for op in self.ops])
 
         # the only way A would be minibatched is if it is targeted by an
         # online learning rule, which isn't supported for sparse transforms
@@ -467,7 +484,7 @@ class SparseDotIncBuilder(OpBuilder):
         # by adding an offset to each sparse matrix's indices
         sparse_indices = []
         corner = np.zeros(2, dtype=np.int64)
-        for op in ops:
+        for op in self.ops:
             if isinstance(op.A.initial_value, SparseMatrix):
                 idxs = np.array(op.A.initial_value.indices)
             else:
@@ -518,11 +535,11 @@ class TimeUpdateBuilder(OpBuilder):
     Build a group of `~nengo.builder.operator.TimeUpdate` operators.
     """
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        assert len(ops) == 1
-        op = ops[0]
+        assert len(self.ops) == 1
+        op = self.ops[0]
 
         self.step_data = signals[op.step]
         self.time_data = signals[op.time]

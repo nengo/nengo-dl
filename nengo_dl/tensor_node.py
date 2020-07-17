@@ -316,12 +316,12 @@ class SimTensorNodeBuilder(OpBuilder):
     """Builds a `~.tensor_node.SimTensorNode` operator into a NengoDL
     model."""
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
         # SimTensorNodes should never be merged
-        assert len(ops) == 1
-        op = ops[0]
+        assert len(self.ops) == 1
+        op = self.ops[0]
 
         if op.time is None:
             self.time_data = None

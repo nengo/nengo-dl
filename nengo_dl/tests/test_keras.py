@@ -77,9 +77,8 @@ def test_predict(Simulator, seed):
         assert np.allclose(output[p], data_tile)
 
         # tf input
-        # TODO: this will work in eager mode
-        # output = sim.predict(tf.constant(a_vals))
-        # assert np.allclose(output[p], data_tile)
+        output = sim.predict(tf.constant(a_vals))
+        assert np.allclose(output[p], data_tile)
 
         # dict input
         for key in [a, "a"]:
@@ -99,9 +98,7 @@ def test_predict(Simulator, seed):
         )
         assert np.allclose(output[p], data_tile)
 
-    # dataset input
-    # TODO: this crashes if placed on GPU (but not in eager mode)
-    with Simulator(net, minibatch_size=4, device="/cpu:0") as sim:
+        # dataset input
         dataset = tf.data.Dataset.from_tensor_slices(
             {
                 "a": tf.constant(a_vals),
@@ -162,14 +159,13 @@ def test_evaluate(Simulator):
         assert np.allclose(loss["probe_1_loss"], 1)
 
         # tensor inputs
-        # TODO: this will work in eager mode
-        # loss = sim.evaluate(
-        #     x=[tf.constant(inputs), tf.constant(inputs * 2)],
-        #     y={p0: tf.constant(targets), p1: tf.constant(targets)},
-        # )
-        # assert np.allclose(loss["loss"], 1)
-        # assert np.allclose(loss["probe_loss"], 0)
-        # assert np.allclose(loss["probe_1_loss"], 1)
+        loss = sim.evaluate(
+            x=[tf.constant(inputs), tf.constant(inputs * 2)],
+            y={p0: tf.constant(targets), p1: tf.constant(targets)},
+        )
+        assert np.allclose(loss["loss"], 1)
+        assert np.allclose(loss["probe_loss"], 0)
+        assert np.allclose(loss["probe_1_loss"], 1)
 
         gen = (
             (
@@ -281,15 +277,14 @@ def test_fit(Simulator, seed):
         )
         assert np.allclose(history.history["val_loss"][-1], 0)
 
-        # TODO: this will work in eager mode
-        # sim.reset()
-        # history = sim.fit(
-        #     [tf.constant(x[..., [0]]), tf.constant(x[..., [1]])],
-        #     tf.constant(y),
-        #     epochs=200,
-        #     verbose=0,
-        # )
-        # assert history.history["loss"][-1] < 5e-4
+        sim.reset()
+        history = sim.fit(
+            [tf.constant(x[..., [0]]), tf.constant(x[..., [1]])],
+            tf.constant(y),
+            epochs=200,
+            verbose=0,
+        )
+        assert history.history["loss"][-1] < 5e-4
 
         sim.reset()
         history = sim.fit(
@@ -302,16 +297,6 @@ def test_fit(Simulator, seed):
             verbose=0,
         )
         assert history.history["loss"][-1] < 5e-4
-
-    # TODO: this crashes if placed on GPU (but not in eager mode)
-    with Simulator(
-        net,
-        minibatch_size=minibatch_size,
-        unroll_simulation=1,
-        seed=seed,
-        device="/cpu:0",
-    ) as sim:
-        sim.compile(optimizer=tf.optimizers.Adam(0.01), loss=tf.losses.mse)
 
         history = sim.fit(
             tf.data.Dataset.from_tensors(
@@ -337,10 +322,15 @@ def test_learning_phase(Simulator):
         nengo.Connection(inp, ens, synapse=None)
         p = nengo.Probe(ens.neurons)
 
-    with tf.keras.backend.learning_phase_scope(1):
-        with Simulator(net) as sim:
-            sim.run_steps(10)
-            assert np.allclose(sim.data[p], 1)
+    with net:
+        config.configure_settings(learning_phase=True)
+
+    with Simulator(net) as sim:
+        sim.run_steps(10)
+        assert np.allclose(sim.data[p], 1)
+
+    with net:
+        config.configure_settings(learning_phase=None)
 
     with Simulator(net) as sim:
         sim.run_steps(10)
@@ -349,11 +339,10 @@ def test_learning_phase(Simulator):
 
 def test_learning_phase_warning(Simulator):
     with nengo.Network() as net:
-        config.configure_settings(inference_only=True)
+        config.configure_settings(inference_only=True, learning_phase=True)
     with pytest.raises(BuildError, match="inference_only=True"):
-        with tf.keras.backend.learning_phase_scope(1):
-            with Simulator(net):
-                pass
+        with Simulator(net):
+            pass
 
 
 def test_save_load_weights(Simulator, tmpdir):
@@ -391,24 +380,27 @@ def test_multi_input_warning(Simulator):
 
         with pytest.warns(None) as recwarn:
             sim.predict([np.zeros((1, 10, 1))] * 2)
-        assert not recwarn
+        assert not any(
+            "does not match number of Nodes" in str(w.message) for w in recwarn
+        )
 
         with pytest.warns(None) as recwarn:
             sim.predict({inp1: np.zeros((1, 10, 1))})
-        assert not recwarn
+        assert not any(
+            "does not match number of Nodes" in str(w.message) for w in recwarn
+        )
 
         sim.compile(optimizer=tf.optimizers.SGD(0), loss=tf.losses.mse)
         with pytest.warns(UserWarning, match="does not match number of Nodes"):
             sim.fit(np.zeros((1, 10, 1)), [np.zeros((1, 10, 1))] * 2)
 
-        sim.compile(optimizer=tf.optimizers.SGD(0), loss=tf.losses.mse)
         with pytest.warns(UserWarning, match="does not match number of Nodes"):
             sim.evaluate(np.zeros((1, 10, 1)), [np.zeros((1, 10, 1))] * 2)
 
-        # we do not need to worry about ambiguous number of target arguments,
-        # because keras already ensures that the the number of target values exactly
-        # matches the number of target placeholders
-        with pytest.raises(ValueError, match="data for each key"):
+        with pytest.warns(UserWarning, match="does not match number of Probes"):
+            sim.evaluate([np.zeros((1, 10, 1))] * 2, np.zeros((1, 10, 1)))
+
+        with pytest.warns(UserWarning, match="does not match number of Probes"):
             sim.evaluate([np.zeros((1, 10, 1))] * 2, np.zeros((1, 10, 1)))
 
 
@@ -426,7 +418,9 @@ def test_uneven_validation_split(Simulator):
 
         # regular keras error message when trying to use validation_split with
         # a generator
-        with pytest.raises(ValueError, match="cannot use `validation_split`"):
+        with pytest.raises(
+            ValueError, match="`validation_split` is only supported for Tensors"
+        ):
             sim.fit(
                 ((x, y) for x, y in zip(np.zeros((10, 10, 1)), np.zeros((10, 10, 1)))),
                 validation_split=0.7,

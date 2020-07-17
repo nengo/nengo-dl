@@ -31,24 +31,14 @@ def test_align_func():
     def my_func():
         return [0, 1, 2, 3]
 
-    x = utils.align_func((4,), tf.float32)(my_func)()
+    x = utils.align_func(tf.float32)(my_func)()
     assert x.shape == (4,)
     assert x.dtype == np.float32
     assert np.allclose(x, [0, 1, 2, 3])
 
-    x = utils.align_func((2, 2), np.int64)(my_func)()
-    assert x.shape == (2, 2)
+    x = utils.align_func(np.int64)(my_func)()
     assert x.dtype == np.int64
-    assert np.allclose(x, [[0, 1], [2, 3]])
-
-
-def test_print_op(capsys):
-    x = tf.constant(0)
-    utils.print_op(x, "hello")
-
-    out, _ = capsys.readouterr()
-
-    assert out == "hello 0\n"
+    assert np.allclose(x, [[0, 1, 2, 3]])
 
 
 def test_progress_bar():

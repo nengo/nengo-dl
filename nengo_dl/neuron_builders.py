@@ -32,25 +32,23 @@ class GenericNeuronBuilder(OpBuilder):
     adding a custom TensorFlow implementation for their neuron type instead.
     """
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        self.J_data = signals.combine([op.J for op in ops])
-        self.output_data = signals.combine([op.output for op in ops])
+        self.J_data = signals.combine([op.J for op in self.ops])
+        self.output_data = signals.combine([op.output for op in self.ops])
 
-        state_keys = compat.neuron_state(ops[0]).keys()
+        state_keys = compat.neuron_state(self.ops[0]).keys()
         self.state_data = [
-            signals.combine([compat.neuron_state(op)[key] for op in ops])
+            signals.combine([compat.neuron_state(op)[key] for op in self.ops])
             for key in state_keys
         ]
-
-        self.prev_result = []
 
         def neuron_step(dt, J, *states):  # pragma: no cover (runs in TF)
             output = None
             J_offset = 0
             state_offset = [0 for _ in states]
-            for op in ops:
+            for op in self.ops:
                 # slice out the individual state vectors from the overall
                 # array
                 op_J = J[:, J_offset : J_offset + op.J.shape[0]]
@@ -91,7 +89,7 @@ class GenericNeuronBuilder(OpBuilder):
 
         self.neuron_step = neuron_step
         self.neuron_step.__name__ = utils.sanitize_name(
-            "_".join([repr(op.neurons) for op in ops])
+            "_".join([repr(op.neurons) for op in self.ops])
         )
 
     def build_step(self, signals):
@@ -99,19 +97,14 @@ class GenericNeuronBuilder(OpBuilder):
         states = [signals.gather(x) for x in self.state_data]
         states_dtype = [x.dtype for x in self.state_data]
 
-        # note: we need to make sure that the previous call to this function
-        # has completed before the next starts, since we don't know that the
-        # functions are thread safe
-        # TODO: this isn't necessary in eager mode
-        with tf.control_dependencies(self.prev_result), tf.device("/cpu:0"):
-            ret = tf.numpy_function(
-                self.neuron_step,
-                [signals.dt, J] + states,
-                [self.output_data.dtype] + states_dtype,
-                name=self.neuron_step.__name__,
-            )
-            neuron_out, state_out = ret[0], ret[1:]
-        self.prev_result = [neuron_out]
+        ret = tf.numpy_function(
+            self.neuron_step,
+            [signals.dt, J] + states,
+            [self.output_data.dtype] + states_dtype,
+            name=self.neuron_step.__name__,
+        )
+
+        neuron_out, state_out = ret[0], ret[1:]
 
         neuron_out.set_shape((signals.minibatch_size,) + self.output_data.shape)
         signals.scatter(self.output_data, neuron_out)
@@ -128,16 +121,16 @@ class TFNeuronBuilder(OpBuilder):
     #  Nengo version to one where that attribute is guaranteed to exist
     spiking = False
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        if hasattr(ops[0].neurons, "amplitude"):
-            if all(op.neurons.amplitude == 1 for op in ops):
+        if hasattr(self.ops[0].neurons, "amplitude"):
+            if all(op.neurons.amplitude == 1 for op in self.ops):
                 self.amplitude = None
             else:
                 self.amplitude = signals.op_constant(
-                    [op.neurons for op in ops],
-                    [op.J.shape[0] for op in ops],
+                    [op.neurons for op in self.ops],
+                    [op.J.shape[0] for op in self.ops],
                     "amplitude",
                     signals.dtype,
                 )
@@ -146,12 +139,15 @@ class TFNeuronBuilder(OpBuilder):
         self.alpha = 1 if self.amplitude is None else self.amplitude
         self.alpha /= signals.dt
 
-        self.J_data = signals.combine([op.J for op in ops])
-        self.output_data = signals.combine([op.output for op in ops])
+        self.J_data = signals.combine([op.J for op in self.ops])
+        self.output_data = signals.combine([op.output for op in self.ops])
 
         self.state_data = OrderedDict(
-            (state, signals.combine([compat.neuron_state(op)[state] for op in ops]))
-            for state in compat.neuron_state(ops[0])
+            (
+                state,
+                signals.combine([compat.neuron_state(op)[state] for op in self.ops]),
+            )
+            for state in compat.neuron_state(self.ops[0])
         )
 
     def step(self, J, dt, **state):
@@ -198,15 +194,15 @@ class TFNeuronBuilder(OpBuilder):
 class RectifiedLinearBuilder(TFNeuronBuilder):
     """Build a group of `~nengo.RectifiedLinear` neuron operators."""
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        if all(getattr(op.neurons, "negative_slope", 0) == 0 for op in ops):
+        if all(getattr(op.neurons, "negative_slope", 0) == 0 for op in self.ops):
             self.negative_slope = None
         else:
             self.negative_slope = signals.op_constant(
-                [op.neurons for op in ops],
-                [op.J.shape[0] for op in ops],
+                [op.neurons for op in self.ops],
+                [op.J.shape[0] for op in self.ops],
                 "negative_slope",
                 signals.dtype,
             )
@@ -245,12 +241,12 @@ class SpikingRectifiedLinearBuilder(RectifiedLinearBuilder):
 class SigmoidBuilder(TFNeuronBuilder):
     """Build a group of `~nengo.Sigmoid` neuron operators."""
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
         self.tau_ref = signals.op_constant(
-            [op.neurons for op in ops],
-            [op.J.shape[0] for op in ops],
+            [op.neurons for op in self.ops],
+            [op.J.shape[0] for op in self.ops],
             "tau_ref",
             signals.dtype,
         )
@@ -262,12 +258,12 @@ class SigmoidBuilder(TFNeuronBuilder):
 class TanhBuilder(TFNeuronBuilder):
     """Build a group of `~nengo.Tanh` neuron operators."""
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
         self.tau_ref = signals.op_constant(
-            [op.neurons for op in ops],
-            [op.J.shape[0] for op in ops],
+            [op.neurons for op in self.ops],
+            [op.J.shape[0] for op in self.ops],
             "tau_ref",
             signals.dtype,
         )
@@ -279,18 +275,18 @@ class TanhBuilder(TFNeuronBuilder):
 class LIFRateBuilder(TFNeuronBuilder):
     """Build a group of `~nengo.LIFRate` neuron operators."""
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
         self.tau_ref = signals.op_constant(
-            [op.neurons for op in ops],
-            [op.J.shape[0] for op in ops],
+            [op.neurons for op in self.ops],
+            [op.J.shape[0] for op in self.ops],
             "tau_ref",
             signals.dtype,
         )
         self.tau_rc = signals.op_constant(
-            [op.neurons for op in ops],
-            [op.J.shape[0] for op in ops],
+            [op.neurons for op in self.ops],
+            [op.J.shape[0] for op in self.ops],
             "tau_rc",
             signals.dtype,
         )
@@ -323,12 +319,12 @@ class LIFRateBuilder(TFNeuronBuilder):
 class SoftLIFRateBuilder(LIFRateBuilder):
     """Build a group of `.SoftLIFRate` neuron operators."""
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
         self.sigma = signals.op_constant(
-            [op.neurons for op in ops],
-            [op.J.shape[0] for op in ops],
+            [op.neurons for op in self.ops],
+            [op.J.shape[0] for op in self.ops],
             "sigma",
             signals.dtype,
         )
@@ -362,14 +358,14 @@ class LIFBuilder(SoftLIFRateBuilder):
 
     spiking = True
 
-    def __init__(self, ops, signals, config):
+    def build_pre(self, signals, config):
         # note: we skip the SoftLIFRateBuilder init
         # pylint: disable=bad-super-call
-        super(SoftLIFRateBuilder, self).__init__(ops, signals, config)
+        super(SoftLIFRateBuilder, self).build_pre(signals, config)
 
         self.min_voltage = signals.op_constant(
-            [op.neurons for op in ops],
-            [op.J.shape[0] for op in ops],
+            [op.neurons for op in self.ops],
+            [op.J.shape[0] for op in self.ops],
             "min_voltage",
             signals.dtype,
         )
@@ -496,10 +492,8 @@ class SimNeuronsBuilder(OpBuilder):
         compat.PoissonSpiking: PoissonSpikingBuilder,
     }
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
-
-        logger.debug("J %s", [op.J for op in ops])
+    def __init__(self, ops):
+        super().__init__(ops)
 
         neuron_type = type(ops[0].neurons)
 
@@ -507,13 +501,16 @@ class SimNeuronsBuilder(OpBuilder):
         # then we build that. otherwise we'll just execute the neuron step
         # function externally (using `tf.py_func`).
         if neuron_type in self.TF_NEURON_IMPL:
-            self.built_neurons = self.TF_NEURON_IMPL[neuron_type](ops, signals, config)
+            self.built_neurons = self.TF_NEURON_IMPL[neuron_type](ops)
         else:
             warnings.warn(
                 "%s does not have a native TensorFlow implementation; "
                 "falling back to Python implementation" % neuron_type
             )
-            self.built_neurons = GenericNeuronBuilder(ops, signals, config)
+            self.built_neurons = GenericNeuronBuilder(ops)
+
+    def build_pre(self, signals, config):
+        self.built_neurons.build_pre(signals, config)
 
     def build_step(self, signals):
         self.built_neurons.build_step(signals)

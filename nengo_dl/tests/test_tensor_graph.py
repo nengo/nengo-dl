@@ -516,7 +516,7 @@ def test_conditional_update(Simulator, use_loop, caplog):
     with Simulator(net):
         pass
 
-    assert "Number of variable updates: 0" in caplog.text
+    assert "Number of state updates: 0" in caplog.text
     caplog.clear()
 
     conn.learning_rule_type = nengo.PES()
@@ -524,7 +524,7 @@ def test_conditional_update(Simulator, use_loop, caplog):
     with Simulator(net):
         pass
 
-    assert "Number of variable updates: 1" in caplog.text
+    assert "Number of state updates: 1" in caplog.text
     caplog.clear()
 
     with net:
@@ -533,4 +533,4 @@ def test_conditional_update(Simulator, use_loop, caplog):
     with Simulator(net):
         pass
 
-    assert "Number of variable updates: 1" in caplog.text
+    assert "Number of state updates: 1" in caplog.text

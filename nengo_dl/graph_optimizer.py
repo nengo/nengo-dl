@@ -856,18 +856,18 @@ def sort_ops_by_signals(sorted_io, sigs, sig_idxs, new_plan, blocks, op_sigs):
     """
     Rearrange operators to match the order of signals.
 
-    Note: the same operators can be associated with multiple read blocks if
+    Note: the same operators can be associated with multiple IO blocks if
     they have multiple inputs, so rearranging the operators according to one
-    of those blocks could mess up the order with respect to the other read
-    block.  We iterate through the read blocks in increasing size so
+    of those blocks could mess up the order with respect to the other IO
+    block.  We iterate through the IO blocks in increasing size so
     that the largest blocks win out.
 
     Parameters
     ----------
     sorted_io : list of tuple of (`~nengo.builder.Operator`, int)
-        The operators that form each io block, sorted by increasing size of
+        The operators that form each IO block, sorted by increasing size of
         the block. In the case that a group of operators participate in
-        multiple io blocks, the integer distinguishes which one of those
+        multiple IO blocks, the integer distinguishes which one of those
         blocks this block is associated with.
     sigs : list of `~nengo.builder.Signal`
         Signals that have been arranged into a given order by other parts
@@ -878,7 +878,7 @@ def sort_ops_by_signals(sorted_io, sigs, sig_idxs, new_plan, blocks, op_sigs):
                         tuple of `~nengo.builder.Operator`}
         Mapping from original operator group to the sorted operators
     blocks : dict of {`~nengo.builder.Signal`: frozenset of int}
-        Indicates which io blocks each signal participates in
+        Indicates which IO blocks each signal participates in
     op_sigs : dict of {`~nengo.builder.Operator`: \
                        list of `~nengo.builder.Signal`}
         The signals accessed by each operator

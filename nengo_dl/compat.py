@@ -169,6 +169,14 @@ if version.parse(tf.__version__) < version.parse("2.2.0rc0"):
 
         return tensor.experimental_ref()
 
+    def output_in_loss(keras_model):
+        """Check which model outputs are used in loss function."""
+
+        return [
+            not e.should_skip_target()
+            for e in getattr(keras_model, "_training_endpoints", [])
+        ]
+
 
 else:
 
@@ -204,6 +212,17 @@ else:
             return tensor
 
         network.Network._conform_to_reference_input = _conform_to_reference_input
+
+    def output_in_loss(keras_model):
+        """Check which model outputs are used in loss function."""
+
+        return [
+            keras_model.compiled_loss is None
+            or keras_model.compiled_loss._losses is None
+            or n in keras_model.compiled_loss._losses
+            for n in keras_model.output_names
+        ]
+
 
 if version.parse(tf.__version__) < version.parse("2.1.0rc0"):
     from tensorflow.python.keras.layers import (

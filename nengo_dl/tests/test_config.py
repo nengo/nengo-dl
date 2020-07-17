@@ -90,12 +90,9 @@ def test_stateful(Simulator, sim_stateful, func_stateful, func):
         if func == "predict" and func_stateful and not sim_stateful:
             # note: we do not get warnings for predict_on_batch/run_steps because
             # they automatically set func_stateful=sim_stateful
-            assert (
-                len([w for w in recwarns if "Ignoring stateful=True" in str(w.message)])
-                > 0
-            )
+            assert any("Ignoring stateful=True" in str(w.message) for w in recwarns)
         else:
-            assert len(recwarns) == 0
+            assert not any("Ignoring stateful=True" in str(w.message) for w in recwarns)
 
         getattr(sim, func)(**kwargs)
         assert sim.n_steps == (10 if func_stateful and sim_stateful else 0)

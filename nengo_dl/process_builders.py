@@ -32,32 +32,26 @@ class GenericProcessBuilder(OpBuilder):
     adding a custom TensorFlow implementation for their type instead.
     """
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
-        self.time_data = signals[ops[0].t].reshape(())
+        self.time_data = signals[self.ops[0].t].reshape(())
         self.input_data = (
-            None if ops[0].input is None else signals.combine([op.input for op in ops])
+            None
+            if self.ops[0].input is None
+            else signals.combine([op.input for op in self.ops])
         )
-        self.output_data = signals.combine([op.output for op in ops])
+        self.output_data = signals.combine([op.output for op in self.ops])
         self.state_data = [
-            signals.combine([list(op.state.values())[i] for op in ops])
-            for i in range(len(ops[0].state))
+            signals.combine([list(op.state.values())[i] for op in self.ops])
+            for i in range(len(self.ops[0].state))
         ]
-        self.mode = "inc" if ops[0].mode == "inc" else "update"
-        self.prev_result = []
-
-        # build the step function for each process
-        self.step_fs = [[None for _ in range(signals.minibatch_size)] for _ in ops]
+        self.mode = "inc" if self.ops[0].mode == "inc" else "update"
 
         # `merged_func` calls the step function for each process and
         # combines the result
-        @utils.align_func(
-            [self.output_data.full_shape] + [s.full_shape for s in self.state_data],
-            [self.output_data.dtype] + [s.dtype for s in self.state_data],
-        )
         def merged_func(time, *input_state):  # pragma: no cover (runs in TF)
-            if any(x is None for a in self.step_fs for x in a):
+            if not hasattr(self, "step_fs"):
                 raise SimulationError("build_post has not been called for %s" % self)
 
             if self.input_data is None:
@@ -74,7 +68,7 @@ class GenericProcessBuilder(OpBuilder):
 
             input_offset = 0
             func_output = []
-            for i, op in enumerate(ops):
+            for i, op in enumerate(self.ops):
                 if op.input is not None:
                     input_shape = op.input.shape[0]
                     func_input = input[:, input_offset : input_offset + input_shape]
@@ -90,7 +84,7 @@ class GenericProcessBuilder(OpBuilder):
 
         self.merged_func = merged_func
         self.merged_func.__name__ = utils.sanitize_name(
-            "_".join([type(op.process).__name__ for op in ops])
+            "_".join([type(op.process).__name__ for op in self.ops])
         )
 
     def build_step(self, signals):
@@ -98,20 +92,19 @@ class GenericProcessBuilder(OpBuilder):
         input = [] if self.input_data is None else [signals.gather(self.input_data)]
         state = [signals.gather(s) for s in self.state_data]
 
-        # note: we need to make sure that the previous call to this function
-        # has completed before the next starts, since we don't know that the
-        # functions are thread safe
-        # TODO: this isn't necessary in eager mode
-        with tf.control_dependencies(self.prev_result), tf.device("/cpu:0"):
-            result = tf.numpy_function(
-                self.merged_func,
-                time + input + state,
-                [self.output_data.dtype] + [s.dtype for s in self.state_data],
-                name=self.merged_func.__name__,
-            )
-            output = result[0]
-            state = result[1:]
-        self.prev_result = [output]
+        result = tf.numpy_function(
+            self.merged_func,
+            time + input + state,
+            [self.output_data.dtype] + [s.dtype for s in self.state_data],
+            name=self.merged_func.__name__,
+        )
+
+        # TensorFlow will automatically squeeze length-1 outputs (if there is
+        # no state), which we don't want
+        result = tf.nest.flatten(result)
+
+        output = result[0]
+        state = result[1:]
 
         output.set_shape(self.output_data.full_shape)
         signals.scatter(self.output_data, output, mode=self.mode)
@@ -119,7 +112,7 @@ class GenericProcessBuilder(OpBuilder):
             s.set_shape(self.state_data[i].full_shape)
             signals.scatter(self.state_data[i], s, mode="update")
 
-    def build_post(self, ops, signals, config):
+    def build_post(self, signals):
         # generate state for each op
         step_states = [
             op.process.make_state(
@@ -127,13 +120,15 @@ class GenericProcessBuilder(OpBuilder):
                 op.output.shape,
                 signals.dt_val,
             )
-            for op in ops
+            for op in self.ops
         ]
 
         # build all the states into combined array with shape
         # (n_states, n_ops, *state_d)
-        combined_states = [[None for _ in ops] for _ in range(len(ops[0].state))]
-        for i, op in enumerate(ops):
+        combined_states = [
+            [None for _ in self.ops] for _ in range(len(self.ops[0].state))
+        ]
+        for i, op in enumerate(self.ops):
             # note: we iterate over op.state so that the order is always based on that
             # dict's order (which is what we used to set up self.state_data)
             for j, name in enumerate(op.state):
@@ -147,16 +142,21 @@ class GenericProcessBuilder(OpBuilder):
         offsets = np.cumsum(offsets, axis=-1)
         self.step_states = [np.concatenate(state, axis=0) for state in combined_states]
 
+        # cast to appropriate dtype
+        for i, state in enumerate(self.state_data):
+            self.step_states[i] = self.step_states[i].astype(state.dtype)
+
         # duplicate state for each minibatch, giving shape
         # (n_states, minibatch_size, n_ops * state_d[0], *state_d[1:])
-        assert all(s.minibatched for op in ops for s in op.state.values())
+        assert all(s.minibatched for op in self.ops for s in op.state.values())
         for i, state in enumerate(self.step_states):
             self.step_states[i] = np.tile(
                 state[None, ...], (signals.minibatch_size,) + (1,) * state.ndim
             )
 
         # build the step functions
-        for i, op in enumerate(ops):
+        self.step_fs = [[None for _ in range(signals.minibatch_size)] for _ in self.ops]
+        for i, op in enumerate(self.ops):
             for j in range(signals.minibatch_size):
                 # pass each make_step function a view into the combined state
                 state = {}
@@ -172,16 +172,20 @@ class GenericProcessBuilder(OpBuilder):
                     op.input.shape if op.input is not None else (0,),
                     op.output.shape,
                     signals.dt_val,
-                    op.process.get_rng(config.rng),
+                    op.process.get_rng(self.config.rng),
                     state,
+                )
+
+                self.step_fs[i][j] = utils.align_func(self.output_data.dtype)(
+                    self.step_fs[i][j]
                 )
 
 
 class LowpassBuilder(OpBuilder):
     """Build a group of `~nengo.Lowpass` synapse operators."""
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
         # the main difference between this and the general linearfilter
         # OneX implementation is that this version allows us to merge
@@ -189,12 +193,12 @@ class LowpassBuilder(OpBuilder):
         # the synapse parameters for every input, rather than using
         # broadcasting)
 
-        self.input_data = signals.combine([op.input for op in ops])
-        self.output_data = signals.combine([op.output for op in ops])
+        self.input_data = signals.combine([op.input for op in self.ops])
+        self.output_data = signals.combine([op.output for op in self.ops])
 
         nums = []
         dens = []
-        for op in ops:
+        for op in self.ops:
             if op.process.tau <= 0.03 * signals.dt_val:
                 num = 1
                 den = 0
@@ -248,8 +252,8 @@ class LowpassBuilder(OpBuilder):
 class LinearFilterBuilder(OpBuilder):
     """Build a group of `~nengo.LinearFilter` synapse operators."""
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def build_pre(self, signals, config):
+        super().build_pre(signals, config)
 
         # note: linear filters are linear systems with n_inputs/n_outputs == 1.
         # we apply them to multidimensional inputs, but we do so by
@@ -265,8 +269,8 @@ class LinearFilterBuilder(OpBuilder):
         # B/C/D broadcasting along all the non-state dimensions. so in these
         # computations we collapse minibatch and signal dimensions into one.
 
-        self.input_data = signals.combine([op.input for op in ops])
-        self.output_data = signals.combine([op.output for op in ops])
+        self.input_data = signals.combine([op.input for op in self.ops])
+        self.output_data = signals.combine([op.output for op in self.ops])
 
         if self.input_data.ndim != 1:
             raise NotImplementedError(
@@ -283,13 +287,13 @@ class LinearFilterBuilder(OpBuilder):
                 ),
                 rng=None,
             )
-            for op in ops
+            for op in self.ops
         ]
         self.step_type = type(steps[0])
         assert all(type(step) == self.step_type for step in steps)
 
-        self.n_ops = len(ops)
-        self.signal_d = ops[0].input.shape[0]
+        self.n_ops = len(self.ops)
+        self.signal_d = self.ops[0].input.shape[0]
         self.state_d = steps[0].A.shape[0]
 
         if self.step_type == LinearFilter.NoX:
@@ -340,7 +344,7 @@ class LinearFilterBuilder(OpBuilder):
                 assert self.D.shape == (self.n_ops, 1, 1)
 
             # create a variable to represent the internal state of the filter
-            self.state_data = signals.combine([op.state["X"] for op in ops])
+            self.state_data = signals.combine([op.state["X"] for op in self.ops])
 
             assert self.A.shape == (self.n_ops, self.state_d, self.state_d)
             assert self.B.shape == (self.n_ops, self.state_d, 1)
@@ -427,8 +431,8 @@ class SimProcessBuilder(OpBuilder):
         [(Lowpass, LowpassBuilder), (LinearFilter, LinearFilterBuilder)]
     )
 
-    def __init__(self, ops, signals, config):
-        super().__init__(ops, signals, config)
+    def __init__(self, ops):
+        super().__init__(ops)
 
         logger.debug("process %s", [op.process for op in ops])
         logger.debug("input %s", [op.input for op in ops])
@@ -440,17 +444,20 @@ class SimProcessBuilder(OpBuilder):
         # function externally (using `tf.py_func`).
         for process_type, process_builder in self.TF_PROCESS_IMPL.items():
             if isinstance(ops[0].process, process_type):
-                self.built_process = process_builder(ops, signals, config)
+                self.built_process = process_builder(ops)
                 break
         else:
-            self.built_process = GenericProcessBuilder(ops, signals, config)
+            self.built_process = GenericProcessBuilder(ops)
+
+    def build_pre(self, signals, config):
+        self.built_process.build_pre(signals, config)
 
     def build_step(self, signals):
         self.built_process.build_step(signals)
 
-    def build_post(self, ops, signals, config):
+    def build_post(self, signals):
         if isinstance(self.built_process, GenericProcessBuilder):
-            self.built_process.build_post(ops, signals, config)
+            self.built_process.build_post(signals)
 
     @staticmethod
     def mergeable(x, y):

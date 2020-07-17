@@ -27,28 +27,33 @@ class Builder:
     ----------
     plan : list of tuple of `~nengo.builder.Operator`
         The groups of operators that will be built
-    signals : `.signals.SignalDict`
-        Mapping from `~nengo.builder.Signal` to
-        ``tf.Tensor`` (updated by operations)
-    config : `.BuildConfig`
-        Configuration parameters for the build process
     """
 
     builders = {}
 
-    def __init__(self, plan, signals, config):
+    def __init__(self, plan):
         self.plan = plan
-        self.signals = signals
-        self.config = config
         self.op_builds = {}
 
-    def build_pre(self, progress=None):
+        for ops in self.plan:
+            if type(ops[0]) not in Builder.builders:
+                raise BuildError(
+                    "No registered builder for operators of type %r" % type(ops[0])
+                )
+            self.op_builds[ops] = Builder.builders[type(ops[0])](ops)
+
+    def build_pre(self, signals, config, progress=None):
         """
         Setup step for build classes, in which they compute any of the
         values that are constant across simulation timesteps.
 
         Parameters
         ----------
+        signals : `.signals.SignalDict`
+            Mapping from `~nengo.builder.Signal` to
+            ``tf.Tensor`` (updated by operations)
+        config : `.BuildConfig`
+            Configuration parameters for the build process
         progress : `.utils.ProgressBar`
             Progress bar for ops in plan
         """
@@ -61,25 +66,21 @@ class Builder:
             logger.debug("reads %s", [op.reads for op in ops])
             logger.debug("updates %s", [op.updates for op in ops])
 
-            if type(ops[0]) not in Builder.builders:
-                raise BuildError(
-                    "No registered builder for operators of type %r" % type(ops[0])
-                )
-
-            BuildClass = Builder.builders[type(ops[0])]
-
             with self.name_scope(ops):
-                self.op_builds[ops] = BuildClass(ops, self.signals, self.config)
+                self.op_builds[ops].build_pre(signals, config)
 
             if progress is not None:
                 progress.step()
 
-    def build(self, progress=None):
+    def build_step(self, signals, progress=None):
         """
         Build the computations implementing a single simulator timestep.
 
         Parameters
         ----------
+        signals : `.signals.SignalDict`
+            Mapping from `~nengo.builder.Signal` to
+            ``tf.Tensor`` (updated by operations)
         progress : `.utils.ProgressBar`
             Progress bar for ops in plan
 
@@ -97,7 +98,7 @@ class Builder:
             logger.debug("BUILD %s", ops)
 
             with self.name_scope(ops):
-                output = self.op_builds[ops].build_step(self.signals)
+                output = self.op_builds[ops].build_step(signals)
 
             if isinstance(output, (tf.Tensor, tf.Variable)):
                 side_effects.append(output)
@@ -109,12 +110,15 @@ class Builder:
 
         return side_effects
 
-    def build_post(self, progress=None):
+    def build_post(self, signals, progress=None):
         """
         Calls post build functions for all ops in plan.
 
         Parameters
         ----------
+        signals : `.signals.SignalDict`
+            Mapping from `~nengo.builder.Signal` to
+            ``tf.Tensor`` (updated by operations)
         progress : `.utils.ProgressBar`
             Progress bar for ops in plan
         """
@@ -124,7 +128,7 @@ class Builder:
             logger.debug("POST BUILD %s", ops)
 
             with self.name_scope(ops):
-                self.op_builds[ops].build_post(ops, self.signals, self.config)
+                self.op_builds[ops].build_post(signals)
 
             if progress is not None:
                 progress.step()
@@ -195,26 +199,40 @@ class OpBuilder:
     """
     Base class for build classes, which implement the logic for building a group of
     Nengo Operators into TensorFlow.
-
-    The constructor should set up any computations that are fixed for
-    this op (i.e., things that do not need to be recomputed each timestep).
-
-    Parameters
-    ----------
-    ops : list of `~nengo.builder.Operator`
-        The operator group to build into the model
-    signals : `.signals.SignalDict`
-        Mapping from `~nengo.builder.Signal` to
-        ``tf.Tensor`` (updated by operations)
-    config : `~.builder.BuildConfig`
-        General repository for config information builders might want
-        (conglomerated into this object so that we can add/remove config data
-        without having to change the function signature all the time).
     """
 
-    def __init__(self, ops, signals, config):
+    def __init__(self, ops):
+        """
+        Initialize internal OpBuilder implementation.
+
+        Note: this should not be building any model operations, this is purely for
+        internal setup of the ``OpBuilder`` itself.
+
+        Parameters
+        ----------
+        ops : list of `~nengo.builder.Operator`
+            The operator group to build into the model
+        """
+
+        self.ops = ops
+
+    def build_pre(self, signals, config):
+        """
+        This function should set up any computations that are fixed for
+        this op (i.e., things that do not need to be recomputed each timestep).
+
+        Parameters
+        ----------
+        signals : `.signals.SignalDict`
+            Mapping from `~nengo.builder.Signal` to
+            ``tf.Tensor`` (updated by operations)
+        config : `~.builder.BuildConfig`
+            General repository for config information builders might want
+            (conglomerated into this object so that we can add/remove config data
+            without having to change the function signature all the time).
+        """
         logger.debug(self.__class__.__name__)
-        logger.debug("\n".join(str(x) for x in ops))
+        logger.debug("\n".join(str(x) for x in self.ops))
 
         self.config = config
 
@@ -239,7 +257,7 @@ class OpBuilder:
         """
         raise BuildError("OpBuilders must implement a `build_step` function")
 
-    def build_post(self, ops, signals, config):
+    def build_post(self, signals):
         """
         This function will be called after the graph has been built and
         each time the Simulator is reset.
@@ -249,15 +267,9 @@ class OpBuilder:
 
         Parameters
         ----------
-        ops : list of `~nengo.builder.Operator`
-            The operator group to build into the model
         signals : `.signals.SignalDict`
             Mapping from `~nengo.builder.Signal` to
             ``tf.Tensor`` (updated by operations)
-        config : `~.builder.BuildConfig`
-            General repository for config information builders might want
-            (conglomerated into this object so that we can add/remove config data
-            without having to change the function signature all the time).
         """
 
     @staticmethod

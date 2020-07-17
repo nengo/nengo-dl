@@ -11,7 +11,6 @@ import nengo
 from nengo.utils.filter_design import cont2discrete
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.eager import profiler
 
 import nengo_dl
 
@@ -219,7 +218,7 @@ def mnist(use_tensor_layer=True):
             #     rates = amplitude / (tau_ref + tau_rc * tf.log1p(1 / z))
             #     return rates
 
-            def mnist_node(x):  # pragma: no cover
+            def mnist_node(x):  # pragma: no cover (runs in TF)
                 x = tf.keras.layers.Conv2D(filters=32, kernel_size=3, activation=nl)(x)
                 x = tf.keras.layers.Conv2D(filters=32, kernel_size=3, activation=nl)(x)
                 x = tf.keras.layers.AveragePooling2D(pool_size=2, strides=2)(x)
@@ -677,12 +676,12 @@ def run_profile(
 
             for _ in range(reps):
                 if do_profile:
-                    profiler.start()
+                    tf.profiler.experimental.start("profile")
                 start = timeit.default_timer()
                 sim.fit(x, y, epochs=1, n_steps=n_steps)
                 exec_time = min(timeit.default_timer() - start, exec_time)
                 if do_profile:
-                    profiler.save("profile", profiler.stop())
+                    tf.profiler.experimental.stop()
 
         else:
             # run once to eliminate startup overhead
@@ -692,12 +691,12 @@ def run_profile(
 
             for _ in range(reps):
                 if do_profile:
-                    profiler.start()
+                    tf.profiler.experimental.start("profile")
                 start = timeit.default_timer()
                 sim.predict(x, n_steps=n_steps)
                 exec_time = min(timeit.default_timer() - start, exec_time)
                 if do_profile:
-                    profiler.save("profile", profiler.stop())
+                    tf.profiler.experimental.stop()
 
     exec_time /= n_batches
 

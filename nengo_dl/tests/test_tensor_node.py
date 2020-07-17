@@ -1,7 +1,6 @@
 # pylint: disable=missing-docstring
 
 from functools import partial
-import threading
 
 import nengo
 from nengo.exceptions import ValidationError, SimulationError
@@ -372,8 +371,8 @@ def test_training_arg(Simulator):
             self.expected = expected
 
         def call(self, inputs, training=None):
-            with tf.control_dependencies([tf.assert_equal(training, self.expected)]):
-                return tf.reshape(inputs, (1, 1))
+            tf.assert_equal(training, self.expected)
+            return tf.reshape(inputs, (1, 1))
 
     with nengo.Network() as net:
         node = TensorNode(TrainingLayer(expected=False), shape_in=None, shape_out=(1,))
@@ -382,15 +381,15 @@ def test_training_arg(Simulator):
     with Simulator(net) as sim:
         sim.predict(n_steps=10)
 
-    node.tensor_func.expected = True
-
     with Simulator(net) as sim:
         sim.compile(optimizer=tf.optimizers.SGD(0), loss=tf.losses.mse)
+        node.tensor_func.expected = True
         sim.fit(n_steps=10, y=np.zeros((1, 1, 1)))
 
-    with tf.keras.backend.learning_phase_scope(True):
-        with Simulator(net) as sim:
-            sim.predict(n_steps=10)
+    with net:
+        configure_settings(learning_phase=True)
+    with Simulator(net) as sim:
+        sim.predict(n_steps=10)
 
 
 def test_wrapped_model(Simulator):
@@ -410,13 +409,6 @@ def test_wrapped_model(Simulator):
             super().build(input_shape)
 
             self.model = tf.keras.models.clone_model(self.model)
-
-            # TODO: this shouldn't be necessary once we're running natively in eager
-            #  mode
-            if not hasattr(self.model, "_metrics_lock"):
-                self.model._metrics_lock = threading.Lock()
-                for layer in self.model.layers:
-                    layer._metrics_lock = threading.Lock()
 
         def call(self, inputs):
             return self.model(inputs)

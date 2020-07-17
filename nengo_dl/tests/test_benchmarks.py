@@ -196,10 +196,10 @@ def test_lmu(Simulator, native_nengo, pytestconfig):
 @pytest.mark.parametrize(
     "net, train, minibatch_size, min, max",
     [
-        (benchmarks.cconv(128, 64, nengo.RectifiedLinear()), False, 64, 0.95, 1.1),
-        (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, 2.2, 2.5),
+        (benchmarks.cconv(128, 64, nengo.RectifiedLinear()), False, 64, 1.05, 1.2),
+        (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, 2.3, 2.6),
         (benchmarks.integrator(128, 32, nengo.RectifiedLinear()), True, 64, 0.6, 0.9),
-        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 1.25, 1.45),
+        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 0.95, 1.15),
         (
             benchmarks.random_network(
                 64,
@@ -214,7 +214,7 @@ def test_lmu(Simulator, native_nengo, pytestconfig):
             0.5,
             0.7,
         ),
-        (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, 1.05, 1.25),
+        (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, 1.3, 1.5),
     ],
 )
 def test_performance(net, train, minibatch_size, min, max):
@@ -222,9 +222,9 @@ def test_performance(net, train, minibatch_size, min, max):
     # CPU: Intel Xeon E5-2690 v3 @ 2.60Ghz
     # GPU: Nvidia Tesla K80
     # Python version: 3.6.10
-    # TensorFlow GPU version: 2.1.0
+    # TensorFlow GPU version: 2.3.0
     # Nengo version: 3.1.0
-    # NengoDL version: 3.1.0
+    # NengoDL version: 3.3.0
 
     time = benchmarks.run_profile(
         net,
