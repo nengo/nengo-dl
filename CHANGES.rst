@@ -65,6 +65,7 @@ Release history
   and will be available in ``build_pre`` as ``self.ops``). Similarly, the ``ops`` and
   ``config`` argument have been removed from ``build_post``, and can instead be
   accessed through ``self.ops/config``. (`#163`_)
+- Minimum TensorFlow version is now 2.2.0. (`#163`_)
 
 **Fixed**
 

@@ -1000,10 +1000,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
         if not stateful:
             target_probes = [
                 p
-                for p, l in zip(
-                    self.model.probes, compat.output_in_loss(self.keras_model)
-                )
-                if l
+                for p, e in zip(self.model.probes, self.keras_model.output_names)
+                if self.keras_model.compiled_loss is None
+                or self.keras_model.compiled_loss._losses is None
+                or e in self.keras_model.compiled_loss._losses
             ]
 
             synapses = [

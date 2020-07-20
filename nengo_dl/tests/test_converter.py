@@ -5,8 +5,9 @@ import numpy as np
 from packaging import version
 import pytest
 import tensorflow as tf
+from tensorflow.python.keras.layers import BatchNormalizationV1, BatchNormalizationV2
 
-from nengo_dl import compat, config, converter, utils
+from nengo_dl import config, converter, utils
 
 
 def _test_convert(inputs, outputs, allow_fallback=False, inp_vals=None):
@@ -173,24 +174,8 @@ def test_zero_padding():
 def test_batch_normalization(rng):
     inp = tf.keras.Input(shape=(4, 4, 3))
     out = []
-
-    # TF<2.1 doesn't support axis!=-1 for fused batchnorm
-    out.append(
-        tf.keras.layers.BatchNormalization(
-            axis=1,
-            fused=False
-            if version.parse(tf.__version__) < version.parse("2.1.0rc0")
-            else None,
-        )(inp)
-    )
-    out.append(
-        tf.keras.layers.BatchNormalization(
-            axis=2,
-            fused=False
-            if version.parse(tf.__version__) < version.parse("2.1.0rc0")
-            else None,
-        )(inp)
-    )
+    out.append(tf.keras.layers.BatchNormalization(axis=1)(inp))
+    out.append(tf.keras.layers.BatchNormalization(axis=2)(inp))
     out.append(tf.keras.layers.BatchNormalization()(inp))
     out.append(tf.keras.layers.BatchNormalization(center=False, scale=False)(inp))
 
@@ -295,9 +280,7 @@ def test_densenet(Simulator, seed):
 
     keras_params = 0
     for layer in model.layers:
-        if not isinstance(
-            layer, (compat.BatchNormalizationV1, compat.BatchNormalizationV2)
-        ):
+        if not isinstance(layer, (BatchNormalizationV1, BatchNormalizationV2)):
             for w in layer._trainable_weights:
                 keras_params += np.prod(w.shape)
 

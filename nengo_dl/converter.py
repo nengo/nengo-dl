@@ -10,6 +10,7 @@ import numpy as np
 from packaging import version
 import tensorflow as tf
 from tensorflow.python.keras import engine
+from tensorflow.python.keras.layers import BatchNormalizationV1, BatchNormalizationV2
 
 from nengo_dl import compat
 from nengo_dl.config import configure_settings
@@ -366,8 +367,7 @@ class Converter:
                 key = key.output
 
             key = tuple(
-                compat.tensor_ref(x) if isinstance(x, tf.Tensor) else x
-                for x in tf.nest.flatten(key)
+                x.ref() if isinstance(x, tf.Tensor) else x for x in tf.nest.flatten(key)
             )
 
             return key
@@ -1122,8 +1122,8 @@ class ConvertAvgPool3D(ConvertAvgPool):
         return super().convert(node_id, dimensions=3)
 
 
-@Converter.register(compat.BatchNormalizationV1)
-@Converter.register(compat.BatchNormalizationV2)
+@Converter.register(BatchNormalizationV1)
+@Converter.register(BatchNormalizationV2)
 class ConvertBatchNormalization(LayerConverter):
     """Convert ``tf.keras.layers.BatchNormalization`` to Nengo objects."""
 

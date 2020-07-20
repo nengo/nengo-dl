@@ -51,11 +51,6 @@ class TFLogFilter:
             If a deprecation message is detected and ``err_on_deprecation=True``.
         """
 
-        # "constraint is deprecated": Keras' Layer.add_weight adds the
-        # constraint argument, so this is not in our control
-        if len(record.args) > 3 and record.args[3] == "constraint":
-            return False
-
         # "tf.keras.backend.get_session is deprecated": this deprecation message
         # is raised incorrectly due to a bug, see
         # https://github.com/tensorflow/tensorflow/issues/33182
@@ -157,83 +152,25 @@ else:
     from tensorflow.python.keras.engine.functional import _build_map
 
 
-if version.parse(tf.__version__) < version.parse("2.2.0rc0"):
+if version.parse(tf.__version__) < version.parse("2.3.0rc0"):
+    from tensorflow.python.keras.engine import network
 
-    def global_learning_phase():
-        """Returns the global (eager) Keras learning phase."""
+    # monkeypatch to fix bug in TF2.2, see
+    # https://github.com/tensorflow/tensorflow/issues/37548
+    old_conform = network.Network._conform_to_reference_input
 
-        return backend._GRAPH_LEARNING_PHASES.get(backend._DUMMY_EAGER_GRAPH, None)
+    def _conform_to_reference_input(self, tensor, ref_input):
+        keras_history = getattr(tensor, "_keras_history", None)
 
-    def tensor_ref(tensor):
-        """Return (experimental) Tensor ref (can be used as dict key)."""
+        tensor = old_conform(self, tensor, ref_input)
 
-        return tensor.experimental_ref()
+        if keras_history is not None:
+            tensor._keras_history = keras_history
 
-    def output_in_loss(keras_model):
-        """Check which model outputs are used in loss function."""
+        return tensor
 
-        return [
-            not e.should_skip_target()
-            for e in getattr(keras_model, "_training_endpoints", [])
-        ]
+    network.Network._conform_to_reference_input = _conform_to_reference_input
 
-
-else:
-
-    def global_learning_phase():
-        """Returns the global (eager) Keras learning phase."""
-
-        return backend._GRAPH_LEARNING_PHASES.get(backend._DUMMY_EAGER_GRAPH.key, None)
-
-    def tensor_ref(tensor):
-        """Return Tensor ref (can be used as dict key)."""
-
-        return tensor.ref()
-
-    if (
-        version.parse("2.2.0")
-        <= version.parse(tf.__version__)
-        < version.parse("2.3.0rc0")
-    ):
-        from tensorflow.python.keras.engine import network
-
-        # monkeypatch to fix bug in TF2.2, see
-        # https://github.com/tensorflow/tensorflow/issues/37548
-        old_conform = network.Network._conform_to_reference_input
-
-        def _conform_to_reference_input(self, tensor, ref_input):
-            keras_history = getattr(tensor, "_keras_history", None)
-
-            tensor = old_conform(self, tensor, ref_input)
-
-            if keras_history is not None:
-                tensor._keras_history = keras_history
-
-            return tensor
-
-        network.Network._conform_to_reference_input = _conform_to_reference_input
-
-    def output_in_loss(keras_model):
-        """Check which model outputs are used in loss function."""
-
-        return [
-            keras_model.compiled_loss is None
-            or keras_model.compiled_loss._losses is None
-            or n in keras_model.compiled_loss._losses
-            for n in keras_model.output_names
-        ]
-
-
-if version.parse(tf.__version__) < version.parse("2.1.0rc0"):
-    from tensorflow.python.keras.layers import (
-        BatchNormalization as BatchNormalizationV1,
-    )
-    from tensorflow.python.keras.layers import BatchNormalizationV2
-else:
-    from tensorflow.python.keras.layers import (
-        BatchNormalizationV1,
-        BatchNormalizationV2,
-    )
 
 # Nengo compatibility
 
