@@ -1202,18 +1202,20 @@ def test_remove_reset_inc_functional(Simulator, seed):
         nengo.Connection(node0, node1, transform=np.ones((3, 1)), synapse=None)
 
         # reset+elementwiseinc (weights, in nengo<3.1)
-        # reset+copy (to probe input)
+        # reset+copy (to probe input, in nengo<3.1)
         p = nengo.Probe(node1)
 
     with Simulator(net) as sim:
-        extra_op = version.parse(nengo.__version__) < version.parse("3.1.0.dev0")
+        extra_op = (
+            2 if version.parse(nengo.__version__) < version.parse("3.1.0.dev0") else 0
+        )
 
-        assert len(sim.tensor_graph.plan) == 8 + extra_op
+        assert len(sim.tensor_graph.plan) == 7 + extra_op
 
         # check that we have all the resets we expect
         resets = sim.tensor_graph.plan[1]
         assert isinstance(resets[0], Reset)
-        assert len(resets) == 6 + extra_op
+        assert len(resets) == 5 + extra_op
 
         # check that all the ops are incs like we expect
         incs = sim.tensor_graph.plan[2:]
@@ -1235,7 +1237,7 @@ def test_remove_reset_inc_functional(Simulator, seed):
 
     with Simulator(net) as sim_remove:
         # check that resets have been removed
-        assert len(sim_remove.tensor_graph.plan) == 7 + extra_op
+        assert len(sim_remove.tensor_graph.plan) == 6 + extra_op
         assert (
             len([x for x in sim_remove.tensor_graph.plan if isinstance(x[0], Reset)])
             == 0

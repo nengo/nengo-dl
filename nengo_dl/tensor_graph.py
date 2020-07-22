@@ -145,6 +145,18 @@ class TensorGraph(tf.keras.layers.Layer):
         with progress.sub("ordering signals", max_value=None):
             sigs, self.plan = sorter(plan, n_passes=10)
 
+        # special case: if nodes aren't read by any op then they won't be in
+        # sigs/plan. normally this means that node can be safely ignored.
+        # but if there is a probe reading that node value, then we do
+        # want to include that signal in the model, because a user may be feeding
+        # in a live value for that node that we want to get live probe values for
+        node_probe_sigs = (
+            set(self.model.sig[p]["in"] for p in self.model.probes)
+            .intersection(self.model.sig[node]["out"] for node in self.invariant_inputs)
+            .difference(sigs)
+        )
+        sigs.extend(node_probe_sigs)
+
         # create base arrays and map Signals to TensorSignals (views on those
         # base arrays)
         with progress.sub("creating signals", max_value=None):
@@ -969,6 +981,15 @@ class TensorGraph(tf.keras.layers.Layer):
                             self.model.sig[obj][attr].trainable = False
 
                         self.model.sig[obj][attr].minibatched = True
+
+            # node outputs are minibatched and not trainable
+            # note: this is the default that will be set below, but we need to set it
+            # explicitly to cover the case where node outputs are not read by any ops
+            for node in net.nodes:
+                # only need to do this for nodes with an output signal
+                if self.model.sig[node]["out"]:
+                    self.model.sig[node]["out"].minibatched = True
+                    self.model.sig[node]["out"].trainable = None
 
         if self.model.toplevel is None:
             warnings.warn(
