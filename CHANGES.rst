@@ -41,6 +41,8 @@ Release history
 - Fixed bug in TensorGraph log message when logging was enabled. (`#151`_)
 - Updated the KerasWrapper class in the ``tensorflow-models`` example to fix
   a compatibility issue in TensorFlow 2.2. (`#153`_)
+- Handle Nodes that are not connected to anything else, but are probed (this only
+  occurs in Nengo>=3.1.0). (`#159`_)
 
 .. _#149: https://github.com/nengo/nengo-dl/pull/149
 .. _#151: https://github.com/nengo/nengo-dl/pull/151
