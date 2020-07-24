@@ -1341,6 +1341,17 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
             for o, params in zip(todo, self.get_nengo_params(todo)):
                 for k, v in params.items():
+                    if (
+                        k == "transform"
+                        and isinstance(v, np.ndarray)
+                        and len(v.shape) == 1
+                    ):
+                        # Formats ndarrays to have the proper shape
+                        new_v = []
+                        for value in v:
+                            new_v.append([value])
+                        new_v = np.array(new_v)
+                        v = new_v
                     setattr(o, k, v)
 
     def get_nengo_params(self, nengo_objs, as_dict=False):

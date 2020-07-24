@@ -6,6 +6,30 @@ import pytest
 import tensorflow as tf
 
 from nengo_dl.utils import tf_gpu_installed
+from nengo_dl import Simulator
+
+
+def test_freeze_params_transform_shape():
+    """Tests different formats of transforms and ensures they still work"""
+    n_neurons = 100
+
+    transform = np.zeros((n_neurons, 1))
+
+    with nengo.Network() as model:
+        x = nengo.Ensemble(n_neurons, 1)
+        nengo.Connection(nengo.Node(0), x.neurons, transform=transform)
+
+    with Simulator(model) as sim:
+        sim.freeze_params(model)
+
+    transform = nengo.dists.Choice([0])
+
+    with nengo.Network() as model:
+        x = nengo.Ensemble(n_neurons, 1)
+        nengo.Connection(nengo.Node(0), x.neurons, transform=transform)
+
+    with Simulator(model) as sim:
+        sim.freeze_params(model)
 
 
 @pytest.mark.parametrize("channels_last", (True, False))
