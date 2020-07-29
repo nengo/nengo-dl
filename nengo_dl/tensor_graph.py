@@ -145,18 +145,6 @@ class TensorGraph(tf.keras.layers.Layer):
         with progress.sub("ordering signals", max_value=None):
             sigs, self.plan = sorter(plan, n_passes=10)
 
-        # special case: if nodes aren't read by any op then they won't be in
-        # sigs/plan. normally this means that node can be safely ignored.
-        # but if there is a probe reading that node value, then we do
-        # want to include that signal in the model, because a user may be feeding
-        # in a live value for that node that we want to get live probe values for
-        node_probe_sigs = (
-            set(self.model.sig[p]["in"] for p in self.model.probes)
-            .intersection(self.model.sig[node]["out"] for node in self.invariant_inputs)
-            .difference(sigs)
-        )
-        sigs.extend(node_probe_sigs)
-
         # create base arrays and map Signals to TensorSignals (views on those
         # base arrays)
         with progress.sub("creating signals", max_value=None):
@@ -982,15 +970,6 @@ class TensorGraph(tf.keras.layers.Layer):
 
                         self.model.sig[obj][attr].minibatched = True
 
-            # node outputs are minibatched and not trainable
-            # note: this is the default that will be set below, but we need to set it
-            # explicitly to cover the case where node outputs are not read by any ops
-            for node in net.nodes:
-                # only need to do this for nodes with an output signal
-                if self.model.sig[node]["out"]:
-                    self.model.sig[node]["out"].minibatched = True
-                    self.model.sig[node]["out"].trainable = None
-
         if self.model.toplevel is None:
             warnings.warn(
                 "No top-level network in model; assuming no trainable parameters",
@@ -1017,19 +996,23 @@ class TensorGraph(tf.keras.layers.Layer):
         # fill in defaults for all other signals
         # signals are not trainable by default, and views take on the
         # properties of their bases
-        for op in self.model.operators:
-            for sig in op.all_signals:
-                if not hasattr(sig.base, "trainable"):
-                    sig.base.trainable = None
+        all_sigs = [sig for op in self.model.operators for sig in op.all_signals]
+        # make sure all probe signals are marked (even if they aren't targeted
+        # by any ops), because we still have to read these signals and so we care
+        # about whether they are minibatched/trainable
+        all_sigs.extend(self.model.sig[probe]["in"] for probe in self.model.probes)
+        for sig in all_sigs:
+            if not hasattr(sig.base, "trainable"):
+                sig.base.trainable = None
 
-                if not hasattr(sig.base, "minibatched"):
-                    sig.base.minibatched = not sig.base.trainable
+            if not hasattr(sig.base, "minibatched"):
+                sig.base.minibatched = not sig.base.trainable
 
-                if not hasattr(sig, "trainable"):
-                    sig.trainable = sig.base.trainable
+            if not hasattr(sig, "trainable"):
+                sig.trainable = sig.base.trainable
 
-                if not hasattr(sig, "minibatched"):
-                    sig.minibatched = sig.base.minibatched
+            if not hasattr(sig, "minibatched"):
+                sig.minibatched = sig.base.minibatched
 
     @trackable.no_automatic_dependency_tracking
     def create_signals(self, sigs):
@@ -1052,6 +1035,19 @@ class TensorGraph(tf.keras.layers.Layer):
             ]
         )
         curr_keys = {}
+
+        # special case: if nodes aren't read by any op then they won't be in
+        # sigs. normally this means that node can be safely ignored.
+        # but if there is a probe reading that node value, then we do
+        # want to include that signal in the model, because a user may be feeding
+        # in a live value for that node for which we want to get live probe values
+        node_probe_sigs = (
+            set(self.model.sig[p]["in"] for p in self.model.probes)
+            .intersection(self.model.sig[node]["out"] for node in self.invariant_inputs)
+            .difference(sigs)
+        )
+        sigs.extend(node_probe_sigs)
+
         sig_idxs = {s: i for i, s in enumerate(sigs)}
 
         # find the non-overlapping partitions of the signals
@@ -1200,13 +1196,22 @@ class TensorGraph(tf.keras.layers.Layer):
             logger.debug(tensor_sig)
 
         # add any signal views to the sig_map
-        all_views = [
+        all_views = set(
             sig
             for ops in self.plan
             for op in ops
             for sig in op.all_signals
             if sig.is_view
-        ]
+        )
+        # add any probe signalviews. these won't be targeted by any ops, but we
+        # still want them in self.signals because we'll be manually reading them
+        probe_views = set(
+            self.model.sig[probe]["in"]
+            for probe in self.model.probes
+            if self.model.sig[probe]["in"].is_view
+        )
+        all_views |= probe_views
+
         for sig in all_views:
             if sig.size == sig.base.size:
                 # reshape view

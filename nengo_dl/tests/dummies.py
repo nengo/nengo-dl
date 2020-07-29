@@ -179,6 +179,8 @@ class TensorGraph(tensor_graph.TensorGraph):
         self.plan = plan
         self.minibatch_size = minibatch_size
         self.seed = 0
+        self.model = nengo.builder.Model()
+        self.invariant_inputs = {}
 
         self.signals = signals.SignalDict(self.dtype, self.minibatch_size)
 
