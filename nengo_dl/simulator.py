@@ -5,6 +5,7 @@ a model.
 """
 
 import collections
+import contextlib
 import copy
 from functools import partial
 import logging
@@ -598,18 +599,20 @@ class Simulator:  # pylint: disable=too-many-public-methods
         `nengo.Process`, as normal).
         """
 
-        if self.stateful:
-            for key, var in self.tensor_graph.saved_state.items():
-                var.assign(
-                    # TODO: cache these instead of regenerating each tim
-                    self.tensor_graph.initial_values[key](var.shape, dtype=var.dtype)
-                )
-
+        reset_vars = (
+            list(self.tensor_graph.saved_state.items()) if self.stateful else []
+        )
         if include_trainable:
-            for key, var in self.tensor_graph.base_params.items():
+            reset_vars.extend(self.tensor_graph.base_params.items())
+
+        if compat.eager_enabled():
+            for key, var in reset_vars:
                 var.assign(
+                    # TODO: cache these instead of regenerating each time
                     self.tensor_graph.initial_values[key](var.shape, dtype=var.dtype)
                 )
+        else:
+            tf.keras.backend.batch_get_value([var.initializer for _, var in reset_vars])
 
         if include_probes:
             for p in self.model.probes:
@@ -955,7 +958,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 "ignoring value passed to `%s`" % func_type
             )
         if "on_batch" not in func_type:
-            kwargs["batch_size"] = self.minibatch_size
+            kwargs["batch_size"] = (
+                self.minibatch_size if compat.eager_enabled() else None
+            )
 
         # TODO: apply standardize/generate/check data to generator somehow
         # maybe move it into a callback where the generated data is available?
@@ -998,13 +1003,23 @@ class Simulator:  # pylint: disable=too-many-public-methods
         # warn for synapses with n_steps=1
         # note: we don't warn if stateful, since there could be effects across runs
         if not stateful:
-            target_probes = [
-                p
-                for p, e in zip(self.model.probes, self.keras_model.output_names)
-                if self.keras_model.compiled_loss is None
-                or self.keras_model.compiled_loss._losses is None
-                or e in self.keras_model.compiled_loss._losses
-            ]
+            if compat.eager_enabled():
+                target_probes = [
+                    p
+                    for p, e in zip(self.model.probes, self.keras_model.output_names)
+                    if self.keras_model.compiled_loss is None
+                    or self.keras_model.compiled_loss._losses is None
+                    or e in self.keras_model.compiled_loss._losses
+                ]
+            else:
+                target_probes = [
+                    p
+                    for p, e in zip(
+                        self.model.probes,
+                        getattr(self.keras_model, "_training_endpoints", []),
+                    )
+                    if not e.should_skip_target()
+                ]
 
             synapses = [
                 x.synapse is not None
@@ -1604,11 +1619,19 @@ class Simulator:  # pylint: disable=too-many-public-methods
             include_probes=False, include_trainable=False, include_processes=False
         )
 
+        ctx = (
+            # noop
+            contextlib.suppress
+            if compat.eager_enabled()
+            else tf.compat.v1.keras.backend.get_session().as_default
+        )
+
         grads = dict()
         for output in outputs:
-            analytic, numeric = tf.test.compute_gradient(
-                partial(arg_func, output=output), inputs
-            )
+            with ctx():
+                analytic, numeric = tf.test.compute_gradient(
+                    partial(arg_func, output=output), inputs
+                )
             grads[output] = dict()
             grads[output]["analytic"] = analytic
             grads[output]["numeric"] = numeric

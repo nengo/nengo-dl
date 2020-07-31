@@ -16,7 +16,7 @@ def test_regularize(axis, order, rng):
 
     reg = losses.Regularize(order=order, axis=axis)(None, x)
 
-    reg_val = reg.numpy()
+    reg_val = tf.keras.backend.get_value(reg)
 
     if order == "euclidean":
         order = 2
@@ -82,4 +82,4 @@ def test_nan_mse():
 
     loss = losses.nan_mse(y, x)
 
-    assert loss.numpy() == (3 ** 2 + 4 ** 2) / 10
+    assert tf.keras.backend.get_value(loss) == (3 ** 2 + 4 ** 2) / 10

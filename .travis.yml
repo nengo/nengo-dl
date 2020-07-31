@@ -58,6 +58,10 @@ jobs:
     python: 3.5
   -
     env:
+      SCRIPT="test-coverage"
+      TEST_ARGS="--graph-mode"
+  -
+    env:
       TF_VERSION="tensorflow-gpu"
       GPU_NUM="0"
       SCRIPT="remote-docs"
@@ -69,10 +73,7 @@ jobs:
       SCRIPT="remote-examples"
   -
     env:
-      TEST_ARGS="--unroll-simulation 5 --simulator-only"
-  -
-    env:
-      TEST_ARGS="--dtype float64 --simulator-only"
+      TEST_ARGS="--unroll-simulation 5 --dtype float64 --simulator-only"
   -
     env:
       TEST_ARGS="--inference-only --simulator-only"

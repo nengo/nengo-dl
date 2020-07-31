@@ -3,6 +3,7 @@ Build classes for Nengo process operators.
 """
 
 from collections import OrderedDict
+import contextlib
 import logging
 
 from nengo.builder.processes import SimProcess
@@ -12,7 +13,7 @@ from nengo.utils.filter_design import cont2discrete
 import numpy as np
 import tensorflow as tf
 
-from nengo_dl import utils
+from nengo_dl import compat, utils
 from nengo_dl.builder import Builder, OpBuilder
 
 
@@ -47,6 +48,8 @@ class GenericProcessBuilder(OpBuilder):
             for i in range(len(self.ops[0].state))
         ]
         self.mode = "inc" if self.ops[0].mode == "inc" else "update"
+
+        self.prev_result = []
 
         # `merged_func` calls the step function for each process and
         # combines the result
@@ -92,12 +95,22 @@ class GenericProcessBuilder(OpBuilder):
         input = [] if self.input_data is None else [signals.gather(self.input_data)]
         state = [signals.gather(s) for s in self.state_data]
 
-        result = tf.numpy_function(
-            self.merged_func,
-            time + input + state,
-            [self.output_data.dtype] + [s.dtype for s in self.state_data],
-            name=self.merged_func.__name__,
-        )
+        if compat.eager_enabled():
+            # noop
+            control_deps = contextlib.suppress()
+        else:
+            # we need to make sure that the previous call to this function
+            # has completed before the next starts, since we don't know that the
+            # functions are thread safe
+            control_deps = tf.control_dependencies(self.prev_result)
+
+        with control_deps:
+            result = tf.numpy_function(
+                self.merged_func,
+                time + input + state,
+                [self.output_data.dtype] + [s.dtype for s in self.state_data],
+                name=self.merged_func.__name__,
+            )
 
         # TensorFlow will automatically squeeze length-1 outputs (if there is
         # no state), which we don't want
@@ -105,6 +118,8 @@ class GenericProcessBuilder(OpBuilder):
 
         output = result[0]
         state = result[1:]
+
+        self.prev_result = [output]
 
         output.set_shape(self.output_data.full_shape)
         signals.scatter(self.output_data, output, mode=self.mode)

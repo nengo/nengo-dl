@@ -12,7 +12,7 @@ import nengo
 from nengo._vendor.scipy.sparse import linalg_interface, linalg_onenormest
 from packaging import version
 import tensorflow as tf
-from tensorflow.python.keras import backend
+from tensorflow.python.eager import context
 
 
 # TensorFlow compatibility
@@ -218,3 +218,15 @@ else:
     def neuron_step(neuron_op, dt, J, output, state):  # pragma: no cover (runs in TF)
         """Equivalent to neuron_op.step."""
         neuron_op.neurons.step(dt, J, output, **state)
+
+
+def eager_enabled():
+    """
+    Check if we're in eager mode or graph mode.
+
+    Note: this function differs from ``tf.executing_eagerly()`` in that it will still
+    return ``True`` if we're inside a ``tf.function``. Essentially this checks whether
+    the user has called ``tf.compat.v1.disable_eager_execution()`` or not.
+    """
+
+    return context.default_execution_mode == context.EAGER_MODE

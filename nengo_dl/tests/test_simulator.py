@@ -1,6 +1,7 @@
 # pylint: disable=missing-docstring
 
 from collections import OrderedDict
+import contextlib
 import logging
 import os
 import pickle
@@ -19,9 +20,10 @@ from packaging import version
 import pytest
 import tensorflow as tf
 from tensorflow.core.util import event_pb2
+from tensorflow.python.eager import context
 
 from nengo_dl import Layer, TensorNode, callbacks, configure_settings, dists, utils
-from nengo_dl.compat import TFLogFilter, default_transform
+from nengo_dl.compat import TFLogFilter, default_transform, eager_enabled
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
 
@@ -758,7 +760,11 @@ def test_tensorboard(Simulator, tmpdir):
         )
 
     # look up name of event file
-    event_dir = os.path.join(log_dir, "train")
+    event_dir = (
+        os.path.join(log_dir, "train")
+        if version.parse(tf.__version__) < version.parse("2.3.0rc0") or eager_enabled()
+        else log_dir
+    )
     event_file = [
         x
         for x in os.listdir(event_dir)
@@ -770,18 +776,24 @@ def test_tensorboard(Simulator, tmpdir):
 
     summaries = ["epoch_loss", "epoch_probe_loss", "epoch_probe_1_loss"]
     # metadata stuff in event file
-    meta_steps = 2
-    for i, record in enumerate(tf.data.TFRecordDataset(event_file)):
-        event = event_pb2.Event.FromString(record.numpy())
+    meta_steps = (
+        2
+        if version.parse(tf.__version__) < version.parse("2.3.0rc0") or eager_enabled()
+        else 3
+    )
+    with contextlib.suppress() if eager_enabled() else context.eager_mode():
+        for i, record in enumerate(tf.data.TFRecordDataset(event_file)):
+            event = event_pb2.Event.FromString(record.numpy())
 
-        if i >= meta_steps:
-            curr_step = (i - meta_steps) // len(summaries)
-            assert event.step == curr_step
+            if i >= meta_steps:
+                curr_step = (i - meta_steps) // len(summaries)
+                assert event.step == curr_step
 
-            # assert event.summary.value[0].tag == summaries[(i - 2) % len(summaries)]
-            # log order non-deterministic in python 3.5 so we use this less
-            # stringent check
-            assert event.summary.value[0].tag in summaries
+                # assert event.summary.value[0].tag
+                # == summaries[(i - 2) % len(summaries)]
+                # log order non-deterministic in python 3.5 so we use this less
+                # stringent check
+                assert event.summary.value[0].tag in summaries
 
     assert i == len(summaries) * n_epochs + (  # pylint: disable=undefined-loop-variable
         meta_steps - 1
@@ -800,16 +812,17 @@ def test_tensorboard(Simulator, tmpdir):
         "Ensemble.neurons_None_bias",
         "Connection_None_weights",
     ]
-    for i, record in enumerate(tf.data.TFRecordDataset(event_file)):
-        event = event_pb2.Event.FromString(record.numpy())
+    with contextlib.suppress() if eager_enabled() else context.eager_mode():
+        for i, record in enumerate(tf.data.TFRecordDataset(event_file)):
+            event = event_pb2.Event.FromString(record.numpy())
 
-        if i < 1:
-            # metadata stuff
-            continue
+            if i < 1:
+                # metadata stuff
+                continue
 
-        curr_step = (i - 1) // len(summaries)
-        assert event.step == curr_step
-        assert event.summary.value[0].tag == summaries[(i - 1) % len(summaries)]
+            curr_step = (i - 1) // len(summaries)
+            assert event.step == curr_step
+            assert event.summary.value[0].tag == summaries[(i - 1) % len(summaries)]
 
     assert i == len(summaries) * n_epochs  # pylint: disable=undefined-loop-variable
 
@@ -1632,6 +1645,10 @@ def test_tf_seed(Simulator, seed):
 
     with Simulator(net, seed=seed) as sim0:
         sim0.step()
+
+    if not eager_enabled():
+        # this is necessary to reset the graph seed
+        tf.keras.backend.clear_session()
 
     with Simulator(net, seed=seed) as sim1:
         sim1.step()

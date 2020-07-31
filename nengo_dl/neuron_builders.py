@@ -3,6 +3,7 @@ Build classes for Nengo neuron operators.
 """
 
 from collections import OrderedDict
+import contextlib
 import logging
 import warnings
 
@@ -43,6 +44,8 @@ class GenericNeuronBuilder(OpBuilder):
             signals.combine([compat.neuron_state(op)[key] for op in self.ops])
             for key in state_keys
         ]
+
+        self.prev_result = []
 
         def neuron_step(dt, J, *states):  # pragma: no cover (runs in TF)
             output = None
@@ -97,14 +100,26 @@ class GenericNeuronBuilder(OpBuilder):
         states = [signals.gather(x) for x in self.state_data]
         states_dtype = [x.dtype for x in self.state_data]
 
-        ret = tf.numpy_function(
-            self.neuron_step,
-            [signals.dt, J] + states,
-            [self.output_data.dtype] + states_dtype,
-            name=self.neuron_step.__name__,
-        )
+        if compat.eager_enabled():
+            # noop
+            control_deps = contextlib.suppress()
+        else:
+            # we need to make sure that the previous call to this function
+            # has completed before the next starts, since we don't know that the
+            # functions are thread safe
+            control_deps = tf.control_dependencies(self.prev_result)
+
+        with control_deps:
+            ret = tf.numpy_function(
+                self.neuron_step,
+                [signals.dt, J] + states,
+                [self.output_data.dtype] + states_dtype,
+                name=self.neuron_step.__name__,
+            )
 
         neuron_out, state_out = ret[0], ret[1:]
+
+        self.prev_result = [neuron_out]
 
         neuron_out.set_shape((signals.minibatch_size,) + self.output_data.shape)
         signals.scatter(self.output_data, neuron_out)

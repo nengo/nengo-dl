@@ -54,7 +54,7 @@ def test_sparse_matmul(dtype, device):
 
     assert Y.dtype == dtype
 
-    assert np.allclose(Y, np.ones(3) * 2)
+    assert np.allclose(tf.keras.backend.get_value(Y), np.ones(3) * 2)
 
 
 def test_merged_simpyfunc(Simulator):

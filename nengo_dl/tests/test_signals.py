@@ -72,6 +72,7 @@ def test_tensor_signal_reshape():
         sig.reshape((4, 4))
 
 
+@pytest.mark.eager_only
 def test_tensor_signal_load_indices():
     sig = TensorSignal([(2, 6)], object(), None, (4,), None)
     assert np.all(sig.tf_indices == np.arange(*sig.slices[0]))
@@ -84,6 +85,7 @@ def test_tensor_signal_load_indices():
     assert sig.tf_slice is None
 
 
+@pytest.mark.eager_only
 @pytest.mark.parametrize("minibatched", (True, False))
 def test_signal_dict_scatter(minibatched):
     minibatch_size = 2
@@ -135,6 +137,7 @@ def test_signal_dict_scatter(minibatched):
     assert signals.write_types["assign"] == 1
 
 
+@pytest.mark.eager_only
 @pytest.mark.parametrize("minibatched", (True, False))
 def test_signal_dict_gather(minibatched):
     minibatch_size = 3
@@ -227,6 +230,7 @@ def test_signal_dict_combine():
     assert y.slices == ((0, 6),)
 
 
+@pytest.mark.eager_only
 @pytest.mark.parametrize("dtype", (np.float32, np.float64))
 @pytest.mark.parametrize("diff", (True, False))
 def test_op_constant(dtype, diff):
@@ -311,6 +315,7 @@ def test_get_tensor_signal():
         signals.get_tensor_signal([(0, 4)], key, np.float64, (2, 2), True, signal=sig)
 
 
+@pytest.mark.eager_only
 @pytest.mark.parametrize("ndims", (1, 2, 3))
 def test_tf_indices_nd(ndims):
     signals = SignalDict(tf.float32, 10)

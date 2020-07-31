@@ -6,6 +6,7 @@ See `the documentation <https://www.nengo.ai/nengo-dl/tensor-node.html>`_ for mo
 details.
 """
 
+import contextlib
 import warnings
 
 from nengo import Node, Connection, Ensemble, builder
@@ -17,9 +18,10 @@ from nengo.neurons import NeuronType
 from nengo.params import Default, ShapeParam, Parameter, BoolParam
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.eager import context
 
 from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
-from nengo_dl.compat import default_transform
+from nengo_dl.compat import default_transform, eager_enabled
 from nengo_dl.config import configure_settings
 
 
@@ -114,15 +116,18 @@ class TensorFuncParam(Parameter):
                 if len(input_spec) == 1:
                     input_spec = input_spec[0]
 
+                ctx = contextlib.suppress() if eager_enabled() else context.eager_mode()
+
                 try:
-                    result = func.compute_output_signature(input_spec)
+                    with ctx:
+                        result = func.compute_output_signature(input_spec)
                 except Exception as e:
                     raise ValidationError(
                         "Attempting to automatically determine TensorNode output shape "
                         "by calling Layer.compute_output_signature produced an error. "
                         "If you would like to avoid this step, try manually setting "
                         "`TensorNode(..., shape_out=x)`. The error is shown below:\n%s"
-                        % e,
+                        % repr(e),
                         attr=self.name,
                         obj=node,
                     )

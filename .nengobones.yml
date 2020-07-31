@@ -207,6 +207,8 @@ travis_yml:
         TF_VERSION: tensorflow==2.2.0
         NUMPY_VERSION: numpy==1.16.0
       python: 3.5
+    - script: test-coverage
+      test_args: --graph-mode
     - stage: advanced
       script: remote-docs
       env:
@@ -216,8 +218,7 @@ travis_yml:
       env:
         TF_VERSION: tensorflow-gpu
         GPU_NUM: 0
-    - test_args: --unroll-simulation 5 --simulator-only
-    - test_args: --dtype float64 --simulator-only
+    - test_args: --unroll-simulation 5 --dtype float64 --simulator-only
     - test_args: --inference-only --simulator-only
   pypi_user: drasmuss
   deploy_dists:

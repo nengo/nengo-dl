@@ -128,6 +128,7 @@ def test_neuron_gradients(Simulator, neuron_type, seed, rng):
         sim.check_gradients()
 
 
+@pytest.mark.eager_only
 @pytest.mark.parametrize(
     "rate, spiking",
     [

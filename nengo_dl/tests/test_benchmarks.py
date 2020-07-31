@@ -6,6 +6,7 @@ import sys
 import pytest
 import nengo
 import numpy as np
+import tensorflow as tf
 
 from nengo_dl import benchmarks, SoftLIFRate
 
@@ -194,12 +195,26 @@ def test_lmu(Simulator, native_nengo, pytestconfig):
 
 @pytest.mark.performance
 @pytest.mark.parametrize(
-    "net, train, minibatch_size, min, max",
+    "net, train, minibatch_size, eager, min, max",
     [
-        (benchmarks.cconv(128, 64, nengo.RectifiedLinear()), False, 64, 1.05, 1.2),
-        (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, 2.3, 2.6),
-        (benchmarks.integrator(128, 32, nengo.RectifiedLinear()), True, 64, 0.6, 0.9),
-        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, 0.95, 1.15),
+        (
+            benchmarks.cconv(128, 64, nengo.RectifiedLinear()),
+            False,
+            64,
+            True,
+            1.05,
+            1.2,
+        ),
+        (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, True, 2.3, 2.6),
+        (
+            benchmarks.integrator(128, 32, nengo.RectifiedLinear()),
+            True,
+            64,
+            True,
+            0.6,
+            0.9,
+        ),
+        (benchmarks.integrator(128, 32, nengo.LIF()), True, 64, True, 0.95, 1.15),
         (
             benchmarks.random_network(
                 64,
@@ -211,13 +226,15 @@ def test_lmu(Simulator, native_nengo, pytestconfig):
             ),
             False,
             None,
+            True,
             0.5,
             0.7,
         ),
-        (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, 1.3, 1.5),
+        (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, True, 1.3, 1.5),
+        (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, False, 1.05, 1.25),
     ],
 )
-def test_performance(net, train, minibatch_size, min, max):
+def test_performance(net, train, minibatch_size, eager, min, max):
     # performance is based on Azure NC6 VM
     # CPU: Intel Xeon E5-2690 v3 @ 2.60Ghz
     # GPU: Nvidia Tesla K80
@@ -225,6 +242,10 @@ def test_performance(net, train, minibatch_size, min, max):
     # TensorFlow GPU version: 2.3.0
     # Nengo version: 3.1.0
     # NengoDL version: 3.3.0
+
+    if not eager:
+        tf.compat.v1.disable_eager_execution()
+        tf.compat.v1.disable_control_flow_v2()
 
     time = benchmarks.run_profile(
         net,

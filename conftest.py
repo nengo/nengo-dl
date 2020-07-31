@@ -12,6 +12,9 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "performance: mark tests that depend on a specific benchmark machine"
     )
+    config.addinivalue_line(
+        "markers", "eager-only: mark tests that only work in eager mode"
+    )
 
 
 def pytest_runtest_setup(item):
@@ -31,6 +34,14 @@ def pytest_runtest_setup(item):
         "--performance"
     ):
         pytest.skip("Skipping performance test")
+    elif item.get_closest_marker("eager_only", False) and item.config.getvalue(
+        "--graph-mode"
+    ):
+        pytest.skip("Skipping eager-only test")
+
+    if item.config.getvalue("--graph-mode"):
+        tf.compat.v1.disable_eager_execution()
+        tf.compat.v1.disable_control_flow_v2()
 
     tf.keras.backend.clear_session()
 
@@ -66,6 +77,12 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="Run performance tests",
+    )
+    parser.addoption(
+        "--graph-mode",
+        action="store_true",
+        default=False,
+        help="Run tests in graph (not eager) mode",
     )
 
 

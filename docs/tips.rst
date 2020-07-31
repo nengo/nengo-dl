@@ -52,6 +52,17 @@ search depth by setting
 
 See :ref:`the documentation <config-planner>` for more details.
 
+TensorFlow reworked a lot of their internal implementation details in TensorFlow 2.0.
+But for some models, the pre-2.0 implementation will be faster. This behaviour can be
+restored by calling
+
+.. code-block:: python
+
+    tf.compat.v1.disable_eager_execution()
+    tf.compat.v1.disable_control_flow_v2()
+
+at the top of your script.
+
 Training a spiking deep network
 -------------------------------
 
