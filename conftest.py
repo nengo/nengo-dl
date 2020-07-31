@@ -16,8 +16,15 @@ def pytest_configure(config):
         "markers", "eager-only: mark tests that only work in eager mode"
     )
 
+    if config.getvalue("--graph-mode"):
+        tf.compat.v1.disable_eager_execution()
+        tf.compat.v1.disable_control_flow_v2()
+
 
 def pytest_runtest_setup(item):
+    # NOTE: this hook will not be called when running --pyargs nengo, so don't
+    # put anything here that we want to run during those tests
+
     if item.get_closest_marker("gpu", False) and not utils.tf_gpu_installed:
         pytest.skip("This test requires tensorflow-gpu")
     elif (
@@ -38,12 +45,6 @@ def pytest_runtest_setup(item):
         "--graph-mode"
     ):
         pytest.skip("Skipping eager-only test")
-
-    if item.config.getvalue("--graph-mode"):
-        tf.compat.v1.disable_eager_execution()
-        tf.compat.v1.disable_control_flow_v2()
-
-    tf.keras.backend.clear_session()
 
 
 def pytest_addoption(parser):
@@ -93,3 +94,11 @@ def Simulator(request):
     """
 
     return make_test_sim(request)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def clear_session(request):
+    # free up resources between tests.
+    # we do this here, rather than in e.g. pytest_runtest_setup, because we want this
+    # to take effect when running the nengo core tests as well
+    tf.keras.backend.clear_session()
