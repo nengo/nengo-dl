@@ -1767,10 +1767,15 @@ class Simulator:  # pylint: disable=too-many-public-methods
         if isinstance(data, (list, tuple)):
             if len(data) != len(objects):
                 warnings.warn(
-                    "Number of data values (%d) does not match number of %ss (%d); "
-                    "consider using an explicit input dictionary in this "
+                    "Number of elements (%d) in %s does not match number of "
+                    "%ss (%d); consider using an explicit input dictionary in this "
                     "case, so that the assignment of data to objects is unambiguous."
-                    % (len(data), type(objects[0]).__name__, len(objects))
+                    % (
+                        len(data),
+                        [type(d).__name__ for d in data],
+                        type(objects[0]).__name__,
+                        len(objects),
+                    )
                 )
 
             # convert list to named dict
