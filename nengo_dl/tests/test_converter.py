@@ -806,3 +806,53 @@ def test_dense_fallback_bias():
         swap_activations={relu: nengo.RectifiedLinear()},
     )
     assert conv.verify(training=True)
+
+
+def test_swap_activations_key_never_used():
+    """
+    Ensure warnings are thrown properly when there is an unused swap activations key.
+    """
+
+    def relu(x):
+        return tf.maximum(x, 0)
+
+    def relu2(x):
+        return tf.maximum(x, 0)
+
+    inp = tf.keras.Input((1,))
+    out = tf.keras.layers.Dense(units=10, activation=relu)(inp)
+
+    # Test that swap_activations are throwing warnings when not used
+    with pytest.warns(UserWarning, match="no layers in the model with that activation"):
+        conv = converter.Converter(
+            tf.keras.Model(inp, out),
+            allow_fallback=False,
+            swap_activations={
+                relu: nengo.RectifiedLinear(),
+                relu2: nengo.RectifiedLinear(),
+            },
+        )
+    assert conv.swap_activations.unused_keys() == {relu2}
+
+    # Test that there is no warning if all keys are used
+    inp = tf.keras.Input((1,))
+    out = tf.keras.layers.Dense(units=10, activation=relu)(inp)
+    out = tf.keras.layers.Dense(units=10, activation=relu2)(out)
+    with pytest.warns(None) as recwarns:
+        conv = converter.Converter(
+            tf.keras.Model(inp, out),
+            allow_fallback=False,
+            swap_activations={
+                relu: nengo.RectifiedLinear(),
+                relu2: nengo.RectifiedLinear(),
+                nengo.RectifiedLinear(): nengo.SpikingRectifiedLinear(),
+            },
+        )
+    assert not any(
+        "no layers in the model with that activation" in w.message for w in recwarns
+    )
+    assert len(conv.swap_activations.unused_keys()) == 0
+
+    # check swap_activations dict functions
+    assert len(conv.swap_activations) == 3
+    assert set(conv.swap_activations.keys()) == {relu, relu2, nengo.RectifiedLinear()}

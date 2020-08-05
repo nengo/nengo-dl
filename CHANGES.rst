@@ -34,6 +34,8 @@ Release history
   2.2 (due to a TensorFlow issue, see
   https://github.com/tensorflow/tensorflow/issues/39456). Loss/metric values
   will still be returned from the function as normal. (`#153`_)
+- A warning will now be raised if activation types are passed to
+  ``Converter.swap_activations`` that aren't actually in the model. (`#168`_)
 
 **Fixed**
 
@@ -53,6 +55,7 @@ Release history
 .. _#159: https://github.com/nengo/nengo-dl/pull/159
 .. _#161: https://github.com/nengo/nengo-dl/pull/161
 .. _#164: https://github.com/nengo/nengo-dl/pull/164
+.. _#168: https://github.com/nengo/nengo-dl/pull/168
 
 3.2.0 (April 2, 2020)
 ---------------------

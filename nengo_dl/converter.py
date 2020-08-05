@@ -119,7 +119,7 @@ class Converter:
         self.inference_only = inference_only
         self.max_to_avg_pool = max_to_avg_pool
         self.split_shared_weights = split_shared_weights
-        self.swap_activations = swap_activations or {}
+        self.swap_activations = Converter.TrackedDict(swap_activations or {})
         self.scale_firing_rates = scale_firing_rates
         self.synapse = synapse
         self._layer_converters = {}
@@ -130,6 +130,12 @@ class Converter:
         # set model from the converter in case the converter has changed the model type
         # (i.e. if the model is sequential, it will be converted to a functional model)
         self.model = self.get_converter(model).layer
+
+        if self.swap_activations.unused_keys():
+            warnings.warn(
+                "swap_activations contained %s, but there were no layers in the model "
+                "with that activation type" % (self.swap_activations.unused_keys(),)
+            )
 
         self.layers = self.net.layers
 
@@ -377,6 +383,29 @@ class Converter:
 
         def __len__(self):
             return len(self.dict)
+
+    class TrackedDict(collections.abc.Mapping):
+        """
+        A dictionary-like object that keeps track of which keys have been accessed.
+        """
+
+        def __init__(self, dict):
+            self.dict = dict
+            self.read = set()
+
+        def __getitem__(self, key):
+            self.read.add(key)
+            return self.dict[key]
+
+        def __iter__(self):
+            return iter(self.dict)
+
+        def __len__(self):
+            return len(self.dict)
+
+        def unused_keys(self):
+            """Returns any keys in the dictionary that have never been read."""
+            return set(self.dict.keys()) - self.read
 
 
 class LayerConverter:
