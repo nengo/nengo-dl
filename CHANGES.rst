@@ -36,6 +36,7 @@ Release history
   will still be returned from the function as normal. (`#153`_)
 - A warning will now be raised if activation types are passed to
   ``Converter.swap_activations`` that aren't actually in the model. (`#168`_)
+- Updated TensorFlow installation instruction in documentation. (`#170`_)
 
 **Fixed**
 
@@ -56,6 +57,7 @@ Release history
 .. _#161: https://github.com/nengo/nengo-dl/pull/161
 .. _#164: https://github.com/nengo/nengo-dl/pull/164
 .. _#168: https://github.com/nengo/nengo-dl/pull/168
+.. _#170: https://github.com/nengo/nengo-dl/pull/170
 
 3.2.0 (April 2, 2020)
 ---------------------

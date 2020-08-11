@@ -44,7 +44,7 @@ class ConvIncBuilder(OpBuilder):
 
         if not self.conv.channels_last and config.cpu_only:
             # TensorFlow doesn't support channels first on CPU, so if
-            # tensorflow-gpu isn't installed we need to force channels_last
+            # GPU support isn't available we need to force channels_last
             # TODO: check if this is supported in future versions
             warnings.warn(
                 "TensorFlow does not support convolution with "

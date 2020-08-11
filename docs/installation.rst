@@ -33,13 +33,13 @@ perform a developer installation:
 
 Installing TensorFlow
 ---------------------
-Use ``pip install tensorflow`` to install the minimal version of TensorFlow,
-or ``pip install tensorflow-gpu`` to include GPU support.
+Use ``pip install tensorflow`` to install the latest version of TensorFlow. GPU support
+is included in this package as of version 2.1.0.
 
 In order to use TensorFlow with GPU support you will need to install the appropriate
 Nvidia drivers and CUDA/cuDNN. The precise steps for accomplishing this will depend
 on your system. On Linux the correct Nvidia drivers (as of TensorFlow 2.2.0) can be
-installed via ``sudo apt install nvidia-drivers-430``, and on Windows simply using the
+installed via ``sudo apt install nvidia-driver-440``, and on Windows simply using the
 most up-to-date drivers should work.  For CUDA/cuDNN we recommend using
 `conda <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`_ to
 simplify the process. ``conda install tensorflow-gpu`` will install TensorFlow as

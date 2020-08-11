@@ -377,7 +377,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         This specifies the computational device on which the simulation will
         run.  The default is ``None``, which means that operations will be assigned
         according to TensorFlow's internal logic (generally speaking, this means that
-        things will be assigned to the GPU if ``tensorflow-gpu`` is installed,
+        things will be assigned to the GPU if GPU support is available,
         otherwise everything will be assigned to the CPU).  The device can be set
         manually by passing the `TensorFlow device specification
         <https://www.tensorflow.org/api_docs/python/tf/Graph#device>`_ to this
@@ -469,8 +469,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         if device is None and not utils.tf_gpu_installed:
             warnings.warn(
-                "No GPU support detected. It is recommended that you "
-                "install tensorflow-gpu (`pip install tensorflow-gpu`)."
+                "No GPU support detected. See "
+                "https://www.nengo.ai/nengo-dl/installation.html#installing-tensorflow "
+                "for instructions on setting up TensorFlow with GPU support."
             )
             logger.info("Running on CPU")
         else:

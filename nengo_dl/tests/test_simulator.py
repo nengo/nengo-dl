@@ -669,7 +669,7 @@ def test_model_passing(Simulator, seed):
 @pytest.mark.parametrize("device", ["/cpu:0", "/gpu:0", None])
 def test_devices(Simulator, device, seed, caplog):
     if device == "/gpu:0" and not utils.tf_gpu_installed:
-        pytest.skip("This test requires tensorflow-gpu")
+        pytest.skip("This test requires GPU support")
 
     caplog.set_level(logging.INFO)
 

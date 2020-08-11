@@ -181,7 +181,7 @@ class BuildConfig(
         Smoothing parameter for `~nengo.LIF` gradient approximation.
     cpu_only : bool
         True if TensorFlow is only running on the CPU (because that was
-        specified by the user or because ``tensorflow-gpu`` is not installed).
+        specified by the user or because GPU support is not available).
     rng : `~numpy.random.RandomState`
         Seeded random number generator.
     training : ``tf.Tensor`` (bool)
