@@ -18,8 +18,8 @@ Release history
    - Deprecated
    - Removed
 
-3.3.0 (unreleased)
-------------------
+3.3.0 (August 14, 2020)
+-----------------------
 
 **Added**
 
@@ -37,7 +37,7 @@ Release history
 **Changed**
 
 - ``Simulator.evaluate`` no longer prints any information to stdout in TensorFlow
-  2.2 (due to a TensorFlow issue, see
+  2.2 in graph mode (due to a TensorFlow issue, see
   https://github.com/tensorflow/tensorflow/issues/39456). Loss/metric values
   will still be returned from the function as normal. (`#153`_)
 - A warning will now be raised if activation types are passed to

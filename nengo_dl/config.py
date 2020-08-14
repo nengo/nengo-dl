@@ -81,6 +81,8 @@ def configure_settings(**kwargs):
         run ``sim.predict`` in training mode).  Set ``learning_phase=True`` to
         always run the model in training mode (or ``False`` to always run in inference
         mode). Set ``learning_phase=None`` to use the default behaviour.
+
+        .. versionadded:: 3.3.0
     """
 
     # get the toplevel network
