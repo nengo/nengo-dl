@@ -1,0 +1,980 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>nengo_dl.neuron_builders &#8212; NengoDL 3.3.0 docs</title>
+    <link rel="stylesheet" href="../../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+<link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,400i,600|Rajdhani:700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
+<link rel="stylesheet" href="https://www.nengo.ai/css/bootstrap.css" type="text/css">
+<style>
+  body .title-bar,
+  body .documentation-source h1:after {
+    background-color: #ff6600;
+  }
+</style>
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-41658423-2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'UA-41658423-2');
+</script>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/scrollreveal"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stickyfill/2.1.0/stickyfill.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+<!-- From basic/layout.html -->
+<script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+  
+  
+<script src="../../_static/underscore.js"></script>
+  
+  
+<script src="../../_static/doctools.js"></script>
+  
+  
+<script src="../../_static/language_data.js"></script>
+  
+  
+<script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+  
+  
+<script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+  
+<script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+  
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  </head><body class="bg-dark">
+
+<header class="fixed-top header-top shadow-sm">
+  <nav class="navbar navbar-expand-md navbar-light bg-white">
+    <a class="navbar-brand" href="https://www.nengo.ai/">
+      <img
+        src="https://www.nengo.ai/design/_images/general-full-light.svg"
+        alt="Nengo"
+        class="logo"
+      />
+    </a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-toggle="collapse"
+      data-target="#navbar-collapse"
+      aria-controls="navbar-collapse"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-collapse">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/">What is Nengo?</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/examples/">Examples</a>
+        </li>
+        <li class="nav-item dropdown active">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-docs"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Documentation</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-docs"
+          >
+            
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo/">Nengo Core</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-gui/">Nengo GUI</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-dl/">Nengo DL</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-spa/">Nengo SPA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-extras/">Nengo Extras</a>
+            <a class="dropdown-item" href="https://arvoelke.github.io/nengolib-docs/">Nengolib</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-fpga/">Nengo FPGA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-loihi/">Nengo Loihi</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-ocl">Nengo OpenCL</a>
+            <a class="dropdown-item" href="https://github.com/project-rig/nengo_spinnaker">Nengo SpiNNaker</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-mpi">Nengo MPI</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/documentation/"
+              >All documentation</a
+            >
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-community"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Community</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-community"
+          >
+            <a class="dropdown-item" href="https://forum.nengo.ai">Forum</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/people/"
+              >People</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/summer-school/"
+              >Summer school</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/contributing/"
+              >Contributing</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/publications/"
+              >Publications</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/videos/"
+              >Videos</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/conduct/"
+              >Code of conduct</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/caa/">CAA</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link btn btn-success btn-sm text-white"
+            href="https://www.nengo.ai/getting-started/"
+            >Getting started</a
+          >
+        </li>
+      </ul>
+    </div>
+  </nav>
+</header>
+<div class="main-content gradient-top">
+  <div class="container-fluid">
+    <div class="row"><a class="toggle-sidenav d-block d-md-none" href="#"
+  ><i class="icon-close fa fa-fw fa-arrow-left"></i
+  ><i class="icon-open fa fa-fw fa-arrow-right"></i
+></a>
+<div role="complementary" class="sidenav col-4 col-xl-3 p-0 border-right">
+  <h3 class="pt-5 px-5">
+    <a href="../../index.html">
+      <img
+        class="img-fluid documentation-image"
+        src="https://www.nengo.ai/design/_images/nengo-dl-full-light.svg"
+        alt="NengoDL"
+      />
+    </a>
+  </h3>
+<form class="px-5 py-3 my-0 border-bottom" action="../../search.html" method="get">
+  <div class="form-group form-group-single">
+    <input type="text" name="q" class="form-control" placeholder="Search" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+    <button type="submit" class="btn btn-link">
+      <img src="https://www.nengo.ai/img/icon-search.svg" alt="Go" />
+    </button>
+  </div>
+</form><div class="p-5 toctree">
+  
+    <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user-guide.html">User guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../project.html">Project information</a></li>
+</ul>
+
+  
+  </div>
+  
+  <form class="p-5 my-0 border-top">
+    <div class="form-group">
+      <label class="text-gray">Version:</label>
+      <select class="custom-select" onchange="switchVersion(this);">
+        
+        
+        <option value="../../../_modules/nengo_dl/neuron_builders.html">latest</option>
+        
+        
+          
+        <option selected>v3.3.0</option>
+          
+        
+          
+        <option value="../../../v3.2.0/_modules/nengo_dl/neuron_builders.html">
+          v3.2.0
+        </option>
+          
+        
+          
+        <option value="../../../v3.1.0/_modules/nengo_dl/neuron_builders.html">
+          v3.1.0
+        </option>
+          
+        
+          
+        <option value="../../../v3.0.0/_modules/nengo_dl/neuron_builders.html">
+          v3.0.0
+        </option>
+          
+        
+          
+        <option value="../../../v2.2.2/_modules/nengo_dl/neuron_builders.html">
+          v2.2.2
+        </option>
+          
+        
+          
+        <option value="../../../v2.2.1/_modules/nengo_dl/neuron_builders.html">
+          v2.2.1
+        </option>
+          
+        
+          
+        <option value="../../../v2.2.0/_modules/nengo_dl/neuron_builders.html">
+          v2.2.0
+        </option>
+          
+        
+          
+        <option value="../../../v2.1.1/_modules/nengo_dl/neuron_builders.html">
+          v2.1.1
+        </option>
+          
+        
+          
+        <option value="../../../v2.1.0/_modules/nengo_dl/neuron_builders.html">
+          v2.1.0
+        </option>
+          
+        
+          
+        <option value="../../../v2.0.0/_modules/nengo_dl/neuron_builders.html">
+          v2.0.0
+        </option>
+          
+        
+          
+        <option value="../../../v1.2.1/_modules/nengo_dl/neuron_builders.html">
+          v1.2.1
+        </option>
+          
+        
+          
+        <option value="../../../v1.2.0/_modules/nengo_dl/neuron_builders.html">
+          v1.2.0
+        </option>
+          
+        
+          
+        <option value="../../../v1.1.0/_modules/nengo_dl/neuron_builders.html">
+          v1.1.0
+        </option>
+          
+        
+          
+        <option value="../../../v1.0.0/_modules/nengo_dl/neuron_builders.html">
+          v1.0.0
+        </option>
+          
+        
+          
+        <option value="../../../v0.6.2/_modules/nengo_dl/neuron_builders.html">
+          v0.6.2
+        </option>
+          
+        
+          
+        <option value="../../../v0.6.1/_modules/nengo_dl/neuron_builders.html">
+          v0.6.1
+        </option>
+          
+        
+          
+        <option value="../../../v0.6.0/_modules/nengo_dl/neuron_builders.html">
+          v0.6.0
+        </option>
+          
+        
+          
+        <option value="../../../v0.5.2/_modules/nengo_dl/neuron_builders.html">
+          v0.5.2
+        </option>
+          
+        
+          
+        <option value="../../../v0.5.1/_modules/nengo_dl/neuron_builders.html">
+          v0.5.1
+        </option>
+          
+        
+          
+        <option value="../../../v0.5.0/_modules/nengo_dl/neuron_builders.html">
+          v0.5.0
+        </option>
+          
+        
+          
+        <option value="../../../v0.4.0/_modules/nengo_dl/neuron_builders.html">
+          v0.4.0
+        </option>
+          
+        
+          
+        <option value="../../../v0.3.1/_modules/nengo_dl/neuron_builders.html">
+          v0.3.1
+        </option>
+          
+        
+          
+        <option value="../../../v0.3.0/_modules/nengo_dl/neuron_builders.html">
+          v0.3.0
+        </option>
+          
+        
+          
+        <option value="../../../v0.2.0/_modules/nengo_dl/neuron_builders.html">
+          v0.2.0
+        </option>
+          
+        
+      </select>
+    </div>
+  </form>
+  
+</div>
+      
+
+      <div class="col-12 col-md-8 col-xl-9">
+        <div class="container">
+          <div class="row">
+            <div class="col-10 offset-1 pb-5 documentation-source" role="main">
+              
+  <h1>Source code for nengo_dl.neuron_builders</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Build classes for Nengo neuron operators.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+<span class="kn">import</span> <span class="nn">contextlib</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">nengo.builder.neurons</span> <span class="kn">import</span> <span class="n">SimNeurons</span>
+<span class="kn">from</span> <span class="nn">nengo.neurons</span> <span class="kn">import</span> <span class="n">RectifiedLinear</span><span class="p">,</span> <span class="n">SpikingRectifiedLinear</span><span class="p">,</span> <span class="n">Sigmoid</span><span class="p">,</span> <span class="n">LIF</span><span class="p">,</span> <span class="n">LIFRate</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">from</span> <span class="nn">tensorflow.python.keras.utils</span> <span class="kn">import</span> <span class="n">tf_utils</span>
+
+<span class="kn">from</span> <span class="nn">nengo_dl</span> <span class="kn">import</span> <span class="n">compat</span><span class="p">,</span> <span class="n">utils</span>
+<span class="kn">from</span> <span class="nn">nengo_dl.builder</span> <span class="kn">import</span> <span class="n">Builder</span><span class="p">,</span> <span class="n">OpBuilder</span>
+<span class="kn">from</span> <span class="nn">nengo_dl.neurons</span> <span class="kn">import</span> <span class="n">LeakyReLU</span><span class="p">,</span> <span class="n">SoftLIFRate</span><span class="p">,</span> <span class="n">SpikingLeakyReLU</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="GenericNeuronBuilder"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.GenericNeuronBuilder">[docs]</a><span class="k">class</span> <span class="nc">GenericNeuronBuilder</span><span class="p">(</span><span class="n">OpBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Builds all neuron types for which there is no custom TensorFlow</span>
+<span class="sd">    implementation.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    These will be executed as native Python functions, requiring execution to</span>
+<span class="sd">    move in and out of TensorFlow.  This can significantly slow down the</span>
+<span class="sd">    simulation, so any performance-critical neuron models should consider</span>
+<span class="sd">    adding a custom TensorFlow implementation for their neuron type instead.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="GenericNeuronBuilder.build_pre"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.GenericNeuronBuilder.build_pre">[docs]</a>    <span class="k">def</span> <span class="nf">build_pre</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">build_pre</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">J_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">J</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">output</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">])</span>
+
+        <span class="n">state_keys</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">neuron_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state_data</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">compat</span><span class="o">.</span><span class="n">neuron_state</span><span class="p">(</span><span class="n">op</span><span class="p">)[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">state_keys</span>
+        <span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">prev_result</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">def</span> <span class="nf">neuron_step</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="o">*</span><span class="n">states</span><span class="p">):</span>  <span class="c1"># pragma: no cover (runs in TF)</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">J_offset</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">state_offset</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">states</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">:</span>
+                <span class="c1"># slice out the individual state vectors from the overall</span>
+                <span class="c1"># array</span>
+                <span class="n">op_J</span> <span class="o">=</span> <span class="n">J</span><span class="p">[:,</span> <span class="n">J_offset</span> <span class="p">:</span> <span class="n">J_offset</span> <span class="o">+</span> <span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                <span class="n">J_offset</span> <span class="o">+=</span> <span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                <span class="n">op_states</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">state_keys</span><span class="p">):</span>
+                    <span class="n">s</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">neuron_state</span><span class="p">(</span><span class="n">op</span><span class="p">)[</span><span class="n">key</span><span class="p">]</span>
+                    <span class="n">op_states</span> <span class="o">+=</span> <span class="p">[</span>
+                        <span class="n">states</span><span class="p">[</span><span class="n">j</span><span class="p">][:,</span> <span class="n">state_offset</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="p">:</span> <span class="n">state_offset</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                    <span class="p">]</span>
+                    <span class="n">state_offset</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                <span class="c1"># call neuron step function</span>
+                <span class="c1"># note: `op_states` are views into `states`, which will</span>
+                <span class="c1"># be updated in-place</span>
+                <span class="n">mini_out</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">signals</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">):</span>
+                    <span class="c1"># blank output variable</span>
+                    <span class="n">neuron_output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                    <span class="n">compat</span><span class="o">.</span><span class="n">neuron_step</span><span class="p">(</span>
+                        <span class="n">op</span><span class="p">,</span>
+                        <span class="n">dt</span><span class="p">,</span>
+                        <span class="n">op_J</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                        <span class="n">neuron_output</span><span class="p">,</span>
+                        <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">state_keys</span><span class="p">,</span> <span class="p">[</span><span class="n">s</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">op_states</span><span class="p">])),</span>
+                    <span class="p">)</span>
+                    <span class="n">mini_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">neuron_output</span><span class="p">)</span>
+                <span class="n">neuron_output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">mini_out</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+                <span class="c1"># concatenate outputs</span>
+                <span class="k">if</span> <span class="n">output</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">output</span> <span class="o">=</span> <span class="n">neuron_output</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">output</span><span class="p">,</span> <span class="n">neuron_output</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="p">(</span><span class="n">output</span><span class="p">,)</span> <span class="o">+</span> <span class="n">states</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">neuron_step</span> <span class="o">=</span> <span class="n">neuron_step</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">neuron_step</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">sanitize_name</span><span class="p">(</span>
+            <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">repr</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span><span class="p">)</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">])</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="GenericNeuronBuilder.build_step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.GenericNeuronBuilder.build_step">[docs]</a>    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="n">J</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">J_data</span><span class="p">)</span>
+        <span class="n">states</span> <span class="o">=</span> <span class="p">[</span><span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_data</span><span class="p">]</span>
+        <span class="n">states_dtype</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_data</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">compat</span><span class="o">.</span><span class="n">eager_enabled</span><span class="p">():</span>
+            <span class="c1"># noop</span>
+            <span class="n">control_deps</span> <span class="o">=</span> <span class="n">contextlib</span><span class="o">.</span><span class="n">suppress</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># we need to make sure that the previous call to this function</span>
+            <span class="c1"># has completed before the next starts, since we don&#39;t know that the</span>
+            <span class="c1"># functions are thread safe</span>
+            <span class="n">control_deps</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">control_dependencies</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prev_result</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">control_deps</span><span class="p">:</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">numpy_function</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">neuron_step</span><span class="p">,</span>
+                <span class="p">[</span><span class="n">signals</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span> <span class="n">J</span><span class="p">]</span> <span class="o">+</span> <span class="n">states</span><span class="p">,</span>
+                <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="o">.</span><span class="n">dtype</span><span class="p">]</span> <span class="o">+</span> <span class="n">states_dtype</span><span class="p">,</span>
+                <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">neuron_step</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="n">neuron_out</span><span class="p">,</span> <span class="n">state_out</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ret</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">prev_result</span> <span class="o">=</span> <span class="p">[</span><span class="n">neuron_out</span><span class="p">]</span>
+
+        <span class="n">neuron_out</span><span class="o">.</span><span class="n">set_shape</span><span class="p">((</span><span class="n">signals</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="p">,</span> <span class="n">neuron_out</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_data</span><span class="p">):</span>
+            <span class="n">state_out</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_shape</span><span class="p">((</span><span class="n">signals</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,)</span> <span class="o">+</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">state_out</span><span class="p">[</span><span class="n">i</span><span class="p">])</span></div></div>
+
+
+<div class="viewcode-block" id="TFNeuronBuilder"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.TFNeuronBuilder">[docs]</a><span class="k">class</span> <span class="nc">TFNeuronBuilder</span><span class="p">(</span><span class="n">OpBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Base class for `~nengo.neurons.NeuronType` builders with a TF implementation.&quot;&quot;&quot;</span>
+
+    <span class="c1"># TODO: this can be delegated to op.neurons.spiking if we increase the minimum</span>
+    <span class="c1">#  Nengo version to one where that attribute is guaranteed to exist</span>
+    <span class="n">spiking</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="TFNeuronBuilder.build_pre"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.TFNeuronBuilder.build_pre">[docs]</a>    <span class="k">def</span> <span class="nf">build_pre</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">build_pre</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">neurons</span><span class="p">,</span> <span class="s2">&quot;amplitude&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span><span class="o">.</span><span class="n">amplitude</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">op_constant</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+                    <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+                    <span class="s2">&quot;amplitude&quot;</span><span class="p">,</span>
+                    <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">/=</span> <span class="n">signals</span><span class="o">.</span><span class="n">dt</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">J_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">J</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_data</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">op</span><span class="o">.</span><span class="n">output</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">state_data</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="n">state</span><span class="p">,</span>
+                <span class="n">signals</span><span class="o">.</span><span class="n">combine</span><span class="p">([</span><span class="n">compat</span><span class="o">.</span><span class="n">neuron_state</span><span class="p">(</span><span class="n">op</span><span class="p">)[</span><span class="n">state</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">]),</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">compat</span><span class="o">.</span><span class="n">neuron_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="TFNeuronBuilder.step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.TFNeuronBuilder.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="o">**</span><span class="n">state</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Implements the logic for a single inference step.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Subclasses must implement&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TFNeuronBuilder.training_step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.TFNeuronBuilder.training_step">[docs]</a>    <span class="k">def</span> <span class="nf">training_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="o">**</span><span class="n">state</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Implements the logic for a single training step.</span>
+
+<span class="sd">        Note: subclasses only need to implement this if ``spiking=True``. It is used</span>
+<span class="sd">        to specify an alternate (differentiable) implementation of the neuron model</span>
+<span class="sd">        to be used during training.</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+<div class="viewcode-block" id="TFNeuronBuilder.build_step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.TFNeuronBuilder.build_step">[docs]</a>    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="o">**</span><span class="n">step_kwargs</span><span class="p">):</span>
+        <span class="n">J</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">J_data</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">signals</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">d</span><span class="p">))</span> <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_data</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+
+        <span class="n">step_output</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nest</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">J</span><span class="p">,</span> <span class="n">signals</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span> <span class="o">**</span><span class="n">state</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">spiking</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">inference_only</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">step_output</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nest</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span>
+                <span class="n">tf_utils</span><span class="o">.</span><span class="n">smart_cond</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">training</span><span class="p">,</span>
+                    <span class="n">true_fn</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">training_step</span><span class="p">(</span><span class="n">J</span><span class="p">,</span> <span class="n">signals</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span> <span class="o">**</span><span class="n">state</span><span class="p">),)</span>
+                    <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+                    <span class="c1"># we use stop_gradient to avoid propagating any nans (those get</span>
+                    <span class="c1"># propagated through the cond even if the spiking version isn&#39;t</span>
+                    <span class="c1"># being used at all)</span>
+                    <span class="n">false_fn</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span>
+                        <span class="n">tf</span><span class="o">.</span><span class="n">stop_gradient</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">tf</span><span class="o">.</span><span class="n">nest</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">step_output</span><span class="p">)</span>
+                    <span class="p">),</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_data</span><span class="p">,</span> <span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">state_data</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_data</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span> <span class="n">out</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">state_data</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="RectifiedLinearBuilder"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.RectifiedLinearBuilder">[docs]</a><span class="k">class</span> <span class="nc">RectifiedLinearBuilder</span><span class="p">(</span><span class="n">TFNeuronBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of `~nengo.RectifiedLinear` neuron operators.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="RectifiedLinearBuilder.build_pre"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.RectifiedLinearBuilder.build_pre">[docs]</a>    <span class="k">def</span> <span class="nf">build_pre</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">build_pre</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span><span class="p">,</span> <span class="s2">&quot;negative_slope&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">negative_slope</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">negative_slope</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">op_constant</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+                <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+                <span class="s2">&quot;negative_slope&quot;</span><span class="p">,</span>
+                <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+            <span class="p">)</span></div>
+
+<div class="viewcode-block" id="RectifiedLinearBuilder.step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.RectifiedLinearBuilder.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">J</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">negative_slope</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">negative_slope</span> <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="o">-</span><span class="n">J</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span>
+        <span class="k">return</span> <span class="n">out</span></div></div>
+
+
+<div class="viewcode-block" id="SpikingRectifiedLinearBuilder"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.SpikingRectifiedLinearBuilder">[docs]</a><span class="k">class</span> <span class="nc">SpikingRectifiedLinearBuilder</span><span class="p">(</span><span class="n">RectifiedLinearBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of `~nengo.SpikingRectifiedLinear` neuron operators.&quot;&quot;&quot;</span>
+
+    <span class="n">spiking</span> <span class="o">=</span> <span class="kc">True</span>
+
+<div class="viewcode-block" id="SpikingRectifiedLinearBuilder.step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.SpikingRectifiedLinearBuilder.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">voltage</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">negative_slope</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">voltage</span> <span class="o">+=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">J</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+            <span class="n">n_spikes</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">voltage</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">voltage</span> <span class="o">+=</span> <span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">J</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">negative_slope</span> <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="o">-</span><span class="n">J</span><span class="p">))</span> <span class="o">*</span> <span class="n">dt</span>
+            <span class="n">n_spikes</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">voltage</span><span class="p">)</span> <span class="o">+</span> <span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">voltage</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">voltage</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="n">voltage</span> <span class="o">-=</span> <span class="n">n_spikes</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">n_spikes</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span>
+
+        <span class="k">return</span> <span class="n">out</span><span class="p">,</span> <span class="n">voltage</span></div>
+
+<div class="viewcode-block" id="SpikingRectifiedLinearBuilder.training_step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.SpikingRectifiedLinearBuilder.training_step">[docs]</a>    <span class="k">def</span> <span class="nf">training_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="o">**</span><span class="n">state</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="SigmoidBuilder"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.SigmoidBuilder">[docs]</a><span class="k">class</span> <span class="nc">SigmoidBuilder</span><span class="p">(</span><span class="n">TFNeuronBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of `~nengo.Sigmoid` neuron operators.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SigmoidBuilder.build_pre"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.SigmoidBuilder.build_pre">[docs]</a>    <span class="k">def</span> <span class="nf">build_pre</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">build_pre</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau_ref</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">op_constant</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+            <span class="s2">&quot;tau_ref&quot;</span><span class="p">,</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="SigmoidBuilder.step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.SigmoidBuilder.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">J</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_ref</span></div></div>
+
+
+<div class="viewcode-block" id="TanhBuilder"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.TanhBuilder">[docs]</a><span class="k">class</span> <span class="nc">TanhBuilder</span><span class="p">(</span><span class="n">TFNeuronBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of `~nengo.Tanh` neuron operators.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="TanhBuilder.build_pre"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.TanhBuilder.build_pre">[docs]</a>    <span class="k">def</span> <span class="nf">build_pre</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">build_pre</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau_ref</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">op_constant</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+            <span class="s2">&quot;tau_ref&quot;</span><span class="p">,</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="TanhBuilder.step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.TanhBuilder.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">J</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_ref</span></div></div>
+
+
+<div class="viewcode-block" id="LIFRateBuilder"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.LIFRateBuilder">[docs]</a><span class="k">class</span> <span class="nc">LIFRateBuilder</span><span class="p">(</span><span class="n">TFNeuronBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of `~nengo.LIFRate` neuron operators.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="LIFRateBuilder.build_pre"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.LIFRateBuilder.build_pre">[docs]</a>    <span class="k">def</span> <span class="nf">build_pre</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">build_pre</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau_ref</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">op_constant</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+            <span class="s2">&quot;tau_ref&quot;</span><span class="p">,</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau_rc</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">op_constant</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+            <span class="s2">&quot;tau_rc&quot;</span><span class="p">,</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">zeros</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">signals</span><span class="o">.</span><span class="n">minibatch_size</span><span class="p">,)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">J_data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="mf">1e-15</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="c1"># copy these so that they&#39;re easily accessible in the step functions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zero</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">zero</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">one</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">one</span></div>
+
+<div class="viewcode-block" id="LIFRateBuilder.step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.LIFRateBuilder.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="n">J</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">one</span>
+
+        <span class="c1"># note: we convert all the j to be positive before this calculation</span>
+        <span class="c1"># (even though we&#39;ll only use the values that are already positive),</span>
+        <span class="c1"># otherwise we can end up with nans in the gradient</span>
+        <span class="n">rates</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">one</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tau_ref</span>
+            <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_rc</span>
+            <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">reciprocal</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">J</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">)))</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">J</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">zero</span><span class="p">,</span> <span class="n">rates</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">zeros</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="SoftLIFRateBuilder"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.SoftLIFRateBuilder">[docs]</a><span class="k">class</span> <span class="nc">SoftLIFRateBuilder</span><span class="p">(</span><span class="n">LIFRateBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of `.SoftLIFRate` neuron operators.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SoftLIFRateBuilder.build_pre"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.SoftLIFRateBuilder.build_pre">[docs]</a>    <span class="k">def</span> <span class="nf">build_pre</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">build_pre</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">op_constant</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+            <span class="s2">&quot;sigma&quot;</span><span class="p">,</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="SoftLIFRateBuilder.step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.SoftLIFRateBuilder.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="n">J</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">one</span>
+
+        <span class="n">js</span> <span class="o">=</span> <span class="n">J</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span>
+        <span class="n">j_valid</span> <span class="o">=</span> <span class="n">js</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mi">20</span>
+        <span class="n">js_safe</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">j_valid</span><span class="p">,</span> <span class="n">js</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">zeros</span><span class="p">)</span>
+
+        <span class="c1"># softplus(js) = log(1 + e^js)</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">softplus</span><span class="p">(</span><span class="n">js_safe</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span>
+
+        <span class="c1"># as z-&gt;0</span>
+        <span class="c1">#   z = s*log(1 + e^js) = s*e^js</span>
+        <span class="c1">#   log(1 + 1/z) = log(1/z) = -log(s*e^js) = -js - log(s)</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+            <span class="n">j_valid</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">reciprocal</span><span class="p">(</span><span class="n">z</span><span class="p">)),</span> <span class="o">-</span><span class="n">js</span> <span class="o">-</span> <span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="n">rates</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">one</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tau_ref</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_rc</span> <span class="o">*</span> <span class="n">q</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">rates</span></div></div>
+
+
+<div class="viewcode-block" id="LIFBuilder"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.LIFBuilder">[docs]</a><span class="k">class</span> <span class="nc">LIFBuilder</span><span class="p">(</span><span class="n">SoftLIFRateBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of `~nengo.LIF` neuron operators.&quot;&quot;&quot;</span>
+
+    <span class="n">spiking</span> <span class="o">=</span> <span class="kc">True</span>
+
+<div class="viewcode-block" id="LIFBuilder.build_pre"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.LIFBuilder.build_pre">[docs]</a>    <span class="k">def</span> <span class="nf">build_pre</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="c1"># note: we skip the SoftLIFRateBuilder init</span>
+        <span class="c1"># pylint: disable=bad-super-call</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SoftLIFRateBuilder</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">build_pre</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_voltage</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">op_constant</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">neurons</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+            <span class="p">[</span><span class="n">op</span><span class="o">.</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ops</span><span class="p">],</span>
+            <span class="s2">&quot;min_voltage&quot;</span><span class="p">,</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">lif_smoothing</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">lif_smoothing</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="LIFBuilder.step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.LIFBuilder.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">voltage</span><span class="p">,</span> <span class="n">refractory_time</span><span class="p">):</span>
+        <span class="n">delta_t</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">clip_by_value</span><span class="p">(</span><span class="n">dt</span> <span class="o">-</span> <span class="n">refractory_time</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">zero</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+
+        <span class="n">dV</span> <span class="o">=</span> <span class="p">(</span><span class="n">voltage</span> <span class="o">-</span> <span class="n">J</span><span class="p">)</span> <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="o">-</span><span class="n">delta_t</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_rc</span><span class="p">)</span>
+        <span class="n">voltage</span> <span class="o">+=</span> <span class="n">dV</span>
+
+        <span class="n">spiked</span> <span class="o">=</span> <span class="n">voltage</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">one</span>
+        <span class="n">spikes</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">spiked</span><span class="p">,</span> <span class="n">J</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span>
+
+        <span class="n">partial_ref</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">tau_rc</span> <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">one</span> <span class="o">-</span> <span class="n">voltage</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">J</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">one</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="c1"># FastLIF version (linearly approximate spike time when calculating</span>
+        <span class="c1"># remaining refractory period)</span>
+        <span class="c1"># partial_ref = signals.dt * (voltage - self.one) / dV</span>
+
+        <span class="n">refractory_time</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+            <span class="n">spiked</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_ref</span> <span class="o">-</span> <span class="n">partial_ref</span><span class="p">,</span> <span class="n">refractory_time</span> <span class="o">-</span> <span class="n">dt</span>
+        <span class="p">)</span>
+
+        <span class="n">voltage</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">spiked</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">zeros</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">voltage</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_voltage</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">spikes</span><span class="p">,</span> <span class="n">voltage</span><span class="p">,</span> <span class="n">refractory_time</span></div>
+
+<div class="viewcode-block" id="LIFBuilder.training_step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.LIFBuilder.training_step">[docs]</a>    <span class="k">def</span> <span class="nf">training_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="o">**</span><span class="n">state</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">LIFRateBuilder</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">lif_smoothing</span> <span class="ow">is</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="n">SoftLIFRateBuilder</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+        <span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="RegularSpikingBuilder"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.RegularSpikingBuilder">[docs]</a><span class="k">class</span> <span class="nc">RegularSpikingBuilder</span><span class="p">(</span><span class="n">TFNeuronBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of `~nengo.RegularSpiking` neuron operators.&quot;&quot;&quot;</span>
+
+    <span class="n">spiking</span> <span class="o">=</span> <span class="kc">True</span>
+
+<div class="viewcode-block" id="RegularSpikingBuilder.step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.RegularSpikingBuilder.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">voltage</span><span class="p">):</span>
+        <span class="n">voltage</span> <span class="o">+=</span> <span class="n">J</span> <span class="o">*</span> <span class="n">dt</span>
+        <span class="n">n_spikes</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">voltage</span><span class="p">)</span>
+
+        <span class="n">voltage</span> <span class="o">-=</span> <span class="n">n_spikes</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">n_spikes</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span>
+
+        <span class="k">return</span> <span class="n">out</span><span class="p">,</span> <span class="n">voltage</span></div>
+
+<div class="viewcode-block" id="RegularSpikingBuilder.training_step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.RegularSpikingBuilder.training_step">[docs]</a>    <span class="k">def</span> <span class="nf">training_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="o">**</span><span class="n">state</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">J</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">J</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span></div></div>
+
+
+<div class="viewcode-block" id="StochasticSpikingBuilder"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.StochasticSpikingBuilder">[docs]</a><span class="k">class</span> <span class="nc">StochasticSpikingBuilder</span><span class="p">(</span><span class="n">TFNeuronBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of `~nengo.StochasticSpiking` neuron operators.&quot;&quot;&quot;</span>
+
+    <span class="n">spiking</span> <span class="o">=</span> <span class="kc">True</span>
+
+<div class="viewcode-block" id="StochasticSpikingBuilder.step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.StochasticSpikingBuilder.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">dt</span> <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">J</span><span class="p">)</span>
+        <span class="n">n_spikes</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">frac</span> <span class="o">=</span> <span class="n">x</span> <span class="o">-</span> <span class="n">n_spikes</span>
+
+        <span class="n">n_spikes</span> <span class="o">+=</span> <span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">frac</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">frac</span><span class="p">,</span> <span class="n">n_spikes</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="n">n_spikes</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">J</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">n_spikes</span></div>
+
+<div class="viewcode-block" id="StochasticSpikingBuilder.training_step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.StochasticSpikingBuilder.training_step">[docs]</a>    <span class="k">def</span> <span class="nf">training_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">J</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">J</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span></div></div>
+
+
+<div class="viewcode-block" id="PoissonSpikingBuilder"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.PoissonSpikingBuilder">[docs]</a><span class="k">class</span> <span class="nc">PoissonSpikingBuilder</span><span class="p">(</span><span class="n">TFNeuronBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build a group of `~nengo.PoissonSpiking` neuron operators.&quot;&quot;&quot;</span>
+
+    <span class="n">spiking</span> <span class="o">=</span> <span class="kc">True</span>
+
+<div class="viewcode-block" id="PoissonSpikingBuilder.step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.PoissonSpikingBuilder.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="n">n_spikes</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span>
+            <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">poisson</span><span class="p">((),</span> <span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">J</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">J</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">J</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">n_spikes</span><span class="o">.</span><span class="n">set_shape</span><span class="p">(</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">n_spikes</span></div>
+
+<div class="viewcode-block" id="PoissonSpikingBuilder.training_step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.PoissonSpikingBuilder.training_step">[docs]</a>    <span class="k">def</span> <span class="nf">training_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">J</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">J</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span></div></div>
+
+
+<div class="viewcode-block" id="SimNeuronsBuilder"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.SimNeuronsBuilder">[docs]</a><span class="nd">@Builder</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">SimNeurons</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">SimNeuronsBuilder</span><span class="p">(</span><span class="n">OpBuilder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Builds a group of `~nengo.builder.neurons.SimNeurons` operators.</span>
+
+<span class="sd">    Calls the appropriate sub-build class for the different neuron types.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    TF_NEURON_IMPL : dict of {`~nengo.neurons.NeuronType`, \</span>
+<span class="sd">                              `.builder.OpBuilder`}</span>
+<span class="sd">        Mapping from neuron types to custom build classes (neurons without</span>
+<span class="sd">        a custom builder will use the generic builder).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">TF_NEURON_IMPL</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">RectifiedLinear</span><span class="p">:</span> <span class="n">RectifiedLinearBuilder</span><span class="p">,</span>
+        <span class="n">SpikingRectifiedLinear</span><span class="p">:</span> <span class="n">SpikingRectifiedLinearBuilder</span><span class="p">,</span>
+        <span class="n">LeakyReLU</span><span class="p">:</span> <span class="n">RectifiedLinearBuilder</span><span class="p">,</span>
+        <span class="n">SpikingLeakyReLU</span><span class="p">:</span> <span class="n">SpikingRectifiedLinearBuilder</span><span class="p">,</span>
+        <span class="n">Sigmoid</span><span class="p">:</span> <span class="n">SigmoidBuilder</span><span class="p">,</span>
+        <span class="n">compat</span><span class="o">.</span><span class="n">Tanh</span><span class="p">:</span> <span class="n">TanhBuilder</span><span class="p">,</span>
+        <span class="n">LIF</span><span class="p">:</span> <span class="n">LIFBuilder</span><span class="p">,</span>
+        <span class="n">LIFRate</span><span class="p">:</span> <span class="n">LIFRateBuilder</span><span class="p">,</span>
+        <span class="n">SoftLIFRate</span><span class="p">:</span> <span class="n">SoftLIFRateBuilder</span><span class="p">,</span>
+        <span class="n">compat</span><span class="o">.</span><span class="n">RegularSpiking</span><span class="p">:</span> <span class="n">RegularSpikingBuilder</span><span class="p">,</span>
+        <span class="n">compat</span><span class="o">.</span><span class="n">StochasticSpiking</span><span class="p">:</span> <span class="n">StochasticSpikingBuilder</span><span class="p">,</span>
+        <span class="n">compat</span><span class="o">.</span><span class="n">PoissonSpiking</span><span class="p">:</span> <span class="n">PoissonSpikingBuilder</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ops</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ops</span><span class="p">)</span>
+
+        <span class="n">neuron_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">neurons</span><span class="p">)</span>
+
+        <span class="c1"># if we have a custom tensorflow implementation for this neuron type,</span>
+        <span class="c1"># then we build that. otherwise we&#39;ll just execute the neuron step</span>
+        <span class="c1"># function externally (using `tf.py_func`).</span>
+        <span class="k">if</span> <span class="n">neuron_type</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">TF_NEURON_IMPL</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">built_neurons</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TF_NEURON_IMPL</span><span class="p">[</span><span class="n">neuron_type</span><span class="p">](</span><span class="n">ops</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> does not have a native TensorFlow implementation; &quot;</span>
+                <span class="s2">&quot;falling back to Python implementation&quot;</span> <span class="o">%</span> <span class="n">neuron_type</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">built_neurons</span> <span class="o">=</span> <span class="n">GenericNeuronBuilder</span><span class="p">(</span><span class="n">ops</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SimNeuronsBuilder.build_pre"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.SimNeuronsBuilder.build_pre">[docs]</a>    <span class="k">def</span> <span class="nf">build_pre</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">built_neurons</span><span class="o">.</span><span class="n">build_pre</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SimNeuronsBuilder.build_step"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.SimNeuronsBuilder.build_step">[docs]</a>    <span class="k">def</span> <span class="nf">build_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signals</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">built_neurons</span><span class="o">.</span><span class="n">build_step</span><span class="p">(</span><span class="n">signals</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SimNeuronsBuilder.mergeable"><a class="viewcode-back" href="../../reference.html#nengo_dl.neuron_builders.SimNeuronsBuilder.mergeable">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">mergeable</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="c1"># neuron ops must all have the same type</span>
+        <span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">neurons</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">neurons</span><span class="p">)</span>  <span class="c1"># noqa: E721</span></div></div>
+</pre></div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div><footer class="text-light footer-main gradient-bottom">
+  <p class="small text-center mb-0">
+    <a class="no-hover-line" href="https://appliedbrainresearch.com">
+      <img
+        src="https://appliedbrainresearch.com/img/logo-blue-notext.svg"
+        height="48"
+      />
+    </a>
+    <a href="https://www.nengo.ai/">What is Nengo?</a>
+    <a href="https://www.nengo.ai/examples/">Examples</a>
+    <a href="https://www.nengo.ai/documentation/">Documentation</a>
+    <a href="https://www.nengo.ai/getting-started/">Getting started</a>
+    <a href="https://www.nengo.ai/privacy/">Privacy</a>
+  </p>
+  <p class="small text-center mb-0">&copy; Applied Brain Research</p>
+</footer>
+<script>
+  function switchVersion(select) {
+    var option = select.selectedOptions[0];
+    if (option.hasAttribute("value")) {
+      window.location = option.value;
+    }
+  }
+</script>
+
+<script>
+  var elements = document.querySelectorAll('.sidenav');
+  Stickyfill.add(elements);
+</script>
+<script>
+  ScrollReveal().reveal(".fade-in", {
+      scale: 0.85,
+      duration: 1000,
+      delay: 250,
+      interval: 50
+  });
+</script>
+<script>
+  $('a.toggle-sidenav').on('click', function(e) {
+    e.preventDefault();
+    if ( $(this).hasClass('active') ) {
+      $(this).removeClass('active');
+      $('.sidenav').removeClass('open');
+    } else {
+      $(this).addClass('active');
+      $('.sidenav').addClass('open');
+    }
+  });
+</script>
+<script>
+  var lists = document.querySelectorAll('.toctree ul');
+  lists.forEach((ul) => {
+      ul.classList.add("nav");
+  });
+  var links = document.querySelectorAll('.toctree a');
+  links.forEach((link) => {
+      link.classList.add("nav-link");
+  });
+  $("body").scrollspy({target: ".sidenav"});
+</script>
+  </body>
+</html>
