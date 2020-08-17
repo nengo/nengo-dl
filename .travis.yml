@@ -22,6 +22,7 @@ env:
     - SCRIPT="test"
     - TEST_ARGS=""
     - BRANCH_NAME="${TRAVIS_PULL_REQUEST_BRANCH:-$TRAVIS_BRANCH}"
+    - PIP_USE_FEATURE="2020-resolver"
     - NUMPY_VERSION="numpy>=1.16.0"
     - TF_VERSION="tensorflow-cpu"
     - NENGO_VERSION="nengo[tests]"
@@ -113,7 +114,7 @@ before_install:
   # upgrade pip
   - pip install pip --upgrade
   # install/run nengo-bones
-  - pip install git+https://github.com/nengo/nengo-bones#egg=nengo-bones
+  - pip install git+https://github.com/nengo/nengo-bones@2020-resolver#egg=nengo-bones
   - bones-generate --output-dir .ci ci-scripts
   - if [[ "$TRAVIS_PYTHON_VERSION" < "3.6" ]]; then
         echo "Skipping bones-check because Python $TRAVIS_PYTHON_VERSION < 3.6";
