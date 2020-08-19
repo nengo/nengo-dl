@@ -30,6 +30,8 @@ Release history
 
 - Global default Keras dtype will now be reset correctly when an exception occurs
   in a Simulator method outside the ``with Simulator`` context. (`#173`_)
+- Support new LinearFilter step type introduced in Nengo core (see
+  `#1629 <https://github.com/nengo/nengo/pull/1629>`__). (`#173`_)
 
 .. _#173: https://github.com/nengo/nengo-dl/pull/173
 
