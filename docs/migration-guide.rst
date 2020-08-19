@@ -170,7 +170,7 @@ Simulator changes
             )
 
 5.  **Rate/spiking neuron swapping is controlled by Keras** ``learning_phase``.  In
-    Nengo DL 2 and 3 spiking neuron models are automatically swapped for rate mode
+    NengoDL 2 and 3 spiking neuron models are automatically swapped for rate mode
     equivalents during training.  However, sometimes it is useful to manually enable
     this swapping in other functions (for example, in order to evaluate the loss
     function on test data but with the swapped rate neuron models).  There were a couple

@@ -153,7 +153,7 @@ on custom neuromorphic hardware).
     # load our optimized network in a different simulator
     with nengo.Simulator(net) as sim2:
         # sim2 will now simulate a model in the default Nengo simulator, but
-        # with the same parameters as our optimized Nengo DL model
+        # with the same parameters as our optimized NengoDL model
         sim2.run(1.0)
 
 .. testoutput::

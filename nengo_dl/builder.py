@@ -300,7 +300,7 @@ class NengoBuilder(builder.Builder):
     Copy of the default Nengo builder.
 
     This class is here so that we can register new build functions for
-    Nengo DL without affecting the default Nengo build process.
+    NengoDL without affecting the default Nengo build process.
     """
 
     builders = {}
@@ -327,7 +327,7 @@ class NengoBuilder(builder.Builder):
 
         try:
             # first try building obj using any custom build functions that have
-            # been registered by Nengo DL
+            # been registered by NengoDL
             return builder.Builder.build.__func__(
                 NengoBuilder, model, obj, *args, **kwargs
             )
