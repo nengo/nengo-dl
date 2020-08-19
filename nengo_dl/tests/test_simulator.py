@@ -1813,7 +1813,7 @@ def test_progress_bar(Simulator, capsys, monkeypatch):
 
     net, _, _ = dummies.linear_net()
 
-    with Simulator(net) as sim:
+    with Simulator(net, progress_bar=True) as sim:
         # default to displaying build information
         build_output = capsys.readouterr().out
         assert "Building" in build_output

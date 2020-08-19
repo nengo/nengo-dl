@@ -24,6 +24,7 @@ def make_test_sim(request):
     def TestSimulator(net, *args, **kwargs):
         kwargs.setdefault("unroll_simulation", unroll)
         kwargs.setdefault("device", device)
+        kwargs.setdefault("progress_bar", False)
 
         if net is not None and config.get_setting(net, "inference_only") is None:
             with net:
