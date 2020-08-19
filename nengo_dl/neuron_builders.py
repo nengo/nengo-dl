@@ -448,7 +448,9 @@ class StochasticSpikingBuilder(TFNeuronBuilder):
         n_spikes = tf.floor(x)
         frac = x - n_spikes
 
-        n_spikes += tf.cast(tf.random.uniform(frac.shape) < frac, n_spikes.dtype)
+        n_spikes += tf.cast(
+            tf.random.uniform(frac.shape, dtype=frac.dtype) < frac, n_spikes.dtype
+        )
 
         n_spikes *= self.alpha * tf.math.sign(J)
 

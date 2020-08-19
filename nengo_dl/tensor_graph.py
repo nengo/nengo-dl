@@ -239,14 +239,17 @@ class TensorGraph(tf.keras.layers.Layer):
             elif all(v is None or np.all(v == 1) for v in values):
                 initializer = tf.initializers.ones()
             else:
-                val = tf.concat(
-                    [
-                        tf.zeros(s, dtype)
-                        if v is None
-                        else tf.cast(tf.broadcast_to(v, s), dtype)
-                        for v, s in zip(values, shapes)
-                    ],
-                    axis=1 if minibatched else 0,
+                val = tf.constant(
+                    np.concatenate(
+                        [
+                            np.zeros(s, dtype)
+                            if v is None
+                            else np.broadcast_to(np.asarray(v, dtype=dtype), s)
+                            for v, s in zip(values, shapes)
+                        ],
+                        axis=1 if minibatched else 0,
+                    ),
+                    dtype=dtype,
                 )
                 initializer = lambda shape=None, dtype=None: val
 

@@ -21,6 +21,11 @@ Release history
 3.3.1 (unreleased)
 ------------------
 
+**Changed**
+
+- Minor improvements to build speed by building constants outside of TensorFlow.
+  (`#173`_)
+
 **Fixed**
 
 - Global default Keras dtype will now be reset correctly when an exception occurs
