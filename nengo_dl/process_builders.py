@@ -304,14 +304,14 @@ class LinearFilterBuilder(OpBuilder):
             )
             for op in self.ops
         ]
-        self.step_type = type(steps[0])
-        assert all(type(step) == self.step_type for step in steps)
+        self.filter_step = steps[0]
+        assert all(isinstance(step, type(self.filter_step)) for step in steps)
 
         self.n_ops = len(self.ops)
         self.signal_d = self.ops[0].input.shape[0]
         self.state_d = steps[0].A.shape[0]
 
-        if self.step_type == LinearFilter.NoX:
+        if isinstance(self.filter_step, LinearFilter.NoX):
             self.A = None
             self.B = None
             self.C = None
@@ -323,7 +323,7 @@ class LinearFilterBuilder(OpBuilder):
             )
 
             assert self.D.shape == (1, self.n_ops, 1)
-        elif self.step_type == LinearFilter.OneX:
+        elif isinstance(self.filter_step, LinearFilter.OneX):
             # combine A scalars for each op, and broadcast along batch/state
             self.A = tf.constant(
                 np.concatenate([step.A for step in steps])[None, :], dtype=signals.dtype
@@ -349,7 +349,7 @@ class LinearFilterBuilder(OpBuilder):
                 np.stack([step.C for step in steps], axis=0), dtype=signals.dtype
             )
 
-            if self.step_type == LinearFilter.NoD:
+            if isinstance(self.filter_step, LinearFilter.NoD):
                 self.D = None
             else:
                 self.D = tf.constant(
@@ -368,11 +368,11 @@ class LinearFilterBuilder(OpBuilder):
     def build_step(self, signals):
         input = signals.gather(self.input_data)
 
-        if self.step_type == LinearFilter.NoX:
+        if isinstance(self.filter_step, LinearFilter.NoX):
             input = tf.reshape(input, (signals.minibatch_size, self.n_ops, -1))
 
             signals.scatter(self.output_data, self.D * input)
-        elif self.step_type == LinearFilter.OneX:
+        elif isinstance(self.filter_step, LinearFilter.OneX):
             input = tf.reshape(input, (signals.minibatch_size, self.n_ops, -1))
 
             # note: we use the output signal in place of a separate state
@@ -403,7 +403,7 @@ class LinearFilterBuilder(OpBuilder):
                 (self.n_ops, self.state_d, self.signal_d * signals.minibatch_size),
             )
 
-            if self.step_type == LinearFilter.NoD:
+            if isinstance(self.filter_step, LinearFilter.NoD):
                 # for NoD, we update the state before computing the output
                 new_state = tf.matmul(self.A, state) + self.B * input
 
@@ -416,7 +416,7 @@ class LinearFilterBuilder(OpBuilder):
                 # in the general case, we compute the output before updating
                 # the state
                 output = tf.matmul(self.C, state)
-                if self.step_type == LinearFilter.General:
+                if isinstance(self.filter_step, LinearFilter.General):
                     output += self.D * input
                 signals.scatter(self.output_data, undo_batch(output))
 

@@ -26,6 +26,11 @@ Release history
 - Minor improvements to build speed by building constants outside of TensorFlow.
   (`#173`_)
 
+**Fixed**
+
+- Support new LinearFilter step type introduced in Nengo core (see
+  `#1629 <https://github.com/nengo/nengo/pull/1629>`__). (`#173`_)
+
 .. _#173: https://github.com/nengo/nengo-dl/pull/173
 
 3.3.0 (August 14, 2020)
