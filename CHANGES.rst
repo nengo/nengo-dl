@@ -21,6 +21,12 @@ Release history
 3.3.1 (unreleased)
 ------------------
 
+**Changed**
+
+- Minor improvements to build speed by building constants outside of TensorFlow.
+  (`#173`_)
+
+.. _#173: https://github.com/nengo/nengo-dl/pull/173
 
 3.3.0 (August 14, 2020)
 -----------------------

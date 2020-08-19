@@ -187,9 +187,15 @@ class TensorSignal:
         A ``tf.Tensor`` representing the indices of this signal.
         """
         if self._tf_indices is None:
-            self._tf_indices = tf.concat(
-                [tf.range(start, stop, dtype=tf.int32) for start, stop in self.slices],
-                axis=0,
+            self._tf_indices = tf.constant(
+                np.concatenate(
+                    [
+                        np.arange(start, stop, dtype=np.int32)
+                        for start, stop in self.slices
+                    ],
+                    axis=0,
+                ),
+                dtype=tf.int32,
             )
 
         return self._tf_indices

@@ -120,17 +120,22 @@ class ResetBuilder(OpBuilder):
             scatters[signals[op.dst].key].append(op)
         self.scatters = []
         for group in scatters.values():
-            value = tf.concat(
+            value = np.concatenate(
                 [
-                    tf.broadcast_to(
-                        tf.cast(x.value, dtype),
+                    np.broadcast_to(
+                        np.asarray(x.value, dtype=dtype),
                         (signals.minibatch_size,) + x.dst.shape,
                     )
                     for x in group
                 ],
                 axis=1,
             )
-            self.scatters.append((signals.combine([x.dst for x in group]), value))
+            self.scatters.append(
+                (
+                    signals.combine([x.dst for x in group]),
+                    tf.constant(value, dtype=dtype),
+                )
+            )
 
         logger.debug("scatters")
         logger.debug("\n".join([str(x) for x in self.scatters]))
