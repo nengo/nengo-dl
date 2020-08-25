@@ -292,12 +292,14 @@ def test_tensor_layer_deprecation(Simulator):
     assert np.allclose(sim.data[p], 1)
 
 
-def test_nested_layer(Simulator):
+def test_nested_layer(Simulator, pytestconfig):
     class MyLayer(tf.keras.layers.Layer):
         def __init__(self):
             super().__init__()
             self.layer = tf.keras.layers.Dense(
-                10, kernel_initializer=tf.initializers.ones()
+                10,
+                kernel_initializer=tf.initializers.ones(),
+                dtype=pytestconfig.getoption("--dtype"),
             )
 
         def build(self, input_shapes):
@@ -392,9 +394,11 @@ def test_training_arg(Simulator):
         sim.predict(n_steps=10)
 
 
-def test_wrapped_model(Simulator):
+def test_wrapped_model(Simulator, pytestconfig):
     inp0 = tf.keras.Input((1,))
-    out0 = tf.keras.layers.Dense(units=10)(inp0)
+    out0 = tf.keras.layers.Dense(units=10, dtype=pytestconfig.getoption("--dtype"))(
+        inp0
+    )
     model0 = tf.keras.Model(inp0, out0)
 
     model0.compile(loss="mse", metrics=["accuracy"])

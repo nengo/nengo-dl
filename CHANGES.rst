@@ -21,6 +21,12 @@ Release history
 3.3.1 (unreleased)
 ------------------
 
+**Fixed**
+
+- Global default Keras dtype will now be reset correctly when an exception occurs
+  in a Simulator method outside the ``with Simulator`` context. (`#173`_)
+
+.. _#173: https://github.com/nengo/nengo-dl/pull/173
 
 3.3.0 (August 14, 2020)
 -----------------------

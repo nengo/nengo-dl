@@ -1876,3 +1876,21 @@ def test_logging(Simulator, caplog):
 
     for rec in caplog.records:
         assert rec.getMessage(), "Record %s has empty message" % rec
+
+
+def test_floatx_context(Simulator):
+    with nengo.Network() as net:
+        configure_settings(dtype="float64")
+
+        def fail_func(t):
+            assert tf.keras.backend.floatx() == "float64"
+            assert False, "intentional failure"
+
+        nengo.Node(fail_func, size_out=1)
+
+    assert tf.keras.backend.floatx() == "float32"
+    sim = Simulator(net)
+    with pytest.raises(AssertionError, match="intentional failure"):
+        sim.step()
+    assert tf.keras.backend.floatx() == "float32"
+    sim.close()

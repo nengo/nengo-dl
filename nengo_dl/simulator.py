@@ -53,9 +53,11 @@ def with_self(wrapped, instance, args, kwargs):
 
     keras_dtype = tf.keras.backend.floatx()
     tf.keras.backend.set_floatx(instance.tensor_graph.dtype)
-    with tf.device(instance.tensor_graph.device):
-        output = wrapped(*args, **kwargs)
-    tf.keras.backend.set_floatx(keras_dtype)
+    try:
+        with tf.device(instance.tensor_graph.device):
+            output = wrapped(*args, **kwargs)
+    finally:
+        tf.keras.backend.set_floatx(keras_dtype)
 
     return output
 
