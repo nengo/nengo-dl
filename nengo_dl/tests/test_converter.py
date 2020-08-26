@@ -568,7 +568,7 @@ def test_upsampling(Layer, size, data_format, rng):
     )(x)
 
     _test_convert(
-        inp, x, inp_vals=[np.arange(np.prod(inp.get_shape())).reshape(inp.shape)],
+        inp, x, inp_vals=[np.arange(np.prod(inp.get_shape())).reshape(inp.shape)]
     )
 
 

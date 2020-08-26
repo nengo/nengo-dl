@@ -5,3 +5,7 @@ repos:
     rev: 20.8b0
     hooks:
     - id: black
+      exclude: |
+          (?x)(
+              '*/whitepaper2018_code.py'
+          )

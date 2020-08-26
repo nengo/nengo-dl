@@ -279,6 +279,10 @@ setup_py:
       - "Topic :: Scientific/Engineering"
       - "Topic :: Scientific/Engineering :: Artificial Intelligence"
 
-pyproject_toml: {}
+pyproject_toml:
+  exclude:
+    - "'*/whitepaper2018_code.py'"
 
-pre_commit_config_yaml: {}
+pre_commit_config_yaml:
+  exclude:
+    - "'*/whitepaper2018_code.py'"

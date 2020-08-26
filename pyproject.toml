@@ -5,3 +5,8 @@ requires = ["setuptools", "wheel"]
 
 [tool.black]
 target-version = ['py35', 'py36', 'py37', 'py38']
+exclude = '''
+(
+    '*/whitepaper2018_code.py'
+)
+'''

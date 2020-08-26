@@ -117,7 +117,7 @@ class TensorGraph(tf.keras.layers.Layer):
 
         # apply graph simplification functions
         simplifications = config.get_setting(
-            model, "simplifications", graph_optimizer.default_simplifications,
+            model, "simplifications", graph_optimizer.default_simplifications
         )
 
         with progress.sub("operator simplificaton", max_value=None):
@@ -865,7 +865,7 @@ class TensorGraph(tf.keras.layers.Layer):
             base = self.saved_state[tensor_sig.key]
 
         return tf.gather(
-            base, tensor_sig.tf_indices, axis=1 if tensor_sig.minibatched else 0,
+            base, tensor_sig.tf_indices, axis=1 if tensor_sig.minibatched else 0
         )
 
     def mark_signals(self):

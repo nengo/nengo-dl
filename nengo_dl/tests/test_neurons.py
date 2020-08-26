@@ -327,10 +327,10 @@ def test_random_spiking(Simulator, inference_only, seed):
         inp = nengo.Node([1])
         ens0 = nengo.Ensemble(100, 1, neuron_type=nengo.Tanh(), seed=seed)
         ens1 = nengo.Ensemble(
-            100, 1, neuron_type=nengo.StochasticSpiking(nengo.Tanh()), seed=seed,
+            100, 1, neuron_type=nengo.StochasticSpiking(nengo.Tanh()), seed=seed
         )
         ens2 = nengo.Ensemble(
-            100, 1, neuron_type=nengo.PoissonSpiking(nengo.Tanh()), seed=seed,
+            100, 1, neuron_type=nengo.PoissonSpiking(nengo.Tanh()), seed=seed
         )
 
         nengo.Connection(inp, ens0, synapse=None)

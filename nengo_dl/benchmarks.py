@@ -460,7 +460,7 @@ def lmu(theta, input_d, native_nengo=False, dtype="float32"):
         with nengo.Network(seed=0) as net:
             # remove some unnecessary features to speed up the training
             nengo_dl.configure_settings(
-                trainable=None, stateful=False, keep_history=False,
+                trainable=None, stateful=False, keep_history=False
             )
 
             # input node
@@ -525,19 +525,19 @@ def lmu(theta, input_d, native_nengo=False, dtype="float32"):
 
                 input_dim = input_shape[-1]
                 self.input_encoders = self.add_weight(
-                    shape=(input_dim, 1), initializer=tf.initializers.ones(),
+                    shape=(input_dim, 1), initializer=tf.initializers.ones()
                 )
                 self.hidden_encoders = self.add_weight(
-                    shape=(self.units, 1), initializer=tf.initializers.zeros(),
+                    shape=(self.units, 1), initializer=tf.initializers.zeros()
                 )
                 self.memory_encoders = self.add_weight(
-                    shape=(self.order, 1), initializer=tf.initializers.zeros(),
+                    shape=(self.order, 1), initializer=tf.initializers.zeros()
                 )
                 self.input_kernel = self.add_weight(
-                    shape=(input_dim, self.units), initializer=tf.initializers.zeros(),
+                    shape=(input_dim, self.units), initializer=tf.initializers.zeros()
                 )
                 self.hidden_kernel = self.add_weight(
-                    shape=(self.units, self.units), initializer=tf.initializers.zeros(),
+                    shape=(self.units, self.units), initializer=tf.initializers.zeros()
                 )
                 self.memory_kernel = self.add_weight(
                     shape=(self.order, self.units),

@@ -71,8 +71,7 @@ class SimBCMBuilder(OpBuilder):
 
 @Builder.register(SimOja)
 class SimOjaBuilder(OpBuilder):
-    """Build a group of `~nengo.builder.learning_rules.SimOja`
-        operators."""
+    """Build a group of `~nengo.builder.learning_rules.SimOja` operators."""
 
     def build_pre(self, signals, config):
         super().build_pre(signals, config)
@@ -132,8 +131,7 @@ class SimOjaBuilder(OpBuilder):
 
 @Builder.register(SimVoja)
 class SimVojaBuilder(OpBuilder):
-    """Build a group of `~nengo.builder.learning_rules.SimVoja`
-        operators."""
+    """Build a group of `~nengo.builder.learning_rules.SimVoja` operators."""
 
     def build_pre(self, signals, config):
         super().build_pre(signals, config)
@@ -275,13 +273,16 @@ class SimPESBuilder(OpBuilder):
             (len(self.ops), 1, self.ops[0].pre_filtered.shape[0])
         )
 
-        self.alpha = signals.op_constant(
-            self.ops,
-            [1 for _ in self.ops],
-            "learning_rate",
-            signals.dtype,
-            shape=(1, -1, 1, 1),
-        ) * (-signals.dt_val / self.ops[0].pre_filtered.shape[0])
+        self.alpha = (
+            signals.op_constant(
+                self.ops,
+                [1 for _ in self.ops],
+                "learning_rate",
+                signals.dtype,
+                shape=(1, -1, 1, 1),
+            )
+            * (-signals.dt_val / self.ops[0].pre_filtered.shape[0])
+        )
 
         assert all(op.encoders is None for op in self.ops)
 

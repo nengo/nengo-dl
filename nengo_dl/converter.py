@@ -505,7 +505,7 @@ class LayerConverter:
             if activation is None:
                 # linear activation, uses a passthrough Node
                 obj = nengo.Node(
-                    size_in=np.prod(self.output_shape(node_id)), label=name,
+                    size_in=np.prod(self.output_shape(node_id)), label=name
                 )
             else:
                 # use ensemble to implement the appropriate neuron type
@@ -618,9 +618,7 @@ class LayerConverter:
         )
         self.set_trainable(conn, trainable)
 
-        logger.info(
-            "Connected %s to %s (trainable=%s)", conn.pre, conn.post, trainable,
-        )
+        logger.info("Connected %s to %s (trainable=%s)", conn.pre, conn.post, trainable)
 
         return conn
 
@@ -984,7 +982,7 @@ class ConvertAvgPool(LayerConverter):
         )
         n_pool = np.prod(pool_size)
         kernel = np.reshape(
-            [np.eye(n_filters) / n_pool] * n_pool, pool_size + (n_filters, n_filters),
+            [np.eye(n_filters) / n_pool] * n_pool, pool_size + (n_filters, n_filters)
         )
         pool_conv = nengo.Convolution(
             n_filters=n_filters,
@@ -1312,7 +1310,7 @@ class ConvertConv(LayerConverter):
         return output
 
 
-@Converter.register(tf.keras.layers.Conv1D,)
+@Converter.register(tf.keras.layers.Conv1D)
 class ConvertConv1D(ConvertConv):
     """Convert ``tf.keras.layers.Conv1D`` to Nengo objects."""
 
@@ -1331,7 +1329,7 @@ class ConvertConv1D(ConvertConv):
         return super().convert(node_id, dimensions=1)
 
 
-@Converter.register(tf.keras.layers.Conv2D,)
+@Converter.register(tf.keras.layers.Conv2D)
 class ConvertConv2D(ConvertConv):
     """Convert ``tf.keras.layers.Conv2D`` to Nengo objects."""
 
@@ -1350,7 +1348,7 @@ class ConvertConv2D(ConvertConv):
         return super().convert(node_id, dimensions=2)
 
 
-@Converter.register(tf.keras.layers.Conv3D,)
+@Converter.register(tf.keras.layers.Conv3D)
 class ConvertConv3D(ConvertConv):
     """Convert ``tf.keras.layers.Conv3D`` to Nengo objects."""
 
@@ -1506,7 +1504,11 @@ class ConvertUpSampling(LayerConverter):
         input_pts = np.reshape(input_pts, (-1, dimensions))
 
         upsampled_pts = np.stack(
-            np.meshgrid(*[np.arange(x) for x in output_shape], indexing="ij",), axis=-1,
+            np.meshgrid(
+                *[np.arange(x) for x in output_shape],
+                indexing="ij",
+            ),
+            axis=-1,
         )
         upsampled_pts = np.reshape(upsampled_pts, (-1, dimensions))
 

@@ -555,7 +555,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         outputs = self.tensor_graph(inputs, stateful=self.stateful, progress=progress)
 
         self.keras_model = tf.keras.Model(
-            inputs=inputs, outputs=outputs, name="keras_model",
+            inputs=inputs, outputs=outputs, name="keras_model"
         )
 
         # set more informative output names
