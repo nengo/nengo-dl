@@ -118,11 +118,11 @@ def align_func(output_dtype):
                         "Function %r returned invalid value %r"
                         % (function_name(func, sanitize=False), output)
                     )
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as e:
                 raise SimulationError(
                     "Function %r returned a value %r of invalid type %r"
                     % (function_name(func, sanitize=False), output, type(output))
-                )
+                ) from e
             output = np.asarray(output, dtype=output_dtype)
 
             return output

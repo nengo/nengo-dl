@@ -251,10 +251,8 @@ setup_py:
     - sphinx-click>=1.4.1
   tests_req:
     - click>=6.7
-    - codespell>=1.12.0
     - matplotlib>=2.0.0
     - nbval>=0.6.0
-    - pylint>=1.9.2
     - pytest>=3.6.0
     - pytest-allclose>=1.0.0
     - pytest-cov>=2.6.0

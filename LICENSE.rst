@@ -61,14 +61,10 @@ To run the tests, NengoDL uses:
 
 * `Click <https://click.palletsprojects.com/en/6.x/>`_ - Used under
   `BSD license <https://click.palletsprojects.com/en/6.x/license/>`__
-* `codespell <https://github.com/codespell-project/codespell>`_ - Used under
-  `GPL license <https://github.com/codespell-project/codespell/blob/master/COPYING>`__
 * `matplotlib <https://matplotlib.org/>`_ - Used under
   `modified PSF license <https://matplotlib.org/users/license.html>`__
 * `nbval <https://github.com/computationalmodelling/nbval>`_ - Used under
   `BSD license <https://github.com/computationalmodelling/nbval/blob/master/LICENSE>`__
-* `pylint <https://www.pylint.org/>`_ - Used under
-  `GPL license <https://github.com/PyCQA/pylint/blob/master/COPYING>`__
 * `pytest <https://docs.pytest.org/en/latest/>`_ - Used under
   `MIT license <https://docs.pytest.org/en/latest/license.html>`__
 * `pytest-allclose <https://www.nengo.ai/pytest-allclose/>`__ Used under

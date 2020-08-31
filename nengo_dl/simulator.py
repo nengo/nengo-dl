@@ -1168,7 +1168,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
                         "SimulationError detected; this most likely means that a "
                         "Python function (e.g. in a Node or Direct ensemble) caused "
                         "an error. See the full error log above."
-                    )
+                    ) from e
                 else:
                     raise e  # pragma: no cover (unknown errors)
 

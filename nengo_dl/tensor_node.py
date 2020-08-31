@@ -130,7 +130,7 @@ class TensorFuncParam(Parameter):
                         % repr(e),
                         attr=self.name,
                         obj=node,
-                    )
+                    ) from e
 
             else:
                 if node.pass_time:
@@ -151,7 +151,7 @@ class TensorFuncParam(Parameter):
                         % e,
                         attr=self.name,
                         obj=node,
-                    )
+                    ) from e
 
             validate_output(result)
 
