@@ -35,6 +35,7 @@
         export TRAVIS_BRANCH="$TRAVIS_BRANCH"
         export TRAVIS_TAG="$TRAVIS_TAG"
         export TEST_ARGS="$TEST_ARGS"
+        export PIP_USE_FEATURE="$PIP_USE_FEATURE"
 
         echo "Waiting for lock on GPU $GPU_NUM"
         (

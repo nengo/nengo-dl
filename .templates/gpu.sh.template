@@ -17,6 +17,8 @@
 
 {% block remote_install %}
 {{ super() }}
+        export PIP_USE_FEATURE="$PIP_USE_FEATURE"
+
         conda install -y "$TF_VERSION" "$NUMPY_VERSION"
         pip install "$NENGO_VERSION"
         pip install git+https://github.com/drasmuss/spaun2.0.git
