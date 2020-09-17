@@ -3,6 +3,7 @@ Build classes for Nengo learning rule operators.
 """
 
 from nengo.builder import Signal
+from nengo.builder.connection import slice_signal
 from nengo.builder.learning_rules import (
     SimBCM,
     SimOja,
@@ -12,11 +13,14 @@ from nengo.builder.learning_rules import (
     build_or_passthrough,
 )
 from nengo.builder.operator import Reset, DotInc, Copy
+from nengo.ensemble import Ensemble, Neurons
+from nengo.exceptions import BuildError
 from nengo.learning_rules import PES
 import numpy as np
 import tensorflow as tf
 
 from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
+from nengo_dl import compat
 
 
 @Builder.register(SimBCM)
@@ -223,25 +227,46 @@ def build_pes(model, pes, rule):
     model.add_op(Reset(error))
     model.sig[rule]["in"] = error  # error connection will attach here
 
-    acts = build_or_passthrough(model, pes.pre_synapse, model.sig[conn.pre_obj]["out"])
+    acts = build_or_passthrough(
+        model,
+        pes.pre_synapse,
+        slice_signal(
+            model,
+            model.sig[conn.pre_obj]["out"],
+            conn.pre_slice,
+        )
+        if isinstance(conn.pre_obj, Neurons)
+        else model.sig[conn.pre_obj]["out"],
+    )
 
-    if not conn.is_decoded:
+    if compat.to_neurons(conn):
         # multiply error by post encoders to get a per-neuron error
 
         post = get_post_ens(conn)
         encoders = model.sig[post]["encoders"]
 
-        if conn.post_obj is not conn.post:
-            # in order to avoid slicing encoders along an axis > 0, we pad
-            # `error` out to the full base dimensionality and then do the
-            # dotinc with the full encoder matrix
-            padded_error = Signal(shape=(encoders.shape[1],))
-            model.add_op(Copy(error, padded_error, dst_slice=conn.post_slice))
-        else:
+        if conn.post_obj is conn.post:
+            # post is not an objview, so no slicing going on
             padded_error = error
+        else:
+            if not isinstance(conn.post_slice, slice):
+                raise BuildError(
+                    "PES learning rule does not support advanced indexing on "
+                    "non-decoded connections"
+                )
+
+            if isinstance(conn.post_obj, Ensemble):
+                # in order to avoid slicing encoders along an axis > 0, we pad
+                # `error` out to the full base dimensionality and then do the
+                # dotinc with the full encoder matrix
+                padded_error = Signal(shape=(encoders.shape[1],), name="padded_error")
+                model.add_op(Copy(error, padded_error[conn.post_slice]))
+            else:
+                padded_error = error
+                encoders = encoders[conn.post_slice]
 
         # error = dot(encoders, error)
-        local_error = Signal(shape=(post.n_neurons,))
+        local_error = Signal(shape=(encoders.shape[0],), name="local_error")
         model.add_op(Reset(local_error))
         model.add_op(DotInc(encoders, padded_error, local_error, tag="PES:encode"))
     else:
@@ -283,8 +308,6 @@ class SimPESBuilder(OpBuilder):
             )
             * (-signals.dt_val / self.ops[0].pre_filtered.shape[0])
         )
-
-        assert all(op.encoders is None for op in self.ops)
 
         self.output_data = signals.combine([op.delta for op in self.ops])
 

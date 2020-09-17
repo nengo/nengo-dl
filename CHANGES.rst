@@ -25,6 +25,9 @@ Release history
 
 - Minor improvements to build speed by building constants outside of TensorFlow.
   (`#173`_)
+- Support for PES implementation changes in Nengo core (see
+  `#1627 <https://github.com/nengo/nengo/pull/1627>`__ and
+  `#1640 <https://github.com/nengo/nengo/pull/1640>`__). (`#181`_)
 
 **Fixed**
 
@@ -36,6 +39,7 @@ Release history
   (`#181`_)
 
 .. _#173: https://github.com/nengo/nengo-dl/pull/173
+.. _#181: https://github.com/nengo/nengo-dl/pull/181
 
 3.3.0 (August 14, 2020)
 -----------------------

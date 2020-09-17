@@ -200,6 +200,14 @@ if version.parse(nengo.__version__) < version.parse("3.1.0.dev0"):
         """Call step_math instead of step."""
         neuron_op.neurons.step_math(dt, J, output, *state.values())
 
+    def to_neurons(conn):
+        """Check whether the output of a connection is a neuron object."""
+        return isinstance(conn.post_obj, nengo.ensemble.Neurons) or (
+            isinstance(conn.pre_obj, nengo.Ensemble)
+            and isinstance(conn.post_obj, nengo.Ensemble)
+            and conn.solver.weights
+        )
+
 
 else:
     from nengo.neurons import PoissonSpiking, RegularSpiking, StochasticSpiking, Tanh
@@ -218,6 +226,10 @@ else:
     def neuron_step(neuron_op, dt, J, output, state):  # pragma: no cover (runs in TF)
         """Equivalent to neuron_op.step."""
         neuron_op.neurons.step(dt, J, output, **state)
+
+    def to_neurons(conn):
+        """Equivalent to conn._to_neurons."""
+        return conn._to_neurons
 
 
 def eager_enabled():
