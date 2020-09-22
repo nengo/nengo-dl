@@ -4,6 +4,7 @@ import logging
 
 import nengo
 from nengo.builder.operator import Reset
+from nengo.builder.signal import Signal
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -366,6 +367,17 @@ def test_create_signals_views():
     assert graph.signals[sigs[1]].slices == ((4, 8),)
     assert graph.signals[sigs[0]].slices == graph.signals[sigs[2]].slices
     assert graph.signals[sigs[1]].slices == graph.signals[sigs[3]].slices
+
+    slice_sig = Signal(shape=(10, 4, 3, 2))[1:8:2]
+    slice_sig.trainable = False
+    slice_sig.minibatched = True
+    slice_sig.base.trainable = False
+    slice_sig.base.minibatched = True
+    plan = [(dummies.Op(reads=[slice_sig]),)]
+    graph = dummies.TensorGraph(plan, tf.float32, 10)
+    graph.create_signals([slice_sig.base])
+    assert graph.signals[slice_sig].key == graph.signals[slice_sig.base].key
+    assert graph.signals[slice_sig].slices == ((1, 2), (3, 4), (5, 6), (7, 8))
 
 
 def test_create_signals_partition():

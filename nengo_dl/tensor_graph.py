@@ -1230,16 +1230,18 @@ class TensorGraph(tf.keras.layers.Layer):
                 # reshape view
                 self.signals[sig] = self.signals[sig.base].reshape(sig.shape)
             else:
+                # slice view
+
                 if sig.shape[1:] != sig.base.shape[1:]:
                     # TODO: support this?
                     raise NotImplementedError("Slicing on axes > 0 is not supported")
 
-                # slice view
-                assert np.all([x == 1 for x in sig.elemstrides[1:]])
-
-                start = sig.elemoffset
-                stride = sig.elemstrides[0]
-                stop = start + sig.size * stride
+                # compute slice along first dimension (dividing the element-wise strides
+                # by the size of each row)
+                row_size = np.prod(sig.shape[1:], dtype=np.int32)
+                start = sig.elemoffset // row_size
+                stride = sig.elemstrides[0] // row_size
+                stop = start + sig.shape[0] * stride
                 if stop < 0:
                     stop = None
 

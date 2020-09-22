@@ -32,6 +32,8 @@ Release history
   in a Simulator method outside the ``with Simulator`` context. (`#173`_)
 - Support new LinearFilter step type introduced in Nengo core (see
   `#1629 <https://github.com/nengo/nengo/pull/1629>`__). (`#173`_)
+- Fixed a bug when slicing multi-dimensional Signals (e.g. Ensemble encoders).
+  (`#181`_)
 
 .. _#173: https://github.com/nengo/nengo-dl/pull/173
 
