@@ -155,6 +155,8 @@ ci_scripts:
       - $NENGO_VERSION
       - $SCIPY_VERSION
       - git+https://github.com/drasmuss/spaun2.0.git
+      # TODO: swap to pypi release after 0.2
+      - git+https://github.com/nengo/keras-spiking
     nengo_tests: true
   - template: examples
     pip_install:
@@ -239,6 +241,8 @@ codecov_yml:
 
 setup_py:
   include_package_data: True
+  optional_req:
+    - keras-spiking>=0.2.0
   docs_req:
     - click>=6.7  # needed for sphinx-click
     - jupyter>=1.0.0

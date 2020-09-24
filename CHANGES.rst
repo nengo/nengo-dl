@@ -21,6 +21,12 @@ Release history
 3.3.1 (unreleased)
 ------------------
 
+**Added**
+
+- Added support for `KerasSpiking <https://www.nengo.ai/keras-spiking/>`_ layers in
+  the Converter. (`#182`_)
+- Added support for ``tf.keras.layers.TimeDistributed`` in the Converter. (`#182`_)
+
 **Changed**
 
 - Minor improvements to build speed by building constants outside of TensorFlow.
@@ -40,6 +46,7 @@ Release history
 
 .. _#173: https://github.com/nengo/nengo-dl/pull/173
 .. _#181: https://github.com/nengo/nengo-dl/pull/181
+.. _#182: https://github.com/nengo/nengo-dl/pull/182
 
 3.3.0 (August 14, 2020)
 -----------------------

@@ -64,6 +64,13 @@ adds a number of unique features, such as:
 - inserting  TensorFlow code (individual functions or whole
   network architectures) directly into a Nengo model
 
+If you are interested in NengoDL you may also be interested in
+`KerasSpiking <https://www.nengo.ai/keras-spiking/>`_, a
+companion project to NengoDL that has a more minimal feature set but integrates
+even more transparently with the Keras API. See
+`this page <https://www.nengo.ai/keras-spiking/nengo-dl-comparison.html>`_ for a more
+detailed comparison between the two projects.
+
 **Documentation**
 
 Check out the `documentation <https://www.nengo.ai/nengo-dl/>`_ for

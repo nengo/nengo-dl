@@ -87,7 +87,9 @@ docs_req = [
     "sphinx>=3.0.0",
     "sphinx-click>=1.4.1",
 ]
-optional_req = []
+optional_req = [
+    "keras-spiking>=0.2.0",
+]
 tests_req = [
     "click>=6.7",
     "matplotlib>=2.0.0",

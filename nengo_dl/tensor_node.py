@@ -126,8 +126,7 @@ class TensorFuncParam(Parameter):
                         "Attempting to automatically determine TensorNode output shape "
                         "by calling Layer.compute_output_signature produced an error. "
                         "If you would like to avoid this step, try manually setting "
-                        "`TensorNode(..., shape_out=x)`. The error is shown below:\n%s"
-                        % repr(e),
+                        "`TensorNode(..., shape_out=x)`.",
                         attr=self.name,
                         obj=node,
                     ) from e

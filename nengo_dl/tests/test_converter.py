@@ -1,5 +1,7 @@
 # pylint: disable=missing-docstring
 
+import contextlib
+
 import nengo
 import numpy as np
 from packaging import version
@@ -10,10 +12,12 @@ from tensorflow.python.keras.layers import BatchNormalizationV1, BatchNormalizat
 from nengo_dl import compat, config, converter, utils
 
 
-def _test_convert(inputs, outputs, allow_fallback=False, inp_vals=None):
+def _test_convert(inputs, outputs, inp_vals=None, **kwargs):
+    kwargs.setdefault("allow_fallback", False)
+
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
-    conv = converter.Converter(model, allow_fallback=allow_fallback)
+    conv = converter.Converter(model, **kwargs)
 
     assert conv.verify(training=False, inputs=inp_vals)
     assert conv.verify(training=True, inputs=inp_vals)
@@ -214,6 +218,13 @@ def test_batch_normalization(rng):
     # error if inference_only=False
     with pytest.raises(TypeError, match="unless inference_only=True"):
         converter.Converter(model, allow_fallback=False, inference_only=False)
+
+    # no error if inference_only=False but layer is not trainable
+    inp = tf.keras.Input(shape=(4, 4, 3))
+    out = tf.keras.layers.BatchNormalization(axis=1, trainable=False)(inp)
+    model = tf.keras.Model(inp, out)
+    conv = converter.Converter(model, inference_only=False, allow_fallback=False)
+    conv.verify(training=True, inputs=inp_vals)
 
 
 def test_relu():
@@ -703,7 +714,7 @@ def test_layer_dicts():
     assert conv.outputs[x1].target is conv.layers[x1]
 
 
-def test_mid_model_output(Simulator):
+def test_mid_model_output():
     """Check that converter supports output tensors from the middle of the model.
 
     Previous converter put output tensors last in build order, so having an output
@@ -809,3 +820,195 @@ def test_swap_activations_key_never_used():
     # check swap_activations dict functions
     assert len(conv.swap_activations) == 3
     assert set(conv.swap_activations.keys()) == {relu, relu2, nengo.RectifiedLinear()}
+
+
+@pytest.mark.skipif(
+    version.parse(nengo.__version__) <= version.parse("3.0.0"),
+    reason="Nengo 3.1 required to convert SpikingActivation layers",
+)
+def test_spiking_activation(Simulator, seed, rng):
+    keras_spiking = pytest.importorskip("keras_spiking")
+
+    inp_val = rng.uniform(0, 2, size=(1, 100, 10))
+
+    inp = x = tf.keras.Input((None, 10))
+    x = tf.keras.layers.Dense(units=10)(x)
+    x = keras_spiking.SpikingActivation(
+        "relu", seed=seed, spiking_aware_training=False
+    )(x)
+
+    # note: it will not match for batch_size > 1, because keras-spiking generates
+    # a different initial state for each batch element, which is not possible in nengo
+    _test_convert(inp, x, inp_vals=[inp_val], temporal_model=True)
+
+    # check non-default dt
+    inp = x = tf.keras.Input((None, 10))
+    x = keras_spiking.SpikingActivation("relu", dt=1, seed=seed)(x)
+    model = tf.keras.Model(inp, x)
+    keras_out = model.predict(inp_val)
+
+    with pytest.warns(UserWarning, match="dt will be controlled by Simulator"):
+        conv = converter.Converter(model, inference_only=True, temporal_model=True)
+
+    with Simulator(conv.net, dt=1) as sim:
+        nengo_out = sim.predict(inp_val)
+
+    assert np.allclose(keras_out, nengo_out[conv.outputs[x]])
+
+    # check statefulness
+    inp = x = tf.keras.Input((None, 10), batch_size=1)
+    x = keras_spiking.SpikingActivation("relu", dt=1, seed=seed, stateful=True)(x)
+    model = tf.keras.Model(inp, x)
+    # keras_out0 = model.predict(inp_val)
+    # keras_out1 = model.predict(inp_val)
+
+    with pytest.warns(
+        UserWarning, match="statefulness will be controlled by Simulator"
+    ):
+        converter.Converter(model, inference_only=True, temporal_model=True)
+
+    # TODO: this fails due to a bug in tensorflow, see
+    #  https://github.com/tensorflow/tensorflow/issues/42193; try again once there is
+    #  a release containing the fix
+    # with Simulator(conv.net, dt=1) as sim:
+    #     nengo_out0 = sim.predict(inp_val, stateful=True)
+    #     nengo_out1 = sim.predict(inp_val, stateful=True)
+    #
+    # assert not np.allclose(keras_out0, keras_out1)
+    # assert np.allclose(keras_out0, nengo_out0[conv.outputs[x]])
+    # assert np.allclose(keras_out1, nengo_out1[conv.outputs[x]])
+
+    # error if wrapped activation is not supported
+    inp = tf.keras.Input((None, 10))
+    x = keras_spiking.SpikingActivation("elu")(inp)
+    model = tf.keras.Model(inp, x)
+    with pytest.raises(TypeError, match="does not have a native Nengo equivalent"):
+        converter.Converter(model, temporal_model=True, inference_only=True)
+
+    # does not support fallbacks
+    inp = tf.keras.Input((None, 10))
+    x = keras_spiking.SpikingActivation("relu", spiking_aware_training=True)(inp)
+    model = tf.keras.Model(inp, x)
+    with pytest.raises(
+        TypeError, match="spiking_aware_training has value True != False"
+    ):
+        converter.Converter(model, temporal_model=True, allow_fallback=True)
+
+
+def test_spiking_activation_old_nengo():
+    keras_spiking = pytest.importorskip("keras_spiking")
+
+    inp = x = tf.keras.Input((None, 10), batch_size=1)
+    x = keras_spiking.SpikingActivation("relu")(x)
+    model = tf.keras.Model(inp, x)
+
+    ctx = (
+        pytest.raises(TypeError, match="requires Nengo>=3.1.0")
+        if version.parse(nengo.__version__) <= version.parse("3.0.0")
+        else contextlib.suppress()
+    )
+
+    with ctx:
+        converter.Converter(
+            model, allow_fallback=False, temporal_model=True, inference_only=True
+        )
+
+
+@pytest.mark.parametrize("tau, dt", [(0.01, 0.001), (0.013, 0.003)])
+@pytest.mark.parametrize("Layer", (compat.Lowpass, compat.Alpha))
+def test_lowpass_alpha(Layer, tau, dt, Simulator, rng):
+    pytest.importorskip("keras_spiking")
+
+    inp = x = tf.keras.Input((None, 10))
+    x = tf.keras.layers.Dense(units=10)(x)
+    x = Layer(tau=tau, dt=dt, trainable=False)(x)
+
+    model = tf.keras.Model(inp, x)
+
+    with (
+        pytest.warns(Warning, match="dt will be controlled by Simulator.dt")
+        if dt != 0.001
+        else contextlib.suppress()
+    ):
+        conv = converter.Converter(model, temporal_model=True, allow_fallback=False)
+
+    inp_vals = rng.uniform(0, 2, size=(8, 50, 10))
+
+    with Simulator(conv.net, dt=dt, minibatch_size=8) as sim:
+        model_out = model.predict(inp_vals)
+        nengo_out = sim.predict(inp_vals)
+
+        # nengo model is off by one timestep due to the synaptic delay
+        assert np.allclose(
+            model_out[:, :-1], nengo_out[conv.outputs[x]][:, 1:], atol=5e-6
+        )
+
+        # check training
+        # Training works, but is not identical due to the different dynamics introduced
+        # by the one-timestep delay.
+        out_vals = nengo.Lowpass(tau).filt(inp_vals, axis=1)
+
+        model.compile(optimizer=tf.optimizers.SGD(0.1), loss=tf.losses.mse)
+        model_log = model.fit(inp_vals, out_vals, epochs=3)
+
+        sim.compile(optimizer=tf.optimizers.SGD(0.1), loss=tf.losses.mse)
+        nengo_log = sim.fit(inp_vals, out_vals, epochs=3)
+
+        assert np.allclose(
+            nengo_log.history["loss"][-1],
+            model_log.history["loss"][-1],
+            rtol=0.05,
+            atol=0.01,
+        )
+
+        model_out = model.predict(inp_vals)
+        nengo_out = sim.predict(inp_vals)
+        assert np.allclose(
+            model_out[:, :-1], nengo_out[conv.outputs[x]][:, 1:], rtol=0.03, atol=0.03
+        )
+
+    # can't convert trainable layers
+    inp = tf.keras.Input((None, 10))
+    layer = Layer(tau=0.1, trainable=True)
+    model = tf.keras.Model(inp, layer(inp))
+    with pytest.raises(TypeError, match="layer.trainable=False"):
+        converter.Converter(model, temporal_model=True)
+
+    # can't convert layers with non-zero initial level
+    layer.trainable = False
+    tf.keras.backend.set_value(
+        layer.layer.cell.initial_level, np.ones(layer.layer.cell.initial_level.shape)
+    )
+    model = tf.keras.Model(inp, layer(inp))
+    with pytest.raises(TypeError, match="initial_level != 0"):
+        converter.Converter(model, temporal_model=True)
+
+    # can't convert layers with individual taus
+    tf.keras.backend.set_value(
+        layer.layer.cell.initial_level, np.zeros(layer.layer.cell.initial_level.shape)
+    )
+    tf.keras.backend.set_value(
+        layer.layer.cell.tau_var, np.arange(10).reshape(layer.layer.cell.tau_var.shape)
+    )
+    model = tf.keras.Model(inp, layer(inp))
+    with pytest.raises(TypeError, match="different tau values"):
+        converter.Converter(model, temporal_model=True)
+
+
+@pytest.mark.parametrize("timesteps", [10, None])
+def test_time_distributed(timesteps):
+    inp = x = tf.keras.Input((timesteps, 8))
+    x = tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(units=16))(x)
+    x = tf.keras.layers.TimeDistributed(tf.keras.layers.Reshape((4, 4, 1)))(x)
+    x = tf.keras.layers.TimeDistributed(
+        tf.keras.layers.Conv2D(filters=2, kernel_size=3)
+    )(x)
+
+    _test_convert(inp, x, temporal_model=True)
+
+    with (
+        pytest.raises(ValueError, match="Input.*fully specified.*temporal_model=True")
+        if timesteps is None
+        else pytest.raises(TypeError, match="only be converted when temporal_model=Tru")
+    ):
+        converter.Converter(tf.keras.Model(inp, x), temporal_model=False)

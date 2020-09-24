@@ -242,3 +242,9 @@ def eager_enabled():
     """
 
     return context.default_execution_mode == context.EAGER_MODE
+
+
+try:
+    from keras_spiking import SpikingActivation, Lowpass, Alpha
+except ImportError:
+    SpikingActivation = Lowpass = Alpha = object()

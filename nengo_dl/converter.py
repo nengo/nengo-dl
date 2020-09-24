@@ -84,6 +84,11 @@ class Converter:
         increasing the synaptic filtering will make the network less responsive to
         rapid changes in the input, and you may need to present each input value
         for more timesteps in order to allow the network output to settle.
+    temporal_model : bool
+        Set to True if the Keras model contains a temporal
+        dimension (e.g. the inputs and outputs of each layer have shape
+        ``(batch_size, n_steps, ...)``). Note that all layers must be temporal, the
+        Converter cannot handle models with a mix of temporal and non-temporal layers.
 
     Attributes
     ----------
@@ -115,6 +120,7 @@ class Converter:
         swap_activations=None,
         scale_firing_rates=None,
         synapse=None,
+        temporal_model=False,
     ):
         self.allow_fallback = allow_fallback
         self.inference_only = inference_only
@@ -123,6 +129,7 @@ class Converter:
         self.swap_activations = Converter.TrackedDict(swap_activations or {})
         self.scale_firing_rates = scale_firing_rates
         self.synapse = synapse
+        self.temporal_model = temporal_model
         self._layer_converters = {}
 
         # convert model
@@ -193,19 +200,30 @@ class Converter:
         ValueError
             If output of Nengo network does not match output of Keras model.
         """
-        epochs = 3
 
-        if inputs is None:
-            batch_size = 2
-            inp_vals = [np.ones((batch_size,) + x.shape[1:]) for x in self.model.inputs]
-        else:
-            batch_size = inputs[0].shape[0]
-            inp_vals = inputs
+        epochs = 3
+        batch_size = 2 if inputs is None else inputs[0].shape[0]
+        n_steps = (
+            1
+            if not self.temporal_model
+            else (10 if inputs is None else inputs[0].shape[1])
+        )
+        shape_prefix = (batch_size, n_steps) if self.temporal_model else (batch_size,)
+
+        inp_vals = (
+            [
+                np.ones(shape_prefix + x.shape[len(shape_prefix) :])
+                for x in self.model.inputs
+            ]
+            if inputs is None
+            else inputs
+        )
 
         # get keras model output
         if training:
             out_vals = [
-                np.ones((batch_size,) + x.shape[1:]) for x in self.model.outputs
+                np.ones(shape_prefix + x.shape[len(shape_prefix) :])
+                for x in self.model.outputs
             ]
             self.model.compile(optimizer=tf.optimizers.SGD(0.1), loss=tf.losses.mse)
             self.model.fit(inp_vals, out_vals, epochs=epochs)
@@ -216,7 +234,7 @@ class Converter:
             keras_out = [keras_out]
 
         # get nengo sim output
-        inp_vals = [np.reshape(x, (batch_size, 1, -1)) for x in inp_vals]
+        inp_vals = [np.reshape(x, (batch_size, n_steps, -1)) for x in inp_vals]
 
         with Simulator(self.net, minibatch_size=batch_size) as sim:
             if training:
@@ -233,7 +251,7 @@ class Converter:
                         % (nengo_params, keras_params)
                     )
 
-                out_vals = [np.reshape(x, (batch_size, 1, -1)) for x in out_vals]
+                out_vals = [np.reshape(x, (batch_size, n_steps, -1)) for x in out_vals]
                 sim.compile(optimizer=tf.optimizers.SGD(0.1), loss=tf.losses.mse)
                 sim.fit(inp_vals, out_vals, epochs=epochs)
 
@@ -291,31 +309,38 @@ class Converter:
 
         # perform custom checks in layer converters
         if ConverterClass is None:
+            convertible = False
             error_msg = "Layer type %s does not have a registered converter" % type(
                 layer
             )
         else:
             convertible, error_msg = ConverterClass.convertible(layer, self)
-            if not convertible:
-                ConverterClass = None
 
-        if ConverterClass is None:
+        if not convertible:
             # this means that there is no LayerConverter compatible with this layer
             # (either because it has an unknown type, or it failed the ``.convertible``
             # check due to its internal parameterization)
-            if self.allow_fallback:
+            can_fallback = ConverterClass is None or ConverterClass.allow_fallback
+            if self.allow_fallback and can_fallback:
                 warnings.warn(
                     "%sFalling back to TensorNode."
                     % (error_msg + ". " if error_msg else "")
                 )
                 ConverterClass = self.converters[None]
             else:
-                raise TypeError(
-                    "%sUnable to convert layer %s to native Nengo objects; set "
-                    "allow_fallback=True if you would like to use a TensorNode "
-                    "instead, or consider registering a custom LayerConverter for this "
-                    "layer type." % (error_msg + ". " if error_msg else "", layer.name)
+                msg = "%sUnable to convert layer %s to native Nengo objects; " % (
+                    error_msg + ". " if error_msg else "",
+                    layer.name,
                 )
+                if not self.allow_fallback and can_fallback:
+                    msg += (
+                        "set allow_fallback=True if you would like to use a "
+                        "TensorNode instead, or "
+                    )
+                msg += (
+                    "consider registering a custom LayerConverter for this layer type."
+                )
+                raise TypeError(msg)
 
         converter = ConverterClass(layer, self)
 
@@ -465,6 +490,9 @@ class LayerConverter:
     # this layer is affected by split_shared_weights)
     has_weights = False
 
+    # whether or not this layer supports a TensorNode fallback
+    allow_fallback = True
+
     def __init__(self, layer, converter):
         self.layer = layer
         self.converter = converter
@@ -608,12 +636,15 @@ class LayerConverter:
         """
 
         pre = self.get_input_obj(node_id, tensor_idx=input_idx)
+
+        kwargs.setdefault(
+            "synapse",
+            self.converter.synapse if isinstance(pre, nengo.ensemble.Neurons) else None,
+        )
+
         conn = nengo.Connection(
             pre,
             obj,
-            synapse=self.converter.synapse
-            if isinstance(pre, nengo.ensemble.Neurons)
-            else None,
             **kwargs,
         )
         self.set_trainable(conn, trainable)
@@ -654,7 +685,7 @@ class LayerConverter:
             input_tensor_id
         ]
 
-    def _get_shape(self, input_output, node_id, include_batch=False):
+    def _get_shape(self, input_output, node_id, full_shape=False):
         """
         Looks up the input or output shape of this Node.
 
@@ -664,8 +695,8 @@ class LayerConverter:
             Whether we want the input or output shape.
         node_id : int
             The node whose shape we want to look up.
-        include_batch : bool
-            Whether or not the returned shape should include the batch dimension.
+        full_shape : bool
+            Whether or not the returned shape should include the batch/time dimensions.
 
         Returns
         -------
@@ -682,16 +713,17 @@ class LayerConverter:
         # get the shape
         shape = func(node_id)
 
-        if not include_batch:
+        if not full_shape:
+            to_skip = 2 if self.converter.temporal_model else 1
             if isinstance(shape, list):
                 # multiple inputs/outputs; trim the batch from each one
-                shape = [s[1:] for s in shape]
+                shape = [s[to_skip:] for s in shape]
             else:
-                shape = shape[1:]
+                shape = shape[to_skip:]
 
         return shape
 
-    def input_shape(self, node_id, include_batch=False):
+    def input_shape(self, node_id, full_shape=False):
         """
         Returns the input shape of the given node.
 
@@ -699,8 +731,8 @@ class LayerConverter:
         ----------
         node_id : int
             The node whose shape we want to look up.
-        include_batch : bool
-            Whether or not the returned shape should include the batch dimension.
+        full_shape : bool
+            Whether or not the returned shape should include the batch/time dimensions.
 
         Returns
         -------
@@ -708,9 +740,9 @@ class LayerConverter:
             A single tuple shape if the node has one input, or a list of shapes
             if the node as multiple inputs.
         """
-        return self._get_shape("input", node_id, include_batch=include_batch)
+        return self._get_shape("input", node_id, full_shape=full_shape)
 
-    def output_shape(self, node_id, include_batch=False):
+    def output_shape(self, node_id, full_shape=False):
         """
         Returns the output shape of the given node.
 
@@ -718,8 +750,8 @@ class LayerConverter:
         ----------
         node_id : int
             The node whose shape we want to look up.
-        include_batch : bool
-            Whether or not the returned shape should include the batch dimension.
+        full_shape : bool
+            Whether or not the returned shape should include the batch/time dimensions.
 
         Returns
         -------
@@ -727,7 +759,7 @@ class LayerConverter:
             A single tuple shape if the node has one output, or a list of shapes
             if the node as multiple outputs.
         """
-        return self._get_shape("output", node_id, include_batch=include_batch)
+        return self._get_shape("output", node_id, full_shape=full_shape)
 
     @staticmethod
     def set_trainable(obj, trainable):
@@ -927,7 +959,7 @@ class ConvertFallback(LayerConverter):
         # affect the source model
         layer = self.layer.__class__.from_config(self.layer.get_config())
         if self.layer.built:
-            layer.build(self.input_shape(0, include_batch=True))
+            layer.build(self.input_shape(0, full_shape=True))
             layer.set_weights(self.layer.get_weights())
 
         self.tensor_layer = Layer(layer)
@@ -1189,10 +1221,10 @@ class ConvertBatchNormalization(LayerConverter):
 
     @classmethod
     def convertible(cls, layer, converter):
-        if not converter.inference_only:
+        if not converter.inference_only and layer.trainable:
             msg = (
                 "Cannot convert BatchNormalization layer to native Nengo objects "
-                "unless inference_only=True"
+                "unless inference_only=True or layer.trainable=False"
             )
             return False, msg
 
@@ -1418,7 +1450,11 @@ class ConvertInput(LayerConverter):
     def convert(self, node_id):
         shape = self.output_shape(node_id)
         if any(x is None for x in shape):
-            raise ValueError("Input shapes must be fully specified; got %s" % (shape,))
+            raise ValueError(
+                "Input shapes must be fully specified; got %s. If inputs contain "
+                "`None` in the first axis to indicate a variable number of timesteps, "
+                "set `temporal_model=True` on the `Converter`." % (shape,)
+            )
         output = nengo.Node(size_in=np.prod(shape), label=self.layer.name)
 
         logger.info("Created %s", output)
@@ -1628,3 +1664,191 @@ class ConvertZeroPadding3D(ConvertZeroPadding):
 
     def convert(self, node_id):
         return super().convert(node_id, dimensions=3)
+
+
+class ConvertKerasSpiking(LayerConverter):
+    """Base class for converting KerasSpiking layers."""
+
+    unsupported_args = [
+        ("return_state", False),
+        ("return_sequences", True),
+        ("time_major", False),
+    ]
+
+    allow_fallback = False
+
+    def convert(self, node_id):
+        if self.layer.dt != 0.001:
+            # this is the default keras-spiking dt; warn if it has been changed, as
+            # those changes will be overridden by sim.dt. we don't want to error,
+            # because this isn't necessarily a problem (they could set sim.dt to
+            # match the layer dt).
+            # TODO: add some kind of callback to check that sim.dt matches layer.dt?
+            warnings.warn(
+                "Ignoring %s.dt=%f parameter; dt will be controlled by Simulator.dt"
+                % (type(self.layer).__name__, self.layer.dt)
+            )
+        if self.layer.stateful:
+            warnings.warn(
+                "Ignoring %s.stateful=True parameter; statefulness will "
+                "be controlled by Simulator" % type(self.layer).__name__
+            )
+
+
+@Converter.register(compat.SpikingActivation)
+class ConvertSpikingActivation(ConvertKerasSpiking):
+    """Convert ``keras_spiking.SpikingActivation`` to Nengo objects."""
+
+    unsupported_training_args = [("spiking_aware_training", False)]
+
+    def convert(self, node_id):
+        super().convert(node_id)
+
+        # note: not applying swap_activations to these activations, because that's
+        # likely to be confusing (e.g. swapping relu to spiking relu, and then wrapping
+        # that in regularspiking by accident)
+        activation = self.activation_map.get(self.layer.activation, None)
+
+        if activation is None:
+            # TODO: allow fallback within SpikingActivation?
+            raise TypeError(
+                "SpikingActivation activation type (%s) does not have a native Nengo "
+                "equivalent" % self.layer.activation
+            )
+
+        initial_state = tf.keras.backend.get_value(
+            self.layer.layer.cell.get_initial_state(batch_size=1, dtype="float32")
+        )[0]
+
+        activation = nengo.RegularSpiking(
+            activation, initial_state={"voltage": initial_state}
+        )
+
+        output = self.add_nengo_obj(node_id, biases=None, activation=activation)
+
+        self.add_connection(node_id, output)
+
+        return output
+
+    @classmethod
+    def convertible(cls, layer, converter):
+        if version.parse(nengo.__version__) <= version.parse("3.0.0"):
+            return False, "Converting SpikingActivation layers requires Nengo>=3.1.0"
+
+        return super().convertible(layer, converter)
+
+
+@Converter.register(compat.Lowpass)
+@Converter.register(compat.Alpha)
+class ConvertLowpassAlpha(ConvertKerasSpiking):
+    """Convert ``keras_spiking.Lowpass`` to Nengo objects."""
+
+    def convert(self, node_id):
+        super().convert(node_id)
+
+        output = self.add_nengo_obj(node_id)
+
+        tau = np.ravel(tf.keras.backend.get_value(self.layer.layer.cell.tau_var))[0]
+
+        synapse = (
+            nengo.Lowpass(tau)
+            if isinstance(self.layer, compat.Lowpass)
+            else nengo.Alpha(tau)
+        )
+
+        self.add_connection(node_id, output, synapse=synapse)
+
+        return output
+
+    @classmethod
+    def convertible(cls, layer, converter):
+        if not converter.inference_only and layer.trainable:
+            msg = (
+                "Cannot convert %s layer to native Nengo objects "
+                "unless inference_only=True or layer.trainable=False"
+                % type(layer).__name__
+            )
+            return False, msg
+
+        if not np.allclose(
+            tf.keras.backend.get_value(layer.layer.cell.initial_level), 0
+        ):
+            msg = (
+                "Cannot convert a %s layer to native Nengo objects with "
+                "initial_level != 0 (this probably means that training has been "
+                "applied to the layer before conversion)" % type(layer).__name__
+            )
+            return False, msg
+
+        tau = tf.keras.backend.get_value(layer.layer.cell.tau_var)
+        if not np.allclose(tau, np.ravel(tau)[0]):
+            msg = (
+                "Cannot convert a %s layer to native Nengo objects with different "
+                "tau values for each element (this probably means that training "
+                "has been applied to the layer before conversion)"
+                % type(layer).__name__
+            )
+            return False, msg
+
+        return super().convertible(layer, converter)
+
+
+@Converter.register(tf.keras.layers.TimeDistributed)
+class ConvertTimeDistributed(LayerConverter):
+    """Convert ``tf.keras.layers.TimeDistributed`` to Keras objects."""
+
+    allow_fallback = False
+
+    def convert(self, node_id):
+        # nengo models are already temporal, so we don't need to do anything special
+        # to make the wrapped layer temporal, we just convert the wrapped layer
+
+        # for some reason, using a layer inside a TimeDistributed wrapper doesn't
+        # update it's inbound_nodes. so we'll call the wrapped layer on the wrapper's
+        # input. note that the wrapper's input has the extra time dimension, so we slice
+        # out just the first timestep (it doesn't matter what the values are)
+        input_node = self.layer.inbound_nodes[node_id]
+        sliced_input = input_node.input_tensors[:, 0]
+        _ = self.layer.layer(sliced_input)
+
+        # add the sliced input we created above to the layer map so that when
+        # we look up the input nengo objects of the wrapped layer we get the input of
+        # the timedistributed layer
+        (
+            input_layer,
+            input_node_id,
+            _,
+        ) = input_node.input_tensors._keras_history
+        (
+            sliced_input_layer,
+            sliced_input_node_id,
+            _,
+        ) = sliced_input._keras_history
+        layer_map = nengo.Network.context[-1].layer_map
+        layer_map[sliced_input_layer][sliced_input_node_id] = layer_map[input_layer][
+            input_node_id
+        ]
+
+        # temporarily set temporal_model=False so that the wrapped layer builds
+        # correctly
+        self.converter.temporal_model = False
+        try:
+            result = self.converter.get_converter(self.layer.layer).convert(
+                # use the nodeid of the just created node
+                len(self.layer.layer.inbound_nodes)
+                - 1
+            )
+        finally:
+            self.converter.temporal_model = True
+
+        return result
+
+    @classmethod
+    def convertible(cls, layer, converter):
+        if not converter.temporal_model:
+            return (
+                False,
+                "TimeDistributed layers can only be converted when temporal_model=True",
+            )
+
+        return super().convertible(layer, converter)
