@@ -391,7 +391,9 @@ class LIFBuilder(SoftLIFRateBuilder):
     def step(self, J, dt, voltage, refractory_time):
         delta_t = tf.clip_by_value(dt - refractory_time, self.zero, dt)
 
-        dV = (voltage - J) * tf.math.expm1(-delta_t / self.tau_rc)
+        dV = (voltage - J) * tf.math.expm1(
+            -delta_t / self.tau_rc  # pylint: disable=invalid-unary-operand-type
+        )
         voltage += dV
 
         spiked = voltage > self.one

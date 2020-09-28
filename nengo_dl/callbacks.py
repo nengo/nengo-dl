@@ -104,17 +104,17 @@ class TensorBoard(tf.keras.callbacks.TensorBoard):
     A version of the Keras TensorBoard callback that also profiles inference.
     """
 
-    def on_predict_batch_end(self, *args, **kwargs):
+    def on_predict_batch_end(self, batch, logs=None):
         """Redirect to training function."""
-        self.on_batch_end(*args, **kwargs)
+        self.on_batch_end(batch, logs=logs)
 
-    def on_predict_begin(self, *args, **kwargs):
+    def on_predict_begin(self, logs=None):
         """Redirect to training function."""
-        self.on_train_begin(*args, **kwargs)
+        self.on_train_begin(logs=logs)
 
-    def on_predict_end(self, *args, **kwargs):
+    def on_predict_end(self, logs=None):
         """Redirect to training function."""
-        self.on_train_end(*args, **kwargs)
+        self.on_train_end(logs=logs)
 
 
 class IsolateState(tf.keras.callbacks.Callback):

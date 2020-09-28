@@ -24,7 +24,7 @@ class Signal(nengo.builder.signal.Signal):
         label="",
         initial_value=0,
         sparse=False,
-    ):
+    ):  # pylint: disable=super-init-not-called
         self._shape = (1,) if shape is None else shape
         self._dtype = np.float32 if dtype is None else dtype
         self._base = (

@@ -9,6 +9,8 @@ from nengo_dl.utils import NullProgressBar
 
 
 def test_custom_builder():
+    # pylint: disable=unused-variable
+
     class TestOp:
         sets = None
         incs = None
@@ -26,13 +28,13 @@ def test_custom_builder():
     with pytest.warns(UserWarning):
 
         @Builder.register(TestOp)
-        class TestOpBuilder0:  # pylint: disable=unused-variable
+        class TestOpBuilder0:
             pass
 
     # warning when overwriting a registered builder
     with pytest.warns(UserWarning):
 
-        @Builder.register(TestOp)  # pylint: disable=unused-variable
+        @Builder.register(TestOp)
         class TestOpBuilder(OpBuilder):
             pre_built = False
             post_built = False
@@ -64,7 +66,7 @@ def test_custom_builder():
     assert builder.op_builds[ops].post_built
 
     # error if builder doesn't define build_step
-    @Builder.register(TestOp)  # pylint: disable=unused-variable
+    @Builder.register(TestOp)
     class TestOpBuilder2(OpBuilder):
         pass
 

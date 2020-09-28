@@ -101,7 +101,10 @@ class Regularize(tf.losses.Loss):
             if y_pred.shape.ndims > 3:
                 # flatten signal (keeping batch/time dimension)
                 y_pred = tf.reshape(
-                    y_pred, tf.concat([tf.shape(y_pred)[:2], (-1,)], axis=0)
+                    y_pred,
+                    tf.concat(  # pylint: disable=no-value-for-parameter
+                        [tf.shape(y_pred)[:2], (-1,)], axis=0
+                    ),
                 )
             axis = 2
         else:
