@@ -247,4 +247,6 @@ def eager_enabled():
 try:
     from keras_spiking import SpikingActivation, Lowpass, Alpha
 except ImportError:
-    SpikingActivation = Lowpass = Alpha = object()
+    SpikingActivation = object()
+    Lowpass = object()
+    Alpha = object()
