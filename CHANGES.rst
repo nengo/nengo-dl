@@ -25,6 +25,12 @@ Release history
 
 *Compatible with TensorFlow 2.2.0 - 2.7.0*
 
+**Added**
+
+- Added support for ``nengo.transforms.ConvolutionTranspose``. (`#183`_)
+
+.. _#183: https://github.com/nengo/nengo-dl/pull/183
+
 3.4.3 (November 9, 2021)
 ------------------------
 

@@ -14,6 +14,19 @@ from nengo._vendor.scipy.sparse import linalg_interface, linalg_onenormest
 from packaging import version
 from tensorflow.python.eager import context
 
+
+class NoType:
+    """A type that can never be instantiated."""
+
+    def __init__(self, *arg, **kwargs):  # pragma: no cover
+        raise RuntimeError("Cannot instantiate")
+
+
+def make_dummy_type(name):
+    """Return a NoType subclass with the given name."""
+    return type(name, (NoType,), {})
+
+
 # TensorFlow compatibility
 
 
@@ -187,7 +200,6 @@ if version.parse(tf.__version__) < version.parse("2.5.0rc0"):
         """Get layers contained in ``layer``."""
         return layer._layers
 
-
 else:
 
     def sub_layers(layer):
@@ -220,10 +232,66 @@ else:
 
 # Nengo compatibility
 
-if version.parse(nengo.__version__) < version.parse("3.1.0"):
-    PoissonSpiking = RegularSpiking = StochasticSpiking = Tanh = NoTransform = type(
-        None
-    )
+# TODO: change to `>= version.parse(3.2.0)` once NengoCore 3.2.0 is released
+HAS_NENGO_3_2_0 = version.parse(nengo.__version__) > version.parse("3.1.0")
+HAS_NENGO_3_1_0 = version.parse(nengo.__version__) >= version.parse("3.1.0")
+
+if HAS_NENGO_3_2_0:  # pragma: no cover
+    from nengo.builder.transforms import ConvTransposeInc
+    from nengo.transforms import ConvolutionTranspose
+    from nengo.utils.stdlib import FrozenOrderedSet
+else:
+    ConvTransposeInc = make_dummy_type("ConvTransposeInc")
+    ConvolutionTranspose = make_dummy_type("ConvolutionTranspose")
+
+    class FrozenOrderedSet(collections.abc.Set):
+        """Backport of `nengo.utils.stdlib.FrozenOrderedSet`."""
+
+        def __init__(self, data):
+            self.data = dict((d, None) for d in data)
+
+        def __contains__(self, elem):
+            return elem in self.data
+
+        def __iter__(self):
+            return iter(self.data)
+
+        def __len__(self):
+            return len(self.data)
+
+        def __hash__(self):
+            return self._hash()
+
+
+if HAS_NENGO_3_1_0:
+    from nengo.builder.probe import SimProbe
+    from nengo.neurons import PoissonSpiking, RegularSpiking, StochasticSpiking, Tanh
+    from nengo.transforms import NoTransform
+
+    default_transform = None
+
+    def conn_has_weights(conn):
+        """Equivalent to conn.has_weights."""
+        return conn.has_weights
+
+    def neuron_state(neuron_op):
+        """Equivalent to neuron_op.state."""
+        return neuron_op.state
+
+    def neuron_step(neuron_op, dt, J, output, state):  # pragma: no cover (runs in TF)
+        """Equivalent to neuron_op.step."""
+        neuron_op.neurons.step(dt, J, output, **state)
+
+    def to_neurons(conn):
+        """Equivalent to conn._to_neurons."""
+        return conn._to_neurons
+
+else:
+    PoissonSpiking = make_dummy_type("PoissonSpiking")
+    RegularSpiking = make_dummy_type("RegularSpiking")
+    StochasticSpiking = make_dummy_type("StochasticSpiking")
+    Tanh = make_dummy_type("Tanh")
+    NoTransform = make_dummy_type("NoTransform")
 
     default_transform = 1
 
@@ -277,54 +345,6 @@ if version.parse(nengo.__version__) < version.parse("3.1.0"):
     # monkeypatch fix for https://github.com/nengo/nengo/pull/1587
     linalg_onenormest.aslinearoperator = linalg_interface.aslinearoperator
 
-else:
-    from nengo.builder.probe import SimProbe
-    from nengo.neurons import PoissonSpiking, RegularSpiking, StochasticSpiking, Tanh
-    from nengo.transforms import NoTransform
-
-    default_transform = None
-
-    def conn_has_weights(conn):
-        """Equivalent to conn.has_weights."""
-        return conn.has_weights
-
-    def neuron_state(neuron_op):
-        """Equivalent to neuron_op.state."""
-        return neuron_op.state
-
-    def neuron_step(neuron_op, dt, J, output, state):  # pragma: no cover (runs in TF)
-        """Equivalent to neuron_op.step."""
-        neuron_op.neurons.step(dt, J, output, **state)
-
-    def to_neurons(conn):
-        """Equivalent to conn._to_neurons."""
-        return conn._to_neurons
-
-
-if version.parse(nengo.__version__) <= version.parse("3.1.0"):
-
-    class FrozenOrderedSet(collections.abc.Set):
-        """Backport of `nengo.utils.stdlib.FrozenOrderedSet`."""
-
-        def __init__(self, data):
-            self.data = dict((d, None) for d in data)
-
-        def __contains__(self, elem):
-            return elem in self.data
-
-        def __iter__(self):
-            return iter(self.data)
-
-        def __len__(self):
-            return len(self.data)
-
-        def __hash__(self):
-            return self._hash()
-
-
-else:
-    from nengo.utils.stdlib import FrozenOrderedSet
-
 
 def eager_enabled():
     """
@@ -341,6 +361,6 @@ def eager_enabled():
 try:
     from keras_spiking import Alpha, Lowpass, SpikingActivation
 except ImportError:
-    SpikingActivation = object()
-    Lowpass = object()
-    Alpha = object()
+    SpikingActivation = make_dummy_type("keras_spiking_SpikingActivation")
+    Lowpass = make_dummy_type("keras_spiking_Lowpass")
+    Alpha = make_dummy_type("keras_spiking_Alpha")

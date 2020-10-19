@@ -791,7 +791,7 @@ def test_remove_unmodified_resets():
     # check that unmodified reset gets removed
     operators = [Reset(a, 2)]
     new_ops = remove_unmodified_resets(operators)
-    assert new_ops == []
+    assert len(new_ops) == 0
     assert np.all(a.initial_value == 2)
 
     # check that reset + inc doesn't get removed
@@ -817,18 +817,18 @@ def test_remove_zero_incs():
         DotInc(dummies.Signal(), dummies.Signal(initial_value=1), dummies.Signal())
     ]
     new_operators = remove_zero_incs(operators)
-    assert new_operators == []
+    assert len(new_operators) == 0
 
     operators = [
         DotInc(dummies.Signal(initial_value=1), dummies.Signal(), dummies.Signal())
     ]
     new_operators = remove_zero_incs(operators)
-    assert new_operators == []
+    assert len(new_operators) == 0
 
     # check that zero inputs (copy) get removed
     operators = [Copy(dummies.Signal(), dummies.Signal(), dummies.Signal(), inc=True)]
     new_operators = remove_zero_incs(operators)
-    assert new_operators == []
+    assert len(new_operators) == 0
 
     # check that node inputs don't get removed
     x = dummies.Signal(label="<Node lorem ipsum")
@@ -1111,11 +1111,25 @@ def test_remove_reset_incs():
 
     # convinc converted to convset
     x = dummies.Signal()
-    operators = [Reset(x), ConvInc(dummies.Signal(), dummies.Signal(), x, None)]
+    conv = nengo.Convolution(1, input_shape=(3, 3, 1))
+    operators = [Reset(x), ConvInc(dummies.Signal(), dummies.Signal(), x, conv)]
     new_operators = remove_reset_incs(operators)
     assert len(new_operators) == 1
     assert isinstance(new_operators[0], transform_builders.ConvSet)
     assert new_operators[0].Y is x
+
+    # convtransposeinc converted to convtransposeset
+    if compat.HAS_NENGO_3_2_0:
+        x = dummies.Signal()
+        conv_tr = nengo.transforms.ConvolutionTranspose(1, input_shape=(1, 1, 1))
+        operators = [
+            Reset(x),
+            compat.ConvTransposeInc(dummies.Signal(), dummies.Signal(), x, conv_tr),
+        ]
+        new_operators = remove_reset_incs(operators)
+        assert len(new_operators) == 1
+        assert isinstance(new_operators[0], transform_builders.ConvTransposeSet)
+        assert new_operators[0].Y is x
 
     # sparsedotinc converted to sparsedotset
     x = dummies.Signal()

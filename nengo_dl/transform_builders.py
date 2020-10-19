@@ -9,6 +9,7 @@ import tensorflow as tf
 from nengo.builder.transforms import ConvInc
 
 from nengo_dl.builder import Builder, OpBuilder
+from nengo_dl.compat import ConvTransposeInc
 
 
 class ConvSet(ConvInc):
@@ -28,12 +29,36 @@ class ConvSet(ConvInc):
         return self.sets[0]
 
 
+class ConvTransposeSet(ConvTransposeInc):
+    """
+    A version of `~nengo.builder.transforms.ConvTransposeInc` that overwrites
+    the target rather than incrementing.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.incs, self.sets = self.sets, self.incs
+
+    @property
+    def Y(self):
+        """Y is stored in ``sets`` rather than ``incs``."""
+        return self.sets[0]
+
+
 @Builder.register(ConvInc)
 @Builder.register(ConvSet)
+@Builder.register(ConvTransposeInc)
+@Builder.register(ConvTransposeSet)
 class ConvIncBuilder(OpBuilder):
     """
     Build a group of `nengo.builder.transforms.ConvInc` operators.
     """
+
+    @staticmethod
+    def is_transpose_op(op):
+        """Returns True if the given op performs transpose convolution."""
+        return isinstance(op, (ConvTransposeInc, ConvTransposeSet))
 
     def build_pre(self, signals, config):
         super().build_pre(signals, config)
@@ -41,6 +66,7 @@ class ConvIncBuilder(OpBuilder):
         self.conv = self.ops[0].conv
         self.n_ops = len(self.ops)
         self.mode = "inc" if type(self.ops[0]) == ConvInc else "update"
+        self.transpose = self.is_transpose_op(self.ops[0])
 
         if not self.conv.channels_last and config.cpu_only:
             # TensorFlow doesn't support channels first on CPU, so if
@@ -91,6 +117,7 @@ class ConvIncBuilder(OpBuilder):
 
             self.perm_x = tf.constant(perm_x)
         else:
+            perm_x = []
             self.perm_x = None
 
         # set up Y transformations
@@ -152,9 +179,32 @@ class ConvIncBuilder(OpBuilder):
             self.perm_w = None
             self.reshape_w = None
 
+        if self.transpose:
+            output_space = list(self.conv.output_shape.spatial_shape)
+            output_filters = sum(op.conv.n_filters for op in self.ops)
+
+            output_shape = [None] + (
+                output_space + [output_filters]
+                if self.conv.channels_last
+                else [output_filters] + output_space
+            )
+            if self.perm_x is not None:
+                output_shape = [output_shape[i] for i in perm_x]
+            # batch size will be filled in dynamically in build_step
+            assert output_shape[0] is None
+            self.output_shape = output_shape[1:]
+
+            # swap channels, because conv_transpose order is for forward weights
+            dims = self.conv.dimensions
+            self.perm_w_t = tf.constant(list(range(dims)) + [dims + 1, dims])
+        else:
+            self.perm_w_t = None
+            self.output_shape = None
+
     def build_step(self, signals):
         W = signals.gather(self.W_data)
         X = signals.gather(self.X_data)
+        batch_size = X.shape[0]
 
         if self.perm_x is not None:
             # move channels to end
@@ -165,13 +215,23 @@ class ConvIncBuilder(OpBuilder):
             W = tf.transpose(W, perm=self.perm_w)
             W = tf.reshape(W, self.reshape_w)
 
-        Y = tf.nn.convolution(
-            input=X,
-            filters=W,
-            strides=self.conv.strides,
-            data_format=self.fmt,
-            padding=self.conv.padding.upper(),
-        )
+        if self.transpose:
+            Y = tf.nn.conv_transpose(
+                input=X,
+                filters=tf.transpose(W, perm=self.perm_w_t),
+                output_shape=[batch_size] + self.output_shape,
+                strides=self.conv.strides,
+                data_format=self.fmt,
+                padding=self.conv.padding.upper(),
+            )
+        else:
+            Y = tf.nn.convolution(
+                input=X,
+                filters=W,
+                strides=self.conv.strides,
+                data_format=self.fmt,
+                padding=self.conv.padding.upper(),
+            )
 
         if self.reshape_y is not None:
             Y = tf.reshape(Y, self.reshape_y)
@@ -196,7 +256,10 @@ class ConvIncBuilder(OpBuilder):
         return (
             x.X is y.X
             and x.conv.input_shape.shape == y.conv.input_shape.shape
+            and x.conv.output_shape.spatial_shape == y.conv.output_shape.spatial_shape
+            and x.conv.kernel_size == y.conv.kernel_size
             and x.conv.strides == y.conv.strides
             and x.conv.padding == y.conv.padding
             and x.conv.channels_last == y.conv.channels_last
+            and ConvIncBuilder.is_transpose_op(x) == ConvIncBuilder.is_transpose_op(y)
         )
