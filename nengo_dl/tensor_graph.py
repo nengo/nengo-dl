@@ -5,7 +5,7 @@ in TensorFlow.
 
 import logging
 import warnings
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 
 import numpy as np
 import tensorflow as tf
@@ -85,13 +85,13 @@ class TensorGraph(tf.keras.layers.Layer):
         # than the simulation time). we'll compute these outside the simulation
         # and feed in the result.
         if self.model.toplevel is None:
-            self.invariant_inputs = OrderedDict()
+            self.invariant_inputs = {}
         else:
-            self.invariant_inputs = OrderedDict(
-                (n, n.output)
+            self.invariant_inputs = {
+                n: n.output
                 for n in self.model.toplevel.all_nodes
                 if n.size_in == 0 and not isinstance(n, tensor_node.TensorNode)
-            )
+            }
 
         # remove input nodes because they are executed outside the simulation
         node_processes = [
@@ -174,7 +174,7 @@ class TensorGraph(tf.keras.layers.Layer):
             key = name.lower()
 
             if name_count[key] > 0:
-                name += "_%d" % name_count[key]
+                name += f"_{name_count[key]}"
 
             self.io_names[obj] = name
             name_count[key] += 1
@@ -203,7 +203,7 @@ class TensorGraph(tf.keras.layers.Layer):
         """
 
         # input placeholders
-        inputs = OrderedDict()
+        inputs = {}
         for n in self.invariant_inputs:
             inputs[n] = tf.keras.layers.Input(
                 shape=(None, n.size_out),
@@ -273,7 +273,7 @@ class TensorGraph(tf.keras.layers.Layer):
 
         # variables for model parameters
         with trackable.no_automatic_dependency_tracking_scope(self):
-            self.base_params = OrderedDict()
+            self.base_params = {}
         assert len(self.base_params) == 0
         for sig_type in ("trainable", "non_trainable"):
             for k, v in self.base_arrays_init[sig_type].items():
@@ -284,8 +284,8 @@ class TensorGraph(tf.keras.layers.Layer):
                     shape=shape,
                     dtype=dtype,
                     trainable=sig_type == "trainable",
-                    name="base_params/%s_%s_%s"
-                    % (sig_type, dtype, "_".join(str(x) for x in shape)),
+                    name=f"base_params/{sig_type}_{dtype}_"
+                    f"{'_'.join(str(x) for x in shape)}",
                 )
 
                 self.initial_values[k] = initializer
@@ -295,7 +295,7 @@ class TensorGraph(tf.keras.layers.Layer):
 
         # variables to save the internal state of simulation between runs
         with trackable.no_automatic_dependency_tracking_scope(self):
-            self.saved_state = OrderedDict()
+            self.saved_state = {}
         for k, v in self.base_arrays_init["state"].items():
             initializer, shape, dtype = get_initializer(v)
             if initializer is not None:
@@ -306,7 +306,7 @@ class TensorGraph(tf.keras.layers.Layer):
                     shape=shape,
                     dtype=dtype,
                     trainable=False,
-                    name="saved_state/%s_%s" % (dtype, "_".join(str(x) for x in shape)),
+                    name=f"saved_state/{dtype}_{'_'.join(str(x) for x in shape)}",
                 )
 
                 self.initial_values[k] = initializer
@@ -435,8 +435,8 @@ class TensorGraph(tf.keras.layers.Layer):
 
         if training is True and self.inference_only:
             raise BuildError(
-                "TensorGraph was created with inference_only=True; cannot be called "
-                "with training=%s" % training
+                f"TensorGraph was created with inference_only=True; cannot be called "
+                f"with training={training}"
             )
 
         tf.random.set_seed(self.seed)
@@ -645,7 +645,7 @@ class TensorGraph(tf.keras.layers.Layer):
         # change to shape (minibatch_size,) (required by keras) instead of a scalar
         steps_run = tf.tile(tf.expand_dims(loop_vars[0], 0), (self.minibatch_size,))
 
-        probe_arrays = OrderedDict()
+        probe_arrays = {}
         for p, a in zip(self.model.probes, loop_vars[2]):
             x = a.stack()
 
@@ -708,7 +708,7 @@ class TensorGraph(tf.keras.layers.Layer):
         # change to shape (minibatch_size,) (required by keras) instead of a scalar
         steps_run = tf.tile(tf.expand_dims(loop_i, 0), (self.minibatch_size,))
 
-        probe_arrays = OrderedDict()
+        probe_arrays = {}
         for p, a in zip(self.model.probes, probe_data):
             if self.model.sig[p]["in"].minibatched:
                 x = tf.stack(a, axis=1)
@@ -747,7 +747,7 @@ class TensorGraph(tf.keras.layers.Layer):
 
         for unroll_iter in range(self.unroll):
             logger.debug("BUILDING ITERATION %d", unroll_iter)
-            with tf.name_scope("iteration_%d" % unroll_iter):
+            with tf.name_scope(f"iteration_{unroll_iter}"):
                 # fill in invariant input data
                 for n in self.node_inputs:
                     if self.model.sig[n]["out"] in self.signals:
@@ -964,9 +964,9 @@ class TensorGraph(tf.keras.layers.Layer):
 
                         if self.model.sig[obj][attr].trainable is True:
                             warnings.warn(
-                                "%s has a learning rule and is also set "
-                                "to be trainable; this is likely to "
-                                "produce strange training behaviour." % obj
+                                f"{obj} has a learning rule and is also set to be "
+                                f"trainable; this is likely to produce strange "
+                                f"training behaviour."
                             )
                         else:
                             self.model.sig[obj][attr].trainable = False
@@ -1026,13 +1026,7 @@ class TensorGraph(tf.keras.layers.Layer):
             memory (e.g., output from `.graph_optimizer.order_signals`)
         """
 
-        base_arrays = OrderedDict(
-            [
-                ("trainable", OrderedDict()),
-                ("non_trainable", OrderedDict()),
-                ("state", OrderedDict()),
-            ]
-        )
+        base_arrays = {"trainable": {}, "non_trainable": {}, "state": {}}
         curr_keys = {}
 
         sig_idxs = {s: i for i, s in enumerate(sigs)}

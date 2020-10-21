@@ -5,7 +5,7 @@ can be simulated more efficiently when converted into a TensorFlow graph.
 
 import logging
 import warnings
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 
 import numpy as np
 from nengo.builder.operator import Copy, DotInc, ElementwiseInc, Reset, SparseDotInc
@@ -575,18 +575,16 @@ def order_signals(plan, n_passes=10):
         of signals
     """
 
-    # get all the unique base signals (we use OrderedDict to drop the duplicate
+    # get all the unique base signals (we use a dict to drop the duplicate
     # bases without changing their order, so that signal order will be
     # deterministic for a given model)
     all_signals = list(
-        OrderedDict(
-            [(s.base, None) for ops in plan for op in ops for s in op.all_signals]
-        ).keys()
+        {s.base: None for ops in plan for op in ops for s in op.all_signals}.keys()
     )
 
     # figure out all the read/write blocks in the plan (in theory we would like
     # each block to become a contiguous chunk in the base array)
-    io_blocks = OrderedDict()
+    io_blocks = {}
 
     op_sigs = {}
     for ops in plan:
@@ -604,12 +602,9 @@ def order_signals(plan, n_passes=10):
             io_blocks[(ops, i)] = frozenset(op_sigs[op][i].base for op in ops)
 
     # get rid of duplicate io blocks
-    duplicates = OrderedDict()
+    duplicates = defaultdict(int)
     for x in io_blocks.values():
-        if x in duplicates:
-            duplicates[x] += 1
-        else:
-            duplicates[x] = 1
+        duplicates[x] += 1
 
     # sort by the size of the block (descending order)
     # note: we multiply by the number of duplicates, since blocks that
@@ -1190,7 +1185,7 @@ def remove_reset_incs(operators):
     for op in operators:
         for s in op.incs:
             if type(op) not in valid_inc_types:
-                warnings.warn("Unknown incer type %s in remove_reset_incs" % type(op))
+                warnings.warn(f"Unknown incer type {type(op)} in remove_reset_incs")
             elif getattr(op, "dst_slice", None) is None:
                 # don't include copy ops with dst_slice, as they aren't incrementing
                 # the whole signal
@@ -1426,7 +1421,7 @@ def remove_identity_muls(operators):
                             other_src,
                             op.Y,
                             inc=len(op.incs) > 0,
-                            tag="%s.identity_mul" % op.tag,
+                            tag=f"{op.tag}.identity_mul",
                         )
                     )
                     break

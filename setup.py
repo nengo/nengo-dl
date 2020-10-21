@@ -47,7 +47,7 @@ else:
     # environment, so we can't just look up the tensorflow version in the current
     # environment. but the pip package will be in the isolated sys.path, so we can use
     # that to look up the site-packages directory of the original environment.
-    target_path = os.path.join("site-packages", "pip")
+    target_path = str(pathlib.Path("site-packages", "pip"))
     for path in sys.path:
         if target_path in path:
             source_path = [path[: path.index("pip")]]
@@ -72,7 +72,7 @@ else:
 install_req = [
     "nengo>=3.0.0",
     "numpy>=1.16.0",
-    "%s>=2.2.0" % tf_req,
+    "{}>=2.2.0".format(tf_req),
     "jinja2>=2.10.1",
     "packaging>=20.0",
     "progressbar2>=3.39.0",
@@ -136,7 +136,6 @@ setup(
         "Operating System :: Microsoft :: Windows",
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",

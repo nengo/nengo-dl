@@ -61,7 +61,7 @@ def require_open(wrapped, instance, args, kwargs):
 
     if instance.closed:
         raise SimulatorClosed(
-            "Cannot call %s after simulator is closed" % wrapped.__name__
+            f"Cannot call {wrapped.__name__} after simulator is closed"
         )
 
     return wrapped(*args, **kwargs)
@@ -484,15 +484,14 @@ class Simulator:  # pylint: disable=too-many-public-methods
         if model is None:
             self.model = NengoModel(
                 dt=float(dt),
-                label="%s, dt=%f" % (network, dt),
+                label=f"{network}, dt={dt:f}",
                 builder=NengoBuilder(),
                 fail_fast=False,
             )
         else:
             if dt != model.dt:
                 warnings.warn(
-                    "Model dt (%g) does not match Simulator "
-                    "dt (%g)" % (model.dt, dt),
+                    f"Model dt ({model.dt:g}) does not match Simulator dt ({dt:g})",
                     NengoWarning,
                 )
             self.model = model
@@ -951,7 +950,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             # rather than the total number of elements in the data)
             warnings.warn(
                 "Batch size is determined statically via Simulator.minibatch_size; "
-                "ignoring value passed to `%s`" % func_type
+                f"ignoring value passed to `{func_type}`"
             )
         if "on_batch" not in func_type:
             kwargs["batch_size"] = (
@@ -1052,10 +1051,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
             # reorganize results (will be flattened) back into dict
             if not isinstance(outputs, list):
                 outputs = [outputs]
-            return collections.OrderedDict(zip(self.model.probes, outputs))
+            return dict(zip(self.model.probes, outputs))
         elif func_type.startswith("evaluate"):
             # return outputs as named dict
-            return collections.OrderedDict(zip(self.keras_model.metrics_names, outputs))
+            return dict(zip(self.keras_model.metrics_names, outputs))
         else:
             # return training history
             return outputs
@@ -1092,15 +1091,15 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         if time_in_seconds < 0:
             raise ValidationError(
-                "Must be positive (got %g)" % (time_in_seconds,), attr="time_in_seconds"
+                f"Must be positive (got {time_in_seconds:g})", attr="time_in_seconds"
             )
 
         steps = int(np.round(float(time_in_seconds) / self.dt))
 
         if steps == 0:
             warnings.warn(
-                "%g results in running for 0 timesteps. Simulator "
-                "still at time %g." % (time_in_seconds, self.time)
+                f"{time_in_seconds:g} results in running for 0 timesteps. Simulator "
+                f"still at time {self.time:g}."
             )
         else:
             self.run_steps(steps, **kwargs)
@@ -1135,10 +1134,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
         # error checking
         if actual_steps != n_steps:
             warnings.warn(
-                "Number of steps (%d) is not an even multiple of "
-                "`unroll_simulation` (%d).  Simulation will run for %d steps, "
-                "which may have unintended side effects."
-                % (n_steps, self.unroll, actual_steps),
+                f"Number of steps ({n_steps}) is not an even multiple of "
+                f"`unroll_simulation` ({self.unroll}).  Simulation will run for "
+                f"{actual_steps} steps, which may have unintended side effects.",
                 RuntimeWarning,
             )
 
@@ -1224,7 +1222,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
         if include_state:
             params.extend(self.tensor_graph.saved_state.values())
 
-        np.savez_compressed(path + ".npz", *tf.keras.backend.batch_get_value(params))
+        np.savez_compressed(
+            str(path) + ".npz", *tf.keras.backend.batch_get_value(params)
+        )
 
         logger.info("Model parameters saved to %s.npz", path)
 
@@ -1262,14 +1262,14 @@ class Simulator:  # pylint: disable=too-many-public-methods
         if include_state:
             params.extend(self.tensor_graph.saved_state.values())
 
-        with np.load(path + ".npz") as vals:
+        with np.load(str(path) + ".npz") as vals:
             if len(params) != len(vals.files):
                 raise SimulationError(
-                    "Number of saved parameters in %s (%d) != number of variables in "
-                    "the model (%d)" % (path, len(vals.files), len(params))
+                    f"Number of saved parameters in {path} ({len(vals.files)}) != "
+                    f"number of variables in the model ({len(params)})"
                 )
             tf.keras.backend.batch_set_value(
-                zip(params, (vals["arr_%d" % i] for i in range(len(vals.files))))
+                zip(params, (vals[f"arr_{i}"] for i in range(len(vals.files))))
             )
 
         logger.info("Model parameters loaded from %s.npz", path)
@@ -1331,7 +1331,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
             if not isinstance(obj, (Network, Ensemble, Connection)):
                 raise TypeError(
-                    "Objects of type %s do not have parameters to store" % type(obj)
+                    f"Objects of type {type(obj)} do not have parameters to store"
                 )
 
             if isinstance(obj, Network):
@@ -1483,8 +1483,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
                         params.append({"transform": weights})
                 else:
                     raise NotImplementedError(
-                        "Cannot get parameters of Connections with transform type '%s'"
-                        % type(obj.transform).__name__
+                        f"Cannot get parameters of Connections with transform type "
+                        f"'{type(obj.transform).__name__}'"
                     )
             else:
                 # note: we don't want to change the original gain (even though
@@ -1521,8 +1521,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
             for obj, p in zip(nengo_objs, params):
                 if obj.label in param_dict:
                     raise ValueError(
-                        "Duplicate label ('%s') detected; cannot return "
-                        "parameters with as_dict=True" % obj.label
+                        f"Duplicate label ('{obj.label}') detected; cannot return "
+                        "parameters with as_dict=True"
                     )
                 else:
                     param_dict[obj.label] = p
@@ -1638,9 +1638,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 fail = abs(a - n) >= atol + rtol * abs(n)
                 if np.any(fail):
                     raise SimulationError(
-                        "Gradient check failed\n"
-                        "numeric values:\n%s\n"
-                        "analytic values:\n%s\n" % (n[fail], a[fail])
+                        f"Gradient check failed\n"
+                        f"numeric values:\n{n[fail]}\n"
+                        f"analytic values:\n{a[fail]}\n"
                     )
 
         logger.info("Gradient check passed")
@@ -1714,17 +1714,17 @@ class Simulator:  # pylint: disable=too-many-public-methods
         if isinstance(obj, Node):
             if obj not in self.node_inputs:
                 raise ValidationError(
-                    "%s is not an input Node (a nengo.Node with "
-                    "size_in==0), or is from a different network." % obj,
+                    f"{obj} is not an input Node (a nengo.Node with size_in==0), or is "
+                    f"from a different network.",
                     "obj",
                 )
         elif isinstance(obj, Probe):
             if obj not in self.tensor_graph.probe_arrays:
-                raise ValidationError("%s is from a different network." % obj, "obj")
+                raise ValidationError(f"{obj} is from a different network.", "obj")
         else:
             raise ValidationError(
-                "%s is of an unknown type (%s); should be nengo.Node "
-                "or nengo.Probe" % (obj, type(obj)),
+                f"{obj} is of an unknown type ({type(obj)}); should be nengo.Node or "
+                f"nengo.Probe",
                 "obj",
             )
         return self.tensor_graph.io_names[obj]
@@ -1763,27 +1763,21 @@ class Simulator:  # pylint: disable=too-many-public-methods
         if isinstance(data, (list, tuple)):
             if len(data) != len(objects):
                 warnings.warn(
-                    "Number of elements (%d) in %s does not match number of "
-                    "%ss (%d); consider using an explicit input dictionary in this "
-                    "case, so that the assignment of data to objects is unambiguous."
-                    % (
-                        len(data),
-                        [type(d).__name__ for d in data],
-                        type(objects[0]).__name__,
-                        len(objects),
-                    )
+                    f"Number of elements ({len(data)}) in "
+                    f"{[type(d).__name__ for d in data]} does not match number of "
+                    f"{type(objects[0]).__name__}s ({len(objects)}); consider "
+                    f"using an explicit input dictionary in this case, so that the "
+                    f"assignment of data to objects is unambiguous."
                 )
 
             # convert list to named dict
-            data = collections.OrderedDict(
-                (self.get_name(obj), val) for obj, val in zip(objects, data)
-            )
+            data = {self.get_name(obj): val for obj, val in zip(objects, data)}
         elif isinstance(data, dict):
             # convert objects to string names
-            data = collections.OrderedDict(
-                (obj if isinstance(obj, str) else self.get_name(obj), val)
+            data = {
+                obj if isinstance(obj, str) else self.get_name(obj): val
                 for obj, val in data.items()
-            )
+            }
 
         return data
 
@@ -1816,10 +1810,10 @@ class Simulator:  # pylint: disable=too-many-public-methods
             # different types of generators this could be)
             if n_steps is not None:
                 raise SimulationError(
-                    "Cannot automatically add n_steps to generator with type %s; "
-                    "please specify n_steps manually as the first element in the "
-                    "values yielded from generator, remembering that it needs to "
-                    "be repeated to have shape (batch_size, 1)" % type(data)
+                    f"Cannot automatically add n_steps to generator with type "
+                    f"{type(data)}; please specify n_steps manually as the first "
+                    f"element in the values yielded from generator, remembering that "
+                    f"it needs to be repeated to have shape (batch_size, 1)"
                 )
 
             return data
@@ -1839,7 +1833,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 )
             n_steps = data_steps
 
-        input_vals = collections.OrderedDict()
+        input_vals = {}
 
         # fill in data for input nodes
         for node, output in self.tensor_graph.input_funcs.items():
@@ -1873,8 +1867,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
         for name in data:
             if name not in input_vals:
                 raise ValidationError(
-                    "Input contained entry for '%s', which is not a valid input name"
-                    % name,
+                    f"Input contained entry for '{name}', which is not a valid input "
+                    f"name",
                     "data",
                 )
 
@@ -1925,9 +1919,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 and data_batch % self.minibatch_size != 0
             ):
                 warnings.warn(
-                    "Number of elements in input data (%d) is not evenly divisible by "
-                    "Simulator.minibatch_size (%d); input data will be truncated."
-                    % (data_batch, self.minibatch_size)
+                    f"Number of elements in input data ({data_batch}) is not "
+                    f"evenly divisible by Simulator.minibatch_size "
+                    f"({self.minibatch_size}); input data will be truncated."
                 )
                 data_batch -= data_batch % self.minibatch_size
                 data[k] = v[:data_batch]
@@ -1942,40 +1936,40 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 valid_names = [self.get_name(n) for n in self.node_inputs]
                 if name not in valid_names:
                     raise ValidationError(
-                        "'%s' is not a valid node name; perhaps the name is wrong (it "
-                        "should match the `label` on the Node), or this is not an "
-                        "input Node (a Node with size_in==0) in this network. "
-                        "Valid names are: %s." % (name, valid_names),
+                        f"'{name}' is not a valid node name; perhaps the name is wrong "
+                        f"(it should match the `label` on the Node), or this is not an "
+                        f"input Node (a Node with size_in==0) in this network. "
+                        f"Valid names are: {valid_names}.",
                         "data",
                     )
             else:
                 valid_names = [self.get_name(p) for p in self.model.probes]
                 if name not in valid_names:
                     raise ValidationError(
-                        "'%s' is not a valid probe name; perhaps the name is wrong (it "
-                        "should match the `label` on the Probe), or this is not a "
-                        "Probe in this network. Valid names are: %s."
-                        % (name, valid_names),
+                        f"'{name}' is not a valid probe name; perhaps the name is "
+                        f"wrong (it should match the `label` on the Probe), or this "
+                        f"is not a Probe in this network. "
+                        f"Valid names are: {valid_names}.",
                         "data",
                     )
 
             # generic shape checks
             if len(x.shape) != 3:
                 raise ValidationError(
-                    "should have rank 3 (batch_size, n_steps, dimensions), "
-                    "found rank %d" % len(x.shape),
-                    "%s data" % name,
+                    f"should have rank 3 (batch_size, n_steps, dimensions), found rank "
+                    f"{len(x.shape)}",
+                    f"{name} data",
                 )
             if x.shape[0] < self.minibatch_size:
                 raise ValidationError(
-                    "Batch size of data (%d) less than Simulator `minibatch_size` (%d)"
-                    % (x.shape[0], self.minibatch_size),
-                    "%s data" % name,
+                    f"Batch size of data ({x.shape[0]}) less than Simulator "
+                    f"`minibatch_size` ({self.minibatch_size})",
+                    f"{name} data",
                 )
             if nodes and x.shape[1] % self.unroll != 0:
                 raise ValidationError(
-                    "The number of timesteps in input data (%s) must be evenly "
-                    "divisible by unroll_simulation (%s)" % (x.shape[1], self.unroll),
+                    f"The number of timesteps in input data ({x.shape[1]}) must be "
+                    f"evenly divisible by unroll_simulation ({self.unroll})",
                     "data",
                 )
 
@@ -1997,16 +1991,16 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 for n, x in data.items():
                     if x.shape[i] != val:
                         raise ValidationError(
-                            "Elements have different %s: %s vs %s"
-                            % (labels[i], val, x.shape[i]),
+                            f"Elements have different {labels[i]}: {val} vs "
+                            f"{x.shape[i]}",
                             "data",
                         )
             else:
                 for n, x in data.items():
                     if x.shape[i] != args[i]:
                         raise ValidationError(
-                            "Data for %s has %s=%s, which does not match "
-                            "expected size (%s)" % (n, labels[i], x.shape[i], args[i]),
+                            f"Data for {n} has {labels[i]}={x.shape[i]}, which does "
+                            f"not match expected size ({args[i]})",
                             "data",
                         )
 
@@ -2016,8 +2010,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
             and n_steps != self.unroll
         ):
             raise ValidationError(
-                "When use_loop=False, n_steps (%d) must exactly match "
-                "unroll_simulation (%d)" % (n_steps, self.unroll),
+                f"When use_loop=False, n_steps ({n_steps}) must exactly match "
+                f"unroll_simulation ({self.unroll})",
                 "n_steps",
             )
 
@@ -2031,8 +2025,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 and (data_n_steps.ndim != 2 or data_n_steps.shape[1] != 1)
             ) or (batch_size is not None and data_n_steps.shape != (batch_size, 1)):
                 raise ValidationError(
-                    "'n_steps' has wrong shape; should be %s (note that this is just "
-                    "the integer n_steps value repeated)" % ((batch_size, 1),),
+                    f"'n_steps' has wrong shape; should be {(batch_size, 1)} (note that"
+                    f" this is just the integer n_steps value repeated)",
                     "data",
                 )
             if not np.all(data_n_steps == data_n_steps[0, 0]):
@@ -2101,9 +2095,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         if self.closed is not None and not self.closed:
             warnings.warn(
-                "Simulator with model=%s was deallocated while open. "
-                "Simulators should be closed manually to ensure resources "
-                "are properly freed." % self.model,
+                f"Simulator with model={self.model} was deallocated while open. "
+                f"Simulators should be closed manually to ensure resources are "
+                f"properly freed.",
                 RuntimeWarning,
             )
             self.close()
@@ -2121,7 +2115,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
             "_closed_attrs"
         ):
             raise SimulatorClosed(
-                "Cannot access Simulator.%s after Simulator is closed" % name
+                f"Cannot access Simulator.{name} after Simulator is closed"
             )
 
         return super().__getattribute__(name)
@@ -2175,7 +2169,7 @@ class SimulationData(collections.Mapping):
 
         if obj not in self.sim.model.params:
             raise ValidationError(
-                "Object is not in parameters of model %s" % self.sim.model, str(obj)
+                f"Object is not in parameters of model {self.sim.model}", str(obj)
             )
 
         data = self.sim.model.params[obj]

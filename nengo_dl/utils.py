@@ -108,19 +108,19 @@ def align_func(output_dtype):
 
             if output is None:
                 raise SimulationError(
-                    "Function %r returned None" % function_name(func, sanitize=False)
+                    f"Function '{function_name(func, sanitize=False)}' returned None"
                 )
 
             try:
                 if not np.all(np.isfinite(output)):
                     raise SimulationError(
-                        "Function %r returned invalid value %r"
-                        % (function_name(func, sanitize=False), output)
+                        f"Function '{function_name(func, sanitize=False)}' returned "
+                        f"invalid value {output!r}"
                     )
             except (TypeError, ValueError) as e:
                 raise SimulationError(
-                    "Function %r returned a value %r of invalid type %r"
-                    % (function_name(func, sanitize=False), output, type(output))
+                    f"Function '{function_name(func, sanitize=False)}' returned a "
+                    f"value {output!r} of invalid type '{type(output).__name__}'"
                 ) from e
             output = np.asarray(output, dtype=output_dtype)
 
@@ -161,7 +161,7 @@ class MessageBar(progressbar.BouncingBar):
         if data["percentage"] is None:
             msg = self.msg
         else:
-            msg = "%s (%d%%)" % (self.msg, data["percentage"])
+            msg = f"{self.msg} ({int(data['percentage'])}%)"
 
         offset = width // 2 - len(msg) // 2
 
@@ -196,7 +196,7 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
         if past is None:
             past = present
 
-        self.msg_bar = MessageBar(msg=present, finish_msg="%s finished in" % past)
+        self.msg_bar = MessageBar(msg=present, finish_msg=f"{past} finished in")
         widgets = [self.msg_bar, " "]
 
         if max_value is None:
@@ -268,7 +268,7 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
             self.sub_bar.finish()
 
         self.sub_bar = SubProgressBar(
-            present="%s: %s" % (self.present, msg) if msg else self.present, **kwargs
+            present=f"{self.present}: {msg}" if msg else self.present, **kwargs
         )
 
         return self.sub_bar

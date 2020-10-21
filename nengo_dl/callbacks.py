@@ -47,7 +47,7 @@ class NengoSummaries(tf.keras.callbacks.Callback):
         self.sim = sim
 
         with contextlib.suppress() if compat.eager_enabled() else context.eager_mode():
-            self.writer = tf.summary.create_file_writer(log_dir)
+            self.writer = tf.summary.create_file_writer(str(log_dir))
 
         self.summaries = []
         for obj in objects:
@@ -56,26 +56,26 @@ class NengoSummaries(tf.keras.callbacks.Callback):
             ):
                 if isinstance(obj, nengo.Ensemble):
                     param = "encoders"
-                    name = "Ensemble_%s" % obj.label
+                    name = f"Ensemble_{obj.label}"
                 elif isinstance(obj, nengo.ensemble.Neurons):
                     param = "bias"
-                    name = "Ensemble.neurons_%s" % obj.ensemble.label
+                    name = f"Ensemble.neurons_{obj.ensemble.label}"
                 elif isinstance(obj, nengo.Connection):
                     if not compat.conn_has_weights(obj):
                         raise ValidationError(
-                            "Connection '%s' does not have any weights to log" % obj,
+                            f"Connection '{obj}' does not have any weights to log",
                             "objects",
                         )
                     param = "weights"
-                    name = "Connection_%s" % obj.label
+                    name = f"Connection_{obj.label}"
 
                 self.summaries.append(
-                    (utils.sanitize_name("%s_%s" % (name, param)), obj, param)
+                    (utils.sanitize_name(f"{name}_{param}"), obj, param)
                 )
             else:
                 raise ValidationError(
-                    "Unknown summary object %s; should be an Ensemble, Neurons, or "
-                    "Connection" % obj,
+                    f"Unknown summary object {obj}; should be an Ensemble, Neurons, or "
+                    "Connection",
                     "objects",
                 )
 

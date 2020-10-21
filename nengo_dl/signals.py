@@ -3,7 +3,7 @@ Represents and manages the internal simulation signals.
 """
 
 import logging
-from collections import Mapping, OrderedDict, defaultdict
+from collections import Mapping, defaultdict
 
 import numpy as np
 import tensorflow as tf
@@ -76,11 +76,7 @@ class TensorSignal:
         return len(self.shape)
 
     def __repr__(self):
-        return "TensorSignal(key=%s, shape=%s, label=%s)" % (
-            self.key,
-            self.shape,
-            self.label,
-        )
+        return f"TensorSignal(key={self.key}, shape={self.shape}, label={self.label})"
 
     def __getitem__(self, indices):
         """
@@ -167,7 +163,7 @@ class TensorSignal:
             self.dtype,
             shape,
             self.minibatch_size,
-            label=self.label + ".reshape(%s)" % (shape,),
+            label=self.label + f".reshape({shape})",
         )
 
     @property
@@ -294,7 +290,7 @@ class SignalDict(Mapping):
         as opposed to data that is constant for a given Nengo model.
         """
         # these values will be re-generated whenever the model is rebuilt
-        self.bases = OrderedDict()
+        self.bases = {}
 
         # reset TensorSignals
         for sig in self.sig_map.values():
@@ -329,8 +325,8 @@ class SignalDict(Mapping):
 
         if val.dtype.is_floating and val.dtype.base_dtype != self.dtype:
             raise BuildError(
-                "Tensor detected with wrong dtype (%s), should "
-                "be %s." % (val.dtype.base_dtype, self.dtype)
+                f"Tensor detected with wrong dtype ({val.dtype.base_dtype}), should "
+                f"be {self.dtype}."
             )
 
         # should never be writing to a variable

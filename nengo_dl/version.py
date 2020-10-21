@@ -3,6 +3,9 @@ We use semantic versioning (see http://semver.org/).
 and conform to PEP440 (see https://www.python.org/dev/peps/pep-0440/).
 '.devN' will be added to the version unless the code base represents
 a release version. Release versions are git tagged with the version.
+
+We avoid the use of f-strings so that this can be imported in Python < 3.6,
+since it is required by setup.py.
 """
 
 import warnings
@@ -32,12 +35,17 @@ else:
 
     if nengo.version.version_info < minimum_nengo_version:  # pragma: no cover
         raise ValueError(
-            "NengoDL does not support Nengo version %s. Upgrade "
-            "with 'pip install --upgrade --no-deps nengo'." % (nengo.version.version,)
+            (
+                "NengoDL does not support Nengo version {nengo_version}. "
+                "Upgrade with 'pip install --upgrade --no-deps nengo'."
+            ).format(nengo_version=nengo.version.version)
         )
     elif nengo.version.version_info > latest_nengo_version:  # pragma: no cover
-        warnings.warn(
-            "This version of NengoDL has not been tested with your Nengo "
-            "version (%s). The latest fully supported version is %d.%d.%d."
-            % ((nengo.version.version,) + latest_nengo_version)
+        warnstr = (
+            "This version of NengoDL has not been tested with your Nengo version "
+            "({nengo_version}). The latest fully supported version is {latest_version}."
+        ).format(
+            nengo_version=nengo.version.version,
+            latest_version=".".join(str(x) for x in latest_nengo_version),
         )
+        warnings.warn(warnstr)

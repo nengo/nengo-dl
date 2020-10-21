@@ -2,10 +2,8 @@
 
 import contextlib
 import logging
-import os
 import pickle
 import sys
-from collections import OrderedDict
 
 import nengo
 import numpy as np
@@ -512,12 +510,12 @@ def test_generate_inputs(Simulator, seed):
             np.ones((minibatch_size, n_steps, 1)) * 2,
         ]
         for i, x in enumerate(vals):
-            assert np.allclose(feed["node_%d" % i if i > 0 else "node"], x)
+            assert np.allclose(feed[f"node_{i}" if i > 0 else "node"], x)
             assert np.allclose(sim.data[p[i]], x)
 
         # check that unseeded process was different in each minibatch item
         assert not np.allclose(
-            feed["node_%d" % (len(inp) - 1)][0], feed["node_%d" % (len(inp) - 1)][1]
+            feed[f"node_{len(inp) - 1}"][0], feed[f"node_{len(inp) - 1}"][1]
         )
 
         with pytest.raises(SimulationError, match="automatically add n_steps"):
@@ -528,7 +526,7 @@ def test_generate_inputs(Simulator, seed):
 
 
 @pytest.mark.parametrize("include_state", (True, False))
-def test_save_load_params(Simulator, include_state, tmpdir):
+def test_save_load_params(Simulator, include_state, tmp_path):
     def get_network(seed):
         with nengo.Network(seed=seed) as net:
             configure_settings(simplifications=[])
@@ -554,7 +552,7 @@ def test_save_load_params(Simulator, include_state, tmpdir):
 
         sim_save.run_steps(10)
 
-        sim_save.save_params(str(tmpdir), include_state=include_state)
+        sim_save.save_params(tmp_path, include_state=include_state)
 
         sim_save.run_steps(10)
 
@@ -575,7 +573,7 @@ def test_save_load_params(Simulator, include_state, tmpdir):
 
         pre_model = sim_load.keras_model
 
-        sim_load.load_params(str(tmpdir), include_state=include_state)
+        sim_load.load_params(tmp_path, include_state=include_state)
 
         weights2, enc2, bias2 = sim_load.data.get_params(
             (conn1, "weights"), (ens1, "encoders"), (ens1, "bias")
@@ -603,10 +601,10 @@ def test_save_load_params(Simulator, include_state, tmpdir):
 
     with Simulator(nengo.Network()) as sim:
         with pytest.raises(SimulationError, match="!= number of variables"):
-            sim.load_params(str(tmpdir))
+            sim.load_params(tmp_path)
 
 
-def test_save_load_params_deprecation(Simulator, tmpdir):
+def test_save_load_params_deprecation(Simulator, tmp_path):
     with nengo.Network() as net:
         a = nengo.Node([1])
         p = nengo.Probe(a, synapse=0.1)
@@ -617,7 +615,7 @@ def test_save_load_params_deprecation(Simulator, tmpdir):
         with pytest.warns(
             DeprecationWarning, match="include_non_trainable is deprecated"
         ):
-            sim0.save_params(str(tmpdir.join("tmp")), include_non_trainable=True)
+            sim0.save_params(tmp_path / "tmp", include_non_trainable=True)
 
         sim0.run_steps(5)
 
@@ -625,7 +623,7 @@ def test_save_load_params_deprecation(Simulator, tmpdir):
         with pytest.warns(
             DeprecationWarning, match="include_non_trainable is deprecated"
         ):
-            sim1.load_params(str(tmpdir.join("tmp")), include_non_trainable=True)
+            sim1.load_params(tmp_path / "tmp", include_non_trainable=True)
 
         sim1.run_steps(5)
 
@@ -725,7 +723,7 @@ def test_side_effects(Simulator):
 
 
 @pytest.mark.training
-def test_tensorboard(Simulator, tmpdir):
+def test_tensorboard(Simulator, tmp_path):
     with nengo.Network() as net:
         a = nengo.Node([0])
         b = nengo.Ensemble(10, 1, neuron_type=nengo.LIFRate())
@@ -738,7 +736,7 @@ def test_tensorboard(Simulator, tmpdir):
     n_epochs = 3
     with Simulator(net) as sim:
 
-        log_dir = str(tmpdir.join("a_run"))
+        log_dir = tmp_path / "a_run"
 
         sim.compile(
             tf.optimizers.SGD(0.0),
@@ -752,7 +750,7 @@ def test_tensorboard(Simulator, tmpdir):
             callbacks=[
                 tf.keras.callbacks.TensorBoard(log_dir=log_dir, profile_batch=0),
                 callbacks.NengoSummaries(
-                    log_dir=os.path.join(log_dir, "nengo"),
+                    log_dir=log_dir / "nengo",
                     sim=sim,
                     objects=[b, b.neurons, c],
                 ),
@@ -761,18 +759,18 @@ def test_tensorboard(Simulator, tmpdir):
 
     # look up name of event file
     event_dir = (
-        os.path.join(log_dir, "train")
+        log_dir / "train"
         if version.parse(tf.__version__) < version.parse("2.3.0rc0") or eager_enabled()
         else log_dir
     )
     event_file = [
         x
-        for x in os.listdir(event_dir)
-        if x.startswith("events.out.tfevents") and not x.endswith(".profile-empty")
+        for x in event_dir.glob("events.out.tfevents*")
+        if x.suffix != ".profile-empty"
     ]
     assert len(event_file) == 1
-    event_file = os.path.join(event_dir, event_file[0])
-    assert os.path.exists(event_file)
+    event_file = event_file[0]
+    assert event_file.exists()
 
     summaries = ["epoch_loss", "epoch_probe_loss", "epoch_probe_1_loss"]
     # metadata stuff in event file
@@ -782,30 +780,27 @@ def test_tensorboard(Simulator, tmpdir):
         else 3
     )
     with contextlib.suppress() if eager_enabled() else context.eager_mode():
-        for i, record in enumerate(tf.data.TFRecordDataset(event_file)):
+        for i, record in enumerate(tf.data.TFRecordDataset(str(event_file))):
             event = event_pb2.Event.FromString(record.numpy())
 
             if i >= meta_steps:
                 curr_step = (i - meta_steps) // len(summaries)
                 assert event.step == curr_step
 
-                # assert event.summary.value[0].tag
-                # == summaries[(i - 2) % len(summaries)]
-                # log order non-deterministic in python 3.5 so we use this less
-                # stringent check
-                assert event.summary.value[0].tag in summaries
+                assert (
+                    event.summary.value[0].tag
+                    == summaries[(i - meta_steps) % len(summaries)]
+                )
 
     assert i == len(summaries) * n_epochs + (  # pylint: disable=undefined-loop-variable
         meta_steps - 1
     )
 
     # look up name of event file
-    event_file = [
-        x for x in os.listdir(os.path.join(log_dir, "nengo")) if x.endswith(".v2")
-    ]
+    event_file = list((log_dir / "nengo").glob("*.v2"))
     assert len(event_file) == 1
-    event_file = os.path.join(log_dir, "nengo", event_file[0])
-    assert os.path.exists(event_file)
+    event_file = event_file[0]
+    assert event_file.exists()
 
     summaries = [
         "Ensemble_None_encoders",
@@ -813,7 +808,7 @@ def test_tensorboard(Simulator, tmpdir):
         "Connection_None_weights",
     ]
     with contextlib.suppress() if eager_enabled() else context.eager_mode():
-        for i, record in enumerate(tf.data.TFRecordDataset(event_file)):
+        for i, record in enumerate(tf.data.TFRecordDataset(str(event_file))):
             event = event_pb2.Event.FromString(record.numpy())
 
             if i < 1:
@@ -828,16 +823,16 @@ def test_tensorboard(Simulator, tmpdir):
 
     # check for error on invalid object
     with pytest.raises(ValidationError, match="Unknown summary object"):
-        callbacks.NengoSummaries(log_dir=log_dir + "/nengo", sim=sim, objects=[a])
+        callbacks.NengoSummaries(log_dir=log_dir / "nengo", sim=sim, objects=[a])
 
     if version.parse(nengo.__version__) >= version.parse("3.1.0"):
         with pytest.raises(ValidationError, match="does not have any weights"):
-            callbacks.NengoSummaries(log_dir=log_dir + "/nengo", sim=sim, objects=[c0])
+            callbacks.NengoSummaries(log_dir=log_dir / "nengo", sim=sim, objects=[c0])
 
 
 @pytest.mark.parametrize("mode", ("predict", "train"))
 @pytest.mark.training
-def test_profile(Simulator, mode, tmpdir, pytestconfig):
+def test_profile(Simulator, mode, tmp_path, pytestconfig):
     if (
         pytestconfig.getoption("--graph-mode")
         and version.parse(tf.__version__) >= version.parse("2.4.0rc0")
@@ -853,7 +848,7 @@ def test_profile(Simulator, mode, tmpdir, pytestconfig):
         # note: TensorFlow bug if using profile_batch=1, see
         # https://github.com/tensorflow/tensorflow/issues/37543
         callback = callbacks.TensorBoard(
-            log_dir=str(tmpdir.join("profile")), profile_batch=2
+            log_dir=str(tmp_path / "profile"), profile_batch=2
         )
 
         if mode == "predict":
@@ -864,13 +859,10 @@ def test_profile(Simulator, mode, tmpdir, pytestconfig):
                 {a: np.zeros((2, 5, 1))}, {p: np.zeros((2, 5, 1))}, callbacks=[callback]
             )
 
-        assert os.path.exists(
-            str(
-                tmpdir.join("profile", "train")
-                if version.parse(tf.__version__) < version.parse("2.3.0rc0")
-                else tmpdir.join("profile")
-            )
-        )
+        path = tmp_path / "profile"
+        if version.parse(tf.__version__) < version.parse("2.3.0rc0"):
+            path /= "train"
+        assert path.exists()
 
 
 def test_dt_readonly(Simulator):
@@ -887,12 +879,10 @@ def test_probe_data():
     sim = dummies.Simulator()
     a = dummies.Probe(add_to_container=False)
     b = dummies.Probe(add_to_container=False)
-    sim.model.params = OrderedDict(
-        {
-            a: [np.zeros((5, 1, 3)), np.ones((5, 1, 3))],
-            b: [np.ones((1, 1, 3)), np.zeros((1, 1, 3))],
-        }
-    )
+    sim.model.params = {
+        a: [np.zeros((5, 1, 3)), np.ones((5, 1, 3))],
+        b: [np.ones((1, 1, 3)), np.zeros((1, 1, 3))],
+    }
     sim.model.probes = (a, b)
     data = SimulationData(sim, True)
     assert data[a].shape == (5, 2, 3)
@@ -1884,7 +1874,7 @@ def test_logging(Simulator, caplog):
             sim.run_steps(10)
 
     for rec in caplog.records:
-        assert rec.getMessage(), "Record %s has empty message" % rec
+        assert rec.getMessage(), f"Record {rec} has empty message"
 
 
 def test_floatx_context(Simulator):

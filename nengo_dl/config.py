@@ -130,7 +130,7 @@ def configure_settings(**kwargs):
         ):
             params.set_param(attr, Parameter(attr, val))
         else:
-            raise ConfigError("%s is not a valid config parameter" % attr)
+            raise ConfigError(f"{attr} is not a valid config parameter")
 
 
 def get_setting(model, setting, default=None, obj=None):

@@ -65,7 +65,7 @@ class TFLogFilter:
             "deprecation.py" in record.pathname or "deprecated" in record.msg.lower()
         ):
             msg = record.getMessage()
-            raise AttributeError("Deprecation warning detected:\n%s" % msg)
+            raise AttributeError(f"Deprecation warning detected:\n{msg}")
 
         return True
 
@@ -190,7 +190,7 @@ if version.parse(nengo.__version__) < version.parse("3.1.0"):
             3:
         ]
         assert len(names) == len(neuron_op.states)
-        return collections.OrderedDict((n, s) for n, s in zip(names, neuron_op.states))
+        return dict(zip(names, neuron_op.states))
 
     def neuron_step(neuron_op, dt, J, output, state):  # pragma: no cover (runs in TF)
         """Call step_math instead of step."""
@@ -260,7 +260,7 @@ if version.parse(nengo.__version__) <= version.parse("3.1.0"):
         """Backport of `nengo.utils.stdlib.FrozenOrderedSet`."""
 
         def __init__(self, data):
-            self.data = collections.OrderedDict((d, None) for d in data)
+            self.data = dict((d, None) for d in data)
 
         def __contains__(self, elem):
             return elem in self.data

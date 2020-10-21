@@ -84,7 +84,7 @@ def test_soft_lif(Simulator, sigma, seed):
     if sigma == 1:
         assert "sigma" not in x
     else:
-        assert "sigma=%s" % sigma in x
+        assert f"sigma={sigma}" in x
 
     with nengo.Simulator(net) as sim:
         _, nengo_curves = nengo.utils.ensemble.tuning_curves(ens, sim)

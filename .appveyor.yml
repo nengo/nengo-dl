@@ -4,7 +4,7 @@ image: Visual Studio 2019
 
 environment:
   MODE: test
-  PYTHON_VERSION: C:\Python36-x64
+  PYTHON_VERSION: C:\Python37-x64
   NUMPY_VERSION: numpy
   TF_VERSION: tensorflow
   NENGO_VERSION: nengo[tests]
@@ -18,7 +18,7 @@ environment:
     - NENGO_VERSION: nengo[tests]==3.0.0
       TF_VERSION: tensorflow==2.2.0
       NUMPY_VERSION: numpy==1.16.0
-      PYTHON_VERSION: C:\Python35-x64
+      PYTHON_VERSION: C:\Python36-x64
 
 init:
   - set PATH=%PYTHON_VERSION%;%PYTHON_VERSION%\Scripts;%PATH%

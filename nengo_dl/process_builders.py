@@ -4,7 +4,6 @@ Build classes for Nengo process operators.
 
 import contextlib
 import logging
-from collections import OrderedDict
 
 import numpy as np
 import tensorflow as tf
@@ -54,7 +53,7 @@ class GenericProcessBuilder(OpBuilder):
         # combines the result
         def merged_func(time, *input_state):  # pragma: no cover (runs in TF)
             if not hasattr(self, "step_fs"):
-                raise SimulationError("build_post has not been called for %s" % self)
+                raise SimulationError(f"build_post has not been called for {self}")
 
             if self.input_data is None:
                 input = None
@@ -438,12 +437,9 @@ class SimProcessBuilder(OpBuilder):
         a custom builder will use the generic builder).
     """
 
-    # we use OrderedDict because it is important that Lowpass come before
-    # LinearFilter (since we'll be using isinstance to find the right builder,
-    # and Lowpass is a subclass of LinearFilter)
-    TF_PROCESS_IMPL = OrderedDict(
-        [(Lowpass, LowpassBuilder), (LinearFilter, LinearFilterBuilder)]
-    )
+    # it is important that Lowpass come before LinearFilter because we'll be using
+    # isinstance to find the right builder, and Lowpass is a subclass of LinearFilter
+    TF_PROCESS_IMPL = {Lowpass: LowpassBuilder, LinearFilter: LinearFilterBuilder}
 
     def __init__(self, ops):
         super().__init__(ops)

@@ -105,8 +105,8 @@ def _test_random(
 @pytest.mark.parametrize(
     "network, train", [("integrator", True), ("cconv", False), ("test", True)]
 )
-def test_run_profile(network, train, pytestconfig, monkeypatch, tmpdir):
-    monkeypatch.chdir(tmpdir)
+def test_run_profile(network, train, pytestconfig, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
 
     if network == "integrator":
         net = benchmarks.integrator(3, 2, nengo.SpikingRectifiedLinear())
@@ -139,12 +139,15 @@ def test_cli():
 
     old_argv = sys.argv
     sys.argv = [sys.argv[0]] + (
-        "build --benchmark random_network --dimensions %d "
-        "--neurons_per_d %d --neuron_type SoftLIFRate "
-        "--kwarg n_ensembles=%d --kwarg connections_per_ensemble=%d "
-        "profile --no-train --n_steps 10 --batch_size 2 --device /cpu:0 "
-        "--unroll 5 --time-only"
-        % (dimensions, neurons_per_d, n_ensembles, n_connections)
+        f"build "
+        f"--benchmark random_network "
+        f"--dimensions {dimensions} "
+        f"--neurons_per_d {neurons_per_d} "
+        f"--neuron_type SoftLIFRate "
+        f"--kwarg n_ensembles={n_ensembles} "
+        f"--kwarg connections_per_ensemble={n_connections} "
+        f"profile "
+        f"--no-train --n_steps 10 --batch_size 2 --device /cpu:0 --unroll 5 --time-only"
     ).split()
     obj = {}
     with pytest.raises(SystemExit):

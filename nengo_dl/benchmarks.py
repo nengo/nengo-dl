@@ -747,8 +747,8 @@ def build(obj, benchmark, dimensions, neurons_per_d, neuron_type, kwarg):
 
     # build benchmark and add to context for chaining
     print(
-        "Building %s with %s"
-        % (nengo_dl.utils.function_name(benchmark, sanitize=False), kwargs)
+        f"Building {nengo_dl.utils.function_name(benchmark, sanitize=False)} "
+        f"with {kwargs}"
     )
 
     obj["net"] = benchmark(**kwargs)

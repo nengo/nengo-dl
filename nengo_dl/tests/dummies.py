@@ -30,7 +30,7 @@ class Signal(nengo.builder.signal.Signal):
         self._base = (
             self
             if base_shape is None
-            else Signal(shape=base_shape, dtype=self.dtype, label="%s.base" % label)
+            else Signal(shape=base_shape, dtype=self.dtype, label=f"{label}.base")
         )
         self._elemoffset = offset
         self.name = label
@@ -87,7 +87,7 @@ class Signal(nengo.builder.signal.Signal):
         return False
 
     def __repr__(self):
-        return "DummySignal(%s)" % self.name
+        return f"DummySignal({self.name})"
 
 
 class Op:
@@ -106,13 +106,13 @@ class Op:
     def __repr__(self):
         rep = "DummyOp("
         if len(self.sets) > 0:
-            rep += "sets=%s" % self.sets
+            rep += f"sets={self.sets}"
         if len(self.incs) > 0:
-            rep += "incs=%s" % self.incs
+            rep += f"incs={self.incs}"
         if len(self.reads) > 0:
-            rep += "reads=%s" % self.reads
+            rep += f"reads={self.reads}"
         if len(self.updates) > 0:
-            rep += "updates=%s" % self.updates
+            rep += f"updates={self.updates}"
         rep += ")"
         return rep
 

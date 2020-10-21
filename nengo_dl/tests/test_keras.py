@@ -348,20 +348,20 @@ def test_learning_phase_warning(Simulator):
             pass
 
 
-def test_save_load_weights(Simulator, tmpdir):
+def test_save_load_weights(Simulator, tmp_path):
     net = dummies.linear_net()[0]
 
     net.connections[0].transform = 2
 
     with Simulator(net, minibatch_size=1) as sim0:
-        sim0.keras_model.save_weights(str(tmpdir.join("tmp")))
+        sim0.keras_model.save_weights(str(tmp_path / "tmp"))
 
     net.connections[0].transform = 3
 
     with Simulator(net, minibatch_size=2) as sim1:
         assert np.allclose(sim1.data[net.connections[0]].weights, 3)
 
-        sim1.keras_model.load_weights(str(tmpdir.join("tmp")))
+        sim1.keras_model.load_weights(str(tmp_path / "tmp"))
 
         assert np.allclose(sim1.data[net.connections[0]].weights, 2)
 

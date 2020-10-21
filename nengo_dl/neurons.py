@@ -53,7 +53,7 @@ class SoftLIFRate(LIFRate):
     def _argreprs(self):
         args = super()._argreprs
         if self.sigma != 1.0:
-            args.append("sigma=%s" % self.sigma)
+            args.append(f"sigma={self.sigma}")
         return args
 
     def rates(self, x, gain, bias):

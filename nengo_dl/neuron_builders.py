@@ -5,7 +5,6 @@ Build classes for Nengo neuron operators.
 import contextlib
 import logging
 import warnings
-from collections import OrderedDict
 
 import numpy as np
 import tensorflow as tf
@@ -157,13 +156,10 @@ class TFNeuronBuilder(OpBuilder):
         self.J_data = signals.combine([op.J for op in self.ops])
         self.output_data = signals.combine([op.output for op in self.ops])
 
-        self.state_data = OrderedDict(
-            (
-                state,
-                signals.combine([compat.neuron_state(op)[state] for op in self.ops]),
-            )
+        self.state_data = {
+            state: signals.combine([compat.neuron_state(op)[state] for op in self.ops])
             for state in compat.neuron_state(self.ops[0])
-        )
+        }
 
     def step(self, J, dt, **state):
         """Implements the logic for a single inference step."""
@@ -180,7 +176,7 @@ class TFNeuronBuilder(OpBuilder):
 
     def build_step(self, signals, **step_kwargs):
         J = signals.gather(self.J_data)
-        state = OrderedDict((s, signals.gather(d)) for s, d in self.state_data.items())
+        state = {s: signals.gather(d) for s, d in self.state_data.items()}
 
         step_output = tf.nest.flatten(self.step(J, signals.dt, **state))
 
@@ -523,8 +519,8 @@ class SimNeuronsBuilder(OpBuilder):
             self.built_neurons = self.TF_NEURON_IMPL[neuron_type](ops)
         else:
             warnings.warn(
-                "%s does not have a native TensorFlow implementation; "
-                "falling back to Python implementation" % neuron_type
+                f"{neuron_type} does not have a native TensorFlow implementation; "
+                "falling back to Python implementation"
             )
             self.built_neurons = GenericNeuronBuilder(ops)
 

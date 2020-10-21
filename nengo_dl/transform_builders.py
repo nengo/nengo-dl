@@ -61,7 +61,7 @@ class ConvIncBuilder(OpBuilder):
 
         if self.conv.dimensions > len(fmts):
             raise NotImplementedError(
-                "Convolutions > %d dimensions are not supported" % len(fmts)
+                f"Convolutions > {len(fmts)} dimensions are not supported"
             )
 
         fmt = fmts[self.conv.dimensions - 1]

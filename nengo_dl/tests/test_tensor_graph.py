@@ -579,15 +579,15 @@ def test_deterministic_order(planner, tmp_path):
         # we could make this work by backporting the deterministic toposort from
         # nengo>3.1.0, but that doesn't seem worth it to get these two niche planners
         # to be deterministic
-        pytest.skip("'%s' is nondeterministic in Nengo<=3.1.0" % planner)
+        pytest.skip(f"'{planner}' is nondeterministic in Nengo<=3.1.0")
 
     code = textwrap.dedent(
-        """
+        f"""
     import nengo
     import nengo_dl
 
     with nengo.Network(seed=0) as net:
-        nengo_dl.configure_settings(planner=nengo_dl.graph_optimizer.%s)
+        nengo_dl.configure_settings(planner=nengo_dl.graph_optimizer.{planner})
 
         # use ensemblearrays as they create a lot of parallel ops
         ens0 = nengo.networks.EnsembleArray(1, 10)
@@ -629,7 +629,6 @@ def test_deterministic_order(planner, tmp_path):
         print(s.shape)
         print(s.initial_value)
     """
-        % planner
     )
     tmp_path = tmp_path / "test.py"
     tmp_path.write_text(code, encoding="utf-8")

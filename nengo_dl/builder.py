@@ -38,7 +38,7 @@ class Builder:
         for ops in self.plan:
             if type(ops[0]) not in Builder.builders:
                 raise BuildError(
-                    "No registered builder for operators of type %r" % type(ops[0])
+                    f"No registered builder for operators of type {type(ops[0])!r}"
                 )
             self.op_builds[ops] = Builder.builders[type(ops[0])](ops)
 
@@ -157,7 +157,7 @@ class Builder:
 
             if nengo_op in cls.builders:
                 warnings.warn(
-                    "Operator '%s' already has a builder. Overwriting." % nengo_op
+                    f"Operator '{nengo_op}' already has a builder. Overwriting."
                 )
 
             cls.builders[nengo_op] = build_class

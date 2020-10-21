@@ -112,11 +112,11 @@ def test_dtype(Simulator, request, seed, bits):
     default = nengo.rc.get("precision", "bits")
     request.addfinalizer(lambda: nengo.rc.set("precision", "bits", default))
 
-    float_dtype = np.dtype(getattr(np, "float%s" % bits))
-    int_dtype = np.dtype(getattr(np, "int%s" % bits))
+    float_dtype = np.dtype(getattr(np, f"float{bits}"))
+    int_dtype = np.dtype(getattr(np, f"int{bits}"))
 
     with nengo.Network() as model:
-        nengo_dl.configure_settings(dtype="float%s" % bits)
+        nengo_dl.configure_settings(dtype=f"float{bits}")
 
         u = nengo.Node([0.5, -0.4])
         a = nengo.Ensemble(10, 2)
@@ -129,9 +129,7 @@ def test_dtype(Simulator, request, seed, bits):
         # check that the builder has created signals of the correct dtype
         # (note that we may not necessarily use that dtype during simulation)
         for sig in sim.tensor_graph.signals:
-            assert sig.dtype in (float_dtype, int_dtype), (
-                "Signal '%s' wrong dtype" % sig
-            )
+            assert sig.dtype in (float_dtype, int_dtype), f"Signal '{sig}' wrong dtype"
 
         objs = (obj for obj in model.all_objects if sim.data[obj] is not None)
         for obj in objs:

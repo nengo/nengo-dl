@@ -140,8 +140,8 @@ class Converter:
 
         if self.swap_activations.unused_keys():
             warnings.warn(
-                "swap_activations contained %s, but there were no layers in the model "
-                "with that activation type" % (self.swap_activations.unused_keys(),)
+                f"swap_activations contained {self.swap_activations.unused_keys()}, "
+                f"but there were no layers in the model with that activation type"
             )
 
         self.layers = self.net.layers
@@ -245,9 +245,9 @@ class Converter:
                 )
                 if keras_params != nengo_params:
                     raise ValueError(
-                        "Number of trainable parameters in Nengo network (%d) does not "
-                        "match number of trainable parameters in Keras model (%d)"
-                        % (nengo_params, keras_params)
+                        f"Number of trainable parameters in Nengo network "
+                        f"({nengo_params}) does not match number of trainable "
+                        f"parameters in Keras model ({keras_params})"
                     )
 
                 out_vals = [np.reshape(x, (batch_size, n_steps, -1)) for x in out_vals]
@@ -268,8 +268,9 @@ class Converter:
                 logger.info("Nengo:\n%s", nengo_vals[fails])
                 raise ValueError(
                     "Output of Keras model does not match output of converted "
-                    "Nengo network (max difference=%.2E; set log level to INFO to see "
-                    "all failures)" % max(abs(keras_vals[fails] - nengo_vals[fails]))
+                    "Nengo network (max difference="
+                    f"{max(abs(keras_vals[fails] - nengo_vals[fails])):.2E}; "
+                    "set log level to INFO to see all failures)"
                 )
 
         return True
@@ -298,8 +299,8 @@ class Converter:
             if converter.has_weights and not self.split_shared_weights:
                 # TODO: allow fallback
                 raise ValueError(
-                    "Multiple applications of layer %s detected; this is not supported "
-                    "unless split_shared_weights=True" % layer
+                    f"Multiple applications of layer {layer} detected; this is not "
+                    f"supported unless split_shared_weights=True"
                 )
             return converter
 
@@ -309,8 +310,9 @@ class Converter:
         # perform custom checks in layer converters
         if ConverterClass is None:
             convertible = False
-            error_msg = "Layer type %s does not have a registered converter" % type(
-                layer
+            error_msg = (
+                f"Layer type {type(layer).__name__} does not have a registered "
+                f"converter"
             )
         else:
             convertible, error_msg = ConverterClass.convertible(layer, self)
@@ -322,14 +324,14 @@ class Converter:
             can_fallback = ConverterClass is None or ConverterClass.allow_fallback
             if self.allow_fallback and can_fallback:
                 warnings.warn(
-                    "%sFalling back to TensorNode."
-                    % (error_msg + ". " if error_msg else "")
+                    f"{error_msg + '. ' if error_msg else ''}"
+                    f"Falling back to TensorNode."
                 )
                 ConverterClass = self.converters[None]
             else:
-                msg = "%sUnable to convert layer %s to native Nengo objects; " % (
-                    error_msg + ". " if error_msg else "",
-                    layer.name,
+                msg = (
+                    f"{error_msg + '. ' if error_msg else ''}Unable to convert layer "
+                    f"'{layer.name}' to native Nengo objects; "
                 )
                 if not self.allow_fallback and can_fallback:
                     msg += (
@@ -361,7 +363,7 @@ class Converter:
         def register_converter(convert_cls):
             if keras_layer in cls.converters:
                 warnings.warn(
-                    "Layer '%s' already has a converter. Overwriting." % keras_layer
+                    f"Layer '{keras_layer}' already has a converter. Overwriting."
                 )
 
             cls.converters[keras_layer] = convert_cls
@@ -376,15 +378,14 @@ class Converter:
         """
 
         def __init__(self):
-            self.dict = collections.OrderedDict()
+            self.dict = {}
 
         def _get_key(self, key):
             if isinstance(key, tf.keras.layers.Layer):
                 if len(key.inbound_nodes) > 1:
                     raise KeyError(
-                        "Layer %s is ambiguous because it has been called multiple "
+                        f"Layer {key} is ambiguous because it has been called multiple "
                         "times; use a specific set of layer outputs as key instead"
-                        % key
                     )
 
                 # get output tensor
@@ -514,7 +515,7 @@ class LayerConverter:
             The Nengo object whose output corresponds to the output of the given Keras
             Node.
         """
-        name = self.layer.name + ".%d" % node_id
+        name = f"{self.layer.name}.{node_id}"
 
         # apply manually specified swaps
         activation = self.converter.swap_activations.get(activation, activation)
@@ -565,9 +566,10 @@ class LayerConverter:
                         ] /= scale_firing_rates
                     else:
                         warnings.warn(
-                            "Firing rate scaling being applied to activation type "
-                            "that does not support amplitude (%s); this will change "
-                            "the output" % type(activation)
+                            f"Firing rate scaling being applied to activation type "
+                            f"that does not support amplitude "
+                            f"({type(activation).__name__}); "
+                            f"this will change the output"
                         )
 
                 obj = nengo.Ensemble(
@@ -584,8 +586,8 @@ class LayerConverter:
                     self.set_trainable(obj, False)
         elif self.converter.allow_fallback:
             warnings.warn(
-                "Activation type %s does not have a native Nengo equivalent; "
-                "falling back to a TensorNode" % activation
+                f"Activation type {activation} does not have a native Nengo "
+                f"equivalent; falling back to a TensorNode"
             )
             obj = TensorNode(
                 activation,
@@ -594,12 +596,12 @@ class LayerConverter:
                 label=name,
             )
         else:
-            raise TypeError("Unsupported activation type (%s)" % self.layer.activation)
+            raise TypeError(f"Unsupported activation type ({self.layer.activation})")
 
         if biases is not None and isinstance(obj, (nengo.Node, TensorNode)):
             # obj doesn't have its own biases, so use a connection from a constant node
             # (so that the bias values will be trainable)
-            bias_node = nengo.Node([1], label="%s.bias" % name)
+            bias_node = nengo.Node([1], label=f"{name}.bias")
             nengo.Connection(bias_node, obj, transform=biases[:, None], synapse=None)
 
         logger.info("Created %s (size=%d)", obj, obj.size_out)
@@ -705,7 +707,7 @@ class LayerConverter:
         # note: layer.get_input/output_shape_at is generally equivalent to
         # layer.input/output_shape, except when the layer is called multiple times
         # with different shapes, in which case input/output_shape is not well defined
-        func = getattr(self.layer, "get_%s_shape_at" % input_output)
+        func = getattr(self.layer, f"get_{input_output}_shape_at")
 
         # get the shape
         shape = func(node_id)
@@ -802,11 +804,9 @@ class LayerConverter:
 
             val = getattr(layer, arg)
             if val != default:
-                msg = "%s.%s has value %s != %s, which is not supported" % (
-                    layer.name,
-                    arg,
-                    val,
-                    default,
+                msg = (
+                    f"{layer.name}.{arg} has value {val} != {default}, "
+                    "which is not supported"
                 )
                 if arg in cls.unsupported_training_args:
                     msg += " (unless inference_only=True)"
@@ -855,7 +855,7 @@ class ConvertModel(LayerConverter):
         ]
 
         with nengo.Network(
-            label=self.layer.name + ("" if node_id is None else ".%d" % node_id)
+            label=self.layer.name + ("" if node_id is None else f".{node_id}")
         ) as net:
             # add the "trainable" attribute to all objects
             configure_settings(trainable=None)
@@ -1206,7 +1206,7 @@ class ConvertBatchNormalization(LayerConverter):
 
         # connect up bias node to output
         bias_node = nengo.Node(
-            broadcast_bias, label="%s.%d.bias" % (self.layer.name, node_id)
+            broadcast_bias, label=f"{self.layer.name}.{node_id}.bias"
         )
         conn = nengo.Connection(bias_node, output, synapse=None)
         self.set_trainable(conn, False)
@@ -1286,10 +1286,9 @@ class ConvertConv(LayerConverter):
             # bias parameter shared across all the spatial dimensions
 
             # add trainable bias weights
-            bias_node = nengo.Node([1], label="%s.%d.bias" % (self.layer.name, node_id))
+            bias_node = nengo.Node([1], label=f"{self.layer.name}.{node_id}.bias")
             bias_relay = nengo.Node(
-                size_in=len(biases),
-                label="%s.%d.bias_relay" % (self.layer.name, node_id),
+                size_in=len(biases), label=f"{self.layer.name}.{node_id}.bias_relay"
             )
             nengo.Connection(
                 bias_node, bias_relay, transform=biases[:, None], synapse=None
@@ -1448,9 +1447,9 @@ class ConvertInput(LayerConverter):
         shape = self.output_shape(node_id)
         if any(x is None for x in shape):
             raise ValueError(
-                "Input shapes must be fully specified; got %s. If inputs contain "
-                "`None` in the first axis to indicate a variable number of timesteps, "
-                "set `temporal_model=True` on the `Converter`." % (shape,)
+                f"Input shapes must be fully specified; got {shape}. If inputs contain "
+                f"`None` in the first axis to indicate a variable number of timesteps, "
+                f"set `temporal_model=True` on the `Converter`."
             )
         output = nengo.Node(size_in=np.prod(shape), label=self.layer.name)
 
@@ -1682,13 +1681,13 @@ class ConvertKerasSpiking(LayerConverter):
             # match the layer dt).
             # TODO: add some kind of callback to check that sim.dt matches layer.dt?
             warnings.warn(
-                "Ignoring %s.dt=%f parameter; dt will be controlled by Simulator.dt"
-                % (type(self.layer).__name__, self.layer.dt)
+                f"Ignoring {type(self.layer).__name__}.dt={self.layer.dt:f} parameter; "
+                f"dt will be controlled by Simulator.dt"
             )
         if self.layer.stateful:
             warnings.warn(
-                "Ignoring %s.stateful=True parameter; statefulness will "
-                "be controlled by Simulator" % type(self.layer).__name__
+                f"Ignoring {type(self.layer).__name__}.stateful=True parameter; "
+                f"statefulness will be controlled by Simulator"
             )
 
 
@@ -1709,8 +1708,8 @@ class ConvertSpikingActivation(ConvertKerasSpiking):
         if activation is None:
             # TODO: allow fallback within SpikingActivation?
             raise TypeError(
-                "SpikingActivation activation type (%s) does not have a native Nengo "
-                "equivalent" % self.layer.activation
+                f"SpikingActivation activation type ({self.layer.activation}) does not "
+                f"have a native Nengo equivalent"
             )
 
         initial_state = tf.keras.backend.get_value(
@@ -1761,9 +1760,8 @@ class ConvertLowpassAlpha(ConvertKerasSpiking):
     def convertible(cls, layer, converter):
         if not converter.inference_only and layer.trainable:
             msg = (
-                "Cannot convert %s layer to native Nengo objects "
-                "unless inference_only=True or layer.trainable=False"
-                % type(layer).__name__
+                f"Cannot convert a {type(layer).__name__} layer to native Nengo "
+                f"objects unless inference_only=True or layer.trainable=False"
             )
             return False, msg
 
@@ -1771,19 +1769,18 @@ class ConvertLowpassAlpha(ConvertKerasSpiking):
             tf.keras.backend.get_value(layer.layer.cell.initial_level), 0
         ):
             msg = (
-                "Cannot convert a %s layer to native Nengo objects with "
-                "initial_level != 0 (this probably means that training has been "
-                "applied to the layer before conversion)" % type(layer).__name__
+                f"Cannot convert a {type(layer).__name__} layer to native Nengo "
+                f"objects with initial_level != 0 (this probably means that training "
+                f"has been applied to the layer before conversion)"
             )
             return False, msg
 
         tau = tf.keras.backend.get_value(layer.layer.cell.tau_var)
         if not np.allclose(tau, np.ravel(tau)[0]):
             msg = (
-                "Cannot convert a %s layer to native Nengo objects with different "
-                "tau values for each element (this probably means that training "
-                "has been applied to the layer before conversion)"
-                % type(layer).__name__
+                f"Cannot convert a {type(layer).__name__} layer to native Nengo "
+                f"objects with different tau values for each element (this probably "
+                f"means that training has been applied to the layer before conversion)"
             )
             return False, msg
 

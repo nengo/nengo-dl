@@ -612,7 +612,7 @@ def test_order_signals_views():
     sig = dummies.Signal(shape=(7,), label="sig")
     sig2 = dummies.Signal(shape=(7,), label="sig2")
     views = [
-        dummies.Signal(shape=(1,), base_shape=(5,), offset=1 + i, label="view_%d" % i)
+        dummies.Signal(shape=(1,), base_shape=(5,), offset=1 + i, label=f"view_{i}")
         for i in range(5)
     ]
     for v in views:

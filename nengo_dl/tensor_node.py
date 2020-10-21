@@ -43,28 +43,27 @@ def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
 
     if not isinstance(output, tf.TensorSpec) and not tf.is_tensor(output):
         raise ValidationError(
-            "TensorNode function must return a Tensor (got %s)" % type(output),
+            f"TensorNode function must return a Tensor (got {type(output)})",
             attr="tensor_func",
         )
 
     if minibatch_size is not None and output.shape[0] != minibatch_size:
         raise ValidationError(
-            "TensorNode output should have batch size %d (got %d)"
-            % (minibatch_size, output.shape[0]),
+            f"TensorNode output should have batch size {minibatch_size} (got "
+            f"{output.shape[0]})",
             attr="tensor_func",
         )
 
     if output_d is not None and np.prod(output.shape[1:]) != output_d:
         raise ValidationError(
-            "TensorNode output should have size %d (got shape %s with size %d)"
-            % (minibatch_size, output.shape[1:], np.prod(output.shape[1:])),
+            f"TensorNode output should have size {output_d} (got shape "
+            f"{output.shape[1:]} with size {np.prod(output.shape[1:])})",
             attr="tensor_func",
         )
 
     if dtype is not None and output.dtype != dtype:
         raise ValidationError(
-            "TensorNode output should have dtype %s "
-            "(got %s)" % (dtype, output.dtype),
+            f"TensorNode output should have dtype {dtype} (got {output.dtype})",
             attr="tensor_func",
         )
 
@@ -143,11 +142,10 @@ class TensorFuncParam(Parameter):
                     result = func(*args)
                 except Exception as e:
                     raise ValidationError(
-                        "Attempting to automatically determine TensorNode output shape "
-                        "by calling TensorNode function produced an error. "
-                        "If you would like to avoid this step, try manually setting "
-                        "`TensorNode(..., shape_out=x)`. The error is shown below:\n%s"
-                        % e,
+                        "Attempting to automatically determine TensorNode output "
+                        "shape by calling TensorNode function produced an error. If "
+                        "you would like to avoid this step, try manually setting "
+                        "`TensorNode(..., shape_out=x)`.",
                         attr=self.name,
                         obj=node,
                     ) from e
@@ -251,12 +249,12 @@ def build_tensor_node(model, node):
 
     # input signal
     if node.shape_in is not None:
-        sig_in = builder.Signal(shape=(node.size_in,), name="%s.in" % node)
+        sig_in = builder.Signal(shape=(node.size_in,), name=f"{node}.in")
         model.add_op(Reset(sig_in))
     else:
         sig_in = None
 
-    sig_out = builder.Signal(shape=(node.size_out,), name="%s.out" % node)
+    sig_out = builder.Signal(shape=(node.size_out,), name=f"{node}.out")
 
     model.sig[node]["in"] = sig_in
     model.sig[node]["out"] = sig_out
@@ -407,7 +405,7 @@ class Layer:
         shape_in=None,
         synapse=None,
         return_conn=False,
-        **layer_args
+        **layer_args,
     ):
         """
         Apply the TensorNode layer to the given input object.
@@ -475,12 +473,12 @@ class Layer:
         return (obj, conn) if return_conn else obj
 
     def __str__(self):
-
-        return "Layer(%s)" % getattr(
+        name = getattr(
             self.layer_func,
             "name",
             getattr(self.layer_func, "__name__", self.layer_func),
         )
+        return f"Layer({name})"
 
 
 def tensor_layer(input, layer_func, **kwargs):

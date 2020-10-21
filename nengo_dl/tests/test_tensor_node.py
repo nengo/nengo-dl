@@ -1,5 +1,6 @@
 # pylint: disable=missing-docstring
 
+import re
 from functools import partial
 
 import nengo
@@ -354,7 +355,10 @@ def test_str():
         layer_w_func = Layer(test_func)
         assert str(layer_w_func) == "Layer(test_func)"
         assert "TensorNode (unlabeled)" in str(layer_w_func(node))
-        assert str(layer_w_func(node, label="test_func")) == '<TensorNode "test_func">'
+        # nengo <= 3.1 uses double quotes around the name, after uses single quotes
+        assert re.compile("<TensorNode ['\"]test_func['\"]>").match(
+            str(layer_w_func(node, label="test_func"))
+        )
 
         class TestLayer(tf.keras.layers.Layer):
             pass
