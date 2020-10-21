@@ -300,3 +300,33 @@ setting ``nengo_dl.Simulator(..., unroll_simulation=x)``. This will explicitly b
 ``x`` timesteps into the model (without using a loop).  So if we use
 ``unroll_simulation=x`` and ``use_loop=False``, then the simulation will always run
 for exactly ``x`` timesteps.
+
+learning_phase
+--------------
+
+NengoDL (and Keras in general) can run models in two different modes, or "phases":
+training and inference. Typically the mode is set automatically based on the function
+used to execute the model; ``sim.fit`` will run in training mode, and all other
+functions (e.g., ``sim.predict``, ``sim.run``, and ``sim.evaluate``) run in inference
+mode.
+
+The most important way that the learning phase affects a NengoDL model is that it
+controls whether spiking neurons are simulated in spiking or non-spiking mode.
+Normally during training spiking neurons will automatically swap their behaviour to
+a non-spiking equivalent, and use the spiking behaviour during inference.
+
+However, sometimes it can be useful to override this default behaviour. For example,
+we might want to evaluate a spiking model in training mode, to get more insight into
+how it is behaving during training. That is the role of the ``learning_phase``
+config option. It can be specified during Network construction to make a network
+that will *always* run in training/inference mode, regardless of what function is
+being called.  For example:
+
+.. testcode::
+
+    with nengo.Network() as net:
+        nengo_dl.configure_settings(learning_phase=True)
+
+        # this ensemble will always use the "training" mode of LIF
+        # (equivalent to LIFRate)
+        ens = nengo.Ensemble(10, 1, neuron_type=nengo.LIF())
