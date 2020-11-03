@@ -41,7 +41,7 @@ def validate_output(output, minibatch_size=None, output_d=None, dtype=None):
         Expected dtype of the function output.
     """
 
-    if not isinstance(output, (tf.Tensor, tf.TensorSpec)):
+    if not isinstance(output, tf.TensorSpec) and not tf.is_tensor(output):
         raise ValidationError(
             "TensorNode function must return a Tensor (got %s)" % type(output),
             attr="tensor_func",

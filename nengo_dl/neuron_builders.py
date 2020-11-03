@@ -11,7 +11,7 @@ from nengo.builder.neurons import SimNeurons
 from nengo.neurons import RectifiedLinear, SpikingRectifiedLinear, Sigmoid, LIF, LIFRate
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras.utils import tf_utils
+from tensorflow.python.framework import smart_cond
 
 from nengo_dl import compat, utils
 from nengo_dl.builder import Builder, OpBuilder
@@ -188,7 +188,7 @@ class TFNeuronBuilder(OpBuilder):
             out = step_output
         else:
             out = tf.nest.flatten(
-                tf_utils.smart_cond(
+                smart_cond.smart_cond(
                     self.config.training,
                     true_fn=lambda: (self.training_step(J, signals.dt, **state),)
                     + tuple(state.values()),

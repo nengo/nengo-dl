@@ -1815,7 +1815,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
         if data is None:
             data = {}
 
-        if not isinstance(data, (list, tuple, dict, np.ndarray, tf.Tensor)):
+        if not isinstance(data, (list, tuple, dict, np.ndarray)) and not tf.is_tensor(
+            data
+        ):
             # data is some kind of generator, so we don't try to modify it (too many
             # different types of generators this could be)
             if n_steps is not None:

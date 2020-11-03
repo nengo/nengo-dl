@@ -391,9 +391,7 @@ class Converter:
                 # get output tensor
                 key = key.output
 
-            key = tuple(
-                x.ref() if isinstance(x, tf.Tensor) else x for x in tf.nest.flatten(key)
-            )
+            key = tuple(x.ref() if tf.is_tensor(x) else x for x in tf.nest.flatten(key))
 
             return key
 

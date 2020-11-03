@@ -373,7 +373,7 @@ def test_training_arg(Simulator):
             self.expected = expected
 
         def call(self, inputs, training=None):
-            tf.assert_equal(training, self.expected)
+            tf.assert_equal(tf.cast(training, tf.bool), self.expected)
             return tf.reshape(inputs, (1, 1))
 
     with nengo.Network() as net:

@@ -837,7 +837,16 @@ def test_tensorboard(Simulator, tmpdir):
 
 @pytest.mark.parametrize("mode", ("predict", "train"))
 @pytest.mark.training
-def test_profile(Simulator, mode, tmpdir):
+def test_profile(Simulator, mode, tmpdir, pytestconfig):
+    if (
+        pytestconfig.getoption("--graph-mode")
+        and version.parse(tf.__version__) >= version.parse("2.4.0rc0")
+        and mode == "predict"
+    ):
+        pytest.skip(
+            "TensorFlow bug, see https://github.com/tensorflow/tensorflow/issues/44563"
+        )
+
     net, a, p = dummies.linear_net()
 
     with Simulator(net) as sim:
