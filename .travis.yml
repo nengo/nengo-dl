@@ -24,7 +24,7 @@ env:
     - BRANCH_NAME="${TRAVIS_PULL_REQUEST_BRANCH:-$TRAVIS_BRANCH}"
     - PIP_USE_FEATURE="2020-resolver"
     - NUMPY_VERSION="numpy>=1.16.0"
-    - TF_VERSION="tensorflow-cpu"
+    - TF_VERSION="tensorflow"
     - NENGO_VERSION="nengo[tests]"
     - SCIPY_VERSION="noop"
 
@@ -35,14 +35,13 @@ jobs:
       SCRIPT="static"
     stage: basic
   -
-    cache: False
+    env:
+      SCRIPT="test"
   -
     env:
       NENGO_VERSION="git+https://github.com/nengo/nengo.git#egg=nengo[tests]"
-      TF_VERSION="tensorflow-gpu"
-      GPU_NUM="0"
-      SCRIPT="gpu"
-      TEST_ARGS="--device /gpu:0"
+      TF_VERSION="tensorflow<2.3.0"
+      SCRIPT="remote-test"
   -
     env:
       NENGO_VERSION="git+https://github.com/nengo/nengo.git#egg=nengo[tests]"
@@ -63,14 +62,10 @@ jobs:
       TEST_ARGS="--graph-mode"
   -
     env:
-      TF_VERSION="tensorflow-gpu"
-      GPU_NUM="0"
       SCRIPT="remote-docs"
     stage: advanced
   -
     env:
-      TF_VERSION="tensorflow-gpu"
-      GPU_NUM="0"
       SCRIPT="remote-examples"
   -
     env:
@@ -85,7 +80,7 @@ jobs:
     deploy:
       - provider: pypi
         server: https://test.pypi.org/legacy/
-        user: drasmuss
+        user: __token__
         password: $PYPI_TEST_TOKEN
         distributions: "sdist "
         on:
@@ -93,7 +88,7 @@ jobs:
           tags: false
           condition: $TRAVIS_BRANCH =~ ^release-candidate-*
       - provider: pypi
-        user: drasmuss
+        user: __token__
         password: $PYPI_TOKEN
         distributions: "sdist "
         on:
