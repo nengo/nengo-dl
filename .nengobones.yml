@@ -139,6 +139,8 @@ docs_conf_py:
 
 ci_scripts:
   - template: static
+    pre_commands:
+      - export SHELLCHECK_OPTS="-e SC2086"
   - template: test
     pip_install:
       - $NUMPY_VERSION
@@ -160,46 +162,87 @@ ci_scripts:
       # TODO: swap to pypi release after 0.2
       - git+https://github.com/nengo/keras-spiking
     nengo_tests: true
+  - template: test
+    output_name: test-performance
+    coverage: true
+    pip_install:
+      - $NUMPY_VERSION
+      - $TF_VERSION
+      - $NENGO_VERSION
+      - $SCIPY_VERSION
+      - git+https://github.com/drasmuss/spaun2.0.git
+    nengo_tests: true
+    pre_commands:
+      - pytest $TEST_ARGS nengo_dl/tests/test_benchmarks.py::test_performance --performance -v --durations 20 --color=yes
   - template: examples
     pip_install:
       - $TF_VERSION
+      - $NUMPY_VERSION
   - template: docs
     pip_install:
       - $TF_VERSION
       - $NUMPY_VERSION
-  - template: gpu
+  - template: remote-script
+    remote_script: test-performance
+    output_name: remote-test
     host: azure
     travis_var_key: fcdbeb54a1c4
     coverage: true
+    azure_name: nengo-dl
+    azure_group: nengo-ci
+    remote_vars:
+      TF_FORCE_GPU_ALLOW_GROWTH: "true"
+      NUMPY_VERSION: $NUMPY_VERSION
+      TF_VERSION: $TF_VERSION
+      NENGO_VERSION: $NENGO_VERSION
+      SCIPY_VERSION: $SCIPY_VERSION
+    remote_setup:
+      - conda install -y cudatoolkit=10.1 cudnn
   - template: remote-script
     remote_script: docs
     output_name: remote-docs
     host: azure-docs
     travis_var_key: fcdbeb54a1c4
+    azure_name: nengo-dl-docs
+    azure_group: nengo-ci
+    remote_vars:
+      NUMPY_VERSION: $NUMPY_VERSION
+      TF_VERSION: $TF_VERSION
+      NENGO_VERSION: $NENGO_VERSION
+      SCIPY_VERSION: $SCIPY_VERSION
+    remote_setup:
+      - conda install -y cudatoolkit=10.1 cudnn
   - template: remote-script
     remote_script: examples
     output_name: remote-examples
     host: azure-examples
     travis_var_key: fcdbeb54a1c4
+    azure_name: nengo-dl-examples
+    azure_group: nengo-ci
+    remote_vars:
+      NUMPY_VERSION: $NUMPY_VERSION
+      TF_VERSION: $TF_VERSION
+      NENGO_VERSION: $NENGO_VERSION
+      SCIPY_VERSION: $SCIPY_VERSION
+    remote_setup:
+      - conda install -y cudatoolkit=10.1 cudnn
   - template: deploy
 
 travis_yml:
   python: 3.6
   global_vars:
     NUMPY_VERSION: numpy>=1.16.0
-    TF_VERSION: tensorflow-cpu
+    TF_VERSION: tensorflow
     NENGO_VERSION: nengo[tests]
     SCIPY_VERSION: noop
   jobs:
     - stage: basic
       script: static
-    - cache: false
-    - script: gpu
-      test_args: --device /gpu:0
+    - script: test
+    - script: remote-test
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
-        TF_VERSION: tensorflow-gpu
-        GPU_NUM: 0
+        TF_VERSION: tensorflow<2.3.0
     - script: test-coverage
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
@@ -216,13 +259,7 @@ travis_yml:
       test_args: --graph-mode
     - stage: advanced
       script: remote-docs
-      env:
-        TF_VERSION: tensorflow-gpu
-        GPU_NUM: 0
     - script: remote-examples
-      env:
-        TF_VERSION: tensorflow-gpu
-        GPU_NUM: 0
     - test_args: --unroll-simulation 5 --dtype float64 --simulator-only
     - test_args: --inference-only --simulator-only
   pypi_user: drasmuss
