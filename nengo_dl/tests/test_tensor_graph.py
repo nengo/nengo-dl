@@ -5,6 +5,7 @@ import logging
 import nengo
 from nengo.builder.operator import Reset
 from nengo.builder.signal import Signal
+from nengo.exceptions import BuildError
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -547,3 +548,13 @@ def test_conditional_update(Simulator, use_loop, caplog):
         pass
 
     assert "Number of state updates: 1" in caplog.text
+
+
+def test_unsupported_op_error():
+    class MyOp(dummies.Op):  # pylint: disable=abstract-method
+        pass
+
+    model = nengo.builder.Model()
+    model.add_op(MyOp())
+    with pytest.raises(BuildError, match="No registered builder"):
+        tensor_graph.TensorGraph(model, None, None, None, None, None, None)

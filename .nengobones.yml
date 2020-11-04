@@ -71,6 +71,8 @@ setup_cfg:
       tests/test_probe.py::test_multirun:
         simulation times may not line up exactly if unroll_simulation != 1, see
         tests/test_nengo_tests.py::test_multirun
+      tests/test_learning_rules.py::test_rls_*:
+        RLS learning rule not implemented
     allclose_tolerances:
       - tests/test_synapses.py::test_lowpass atol=5e-7
       - tests/test_synapses.py::test_triangle atol=5e-7

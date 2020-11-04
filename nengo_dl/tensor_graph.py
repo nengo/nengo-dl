@@ -110,6 +110,14 @@ class TensorGraph(tf.keras.layers.Layer):
             )
         ]
 
+        # check for unsupported operators
+        for op in operators:
+            if type(op) not in builder.Builder.builders:
+                raise BuildError(
+                    "No registered builder for operators of type %s; "
+                    "consider registering a custom builder" % type(op)
+                )
+
         # mark trainable signals
         self.mark_signals()
 
