@@ -86,7 +86,7 @@ jobs:
       - provider: pypi
         server: https://test.pypi.org/legacy/
         user: drasmuss
-        password: $PYPI_TOKEN
+        password: $PYPI_TEST_TOKEN
         distributions: "sdist "
         on:
           all_branches: true
