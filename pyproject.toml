@@ -10,3 +10,7 @@ exclude = '''
     '*/whitepaper2018_code.py'
 )
 '''
+
+[tool.isort]
+profile = "black"
+src_paths = ["nengo_dl"]
