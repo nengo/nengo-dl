@@ -2,9 +2,9 @@
 
 import nengo
 import numpy as np
-from packaging import version
 import pytest
 import tensorflow as tf
+from packaging import version
 
 from nengo_dl import (
     LeakyReLU,

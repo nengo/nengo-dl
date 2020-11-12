@@ -2,9 +2,9 @@
 Additions to the `neuron types included with Nengo <nengo.neurons.NeuronType>`.
 """
 
+import numpy as np
 from nengo.neurons import LIFRate, RectifiedLinear, SpikingRectifiedLinear
 from nengo.params import NumberParam
-import numpy as np
 
 
 class SoftLIFRate(LIFRate):

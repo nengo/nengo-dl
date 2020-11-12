@@ -2,22 +2,22 @@
 Build classes for basic Nengo operators.
 """
 
-from collections import defaultdict
 import logging
 import warnings
+from collections import defaultdict
 
+import numpy as np
+import tensorflow as tf
 from nengo.builder.operator import (
-    Reset,
     Copy,
-    ElementwiseInc,
     DotInc,
+    ElementwiseInc,
+    Reset,
     SimPyFunc,
     TimeUpdate,
 )
 from nengo.builder.transforms import SparseDotInc
 from nengo.transforms import SparseMatrix
-import numpy as np
-import tensorflow as tf
 from tensorflow.python.ops import gen_sparse_ops
 
 from nengo_dl import utils

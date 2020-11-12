@@ -4,9 +4,9 @@ import contextlib
 
 import nengo
 import numpy as np
-from packaging import version
 import pytest
 import tensorflow as tf
+from packaging import version
 from tensorflow.python.keras.layers import BatchNormalizationV1, BatchNormalizationV2
 
 from nengo_dl import compat, config, converter, utils

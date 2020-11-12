@@ -3,10 +3,11 @@ These functions are used to restructure the Nengo operator graph so that it
 can be simulated more efficiently when converted into a TensorFlow graph.
 """
 
-from collections import OrderedDict, defaultdict
 import logging
 import warnings
+from collections import OrderedDict, defaultdict
 
+import numpy as np
 from nengo.builder.operator import Copy, DotInc, ElementwiseInc, Reset, SparseDotInc
 from nengo.builder.processes import SimProcess
 from nengo.builder.transforms import ConvInc
@@ -14,7 +15,6 @@ from nengo.exceptions import BuildError, SignalError
 from nengo.transforms import SparseMatrix
 from nengo.utils.graphs import BidirectionalDAG, toposort
 from nengo.utils.simulator import operator_dependency_graph
-import numpy as np
 
 from nengo_dl import (
     builder,

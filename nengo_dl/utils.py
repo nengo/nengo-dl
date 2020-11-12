@@ -9,11 +9,10 @@ import sys
 import threading
 import time
 
-from nengo.exceptions import SimulationError
 import numpy as np
 import progressbar
 import tensorflow as tf
-
+from nengo.exceptions import SimulationError
 
 logger = logging.getLogger(__name__)
 

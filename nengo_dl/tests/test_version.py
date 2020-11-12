@@ -1,10 +1,10 @@
 # pylint: disable=missing-docstring
 
-from importlib import reload
 import sys
+from importlib import reload
 
-from nengo import version as nengo_version
 import pytest
+from nengo import version as nengo_version
 
 from nengo_dl import version
 

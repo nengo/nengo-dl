@@ -3,10 +3,12 @@ Manages the data and build processes associated with implementing a Nengo simula
 in TensorFlow.
 """
 
-from collections import OrderedDict, defaultdict
 import logging
 import warnings
+from collections import OrderedDict, defaultdict
 
+import numpy as np
+import tensorflow as tf
 from nengo import Connection, Process
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.operator import Reset, SimPyFunc, TimeUpdate
@@ -16,18 +18,16 @@ from nengo.exceptions import BuildError
 from nengo.neurons import Direct
 from nengo.synapses import Lowpass
 from nengo.transforms import SparseMatrix
-import numpy as np
-import tensorflow as tf
 from tensorflow.python.eager import context
 from tensorflow.python.training.tracking import base as trackable
 
 from nengo_dl import (
     builder,
-    config,
     compat,
+    config,
     graph_optimizer,
-    tensor_node,
     signals,
+    tensor_node,
     utils,
 )
 

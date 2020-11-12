@@ -8,9 +8,9 @@ import timeit
 
 import click
 import nengo
-from nengo.utils.filter_design import cont2discrete
 import numpy as np
 import tensorflow as tf
+from nengo.utils.filter_design import cont2discrete
 
 import nengo_dl
 
@@ -273,12 +273,12 @@ def spaun(dimensions):
 
     # pylint: disable=import-outside-toplevel
     from _spaun.configurator import cfg
-    from _spaun.vocabulator import vocab
     from _spaun.experimenter import experiment
+    from _spaun.modules.motor import mtr_data
     from _spaun.modules.stim import stim_data
     from _spaun.modules.vision import vis_data
-    from _spaun.modules.motor import mtr_data
     from _spaun.spaun_main import Spaun
+    from _spaun.vocabulator import vocab
 
     vocab.sp_dim = dimensions
     cfg.mtr_arm_type = None

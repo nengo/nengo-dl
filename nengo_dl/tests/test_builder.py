@@ -1,9 +1,9 @@
 # pylint: disable=missing-docstring
 
-from nengo.exceptions import BuildError
 import pytest
+from nengo.exceptions import BuildError
 
-from nengo_dl.builder import Builder, OpBuilder, NengoModel
+from nengo_dl.builder import Builder, NengoModel, OpBuilder
 from nengo_dl.tests import dummies
 from nengo_dl.utils import NullProgressBar
 

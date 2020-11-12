@@ -2,6 +2,8 @@
 Build classes for Nengo learning rule operators.
 """
 
+import numpy as np
+import tensorflow as tf
 from nengo.builder import Signal
 from nengo.builder.connection import slice_signal
 from nengo.builder.learning_rules import (
@@ -9,18 +11,16 @@ from nengo.builder.learning_rules import (
     SimOja,
     SimPES,
     SimVoja,
-    get_post_ens,
     build_or_passthrough,
+    get_post_ens,
 )
-from nengo.builder.operator import Reset, DotInc, Copy
+from nengo.builder.operator import Copy, DotInc, Reset
 from nengo.ensemble import Ensemble, Neurons
 from nengo.exceptions import BuildError
 from nengo.learning_rules import PES
-import numpy as np
-import tensorflow as tf
 
-from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
 from nengo_dl import compat
+from nengo_dl.builder import Builder, NengoBuilder, OpBuilder
 
 
 @Builder.register(SimBCM)

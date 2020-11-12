@@ -3,14 +3,14 @@
 import logging
 
 import nengo
-from nengo.builder.operator import Reset
-from nengo.builder.signal import Signal
-from nengo.exceptions import BuildError
 import numpy as np
 import pytest
 import tensorflow as tf
+from nengo.builder.operator import Reset
+from nengo.builder.signal import Signal
+from nengo.exceptions import BuildError
 
-from nengo_dl import tensor_graph, utils, graph_optimizer, config
+from nengo_dl import config, graph_optimizer, tensor_graph, utils
 from nengo_dl.tests import dummies
 
 

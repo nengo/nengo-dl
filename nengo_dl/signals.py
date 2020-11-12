@@ -2,14 +2,13 @@
 Represents and manages the internal simulation signals.
 """
 
-from collections import defaultdict, OrderedDict, Mapping
 import logging
+from collections import Mapping, OrderedDict, defaultdict
 
-from nengo.builder.signal import Signal
-from nengo.exceptions import BuildError
 import numpy as np
 import tensorflow as tf
-
+from nengo.builder.signal import Signal
+from nengo.exceptions import BuildError
 
 logger = logging.getLogger(__name__)
 

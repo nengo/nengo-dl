@@ -2,15 +2,15 @@
 Build classes for Nengo neuron operators.
 """
 
-from collections import OrderedDict
 import contextlib
 import logging
 import warnings
+from collections import OrderedDict
 
-from nengo.builder.neurons import SimNeurons
-from nengo.neurons import RectifiedLinear, SpikingRectifiedLinear, Sigmoid, LIF, LIFRate
 import numpy as np
 import tensorflow as tf
+from nengo.builder.neurons import SimNeurons
+from nengo.neurons import LIF, LIFRate, RectifiedLinear, Sigmoid, SpikingRectifiedLinear
 from tensorflow.python.framework import smart_cond
 
 from nengo_dl import compat, utils

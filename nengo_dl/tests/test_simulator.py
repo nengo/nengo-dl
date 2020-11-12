@@ -1,24 +1,24 @@
 # pylint: disable=missing-docstring
 
-from collections import OrderedDict
 import contextlib
 import logging
 import os
 import pickle
 import sys
+from collections import OrderedDict
 
 import nengo
-from nengo.dists import Uniform
-from nengo.exceptions import (
-    SimulationError,
-    SimulatorClosed,
-    ReadonlyError,
-    ValidationError,
-)
 import numpy as np
-from packaging import version
 import pytest
 import tensorflow as tf
+from nengo.dists import Uniform
+from nengo.exceptions import (
+    ReadonlyError,
+    SimulationError,
+    SimulatorClosed,
+    ValidationError,
+)
+from packaging import version
 from tensorflow.core.util import event_pb2
 from tensorflow.python.eager import context
 

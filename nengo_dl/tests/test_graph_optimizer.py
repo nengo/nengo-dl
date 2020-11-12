@@ -1,9 +1,8 @@
 # pylint: disable=missing-docstring
 
 import nengo
-from nengo.exceptions import BuildError
-from nengo.neurons import LIF, LIFRate, Izhikevich, AdaptiveLIF
-from nengo.synapses import Lowpass, Triangle, Alpha, LinearFilter
+import numpy as np
+import pytest
 from nengo.builder.learning_rules import SimBCM
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.operator import (
@@ -17,9 +16,10 @@ from nengo.builder.operator import (
 from nengo.builder.processes import SimProcess
 from nengo.builder.signal import Signal
 from nengo.builder.transforms import ConvInc
-import numpy as np
+from nengo.exceptions import BuildError
+from nengo.neurons import LIF, AdaptiveLIF, Izhikevich, LIFRate
+from nengo.synapses import Alpha, LinearFilter, Lowpass, Triangle
 from packaging import version
-import pytest
 
 from nengo_dl import compat, config, op_builders, transform_builders
 from nengo_dl.graph_optimizer import (

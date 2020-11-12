@@ -4,9 +4,9 @@ Build classes for Nengo transform operators.
 
 import warnings
 
-from nengo.builder.transforms import ConvInc
 import numpy as np
 import tensorflow as tf
+from nengo.builder.transforms import ConvInc
 
 from nengo_dl.builder import Builder, OpBuilder
 

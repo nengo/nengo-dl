@@ -3,12 +3,12 @@
 from functools import partial
 
 import nengo
-from nengo.exceptions import ValidationError, SimulationError
 import numpy as np
 import pytest
 import tensorflow as tf
+from nengo.exceptions import SimulationError, ValidationError
 
-from nengo_dl import TensorNode, Layer, configure_settings, tensor_layer
+from nengo_dl import Layer, TensorNode, configure_settings, tensor_layer
 
 
 def test_validation(Simulator):

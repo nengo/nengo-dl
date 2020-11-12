@@ -6,7 +6,7 @@ import nengo
 import numpy as np
 from packaging import version
 
-from nengo_dl import builder, tensor_graph, signals
+from nengo_dl import builder, signals, tensor_graph
 
 
 class Signal(nengo.builder.signal.Signal):

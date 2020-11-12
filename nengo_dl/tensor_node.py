@@ -9,18 +9,18 @@ details.
 import contextlib
 import warnings
 
-from nengo import Node, Connection, Ensemble, builder
+import numpy as np
+import tensorflow as tf
+from nengo import Connection, Ensemble, Node, builder
 from nengo.base import NengoObject
 from nengo.builder.operator import Reset
 from nengo.config import Config
-from nengo.exceptions import ValidationError, SimulationError
+from nengo.exceptions import SimulationError, ValidationError
 from nengo.neurons import NeuronType
-from nengo.params import Default, ShapeParam, Parameter, BoolParam
-import numpy as np
-import tensorflow as tf
+from nengo.params import BoolParam, Default, Parameter, ShapeParam
 from tensorflow.python.eager import context
 
-from nengo_dl.builder import Builder, OpBuilder, NengoBuilder
+from nengo_dl.builder import Builder, NengoBuilder, OpBuilder
 from nengo_dl.compat import default_transform, eager_enabled
 from nengo_dl.config import configure_settings
 

@@ -5,9 +5,9 @@ These distributions are usually used to initialize weight matrices, e.g.
 ``nengo.Connection(a.neurons, b.neurons, transform=nengo_dl.dists.Glorot())``.
 """
 
-from nengo.dists import Distribution
-from nengo.params import NumberParam, EnumParam
 import numpy as np
+from nengo.dists import Distribution
+from nengo.params import EnumParam, NumberParam
 
 
 class TruncatedNormal(Distribution):

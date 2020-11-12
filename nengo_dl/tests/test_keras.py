@@ -1,10 +1,10 @@
 # pylint: disable=missing-docstring
 
 import nengo
-from nengo.exceptions import BuildError, ValidationError
 import numpy as np
 import pytest
 import tensorflow as tf
+from nengo.exceptions import BuildError, ValidationError
 
 from nengo_dl import compat, config, dists
 from nengo_dl.tests import dummies

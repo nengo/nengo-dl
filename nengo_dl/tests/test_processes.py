@@ -1,13 +1,13 @@
 # pylint: disable=missing-docstring
 
 import nengo
+import numpy as np
+import pytest
 from nengo.builder.processes import SimProcess
-from nengo.synapses import Alpha, LinearFilter, Triangle, Lowpass
+from nengo.synapses import Alpha, LinearFilter, Lowpass, Triangle
 from nengo.tests.test_synapses import run_synapse
 from nengo.utils.filter_design import ss2tf
 from nengo.utils.testing import signals_allclose
-import numpy as np
-import pytest
 
 
 @pytest.mark.parametrize("Synapse", (Alpha, Triangle))

@@ -1,14 +1,14 @@
 # pylint: disable=missing-docstring
 
-from collections import defaultdict
 import sys
+from collections import defaultdict
 
-import pytest
 import nengo
 import numpy as np
+import pytest
 import tensorflow as tf
 
-from nengo_dl import benchmarks, SoftLIFRate
+from nengo_dl import SoftLIFRate, benchmarks
 
 
 @pytest.mark.parametrize(

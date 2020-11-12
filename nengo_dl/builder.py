@@ -4,15 +4,15 @@ builder objects that know how to translate those operators into a
 TensorFlow graph.
 """
 
-from collections import namedtuple
 import logging
 import warnings
+from collections import namedtuple
 
+import numpy as np
+import tensorflow as tf
 from nengo import builder
 from nengo.builder import signal
 from nengo.exceptions import BuildError
-import numpy as np
-import tensorflow as tf
 
 from nengo_dl import utils
 

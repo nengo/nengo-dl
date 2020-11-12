@@ -7,8 +7,8 @@ import warnings
 
 import nengo
 import numpy as np
-from packaging import version
 import tensorflow as tf
+from packaging import version
 from tensorflow.python.keras import engine
 from tensorflow.python.keras.layers import BatchNormalizationV1, BatchNormalizationV2
 
@@ -17,7 +17,6 @@ from nengo_dl.config import configure_settings
 from nengo_dl.neurons import LeakyReLU
 from nengo_dl.simulator import Simulator
 from nengo_dl.tensor_node import Layer, TensorNode
-
 
 logger = logging.getLogger(__name__)
 

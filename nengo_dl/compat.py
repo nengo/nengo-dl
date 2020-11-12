@@ -5,15 +5,14 @@ Utilities to ease cross-compatibility between different versions of upstream
 dependencies.
 """
 
-from collections import OrderedDict
 import inspect
+from collections import OrderedDict
 
 import nengo
+import tensorflow as tf
 from nengo._vendor.scipy.sparse import linalg_interface, linalg_onenormest
 from packaging import version
-import tensorflow as tf
 from tensorflow.python.eager import context
-
 
 # TensorFlow compatibility
 
@@ -245,7 +244,7 @@ def eager_enabled():
 
 
 try:
-    from keras_spiking import SpikingActivation, Lowpass, Alpha
+    from keras_spiking import Alpha, Lowpass, SpikingActivation
 except ImportError:
     SpikingActivation = object()
     Lowpass = object()

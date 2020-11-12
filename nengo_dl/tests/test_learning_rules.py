@@ -3,9 +3,9 @@
 from functools import partial
 
 import nengo
-from nengo.builder.learning_rules import SimVoja, SimOja, SimBCM
 import numpy as np
 import pytest
+from nengo.builder.learning_rules import SimBCM, SimOja, SimVoja
 
 from nengo_dl import configure_settings, graph_optimizer
 from nengo_dl.learning_rule_builders import SimPES

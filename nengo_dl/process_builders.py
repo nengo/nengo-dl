@@ -2,20 +2,19 @@
 Build classes for Nengo process operators.
 """
 
-from collections import OrderedDict
 import contextlib
 import logging
+from collections import OrderedDict
 
-from nengo.builder.processes import SimProcess
-from nengo.exceptions import SimulationError
-from nengo.synapses import Lowpass, LinearFilter
-from nengo.utils.filter_design import cont2discrete
 import numpy as np
 import tensorflow as tf
+from nengo.builder.processes import SimProcess
+from nengo.exceptions import SimulationError
+from nengo.synapses import LinearFilter, Lowpass
+from nengo.utils.filter_design import cont2discrete
 
 from nengo_dl import compat, utils
 from nengo_dl.builder import Builder, OpBuilder
-
 
 logger = logging.getLogger(__name__)
 

@@ -1,14 +1,14 @@
 # pylint: disable=missing-docstring
 
+import numpy as np
+import pytest
+import tensorflow as tf
 from nengo.builder.neurons import SimNeurons
 from nengo.builder.signal import Signal
 from nengo.exceptions import BuildError
 from nengo.neurons import LIF
-import numpy as np
-import pytest
-import tensorflow as tf
 
-from nengo_dl.signals import TensorSignal, SignalDict
+from nengo_dl.signals import SignalDict, TensorSignal
 
 
 def test_tensor_signal_basic():

@@ -7,41 +7,33 @@ a model.
 import collections
 import contextlib
 import copy
-from functools import partial
 import logging
 import textwrap
 import warnings
+from functools import partial
 
 import jinja2
-from nengo import (
-    Connection,
-    Direct,
-    Ensemble,
-    Network,
-    Node,
-    Probe,
-)
+import numpy as np
+import tensorflow as tf
+from nengo import Connection, Direct, Ensemble, Network, Node, Probe
 from nengo import rc as nengo_rc
 from nengo.builder.connection import BuiltConnection
 from nengo.builder.ensemble import BuiltEnsemble
 from nengo.ensemble import Neurons
 from nengo.exceptions import (
-    ReadonlyError,
-    SimulatorClosed,
     NengoWarning,
+    ReadonlyError,
     SimulationError,
+    SimulatorClosed,
     ValidationError,
 )
 from nengo.solvers import NoSolver
 from nengo.transforms import Convolution, Dense, Sparse, SparseMatrix
 from nengo.utils.magic import decorator
-import numpy as np
-import tensorflow as tf
 
 from nengo_dl import callbacks, compat, config, utils
 from nengo_dl.builder import NengoBuilder, NengoModel
 from nengo_dl.tensor_graph import TensorGraph
-
 
 logger = logging.getLogger(__name__)
 

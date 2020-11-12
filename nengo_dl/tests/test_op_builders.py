@@ -1,11 +1,11 @@
 # pylint: disable=missing-docstring
 
 import nengo
-from nengo import builder
-from nengo.builder import signal, operator
 import numpy as np
 import pytest
 import tensorflow as tf
+from nengo import builder
+from nengo.builder import operator, signal
 
 from nengo_dl.op_builders import sparse_matmul
 from nengo_dl.utils import tf_gpu_installed

@@ -1,11 +1,11 @@
 # pylint: disable=missing-docstring
 
 import nengo
-from nengo.builder.signal import Signal
-from nengo.builder.operator import ElementwiseInc, DotInc
 import numpy as np
 import pkg_resources
 import pytest
+from nengo.builder.operator import DotInc, ElementwiseInc
+from nengo.builder.signal import Signal
 
 import nengo_dl
 from nengo_dl.tests import dummies

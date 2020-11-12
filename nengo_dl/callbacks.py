@@ -15,8 +15,8 @@ The short answer is that these can be passed to, e.g., `.Simulator.fit` like
 import contextlib
 
 import nengo
-from nengo.exceptions import ValidationError
 import tensorflow as tf
+from nengo.exceptions import ValidationError
 from tensorflow.python.eager import context
 
 from nengo_dl import compat, utils

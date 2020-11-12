@@ -1,9 +1,9 @@
 # pylint: disable=missing-docstring
 
-from nengo import ensemble, Network, Ensemble, Connection, Probe
-from nengo.exceptions import ValidationError, ConfigError, NetworkContextError
 import numpy as np
 import pytest
+from nengo import Connection, Ensemble, Network, Probe, ensemble
+from nengo.exceptions import ConfigError, NetworkContextError, ValidationError
 
 from nengo_dl import config
 
