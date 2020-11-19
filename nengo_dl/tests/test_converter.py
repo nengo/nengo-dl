@@ -826,7 +826,7 @@ def test_swap_activations_key_never_used():
     version.parse(nengo.__version__) <= version.parse("3.0.0"),
     reason="Nengo 3.1 required to convert SpikingActivation layers",
 )
-def test_spiking_activation(Simulator, seed, rng):
+def test_spiking_activation(Simulator, seed, rng, pytestconfig):
     keras_spiking = pytest.importorskip("keras_spiking")
 
     inp_val = rng.uniform(0, 2, size=(1, 100, 10))
@@ -839,7 +839,12 @@ def test_spiking_activation(Simulator, seed, rng):
 
     # note: it will not match for batch_size > 1, because keras-spiking generates
     # a different initial state for each batch element, which is not possible in nengo
-    _test_convert(inp, x, inp_vals=[inp_val], temporal_model=True)
+    model = tf.keras.Model(inp, x)
+    conv = converter.Converter(model, temporal_model=True)
+    assert conv.verify(training=False, inputs=[inp_val])
+    if not pytestconfig.getoption("--graph-mode"):
+        # the keras-spiking gradient implementation doesn't work in graph mode
+        assert conv.verify(training=True, inputs=[inp_val])
 
     # check non-default dt
     inp = x = tf.keras.Input((None, 10))
@@ -859,24 +864,25 @@ def test_spiking_activation(Simulator, seed, rng):
     inp = x = tf.keras.Input((None, 10), batch_size=1)
     x = keras_spiking.SpikingActivation("relu", dt=1, seed=seed, stateful=True)(x)
     model = tf.keras.Model(inp, x)
-    # keras_out0 = model.predict(inp_val)
-    # keras_out1 = model.predict(inp_val)
 
     with pytest.warns(
         UserWarning, match="statefulness will be controlled by Simulator"
     ):
-        converter.Converter(model, inference_only=True, temporal_model=True)
+        conv = converter.Converter(model, inference_only=True, temporal_model=True)
 
-    # TODO: this fails due to a bug in tensorflow, see
-    #  https://github.com/tensorflow/tensorflow/issues/42193; try again once there is
-    #  a release containing the fix
-    # with Simulator(conv.net, dt=1) as sim:
-    #     nengo_out0 = sim.predict(inp_val, stateful=True)
-    #     nengo_out1 = sim.predict(inp_val, stateful=True)
-    #
-    # assert not np.allclose(keras_out0, keras_out1)
-    # assert np.allclose(keras_out0, nengo_out0[conv.outputs[x]])
-    # assert np.allclose(keras_out1, nengo_out1[conv.outputs[x]])
+    if version.parse(tf.__version__) >= version.parse("2.4.0rc0"):
+        # TensorFlow bug prevents this from working prior to 2.4, see
+        #  https://github.com/tensorflow/tensorflow/issues/42193
+        keras_out0 = model.predict(inp_val)
+        keras_out1 = model.predict(inp_val)
+
+        with Simulator(conv.net, dt=1) as sim:
+            nengo_out0 = sim.predict(inp_val, stateful=True)
+            nengo_out1 = sim.predict(inp_val, stateful=True)
+
+        assert not np.allclose(keras_out0, keras_out1)
+        assert np.allclose(keras_out0, nengo_out0[conv.outputs[x]])
+        assert np.allclose(keras_out1, nengo_out1[conv.outputs[x]])
 
     # error if wrapped activation is not supported
     inp = tf.keras.Input((None, 10))
