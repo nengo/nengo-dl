@@ -22,6 +22,7 @@ from tensorflow.python.ops import gen_sparse_ops
 
 from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
+from nengo_dl.compat import SimProbe
 
 logger = logging.getLogger(__name__)
 
@@ -562,3 +563,21 @@ class TimeUpdateBuilder(OpBuilder):
     def mergeable(x, y):
         # there should only ever be one TimeUpdate so this should never be called
         raise NotImplementedError
+
+
+@Builder.register(SimProbe)
+class SimProbeBuilder(OpBuilder):
+    """
+    Build a group of `~nengo.builder.probe.SimProbe` operators.
+    """
+
+    def build_step(self, signals):
+        # doesn't do anything (probe reading is handled directly in
+        # TensorGraph._build_inner_loop)
+        pass
+
+    @staticmethod
+    def mergeable(x, y):
+        # set mergeable=False because we don't want to force the read signals into
+        # a big block
+        return False

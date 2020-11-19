@@ -12,6 +12,7 @@ from nengo.builder.operator import (
     Reset,
     SimPyFunc,
     SparseDotInc,
+    TimeUpdate,
 )
 from nengo.builder.processes import SimProcess
 from nengo.builder.signal import Signal
@@ -1203,26 +1204,31 @@ def test_remove_reset_inc_functional(Simulator, seed):
 
         # reset+elementwiseinc (weights, in nengo<3.1)
         # reset+copy (to probe input, in nengo<3.1)
+        # simprobe
         p = nengo.Probe(node1)
 
     with Simulator(net) as sim:
-        extra_op = (
-            2 if version.parse(nengo.__version__) < version.parse("3.1.0.dev0") else 0
-        )
+        extra_op = 2 if version.parse(nengo.__version__) < version.parse("3.1.0") else 0
 
-        assert len(sim.tensor_graph.plan) == 7 + extra_op
+        assert len(sim.tensor_graph.plan) == 8 + extra_op
 
-        # check that we have all the resets we expect
+        # first op is timeupdate
+        assert isinstance(sim.tensor_graph.plan[0][0], TimeUpdate)
+
+        # second is all the resets
         resets = sim.tensor_graph.plan[1]
         assert isinstance(resets[0], Reset)
         assert len(resets) == 5 + extra_op
 
-        # check that all the ops are incs like we expect
-        incs = sim.tensor_graph.plan[2:]
+        # then all the incs
+        incs = sim.tensor_graph.plan[2:-1]
         for ops in incs:
             for op in ops:
                 assert len(op.incs) == 1
                 assert len(op.sets) == 0
+
+        # and finally the simprobe read
+        assert isinstance(sim.tensor_graph.plan[-1][0], compat.SimProbe)
 
         sim.run_steps(100)
 
@@ -1237,14 +1243,11 @@ def test_remove_reset_inc_functional(Simulator, seed):
 
     with Simulator(net) as sim_remove:
         # check that resets have been removed
-        assert len(sim_remove.tensor_graph.plan) == 6 + extra_op
-        assert (
-            len([x for x in sim_remove.tensor_graph.plan if isinstance(x[0], Reset)])
-            == 0
-        )
+        assert len(sim_remove.tensor_graph.plan) == 7 + extra_op
+        assert not any(isinstance(x[0], Reset) for x in sim_remove.tensor_graph.plan)
 
-        # check that all the ops are sets like we expect
-        incs = sim_remove.tensor_graph.plan[1:]
+        # check that all the incs are now sets like we expect
+        incs = sim_remove.tensor_graph.plan[1:-1]
         for ops in incs:
             for op in ops:
                 assert len(op.incs) == 0

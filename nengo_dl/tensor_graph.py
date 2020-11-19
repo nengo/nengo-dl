@@ -744,20 +744,6 @@ class TensorGraph(tf.keras.layers.Layer):
             Updated loop iteration variable.
         """
 
-        constant_probes = {}
-        for p in self.model.probes:
-            probe_sig = self.model.sig[p]["in"]
-            if probe_sig not in self.signals:
-                # if a probe signal isn't in sig_map, that means that it
-                # isn't involved in any simulator ops.  so we know its value
-                # never changes, and we'll just return a constant containing
-                # the initial value.
-                init_val = probe_sig.initial_value
-                if probe_sig.minibatched:
-                    init_val = np.tile(init_val[None, :], (self.minibatch_size, 1))
-
-                constant_probes[p] = tf.constant(init_val, dtype=self.dtype)
-
         for unroll_iter in range(self.unroll):
             logger.debug("BUILDING ITERATION %d", unroll_iter)
             with tf.name_scope("iteration_%d" % unroll_iter):
@@ -786,14 +772,9 @@ class TensorGraph(tf.keras.layers.Layer):
                     logger.debug("collecting probe tensors")
                     probe_tensors = []
                     for p in self.model.probes:
-                        if p in constant_probes:
-                            probe_tensors.append(constant_probes[p])
-                        else:
-                            probe_tensors.append(
-                                self.signals.gather(
-                                    self.signals[self.model.sig[p]["in"]]
-                                )
-                            )
+                        probe_tensors.append(
+                            self.signals.gather(self.signals[self.model.sig[p]["in"]])
+                        )
 
                     logger.debug("=" * 30)
                     logger.debug("build_step complete")
@@ -1018,10 +999,6 @@ class TensorGraph(tf.keras.layers.Layer):
         # signals are not trainable by default, and views take on the
         # properties of their bases
         all_sigs = [sig for op in self.model.operators for sig in op.all_signals]
-        # make sure all probe signals are marked (even if they aren't targeted
-        # by any ops), because we still have to read these signals and so we care
-        # about whether they are minibatched/trainable
-        all_sigs.extend(self.model.sig[probe]["in"] for probe in self.model.probes)
         for sig in all_sigs:
             if not hasattr(sig.base, "trainable"):
                 sig.base.trainable = None
@@ -1056,18 +1033,6 @@ class TensorGraph(tf.keras.layers.Layer):
             ]
         )
         curr_keys = {}
-
-        # special case: if nodes aren't read by any op then they won't be in
-        # sigs. normally this means that node can be safely ignored.
-        # but if there is a probe reading that node value, then we do
-        # want to include that signal in the model, because a user may be feeding
-        # in a live value for that node for which we want to get live probe values
-        node_probe_sigs = (
-            set(self.model.sig[p]["in"] for p in self.model.probes)
-            .intersection(self.model.sig[node]["out"] for node in self.invariant_inputs)
-            .difference(sigs)
-        )
-        sigs.extend(node_probe_sigs)
 
         sig_idxs = {s: i for i, s in enumerate(sigs)}
 
@@ -1192,6 +1157,7 @@ class TensorGraph(tf.keras.layers.Layer):
                 base_arrays[sig_type][key][0].append(initial_value)
                 base_arrays[sig_type][key][1].append(shape)
             else:
+                logger.debug("starting new base signal %s", key)
                 base_arrays[sig_type][key] = [
                     [initial_value],
                     [shape],
@@ -1212,7 +1178,6 @@ class TensorGraph(tf.keras.layers.Layer):
                 signal=sig,
             )
 
-            logger.debug("created base signal")
             logger.debug(sig)
             logger.debug(tensor_sig)
 
@@ -1224,14 +1189,6 @@ class TensorGraph(tf.keras.layers.Layer):
             for sig in op.all_signals
             if sig.is_view
         )
-        # add any probe signalviews. these won't be targeted by any ops, but we
-        # still want them in self.signals because we'll be manually reading them
-        probe_views = set(
-            self.model.sig[probe]["in"]
-            for probe in self.model.probes
-            if self.model.sig[probe]["in"].is_view
-        )
-        all_views |= probe_views
 
         for sig in all_views:
             if sig.size == sig.base.size:

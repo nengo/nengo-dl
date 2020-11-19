@@ -139,7 +139,7 @@ def test_neuron_gradients(Simulator, neuron_type, seed, rng):
             nengo.LIFRate,
             lambda **kwargs: nengo.PoissonSpiking(nengo.LIFRate(**kwargs)),
             marks=pytest.mark.skipif(
-                version.parse(nengo.__version__) < version.parse("3.1.0dev0"),
+                version.parse(nengo.__version__) < version.parse("3.1.0"),
                 reason="PoissonSpiking does not exist",
             ),
         ),
@@ -147,7 +147,7 @@ def test_neuron_gradients(Simulator, neuron_type, seed, rng):
             nengo.LIFRate,
             lambda **kwargs: nengo.RegularSpiking(nengo.LIFRate(), **kwargs),
             marks=pytest.mark.skipif(
-                version.parse(nengo.__version__) < version.parse("3.1.0dev0"),
+                version.parse(nengo.__version__) < version.parse("3.1.0"),
                 reason="RegularSpiking does not exist",
             ),
         ),
@@ -279,7 +279,7 @@ def test_leaky_relu(Simulator, Neurons):
 
 
 @pytest.mark.xfail(
-    version.parse(nengo.__version__) < version.parse("3.1.0.dev0"),
+    version.parse(nengo.__version__) < version.parse("3.1.0"),
     reason="RegularSpiking does not exist",
 )
 @pytest.mark.parametrize("inference_only", (True, False))
@@ -316,7 +316,7 @@ def test_regular_spiking(Simulator, inference_only, seed):
 
 
 @pytest.mark.skipif(
-    version.parse(nengo.__version__) < version.parse("3.1.0.dev0"),
+    version.parse(nengo.__version__) < version.parse("3.1.0"),
     reason="Stochastic/PoissonSpiking do not exist",
 )
 @pytest.mark.parametrize("inference_only", (True, False))

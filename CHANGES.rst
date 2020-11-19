@@ -18,7 +18,7 @@ Release history
    - Deprecated
    - Removed
 
-3.3.1 (unreleased)
+3.4.0 (unreleased)
 ------------------
 
 **Added**
@@ -27,6 +27,7 @@ Release history
   the Converter. (`#182`_)
 - Added support for ``tf.keras.layers.TimeDistributed`` in the Converter. (`#182`_)
 - Added support for TensorFlow 2.4. (`#185`_)
+- Added support for Nengo 3.1. (`#187`_)
 
 **Changed**
 
@@ -49,6 +50,7 @@ Release history
 .. _#181: https://github.com/nengo/nengo-dl/pull/181
 .. _#182: https://github.com/nengo/nengo-dl/pull/182
 .. _#185: https://github.com/nengo/nengo-dl/pull/185
+.. _#187: https://github.com/nengo/nengo-dl/pull/187
 
 3.3.0 (August 14, 2020)
 -----------------------

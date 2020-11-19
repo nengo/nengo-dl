@@ -830,7 +830,7 @@ def test_tensorboard(Simulator, tmpdir):
     with pytest.raises(ValidationError, match="Unknown summary object"):
         callbacks.NengoSummaries(log_dir=log_dir + "/nengo", sim=sim, objects=[a])
 
-    if version.parse(nengo.__version__) >= version.parse("3.1.0.dev0"):
+    if version.parse(nengo.__version__) >= version.parse("3.1.0"):
         with pytest.raises(ValidationError, match="does not have any weights"):
             callbacks.NengoSummaries(log_dir=log_dir + "/nengo", sim=sim, objects=[c0])
 

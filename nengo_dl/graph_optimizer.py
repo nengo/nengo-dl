@@ -398,6 +398,8 @@ def transitive_planner(op_list):
         op_builders.CopyBuilder,
         op_builders.ResetBuilder,
         tensor_node.SimTensorNodeBuilder,
+        op_builders.SimProbeBuilder,
+        op_builders.TimeUpdateBuilder,
     ]
 
     for builder_type in order:
@@ -448,33 +450,9 @@ def transitive_planner(op_list):
             for t in unique_trans.values():
                 t -= available
 
-        # trans_reverse = [None for _ in range(n_ele)]
-        # transitive_closure_recurse(dg.backward, ops, trans_reverse,
-        #                            builder_type, builder_types, cache)
-        # trans_reverse = {i: v for i, v in
-        #                  enumerate(trans_reverse[:len(op_list)]) if i in ops}
-        # group = None
-        # for op in toposort(trans, trans_reverse):
-        #     if group is None:
-        #         group = [op]
-        #         continue
-        #
-        #     if mergeable(op_list[op], (op_list[group[0]],)) and all(
-        #             x not in trans[op] for x in group):
-        #         group.append(op)
-        #     else:
-        #         dg.merge(group, n_ele)
-        #         merge_groups[n_ele] = group
-        #         n_ele += 1
-        #         group = [op]
-        #
-        # dg.merge(group, n_ele)
-        # merge_groups[n_ele] = group
-        # n_ele += 1
-
         del ops_by_type[builder_type]
 
-    assert len(ops_by_type) == 0
+    assert len(ops_by_type) == 0, "Builder type missing from `order`"
 
     # toposort the merged graph to come up with execution plan
     plan = toposort(dg.forward)

@@ -176,7 +176,7 @@ if version.parse(tf.__version__) < version.parse("2.3.0rc0"):
 # monkeypatch fix for https://github.com/nengo/nengo/pull/1587
 linalg_onenormest.aslinearoperator = linalg_interface.aslinearoperator
 
-if version.parse(nengo.__version__) < version.parse("3.1.0.dev0"):
+if version.parse(nengo.__version__) < version.parse("3.1.0"):
     PoissonSpiking = RegularSpiking = StochasticSpiking = Tanh = NoTransform = type(
         None
     )
@@ -207,8 +207,32 @@ if version.parse(nengo.__version__) < version.parse("3.1.0.dev0"):
             and conn.solver.weights
         )
 
+    class SimProbe(nengo.builder.Operator):
+        """Backport of Nengo 3.1.0 SimProbe."""
+
+        def __init__(self, signal, tag=None):
+            super().__init__(tag=tag)
+            self.sets = []
+            self.incs = []
+            self.reads = [signal]
+            self.updates = []
+
+        def make_step(self, signals, dt, rng):
+            """Not used in NengoDL."""
+            raise NotImplementedError
+
+    from nengo_dl.builder import NengoBuilder as _NengoBuilder
+
+    def build_probe(model, probe):
+        """Copy of the base probe builder that adds the SimProbe op."""
+        nengo.builder.probe.build_probe(model, probe)
+        model.add_op(SimProbe(model.sig[probe]["in"]))
+
+    _NengoBuilder.register(nengo.Probe)(build_probe)
+
 
 else:
+    from nengo.builder.probe import SimProbe
     from nengo.neurons import PoissonSpiking, RegularSpiking, StochasticSpiking, Tanh
     from nengo.transforms import NoTransform
 

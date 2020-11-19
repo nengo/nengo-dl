@@ -8,6 +8,7 @@ from nengo.builder.operator import DotInc, ElementwiseInc
 from nengo.builder.signal import Signal
 
 import nengo_dl
+from nengo_dl.compat import SimProbe
 from nengo_dl.tests import dummies
 
 
@@ -46,14 +47,20 @@ def test_args(Simulator):
 def test_signal_init_values(Simulator):
     """Tests that initial values are not overwritten."""
 
-    zero = Signal([0.0])
-    one = Signal([1.0])
-    five = Signal([5.0])
-    zeroarray = Signal([[0.0], [0.0], [0.0]])
-    array = Signal([1.0, 2.0, 3.0])
+    zero = Signal([0.0], name="zero")
+    one = Signal([1.0], name="one")
+    five = Signal([5.0], name="five")
+    zeroarray = Signal([[0.0], [0.0], [0.0]], name="zeroarray")
+    array = Signal([1.0, 2.0, 3.0], name="array")
 
     m = nengo.builder.Model(dt=0)
-    m.operators += [ElementwiseInc(zero, zero, five), DotInc(zeroarray, one, array)]
+    m.add_op(ElementwiseInc(zero, zero, five))
+    m.add_op(DotInc(zeroarray, one, array))
+    m.add_op(SimProbe(zero))
+    m.add_op(SimProbe(one))
+    m.add_op(SimProbe(five))
+    m.add_op(SimProbe(zeroarray))
+    m.add_op(SimProbe(array))
 
     probes = [
         dummies.Probe(zero, add_to_container=False),
