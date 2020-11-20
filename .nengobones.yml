@@ -178,10 +178,12 @@ ci_scripts:
     pip_install:
       - $TF_VERSION
       - $NUMPY_VERSION
+      - $NENGO_VERSION
   - template: docs
     pip_install:
       - $TF_VERSION
       - $NUMPY_VERSION
+      - $NENGO_VERSION
   - template: remote-script
     remote_script: test-performance
     output_name: remote-test
