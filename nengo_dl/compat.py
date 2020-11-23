@@ -5,8 +5,8 @@ Utilities to ease cross-compatibility between different versions of upstream
 dependencies.
 """
 
+import collections
 import inspect
-from collections import OrderedDict
 
 import nengo
 import tensorflow as tf
@@ -173,9 +173,6 @@ if version.parse(tf.__version__) < version.parse("2.3.0rc0"):
 
 # Nengo compatibility
 
-# monkeypatch fix for https://github.com/nengo/nengo/pull/1587
-linalg_onenormest.aslinearoperator = linalg_interface.aslinearoperator
-
 if version.parse(nengo.__version__) < version.parse("3.1.0"):
     PoissonSpiking = RegularSpiking = StochasticSpiking = Tanh = NoTransform = type(
         None
@@ -193,7 +190,7 @@ if version.parse(nengo.__version__) < version.parse("3.1.0"):
             3:
         ]
         assert len(names) == len(neuron_op.states)
-        return OrderedDict((n, s) for n, s in zip(names, neuron_op.states))
+        return collections.OrderedDict((n, s) for n, s in zip(names, neuron_op.states))
 
     def neuron_step(neuron_op, dt, J, output, state):  # pragma: no cover (runs in TF)
         """Call step_math instead of step."""
@@ -230,6 +227,8 @@ if version.parse(nengo.__version__) < version.parse("3.1.0"):
 
     _NengoBuilder.register(nengo.Probe)(build_probe)
 
+    # monkeypatch fix for https://github.com/nengo/nengo/pull/1587
+    linalg_onenormest.aslinearoperator = linalg_interface.aslinearoperator
 
 else:
     from nengo.builder.probe import SimProbe
@@ -253,6 +252,31 @@ else:
     def to_neurons(conn):
         """Equivalent to conn._to_neurons."""
         return conn._to_neurons
+
+
+if version.parse(nengo.__version__) <= version.parse("3.1.0"):
+
+    class FrozenOrderedSet(collections.abc.Set):
+        """Backport of `nengo.utils.stdlib.FrozenOrderedSet`."""
+
+        def __init__(self, data):
+            self.data = collections.OrderedDict((d, None) for d in data)
+
+        def __contains__(self, elem):
+            return elem in self.data
+
+        def __iter__(self):
+            return iter(self.data)
+
+        def __len__(self):
+            return len(self.data)
+
+        def __hash__(self):
+            return self._hash()
+
+
+else:
+    from nengo.utils.stdlib import FrozenOrderedSet
 
 
 def eager_enabled():

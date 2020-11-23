@@ -45,6 +45,7 @@ Release history
   `#1629 <https://github.com/nengo/nengo/pull/1629>`__). (`#173`_)
 - Fixed a bug when slicing multi-dimensional Signals (e.g. Ensemble encoders).
   (`#181`_)
+- Fixed a bug when loading weights saved in a different Python version. (`#187`_)
 
 .. _#173: https://github.com/nengo/nengo-dl/pull/173
 .. _#181: https://github.com/nengo/nengo-dl/pull/181

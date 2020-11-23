@@ -744,6 +744,29 @@ def test_order_signals_duplicate_read_blocks():
     assert not ordered(new_plan[2], sigs)
 
 
+def test_order_signals_by_size():
+    inputs = [
+        dummies.Signal(label="0"),
+        dummies.Signal(label="1"),
+        dummies.Signal(label="2", shape=(2,)),
+        dummies.Signal(label="3", shape=(3,)),
+    ]
+    plan = [
+        (
+            dummies.Op(reads=[inputs[0], inputs[0]]),
+            dummies.Op(reads=[inputs[1], inputs[2]]),
+            dummies.Op(reads=[inputs[2], inputs[3]]),
+        ),
+    ]
+
+    sigs, new_plan = order_signals(plan)
+
+    assert not ordered(new_plan[0], sigs, block=0)
+    assert ordered(new_plan[0], sigs, block=1)
+    assert contiguous(inputs[:3], sigs)
+    assert contiguous((inputs[0], inputs[2], inputs[3]), sigs)
+
+
 def test_noop_order_signals():
     inputs = [
         dummies.Signal(label="a"),

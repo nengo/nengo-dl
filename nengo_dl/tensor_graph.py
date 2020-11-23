@@ -1182,7 +1182,7 @@ class TensorGraph(tf.keras.layers.Layer):
             logger.debug(tensor_sig)
 
         # add any signal views to the sig_map
-        all_views = set(
+        all_views = compat.FrozenOrderedSet(
             sig
             for ops in self.plan
             for op in ops

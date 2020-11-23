@@ -18,6 +18,7 @@ from nengo.utils.simulator import operator_dependency_graph
 
 from nengo_dl import (
     builder,
+    compat,
     learning_rule_builders,
     neuron_builders,
     op_builders,
@@ -337,7 +338,8 @@ def tree_planner(op_list, max_depth=3):
             del successors_of[op]
 
     # convert indices back to operators
-    plan = [tuple(op_list[x] for x in g) for g in plan]
+    # note: we sort g so that group order is deterministic
+    plan = [tuple(op_list[x] for x in sorted(g)) for g in plan]
 
     logger.debug("TREE PLAN")
     logger.debug("\n%s" * len(plan), *plan)
@@ -599,24 +601,28 @@ def order_signals(plan, n_passes=10):
         # (note that we only care about bases, since those are the things we
         # are trying to order)
         for i in range(len(op_sigs[ops[0]])):
-            io_blocks[(ops, i)] = set(op_sigs[op][i].base for op in ops)
+            io_blocks[(ops, i)] = frozenset(op_sigs[op][i].base for op in ops)
 
     # get rid of duplicate io blocks
-    duplicates = [[y for y in io_blocks.values() if x == y] for x in io_blocks.values()]
-    sorted_blocks = [
-        (x, len(duplicates[i]))
-        for i, x in enumerate(io_blocks.values())
-        if duplicates[i][0] is x
-    ]
+    duplicates = OrderedDict()
+    for x in io_blocks.values():
+        if x in duplicates:
+            duplicates[x] += 1
+        else:
+            duplicates[x] = 1
 
     # sort by the size of the block (descending order)
     # note: we multiply by the number of duplicates, since blocks that
     # are accessed by multiple op groups will have a proportionally larger
     # impact on performance
-    sorted_blocks = sorted(
-        sorted_blocks, key=lambda b: np.sum([s.size for s in b[0]]) * b[1]
-    )
-    sorted_blocks = [sorted_blocks[i][0] for i in range(len(sorted_blocks) - 1, -1, -1)]
+    sorted_blocks = [
+        block
+        for block, _ in sorted(
+            duplicates.items(),
+            key=lambda b: sum(s.size for s in b[0]) * b[1],
+            reverse=True,
+        )
+    ]
 
     # figure out which io blocks each signal participates in
     signal_blocks = defaultdict(list)
@@ -1021,7 +1027,11 @@ def noop_order_signals(plan, **_):
     """A version of `.graph_optimizer.order_signals` that doesn't do any
     reordering, for debugging."""
 
-    all_signals = list({s.base for ops in plan for op in ops for s in op.all_signals})
+    all_signals = list(
+        compat.FrozenOrderedSet(
+            s.base for ops in plan for op in ops for s in op.all_signals
+        )
+    )
     return all_signals, plan
 
 

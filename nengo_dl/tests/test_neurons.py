@@ -181,7 +181,7 @@ def test_spiking_swap(Simulator, rate, spiking, seed):
                         tf.zeros((1, sim.unroll * 2, 1)),
                         tf.constant([[sim.unroll * 2]]),
                     ]
-                    outputs = sim.tensor_graph(inputs, training=True)
+                    outputs = sim.tensor_graph(inputs, training=True)[:-1]
                 g = tape.gradient(outputs, sim.tensor_graph.trainable_variables)
 
                 grads.append(g)

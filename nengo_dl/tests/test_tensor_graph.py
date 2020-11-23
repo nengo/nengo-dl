@@ -1,6 +1,10 @@
 # pylint: disable=missing-docstring
 
 import logging
+import os
+import subprocess
+import sys
+import textwrap
 
 import nengo
 import numpy as np
@@ -9,6 +13,7 @@ import tensorflow as tf
 from nengo.builder.operator import Reset
 from nengo.builder.signal import Signal
 from nengo.exceptions import BuildError
+from packaging import version
 
 from nengo_dl import config, graph_optimizer, tensor_graph, utils
 from nengo_dl.tests import dummies
@@ -558,3 +563,95 @@ def test_unsupported_op_error():
     model.add_op(MyOp())
     with pytest.raises(BuildError, match="No registered builder"):
         tensor_graph.TensorGraph(model, None, None, None, None, None, None)
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 6, 0), reason="order is not deterministic in python<3.6"
+)
+@pytest.mark.parametrize(
+    "planner", ("greedy_planner", "tree_planner", "transitive_planner", "noop_planner")
+)
+def test_deterministic_order(planner, tmp_path):
+    if version.parse(nengo.__version__) <= version.parse("3.1.0") and planner in (
+        "greedy_planner",
+        "noop_planner",
+    ):
+        # we could make this work by backporting the deterministic toposort from
+        # nengo>3.1.0, but that doesn't seem worth it to get these two niche planners
+        # to be deterministic
+        pytest.skip("'%s' is nondeterministic in Nengo<=3.1.0" % planner)
+
+    code = textwrap.dedent(
+        """
+    import nengo
+    import nengo_dl
+
+    with nengo.Network(seed=0) as net:
+        nengo_dl.configure_settings(planner=nengo_dl.graph_optimizer.%s)
+
+        # use ensemblearrays as they create a lot of parallel ops
+        ens0 = nengo.networks.EnsembleArray(1, 10)
+        ens1 = nengo.networks.EnsembleArray(1, 10)
+        nengo.Connection(ens0.output, ens1.input)
+        nengo.Probe(ens1.output)
+
+    model = nengo_dl.builder.NengoModel(
+        dt=0.001,
+        builder=nengo_dl.builder.NengoBuilder(),
+        fail_fast=False,
+    )
+    model.build(net)
+
+    tensor_graph = nengo_dl.tensor_graph.TensorGraph(
+        model=model,
+        dt=0.001,
+        unroll_simulation=1,
+        minibatch_size=1,
+        device=None,
+        progress=nengo_dl.utils.NullProgressBar(),
+        seed=0,
+    )
+
+    plan = tensor_graph.plan
+    sigs = tensor_graph.signals.sig_map
+
+    for ops in plan:
+        print(len(ops))
+        for op in ops:
+            print(type(op))
+            for s in op.all_signals:
+                print(s._name)
+                print(s.shape)
+                print(s.initial_value)
+
+    for s in sigs:
+        print(s._name)
+        print(s.shape)
+        print(s.initial_value)
+    """
+        % planner
+    )
+    tmp_path = tmp_path / "test.py"
+    tmp_path.write_text(code, encoding="utf-8")
+
+    env = os.environ.copy()
+
+    env["PYTHONHASHSEED"] = "0"
+    output0 = subprocess.run(
+        [sys.executable, str(tmp_path)],
+        stdout=subprocess.PIPE,
+        env=env,
+        encoding="utf-8",
+        check=True,
+    )
+
+    env["PYTHONHASHSEED"] = "1"
+    output1 = subprocess.run(
+        [sys.executable, str(tmp_path)],
+        stdout=subprocess.PIPE,
+        env=env,
+        encoding="utf-8",
+        check=True,
+    )
+
+    assert output0.stdout == output1.stdout
