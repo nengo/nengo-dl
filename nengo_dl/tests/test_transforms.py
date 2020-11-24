@@ -60,8 +60,9 @@ def test_merge_conv(Simulator, channels_last, seed, pytestconfig):
     # note: this also assures us that we are testing on the GPU in native
     # channels_first when possible
     recwarns = [w for w in recwarns if "channels_last=False" in str(w.message)]
+    device = pytestconfig.getoption("--device")
     if channels_last or (
-        tf_gpu_installed and pytestconfig.getoption("--device") != "/cpu:0"
+        tf_gpu_installed and (device is None or "gpu" in device.lower())
     ):
         assert len(recwarns) == 0
     else:

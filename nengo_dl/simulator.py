@@ -466,7 +466,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
         else:
             logger.info(
                 "Running on %s",
-                "CPU/GPU" if device is None else ("CPU" if "cpu" in device else "GPU"),
+                "CPU/GPU"
+                if device is None
+                else ("CPU" if "cpu" in device.lower() else "GPU"),
             )
 
         self.progress_bar = progress_bar

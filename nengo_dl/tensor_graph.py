@@ -470,7 +470,8 @@ class TensorGraph(tf.keras.layers.Layer):
         build_config = builder.BuildConfig(
             inference_only=self.inference_only,
             lif_smoothing=config.get_setting(self.model, "lif_smoothing"),
-            cpu_only=self.device == "/cpu:0" or not utils.tf_gpu_installed,
+            cpu_only=(self.device is not None and "cpu" in self.device.lower())
+            or not utils.tf_gpu_installed,
             rng=np.random.RandomState(self.seed),
             training=(
                 tf.keras.backend.learning_phase() if training is None else training
