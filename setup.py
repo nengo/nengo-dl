@@ -29,8 +29,9 @@ def read(*filenames, **kwargs):
 root = os.path.dirname(os.path.realpath(__file__))
 version = runpy.run_path(os.path.join(root, "nengo_dl", "version.py"))["version"]
 
-import pkg_resources
 import sys
+
+import pkg_resources
 
 # determine which tensorflow package to require
 if "bdist_wheel" in sys.argv:

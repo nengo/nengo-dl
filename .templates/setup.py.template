@@ -1,8 +1,9 @@
 {% extends "templates/setup.py.template" %}
 
 {% block install_req %}
-import pkg_resources
 import sys
+
+import pkg_resources
 
 # determine which tensorflow package to require
 if "bdist_wheel" in sys.argv:
