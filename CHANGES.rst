@@ -21,6 +21,10 @@ Release history
 3.4.0 (unreleased)
 ------------------
 
+*Compatible with Nengo 3.0.0 - 3.1.0*
+
+*Compatible with TensorFlow 2.2.0 - 2.4.0*
+
 **Added**
 
 - Added support for `KerasSpiking <https://www.nengo.ai/keras-spiking/>`_ layers in
@@ -55,6 +59,10 @@ Release history
 
 3.3.0 (August 14, 2020)
 -----------------------
+
+*Compatible with Nengo 3.0.0*
+
+*Compatible with TensorFlow 2.2.0 - 2.3.0*
 
 **Added**
 
@@ -130,6 +138,10 @@ Release history
 
 3.2.0 (April 2, 2020)
 ---------------------
+
+*Compatible with Nengo 3.0.0*
+
+*Compatible with TensorFlow 2.0.0 - 2.2.0*
 
 **Added**
 
@@ -219,6 +231,10 @@ Release history
 3.1.0 (March 4, 2020)
 ---------------------
 
+*Compatible with Nengo 3.0.0*
+
+*Compatible with TensorFlow 2.0.0 - 2.1.0*
+
 **Added**
 
 - Added ``inference_only=True`` option to the Converter, which will allow some
@@ -263,6 +279,10 @@ Release history
 
 3.0.0 (December 17, 2019)
 -------------------------
+
+*Compatible with Nengo 3.0.0*
+
+*Compatible with TensorFlow 2.0.0*
 
 There are a lot of **breaking changes** in NengoDL 3.0. See the `migration guide
 <https://www.nengo.ai/nengo-dl/migration-guide.html#nengodl-2-to-3>`_ for all the
@@ -446,12 +466,20 @@ details.
 2.2.2 (November 20, 2019)
 -------------------------
 
+*Compatible with Nengo 2.8.0 - 3.0.0*
+
+*Compatible with TensorFlow 1.4.0 - 2.0.0*
+
 **Fixed**
 
 - Compatibility with Nengo 3.0 release
 
 2.2.1 (October 2, 2019)
 -----------------------
+
+*Compatible with Nengo 2.8.0*
+
+*Compatible with TensorFlow 1.4.0 - 2.0.0*
 
 **Changed**
 
@@ -467,6 +495,10 @@ details.
 
 2.2.0 (July 24, 2019)
 ---------------------
+
+*Compatible with Nengo 2.8.0*
+
+*Compatible with TensorFlow 1.4.0 - 2.0.0*
 
 **Added**
 
