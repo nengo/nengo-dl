@@ -2121,7 +2121,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         return super().__getattribute__(name)
 
 
-class SimulationData(collections.Mapping):
+class SimulationData(collections.abc.Mapping):
     """
     Data structure used to access simulation data from the model.
 

@@ -3,7 +3,8 @@ Represents and manages the internal simulation signals.
 """
 
 import logging
-from collections import Mapping, defaultdict
+from collections import defaultdict
+from collections.abc import Mapping
 
 import numpy as np
 import tensorflow as tf
