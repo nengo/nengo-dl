@@ -2,13 +2,9 @@
   :target: https://pypi.org/project/nengo-dl
   :alt: Latest PyPI version
 
-.. image:: https://img.shields.io/travis/nengo/nengo-dl/master.svg
-  :target: https://travis-ci.org/nengo/nengo-dl
-  :alt: Travis-CI build status
-
-.. image:: https://ci.appveyor.com/api/projects/status/github/nengo/nengo-dl?branch=master&svg=true
-  :target: https://ci.appveyor.com/project/nengo/nengo-dl
-  :alt: AppVeyor build status
+.. image:: https://img.shields.io/pypi/pyversions/nengo-dl.svg
+  :target: https://pypi.org/project/nengo-dl
+  :alt: Python versions
 
 .. image:: https://img.shields.io/codecov/c/github/nengo/nengo-dl/master.svg
   :target: https://codecov.io/gh/nengo/nengo-dl
