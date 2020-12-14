@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 from nengo.exceptions import BuildError, ValidationError
+from packaging import version
 
 from nengo_dl import compat, config, dists
 from nengo_dl.tests import dummies
@@ -316,12 +317,17 @@ def test_fit(Simulator, seed):
 
 
 @pytest.mark.training
-def test_learning_phase(Simulator):
-    with nengo.Network() as net:
-        inp = nengo.Node([0])
-        ens = nengo.Ensemble(
-            1, 1, gain=[0], bias=[1], neuron_type=nengo.SpikingRectifiedLinear()
+def test_learning_phase(Simulator, seed):
+    if version.parse(nengo.__version__) < version.parse("3.1.0"):
+        neuron_type = nengo.SpikingRectifiedLinear()
+    else:
+        neuron_type = nengo.SpikingRectifiedLinear(
+            initial_state={"voltage": nengo.dists.Choice([0])}
         )
+
+    with nengo.Network(seed=seed) as net:
+        inp = nengo.Node([0])
+        ens = nengo.Ensemble(1, 1, gain=[0], bias=[1], neuron_type=neuron_type)
         nengo.Connection(inp, ens, synapse=None)
         p = nengo.Probe(ens.neurons)
 

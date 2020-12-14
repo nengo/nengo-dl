@@ -38,8 +38,8 @@ is included in this package as of version 2.1.0.
 
 In order to use TensorFlow with GPU support you will need to install the appropriate
 Nvidia drivers and CUDA/cuDNN. The precise steps for accomplishing this will depend
-on your system. On Linux the correct Nvidia drivers (as of TensorFlow 2.2.0) can be
-installed via ``sudo apt install nvidia-driver-440``, and on Windows simply using the
+on your system. On Linux the correct Nvidia drivers (as of TensorFlow 2.4.0) can be
+installed via ``sudo apt install nvidia-driver-450``, and on Windows simply using the
 most up-to-date drivers should work.  For CUDA/cuDNN we recommend using
 `conda <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`_ to
 simplify the process. ``conda install tensorflow-gpu`` will install TensorFlow as
