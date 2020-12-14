@@ -206,10 +206,10 @@ def test_lmu(Simulator, native_nengo, pytestconfig):
             False,
             64,
             True,
-            1.05,
-            1.2,
+            1.0,
+            1.15,
         ),
-        (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, True, 2.3, 2.6),
+        (benchmarks.cconv(128, 64, nengo.LIF()), False, 64, True, 2.25, 2.55),
         (
             benchmarks.integrator(128, 32, nengo.RectifiedLinear()),
             True,
@@ -242,10 +242,10 @@ def test_performance(net, train, minibatch_size, eager, min, max):
     # performance is based on Azure NC6 VM
     # CPU: Intel Xeon E5-2690 v3 @ 2.60Ghz
     # GPU: Nvidia Tesla K80
-    # Python version: 3.6.10
-    # TensorFlow GPU version: 2.3.0
+    # Python version: 3.7.1
+    # TensorFlow GPU version: 2.2.1
     # Nengo version: 3.1.0
-    # NengoDL version: 3.3.0
+    # NengoDL version: 3.4.1
 
     if not eager:
         tf.compat.v1.disable_eager_execution()
