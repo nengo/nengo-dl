@@ -14,7 +14,7 @@ environment:
     - MODE: test # default build
     - NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
       TF_VERSION: tensorflow --pre
-      PYTHON_VERSION: C:\Python38-x64
+      PYTHON_VERSION: C:\Python39-x64
     - NENGO_VERSION: nengo[tests]==3.0.0
       TF_VERSION: tensorflow==2.2.0
       NUMPY_VERSION: numpy==1.16.0

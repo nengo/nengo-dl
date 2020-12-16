@@ -25,12 +25,17 @@ Release history
 
 *Compatible with TensorFlow 2.2.0 - 2.4.0*
 
+**Added**
+
+- Added official support for Python 3.9. (`#195`_)
+
 **Removed**
 
 - Dropped support for Python 3.5 (which reached its end of life in September 2020).
   (`#184`_)
 
 .. _#184: https://github.com/nengo/nengo-dl/pull/184
+.. _#195: https://github.com/nengo/nengo-dl/pull/195
 
 3.4.0 (November 26, 2020)
 -------------------------
