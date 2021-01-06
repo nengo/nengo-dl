@@ -199,7 +199,7 @@ ci_scripts:
       NENGO_VERSION: $NENGO_VERSION
       SCIPY_VERSION: $SCIPY_VERSION
     remote_setup:
-      - conda install -y -c nvidia cudatoolkit=10.1 cudnn=7.6
+      - conda install -y -c nvidia cudatoolkit=11.0 cudnn=8.0
   - template: remote-script
     remote_script: docs
     output_name: remote-docs
@@ -244,7 +244,7 @@ travis_yml:
     - script: remote-test
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
-        TF_VERSION: tensorflow<2.3.0
+        TF_VERSION: tensorflow>=2.4.0
     - script: test-coverage
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
