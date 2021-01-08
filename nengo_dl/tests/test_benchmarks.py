@@ -1,5 +1,6 @@
 # pylint: disable=missing-docstring
 
+import logging
 import sys
 from collections import defaultdict
 
@@ -261,5 +262,9 @@ def test_performance(net, train, minibatch_size, eager, min, max):
         do_profile=False,
         reps=15,
     )
+
+    logger = logging.getLogger("test_performance")
+    logger.info(f"Execution time: {time}")
+
     assert time > min
     assert time < max

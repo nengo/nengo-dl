@@ -173,7 +173,7 @@ ci_scripts:
       - git+https://github.com/drasmuss/spaun2.0.git
     nengo_tests: true
     pre_commands:
-      - pytest $TEST_ARGS nengo_dl/tests/test_benchmarks.py::test_performance --performance -v --durations 20 --color=yes
+      - pytest $TEST_ARGS nengo_dl/tests/test_benchmarks.py::test_performance --performance -v --durations 20 --color=yes --log-cli-level=info
   - template: examples
     pip_install:
       - $TF_VERSION
