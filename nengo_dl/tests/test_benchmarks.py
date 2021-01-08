@@ -238,7 +238,7 @@ def test_lmu(Simulator, native_nengo, pytestconfig):
         (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, False, 1.05, 1.25),
     ],
 )
-def test_performance(net, train, minibatch_size, eager, min, max):
+def test_performance(net, train, minibatch_size, eager, min, max, capsys):
     # performance is based on Azure NC6 VM
     # CPU: Intel Xeon E5-2690 v3 @ 2.60Ghz
     # GPU: Nvidia Tesla K80
@@ -261,5 +261,9 @@ def test_performance(net, train, minibatch_size, eager, min, max):
         do_profile=False,
         reps=15,
     )
+
+    with capsys.disabled():
+        print(f"\nExecution time: {time}")
+
     assert time > min
     assert time < max
