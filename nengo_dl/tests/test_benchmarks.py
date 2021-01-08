@@ -238,7 +238,7 @@ def test_lmu(Simulator, native_nengo, pytestconfig):
         (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, False, 1.05, 1.25),
     ],
 )
-def test_performance(net, train, minibatch_size, eager, min, max):
+def test_performance(net, train, minibatch_size, eager, min, max, capsys):
     # performance is based on Azure NC6 VM
     # CPU: Intel Xeon E5-2690 v3 @ 2.60Ghz
     # GPU: Nvidia Tesla K80
@@ -251,7 +251,7 @@ def test_performance(net, train, minibatch_size, eager, min, max):
         tf.compat.v1.disable_eager_execution()
         tf.compat.v1.disable_control_flow_v2()
 
-    time = benchmarks.run_profile(
+    times = benchmarks.run_profile(
         net,
         minibatch_size=minibatch_size,
         train=train,
@@ -261,5 +261,14 @@ def test_performance(net, train, minibatch_size, eager, min, max):
         do_profile=False,
         reps=15,
     )
+
+    with capsys.disabled():
+        print(
+            f"\nExecution times ({len(times)}): "
+            f"{times.min():.3f} (min), {times.max():.3f} (max), "
+            f"{times.mean():.3f} (mean), {times.std():.3f} (std)"
+        )
+
+    time = times.min()
     assert time > min
     assert time < max

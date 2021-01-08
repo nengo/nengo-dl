@@ -619,23 +619,21 @@ def run_profile(
     do_profile : bool
         Whether or not to run profiling
     reps : int
-        Repeat the run this many times (only profile data from the last
-        run will be kept).
+        Repeat the run this many times. The execution time from each run is returned,
+        but only profile data from the last run will be kept (if ``do_profile``).
     dtype : str
         Simulation dtype (e.g. "float32")
 
     Returns
     -------
-    exec_time : float
-        Time (in seconds) taken to run the benchmark, taking the minimum over
-        ``reps``.
+    exec_times : ndarray of float
+        Time (in seconds) taken to run the benchmark for each repetition.
 
     Notes
     -----
     kwargs will be passed on to `.Simulator`
     """
 
-    exec_time = 1e10
     n_batches = 1
 
     with net:
@@ -660,6 +658,7 @@ def run_profile(
         else:
             x = None
 
+        exec_times = []
         if train:
             y = {
                 net.p: np.random.randn(
@@ -679,7 +678,7 @@ def run_profile(
                     tf.profiler.experimental.start("profile")
                 start = timeit.default_timer()
                 sim.fit(x, y, epochs=1, n_steps=n_steps)
-                exec_time = min(timeit.default_timer() - start, exec_time)
+                exec_times.append(timeit.default_timer() - start)
                 if do_profile:
                     tf.profiler.experimental.stop()
 
@@ -694,15 +693,16 @@ def run_profile(
                     tf.profiler.experimental.start("profile")
                 start = timeit.default_timer()
                 sim.predict(x, n_steps=n_steps)
-                exec_time = min(timeit.default_timer() - start, exec_time)
+                exec_times.append(timeit.default_timer() - start)
                 if do_profile:
                     tf.profiler.experimental.stop()
 
-    exec_time /= n_batches
+    exec_times = np.array(exec_times)
+    exec_times /= n_batches
 
-    print("Execution time:", exec_time)
+    print(f"Execution time (min over {reps} reps): {exec_times.min()}")
 
-    return exec_time
+    return exec_times
 
 
 @click.group(chain=True)
@@ -785,7 +785,7 @@ def profile(obj, train, n_steps, batch_size, device, unroll, time_only):
     if "net" not in obj:
         raise ValueError("Must call `build` before `profile`")
 
-    obj["time"] = run_profile(
+    exec_times = run_profile(
         obj["net"],
         do_profile=not time_only,
         train=train,
@@ -794,6 +794,7 @@ def profile(obj, train, n_steps, batch_size, device, unroll, time_only):
         device=device,
         unroll_simulation=unroll,
     )
+    obj["time"] = exec_times.item()
 
 
 if __name__ == "__main__":
