@@ -61,7 +61,10 @@ restored by calling
     tf.compat.v1.disable_eager_execution()
     tf.compat.v1.disable_control_flow_v2()
 
-at the top of your script.
+at the top of your script. As of TensorFlow 2.3, we have also found at least one model
+(training a recurrent network) for which this pre-2.0 implementation is slower.
+Therefore, those looking for optimial performence with the pre-2.0 implementation
+may consider using TensorFlow < 2.3 (e.g. 2.2).
 
 Training a spiking deep network
 -------------------------------
