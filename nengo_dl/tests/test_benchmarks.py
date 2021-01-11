@@ -235,7 +235,7 @@ def test_lmu(Simulator, native_nengo, pytestconfig):
             0.7,
         ),
         (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, True, 1.25, 1.45),
-        (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, False, 1.05, 1.25),
+        (benchmarks.lmu(1000, 1, native_nengo=True), True, 100, False, 1.15, 1.35),
     ],
 )
 def test_performance(net, train, minibatch_size, eager, min, max, capsys):
