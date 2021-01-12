@@ -251,7 +251,7 @@ def test_performance(net, train, minibatch_size, eager, min, max, capsys):
         tf.compat.v1.disable_eager_execution()
         tf.compat.v1.disable_control_flow_v2()
 
-    time = benchmarks.run_profile(
+    times = benchmarks.run_profile(
         net,
         minibatch_size=minibatch_size,
         train=train,
@@ -259,11 +259,16 @@ def test_performance(net, train, minibatch_size, eager, min, max, capsys):
         unroll_simulation=25,
         progress_bar=False,
         do_profile=False,
-        reps=15,
+        reps=2,
     )
 
     with capsys.disabled():
-        print(f"\nExecution time: {time}")
+        print(
+            f"\nExecution times ({len(times)}): "
+            f"{times.min():.3f} (min), {times.max():.3f} (max), "
+            f"{times.mean():.3f} (mean), {times.std():.3f} (std)"
+        )
 
+    time = times.min()
     assert time > min
     assert time < max
