@@ -259,7 +259,7 @@ def test_performance(net, train, minibatch_size, eager, min, max, capsys):
         unroll_simulation=25,
         progress_bar=False,
         do_profile=False,
-        reps=2,
+        reps=15,
     )
 
     with capsys.disabled():
