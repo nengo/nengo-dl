@@ -162,12 +162,22 @@ class TFNeuronBuilder(OpBuilder):
         }
 
     def step(self, J, dt, **state):
-        """Implements the logic for a single inference step."""
+        """
+        Implements the logic for a single inference step.
+
+        If the neuron has no states, returns only the neuron output. Otherwise, returns
+        a tuple where the first element is the neuron output, and subsequent elements
+        correspond to each of the neuron's states. The order of the states must be the
+        same as the order they appear in the neuron type's ``state`` dictionary.
+        """
         raise NotImplementedError("Subclasses must implement")
 
     def training_step(self, J, dt, **state):
         """
         Implements the logic for a single training step.
+
+        Returns only the neuron output. Therefore, the ``training_step`` cannot affect
+        any neuron states; they will all be held constant during training.
 
         Note: subclasses only need to implement this if ``spiking=True``. It is used
         to specify an alternate (differentiable) implementation of the neuron model
@@ -178,7 +188,16 @@ class TFNeuronBuilder(OpBuilder):
         J = signals.gather(self.J_data)
         state = {s: signals.gather(d) for s, d in self.state_data.items()}
 
-        step_output = tf.nest.flatten(self.step(J, signals.dt, **state))
+        step_output = self.step(J, signals.dt, **state)
+        if isinstance(step_output, tuple) and len(step_output) != 1 + len(state):
+            raise ValueError(
+                f"`{type(self).__name__}.step` must return a tuple with the neuron "
+                f"output followed by tensors with each updated state (one tensor per "
+                f"state). `{type(self).__name__}` has {len(state)} states, but only "
+                f"received output for {len(step_output) - 1} states."
+            )
+
+        step_output = tf.nest.flatten(step_output)
 
         if not self.spiking or self.config.inference_only:
             out = step_output

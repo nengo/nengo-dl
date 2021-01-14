@@ -25,12 +25,18 @@ Release history
 
 *Compatible with TensorFlow 2.2.0 - 2.4.0*
 
+**Fixed**
+
+- A more informative error message will be raised if a custom neuron build function
+  returns the wrong number of values. (`#199`_)
+
 **Removed**
 
 - Dropped support for Python 3.5 (which reached its end of life in September 2020).
   (`#184`_)
 
 .. _#184: https://github.com/nengo/nengo-dl/pull/184
+.. _#199: https://github.com/nengo/nengo-dl/pull/199
 
 3.4.0 (November 26, 2020)
 -------------------------

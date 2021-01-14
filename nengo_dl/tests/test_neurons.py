@@ -353,3 +353,25 @@ def test_random_spiking(Simulator, inference_only, seed):
         sim.data[p0][0], np.mean(sim.data[p1], axis=0), atol=1, rtol=2e-1
     )
     assert np.allclose(sim.data[p0], np.mean(sim.data[p2], axis=0), atol=1, rtol=1e-1)
+
+
+def test_bad_step_return_error(Simulator, monkeypatch):
+    class CustomNeuron(nengo.LIF):
+        pass
+
+    class CustomNeuronBuilder(neuron_builders.TFNeuronBuilder):
+        def step(self, J, dt, voltage, refractory_time):
+            return J, voltage
+
+    monkeypatch.setitem(
+        neuron_builders.SimNeuronsBuilder.TF_NEURON_IMPL,
+        CustomNeuron,
+        CustomNeuronBuilder,
+    )
+
+    with nengo.Network(seed=0) as net:
+        nengo.Ensemble(10, 1, neuron_type=CustomNeuron())
+
+    with pytest.raises(ValueError, match="must return a tuple with the neuron output"):
+        with Simulator(net):
+            pass
