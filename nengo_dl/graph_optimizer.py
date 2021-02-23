@@ -695,8 +695,8 @@ def order_signals(plan, n_passes=10):
         logger.debug(sig_idxs)
 
         if all(
-            [x == y for ops in plan for x, y in zip(new_plan[ops], prev_plan[ops])]
-        ) and all([sig_idxs[s] == prev_sig_idxs[s] for s in all_signals]):
+            x == y for ops in plan for x, y in zip(new_plan[ops], prev_plan[ops])
+        ) and all(sig_idxs[s] == prev_sig_idxs[s] for s in all_signals):
             # if the plan didn't change and the signals didn't change, then
             # there is no point in continuing (they're not going to change
             # in the future)
