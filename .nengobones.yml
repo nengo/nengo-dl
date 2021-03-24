@@ -188,7 +188,7 @@ ci_scripts:
     remote_script: test-performance
     output_name: remote-test
     host: azure
-    travis_var_key: fcdbeb54a1c4
+    travis_var_key: 2895d60e3414
     coverage: true
     azure_name: nengo-dl
     azure_group: nengo-ci
@@ -204,7 +204,7 @@ ci_scripts:
     remote_script: docs
     output_name: remote-docs
     host: azure-docs
-    travis_var_key: fcdbeb54a1c4
+    travis_var_key: 2895d60e3414
     azure_name: nengo-dl-docs
     azure_group: nengo-ci
     remote_vars:
@@ -218,7 +218,7 @@ ci_scripts:
     remote_script: examples
     output_name: remote-examples
     host: azure-examples
-    travis_var_key: fcdbeb54a1c4
+    travis_var_key: 2895d60e3414
     azure_name: nengo-dl-examples
     azure_group: nengo-ci
     remote_vars:
