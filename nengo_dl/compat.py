@@ -170,6 +170,19 @@ if version.parse(tf.__version__) < version.parse("2.3.0rc0"):
 
     network.Network._conform_to_reference_input = _conform_to_reference_input
 
+if version.parse(tf.__version__) < version.parse("2.5.0rc0"):
+
+    def sub_layers(layer):
+        """Get layers contained in ``layer``."""
+        return layer._layers
+
+
+else:
+
+    def sub_layers(layer):
+        """Get layers contained in ``layer``."""
+        return layer._self_tracked_trackables
+
 
 # Nengo compatibility
 

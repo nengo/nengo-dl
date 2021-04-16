@@ -329,7 +329,7 @@ class TensorGraph(tf.keras.layers.Layer):
 
             layer.built = False
 
-            for sub in layer._layers:
+            for sub in compat.sub_layers(layer):
                 if isinstance(sub, tf.keras.layers.Layer):
                     unbuild(sub)
 
@@ -343,7 +343,7 @@ class TensorGraph(tf.keras.layers.Layer):
         weight_gets = []
         weight_sets = []
         for op in layer_ops:
-            if op.func in self._layers:
+            if op.func in compat.sub_layers(self):
                 # already built this layer
                 continue
 
@@ -378,7 +378,7 @@ class TensorGraph(tf.keras.layers.Layer):
                 weight_sets.extend(op.func.weights)
 
             # add op func to _layers so that any weights are collected
-            self._layers.append(op.func)
+            compat.sub_layers(self).append(op.func)
 
         if len(weight_gets) > 0:
             # do all the weight getting/setting in one go, for efficiency reasons
