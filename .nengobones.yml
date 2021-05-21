@@ -199,7 +199,7 @@ ci_scripts:
       NENGO_VERSION: $NENGO_VERSION
       SCIPY_VERSION: $SCIPY_VERSION
     remote_setup:
-      - conda install -y -c nvidia cudatoolkit=10.1 cudnn=7.6
+      - conda install -y -c conda-forge cudatoolkit=10.1 cudnn=7.6
   - template: remote-script
     remote_script: docs
     output_name: remote-docs
@@ -213,7 +213,7 @@ ci_scripts:
       NENGO_VERSION: $NENGO_VERSION
       SCIPY_VERSION: $SCIPY_VERSION
     remote_setup:
-      - conda install -y -c nvidia cudatoolkit=11.0 cudnn=8.0
+      - conda install -y -c conda-forge cudatoolkit=11.2 cudnn=8.1
   - template: remote-script
     remote_script: examples
     output_name: remote-examples
@@ -227,7 +227,7 @@ ci_scripts:
       NENGO_VERSION: $NENGO_VERSION
       SCIPY_VERSION: $SCIPY_VERSION
     remote_setup:
-      - conda install -y -c nvidia cudatoolkit=11.0 cudnn=8.0
+      - conda install -y -c conda-forge cudatoolkit=11.2 cudnn=8.1
   - template: deploy
 
 travis_yml:
