@@ -328,3 +328,9 @@ pyproject_toml:
 pre_commit_config_yaml:
   exclude:
     - "'*/whitepaper2018_code.py'"
+
+version_py:
+  major: 3
+  minor: 4
+  patch: 1
+  release: false

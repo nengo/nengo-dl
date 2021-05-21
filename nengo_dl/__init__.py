@@ -1,9 +1,9 @@
 # pylint: disable=wrong-import-order,wrong-import-position,missing-docstring,ungrouped-imports
 # isort: skip_file
 
-__copyright__ = "2015-2021, Applied Brain Research"
 __license__ = "Free for non-commercial use; see LICENSE.rst"
 from nengo_dl.version import version as __version__
+from nengo_dl.version import copyright as __copyright__
 
 # filter out "INFO" level log messages
 import os
