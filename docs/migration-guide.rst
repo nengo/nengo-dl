@@ -287,10 +287,10 @@ TensorNode changes
 
         class MyLayer:
             def pre_build(self, shape_in, shape_out):
-                self.w = tf.Variable(tf.ones((1,)))
+                self.w = tf.Variable(tf.ones((1, 1)))
 
             def __call__(self, t):
-                return t * self.weights
+                return t * self.w
 
         with nengo.Network():
             tensor_node = nengo_dl.TensorNode(MyLayer())
@@ -302,11 +302,11 @@ TensorNode changes
         class MyLayer(tf.keras.layers.Layer):
             def build(self, input_shapes):
                 self.w = self.add_weight(
-                    shape=(1,), initializer=tf.initializers.ones(),
+                    shape=(1, 1), initializer=tf.initializers.ones(),
                 )
 
             def call(self, inputs):
-                return inputs * self.weights
+                return inputs * self.w
 
         with nengo.Network():
             tensor_node = nengo_dl.TensorNode(MyLayer())
