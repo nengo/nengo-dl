@@ -183,6 +183,29 @@ else:
         """Get layers contained in ``layer``."""
         return layer._self_tracked_trackables
 
+    # monkeypatch to fix bug when using TF2.5 with sphinx's doctest extension
+    from tensorflow.python.autograph.impl.api import StackTraceMapper
+
+    old_source_map = StackTraceMapper.get_effective_source_map
+
+    def get_effective_source_map(self):
+        """
+        Sometimes the source file is unknown (e.g. when running code through Sphinx's
+        doctest builder). This causes TensorFlow to crash (as of TF 2.5). So we convert
+        any Nones to the string "unknown".
+        """
+
+        effective_source_map = old_source_map(self)
+
+        # convert Nones to "unknown"
+        effective_source_map = {
+            key: tuple("unknown" if x is None else x for x in val)
+            for key, val in effective_source_map.items()
+        }
+        return effective_source_map
+
+    StackTraceMapper.get_effective_source_map = get_effective_source_map
+
 
 # Nengo compatibility
 
