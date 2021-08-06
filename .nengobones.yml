@@ -159,8 +159,7 @@ ci_scripts:
       - $NENGO_VERSION
       - $SCIPY_VERSION
       - git+https://github.com/drasmuss/spaun2.0.git
-      # TODO: swap to pypi release after 0.2
-      - git+https://github.com/nengo/keras-spiking
+      - keras-spiking
     nengo_tests: true
   - template: test
     output_name: test-performance
