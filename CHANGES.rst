@@ -23,7 +23,13 @@ Release history
 
 *Compatible with Nengo 3.0.0 - 3.2.0*
 
-*Compatible with TensorFlow 2.2.0 - 2.5.0*
+*Compatible with TensorFlow 2.2.0 - 2.6.0*
+
+**Added**
+
+- Added support for TensorFlow 2.6.0. (`#216`_)
+
+.. _#216: https://github.com/nengo/nengo-dl/pull/216
 
 3.4.1 (May 28, 2021)
 --------------------

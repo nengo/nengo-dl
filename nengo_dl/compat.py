@@ -146,9 +146,20 @@ if version.parse(tf.__version__) < version.parse("2.3.0rc0"):
         nodes_in_progress.remove(node)
         nodes_in_decreasing_depth.append(node)
 
-
+    from tensorflow.keras import Model as Functional
+    from tensorflow.python.keras.layers import (
+        BatchNormalizationV1,
+        BatchNormalizationV2,
+    )
+elif version.parse(tf.__version__) < version.parse("2.6.0rc0"):  # pragma: no cover
+    from tensorflow.python.keras.engine.functional import Functional, _build_map
+    from tensorflow.python.keras.layers import (
+        BatchNormalizationV1,
+        BatchNormalizationV2,
+    )
 else:
-    from tensorflow.python.keras.engine.functional import _build_map
+    from keras.engine.functional import Functional, _build_map
+    from keras.layers import BatchNormalizationV1, BatchNormalizationV2
 
 
 if version.parse(tf.__version__) < version.parse("2.3.0rc0"):

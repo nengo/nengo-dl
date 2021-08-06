@@ -9,8 +9,6 @@ import nengo
 import numpy as np
 import tensorflow as tf
 from packaging import version
-from tensorflow.python.keras import engine
-from tensorflow.python.keras.layers import BatchNormalizationV1, BatchNormalizationV2
 
 from nengo_dl import compat
 from nengo_dl.config import configure_settings
@@ -831,11 +829,7 @@ class LayerConverter:
         raise NotImplementedError("Subclasses must implement convert")
 
 
-@Converter.register(
-    tf.keras.Model
-    if version.parse(tf.__version__) < version.parse("2.3.0rc0")
-    else engine.functional.Functional
-)
+@Converter.register(compat.Functional)
 class ConvertModel(LayerConverter):
     """Convert ``tf.keras.Model`` to Nengo objects."""
 
@@ -1149,8 +1143,8 @@ class ConvertAvgPool3D(ConvertAvgPool):
         return super().convert(node_id, dimensions=3)
 
 
-@Converter.register(BatchNormalizationV1)
-@Converter.register(BatchNormalizationV2)
+@Converter.register(compat.BatchNormalizationV1)
+@Converter.register(compat.BatchNormalizationV2)
 class ConvertBatchNormalization(LayerConverter):
     """Convert ``tf.keras.layers.BatchNormalization`` to Nengo objects."""
 

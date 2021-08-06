@@ -7,7 +7,6 @@ import numpy as np
 import pytest
 import tensorflow as tf
 from packaging import version
-from tensorflow.python.keras.layers import BatchNormalizationV1, BatchNormalizationV2
 
 from nengo_dl import compat, config, converter, utils
 
@@ -291,7 +290,9 @@ def test_densenet(Simulator, seed):
 
     keras_params = 0
     for layer in model.layers:
-        if not isinstance(layer, (BatchNormalizationV1, BatchNormalizationV2)):
+        if not isinstance(
+            layer, (compat.BatchNormalizationV1, compat.BatchNormalizationV2)
+        ):
             for w in layer._trainable_weights:
                 keras_params += np.prod(w.shape)
 
