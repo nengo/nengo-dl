@@ -749,15 +749,14 @@ class TensorGraph(tf.keras.layers.Layer):
             logger.debug("BUILDING ITERATION %d", unroll_iter)
             with tf.name_scope(f"iteration_{unroll_iter}"):
                 # fill in invariant input data
-                for n in self.node_inputs:
-                    if self.model.sig[n]["out"] in self.signals:
+                for node, vals in self.node_inputs.items():
+                    if self.model.sig[node]["out"] in self.signals:
                         # if the out signal doesn't exist then that means that
                         # the node output isn't actually used anywhere, so we can
                         # ignore it
-
                         self.signals.scatter(
-                            self.signals[self.model.sig[n]["out"]],
-                            self.node_inputs[n][:, loop_i],
+                            self.signals[self.model.sig[node]["out"]],
+                            vals[:, loop_i],
                         )
 
                 # build the operators for a single step

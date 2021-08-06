@@ -74,16 +74,16 @@ class TensorFuncParam(Parameter):
     def __init__(self, name, readonly=False):
         super().__init__(name, optional=False, readonly=readonly)
 
-    def coerce(self, node, func):
+    def coerce(self, instance, value):
         """
         Performs validation on the function passed to TensorNode, and sets
         ``shape_out`` if necessary.
 
         Parameters
         ----------
-        node : `.TensorNode`
+        instance : `.TensorNode`
             The node whose ``tensor_func`` parameter is being set.
-        func : callable
+        value : callable
             The function being assigned to the TensorNode.
 
         Returns
@@ -92,25 +92,25 @@ class TensorFuncParam(Parameter):
             The function after validation is applied.
         """
 
-        output = super().coerce(node, func)
+        output = super().coerce(instance, value)
 
-        if not callable(func):
+        if not callable(value):
             raise ValidationError(
                 "TensorNode output must be a function or Keras Layer",
                 attr=self.name,
-                obj=node,
+                obj=instance,
             )
 
-        if node.shape_out is None:
-            if isinstance(func, tf.keras.layers.Layer):
+        if instance.shape_out is None:
+            if isinstance(value, tf.keras.layers.Layer):
                 # we can use Keras' static shape inference to get the
                 # output shape, which avoids having to build/call the layer
-                if node.pass_time:
+                if instance.pass_time:
                     input_spec = [tf.TensorSpec(())]
                 else:
                     input_spec = []
-                if node.shape_in is not None:
-                    input_spec += [tf.TensorSpec((1,) + node.shape_in)]
+                if instance.shape_in is not None:
+                    input_spec += [tf.TensorSpec((1,) + instance.shape_in)]
 
                 if len(input_spec) == 1:
                     input_spec = input_spec[0]
@@ -119,7 +119,7 @@ class TensorFuncParam(Parameter):
 
                 try:
                     with ctx:
-                        result = func.compute_output_signature(input_spec)
+                        result = value.compute_output_signature(input_spec)
                 except Exception as e:
                     raise ValidationError(
                         "Attempting to automatically determine TensorNode output shape "
@@ -127,19 +127,19 @@ class TensorFuncParam(Parameter):
                         "If you would like to avoid this step, try manually setting "
                         "`TensorNode(..., shape_out=x)`.",
                         attr=self.name,
-                        obj=node,
+                        obj=instance,
                     ) from e
 
             else:
-                if node.pass_time:
+                if instance.pass_time:
                     args = (tf.constant(0.0),)
                 else:
                     args = ()
-                if node.shape_in is not None:
-                    args += (tf.zeros((1,) + node.shape_in),)
+                if instance.shape_in is not None:
+                    args += (tf.zeros((1,) + instance.shape_in),)
 
                 try:
-                    result = func(*args)
+                    result = value(*args)
                 except Exception as e:
                     raise ValidationError(
                         "Attempting to automatically determine TensorNode output "
@@ -147,12 +147,12 @@ class TensorFuncParam(Parameter):
                         "you would like to avoid this step, try manually setting "
                         "`TensorNode(..., shape_out=x)`.",
                         attr=self.name,
-                        obj=node,
+                        obj=instance,
                     ) from e
 
             validate_output(result)
 
-            node.shape_out = result.shape[1:]
+            instance.shape_out = result.shape[1:]
 
         return output
 
