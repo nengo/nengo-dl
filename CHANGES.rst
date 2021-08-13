@@ -18,6 +18,10 @@ Release history
    - Deprecated
    - Removed
 
+3.4.3 (unreleased)
+------------------
+
+
 3.4.2 (August 12, 2021)
 -----------------------
 
