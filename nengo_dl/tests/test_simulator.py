@@ -224,7 +224,7 @@ def test_train_recurrent(Simulator, truncation, use_loop, seed):
 
         p = nengo.Probe(out)
 
-    kwargs = dict(unroll_simulation=truncation or n_steps) if use_loop else dict()
+    kwargs = dict(unroll_simulation=truncation or n_steps) if use_loop else {}
 
     with Simulator(net, minibatch_size=minibatch_size, seed=seed, **kwargs) as sim:
         x = np.outer(np.linspace(0, 1, batch_size), np.ones(n_steps))[:, :, None]

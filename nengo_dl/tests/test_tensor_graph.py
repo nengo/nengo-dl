@@ -439,7 +439,7 @@ def test_get_tensor(Simulator, use_loop):
         # (checks that the indices reloading works properly)
         nengo.Probe(c, "weights")
 
-    kwargs = dict() if use_loop else dict(unroll_simulation=10)
+    kwargs = {} if use_loop else dict(unroll_simulation=10)
     with Simulator(net, **kwargs) as sim:
         tensor = sim.tensor_graph.get_tensor(sim.model.sig[c]["weights"])
 

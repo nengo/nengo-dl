@@ -1622,13 +1622,13 @@ class Simulator:  # pylint: disable=too-many-public-methods
             else tf.compat.v1.keras.backend.get_session().as_default
         )
 
-        grads = dict()
+        grads = {}
         for output in outputs:
             with ctx():
                 analytic, numeric = tf.test.compute_gradient(
                     partial(arg_func, output=output), inputs
                 )
-            grads[output] = dict()
+            grads[output] = {}
             grads[output]["analytic"] = analytic
             grads[output]["numeric"] = numeric
 

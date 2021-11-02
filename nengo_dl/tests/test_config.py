@@ -55,7 +55,7 @@ def test_keep_history(Simulator, use_loop, seed):
         a = Ensemble(30, 1)
         p = Probe(a.neurons, synapse=0.1)
 
-    kwargs = dict() if use_loop else dict(unroll_simulation=10)
+    kwargs = {} if use_loop else dict(unroll_simulation=10)
     with Simulator(net, **kwargs) as sim:
         sim.run_steps(10)
 

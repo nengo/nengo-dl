@@ -893,7 +893,7 @@ def sort_ops_by_signals(sorted_io, sigs, sig_idxs, new_plan, blocks, op_sigs):
         # the order of the views within each signal
         sorted_ops = sorted(
             ops,
-            key=lambda op, io_block=io_block: (
+            key=lambda op, io_block=io_block, sig_idxs=sig_idxs: (
                 sig_idxs[op_sigs[op][io_block].base],
                 op_sigs[op][io_block].elemoffset,
             ),
