@@ -90,10 +90,15 @@ def test_predict(Simulator, seed):
         # generator input
         output = sim.predict(
             (
-                [
-                    a_vals[i * sim.minibatch_size : (i + 1) * sim.minibatch_size],
-                    np.ones((sim.minibatch_size, 1), dtype=np.int32) * n_steps,
-                ]
+                # generator produces tuples ((x0, x1),); the size-one tuple indicates
+                # that the two things we are passing are inputs
+                # (not, e.g., inputs+targets)
+                (
+                    (
+                        a_vals[i * sim.minibatch_size : (i + 1) * sim.minibatch_size],
+                        np.ones((sim.minibatch_size, 1), dtype=np.int32) * n_steps,
+                    ),
+                )
                 for i in range(n_batches)
             ),
             steps=n_batches,

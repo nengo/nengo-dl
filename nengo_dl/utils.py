@@ -333,3 +333,18 @@ class NullProgressBar(progressbar.NullBar):  # pylint: disable=too-many-ancestor
         """
         Noop for incrementing the progress bar.
         """
+
+
+def numpy_function(func, inp, Tout, name=None):
+    """
+    A version of ``tf.numpy_function`` that copies its inputs.
+
+    This is so that any in-place operations inside the numpy function can't modify
+    the data underlying the input Tensors.
+    """
+    # we use the roll to force a copy
+    inp = tf.nest.pack_sequence_as(
+        inp,
+        [tf.roll(x, 0, 0) if x.shape.ndims > 0 else x for x in tf.nest.flatten(inp)],
+    )
+    return tf.numpy_function(func, inp, Tout, name=name)

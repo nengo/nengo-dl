@@ -1,6 +1,7 @@
 # pylint: disable=missing-docstring
 
 import numpy as np
+import pytest
 import tensorflow as tf
 
 from nengo_dl import utils
@@ -69,3 +70,20 @@ def test_gpu_check():
     gpus_available = tf.config.list_physical_devices("GPU")
 
     assert utils.tf_gpu_installed == (len(gpus_available) > 0)
+
+
+@pytest.mark.parametrize("shape", ((10,), ()))
+def test_numpy_inplace(shape):
+    def inc(a):
+        a += a
+        return a
+
+    @tf.function
+    def do_inc(inp):
+        return utils.numpy_function(inc, [inp], ["float32"])
+
+    with tf.device("/cpu:0"):
+        x = tf.ones(shape)
+        do_inc(x)
+
+    assert np.allclose(tf.keras.backend.get_value(x), 1), x

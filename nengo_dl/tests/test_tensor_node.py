@@ -57,31 +57,32 @@ def test_validation(Simulator):
     # None output
     with nengo.Network() as net:
         TensorNode(lambda t: None, shape_out=(2,))
-    with pytest.raises(ValidationError, match="must return a Tensor"):
+    # in TF>=2.7 the ValidationError gets caught and reraised as a RuntimeError by TF
+    with pytest.raises((RuntimeError, ValidationError), match="must return a Tensor"):
         Simulator(net)
 
     # wrong number of dimensions
     with nengo.Network() as net:
         TensorNode(lambda t: tf.zeros((1, 2, 2)), shape_out=(2,))
-    with pytest.raises(ValidationError, match="should have size"):
+    with pytest.raises((RuntimeError, ValidationError), match="should have size"):
         Simulator(net)
 
     # wrong minibatch size
     with nengo.Network() as net:
         TensorNode(lambda t: tf.zeros((3, 2)), shape_out=(2,))
-    with pytest.raises(ValidationError, match="should have batch size"):
+    with pytest.raises((RuntimeError, ValidationError), match="should have batch size"):
         Simulator(net, minibatch_size=2)
 
     # wrong output d
     with nengo.Network() as net:
         TensorNode(lambda t: tf.zeros((3, 2)), shape_out=(3,))
-    with pytest.raises(ValidationError, match="should have size"):
+    with pytest.raises((RuntimeError, ValidationError), match="should have size"):
         Simulator(net, minibatch_size=3)
 
     # wrong dtype
     with nengo.Network() as net:
         TensorNode(lambda t: tf.zeros((3, 2), dtype=tf.int32), shape_out=(2,))
-    with pytest.raises(ValidationError, match="should have dtype"):
+    with pytest.raises((RuntimeError, ValidationError), match="should have dtype"):
         Simulator(net, minibatch_size=3)
 
     # make sure that correct output _does_ pass

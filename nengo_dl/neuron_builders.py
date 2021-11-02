@@ -109,7 +109,7 @@ class GenericNeuronBuilder(OpBuilder):
             control_deps = tf.control_dependencies(self.prev_result)
 
         with control_deps:
-            ret = tf.numpy_function(
+            ret = utils.numpy_function(
                 self.neuron_step,
                 [signals.dt, J] + states,
                 [self.output_data.dtype] + states_dtype,

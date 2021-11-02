@@ -199,6 +199,7 @@ ci_scripts:
       SCIPY_VERSION: $SCIPY_VERSION
     remote_setup:
       - conda install -y -c conda-forge cudatoolkit=10.1 cudnn=7.6
+      - export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$CONDA_PREFIX/lib
   - template: remote-script
     remote_script: docs
     output_name: remote-docs
@@ -212,7 +213,8 @@ ci_scripts:
       NENGO_VERSION: $NENGO_VERSION
       SCIPY_VERSION: $SCIPY_VERSION
     remote_setup:
-      - conda install -y -c conda-forge cudatoolkit=11.2 cudnn=8.1
+      - conda install -y -c conda-forge cudatoolkit=11.3 cudnn=8.2
+      - export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$CONDA_PREFIX/lib
   - template: remote-script
     remote_script: examples
     output_name: remote-examples
@@ -226,7 +228,8 @@ ci_scripts:
       NENGO_VERSION: $NENGO_VERSION
       SCIPY_VERSION: $SCIPY_VERSION
     remote_setup:
-      - conda install -y -c conda-forge cudatoolkit=11.2 cudnn=8.1
+      - conda install -y -c conda-forge cudatoolkit=11.3 cudnn=8.2
+      - export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$CONDA_PREFIX/lib
   - template: deploy
 
 travis_yml:

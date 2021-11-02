@@ -103,7 +103,7 @@ class GenericProcessBuilder(OpBuilder):
             control_deps = tf.control_dependencies(self.prev_result)
 
         with control_deps:
-            result = tf.numpy_function(
+            result = utils.numpy_function(
                 self.merged_func,
                 time + input + state,
                 [self.output_data.dtype] + [s.dtype for s in self.state_data],

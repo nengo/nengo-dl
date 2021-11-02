@@ -438,7 +438,7 @@ class SimPyFuncBuilder(OpBuilder):
         time = [] if self.time_data is None else signals.gather(self.time_data)
         inputs = [] if self.input_data is None else signals.gather(self.input_data)
 
-        node_outputs = tf.numpy_function(
+        node_outputs = utils.numpy_function(
             self.merged_func,
             [time, inputs],
             self.output_dtype,
