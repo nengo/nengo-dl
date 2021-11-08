@@ -18,8 +18,8 @@ Release history
    - Deprecated
    - Removed
 
-3.4.3 (unreleased)
-------------------
+3.4.3 (November 9, 2021)
+------------------------
 
 *Compatible with Nengo 3.0.0 - 3.1.0*
 
