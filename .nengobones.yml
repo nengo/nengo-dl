@@ -285,7 +285,7 @@ codecov_yml:
 setup_py:
   include_package_data: True
   optional_req:
-    - keras-spiking>=0.2.0
+    - keras-spiking>=0.3.0
   docs_req:
     - click>=6.7  # needed for sphinx-click
     - jupyter>=1.0.0

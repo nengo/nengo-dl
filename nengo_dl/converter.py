@@ -1738,7 +1738,7 @@ class ConvertLowpassAlpha(ConvertKerasSpiking):
 
         output = self.add_nengo_obj(node_id)
 
-        tau = np.ravel(tf.keras.backend.get_value(self.layer.layer.cell.tau_var))[0]
+        tau = np.ravel(tf.keras.backend.get_value(self.layer.layer.cell.tau))[0]
 
         synapse = (
             nengo.Lowpass(tau)
@@ -1769,7 +1769,7 @@ class ConvertLowpassAlpha(ConvertKerasSpiking):
             )
             return False, msg
 
-        tau = tf.keras.backend.get_value(layer.layer.cell.tau_var)
+        tau = tf.keras.backend.get_value(layer.layer.cell.tau)
         if not np.allclose(tau, np.ravel(tau)[0]):
             msg = (
                 f"Cannot convert a {type(layer).__name__} layer to native Nengo "

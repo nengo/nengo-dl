@@ -29,7 +29,12 @@ Release history
 
 - Added support for TensorFlow 2.7.0. (`#218`_)
 
+**Changed**
+
+- Increased minimum ``keras-spiking`` version to 0.3.0. (`#219`_)
+
 .. _#218: https://github.com/nengo/nengo-dl/pull/218
+.. _#219: https://github.com/nengo/nengo-dl/pull/219
 
 3.4.2 (August 12, 2021)
 -----------------------

@@ -928,7 +928,7 @@ def test_lowpass_alpha(Layer, tau, dt, Simulator, rng):
 
     inp = x = tf.keras.Input((None, 10))
     x = tf.keras.layers.Dense(units=10)(x)
-    x = Layer(tau=tau, dt=dt, trainable=False)(x)
+    x = Layer(tau_initializer=tau, dt=dt, trainable=False)(x)
 
     model = tf.keras.Model(inp, x)
 
@@ -976,7 +976,7 @@ def test_lowpass_alpha(Layer, tau, dt, Simulator, rng):
 
     # can't convert trainable layers
     inp = tf.keras.Input((None, 10))
-    layer = Layer(tau=0.1, trainable=True)
+    layer = Layer(tau_initializer=0.1, trainable=True)
     model = tf.keras.Model(inp, layer(inp))
     with pytest.raises(TypeError, match="layer.trainable=False"):
         converter.Converter(model, temporal_model=True)
@@ -995,7 +995,7 @@ def test_lowpass_alpha(Layer, tau, dt, Simulator, rng):
         layer.layer.cell.initial_level, np.zeros(layer.layer.cell.initial_level.shape)
     )
     tf.keras.backend.set_value(
-        layer.layer.cell.tau_var, np.arange(10).reshape(layer.layer.cell.tau_var.shape)
+        layer.layer.cell.tau, np.arange(10).reshape(layer.layer.cell.tau.shape)
     )
     model = tf.keras.Model(inp, layer(inp))
     with pytest.raises(TypeError, match="different tau values"):

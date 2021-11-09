@@ -89,7 +89,7 @@ docs_req = [
     "sphinx-click>=1.4.1",
 ]
 optional_req = [
-    "keras-spiking>=0.2.0",
+    "keras-spiking>=0.3.0",
 ]
 tests_req = [
     "click>=6.7",
