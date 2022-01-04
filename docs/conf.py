@@ -92,7 +92,7 @@ suppress_warnings = ["image.nonlocal_uri"]
 
 project = "NengoDL"
 authors = "Applied Brain Research"
-copyright = "2015-2021 Applied Brain Research"
+copyright = "2015-2022 Applied Brain Research"
 version = ".".join(nengo_dl.__version__.split(".")[:2])  # Short X.Y version
 release = nengo_dl.__version__  # Full version, with tags
 

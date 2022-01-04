@@ -4,6 +4,7 @@ repo_name: nengo/nengo-dl
 
 description: Deep learning integration for Nengo
 copyright_start: 2015
+license: abr-free
 
 license_rst: {}
 
@@ -314,7 +315,6 @@ setup_py:
       - "Development Status :: 5 - Production/Stable"
       - "Framework :: Nengo"
       - "Intended Audience :: Science/Research"
-      - "License :: Free for non-commercial use"
       - "Operating System :: Microsoft :: Windows"
       - "Operating System :: POSIX :: Linux"
       - "Programming Language :: Python"
