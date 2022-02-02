@@ -120,7 +120,7 @@ class SimOjaBuilder(OpBuilder):
 
         alpha = self.learning_rate * signals.dt
 
-        update = alpha * post ** 2
+        update = alpha * post**2
         update *= -self.beta * weights
         update += alpha * post * pre
 
@@ -298,16 +298,13 @@ class SimPESBuilder(OpBuilder):
             (len(self.ops), 1, self.ops[0].pre_filtered.shape[0])
         )
 
-        self.alpha = (
-            signals.op_constant(
-                self.ops,
-                [1 for _ in self.ops],
-                "learning_rate",
-                signals.dtype,
-                shape=(1, -1, 1, 1),
-            )
-            * (-signals.dt_val / self.ops[0].pre_filtered.shape[0])
-        )
+        self.alpha = signals.op_constant(
+            self.ops,
+            [1 for _ in self.ops],
+            "learning_rate",
+            signals.dtype,
+            shape=(1, -1, 1, 1),
+        ) * (-signals.dt_val / self.ops[0].pre_filtered.shape[0])
 
         self.output_data = signals.combine([op.delta for op in self.ops])
 

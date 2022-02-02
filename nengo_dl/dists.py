@@ -187,4 +187,4 @@ class He(VarianceScaling):
     """
 
     def __init__(self, scale=1, distribution="normal"):
-        super().__init__(scale=scale ** 2, mode="fan_in", distribution=distribution)
+        super().__init__(scale=scale**2, mode="fan_in", distribution=distribution)

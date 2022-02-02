@@ -13,7 +13,7 @@ def norm_cdf(x):
 
 
 def norm_pdf(x):
-    return 1 / np.sqrt(2 * np.pi) * np.exp(-0.5 * x ** 2)
+    return 1 / np.sqrt(2 * np.pi) * np.exp(-0.5 * x**2)
 
 
 def tnorm_var(scale, limit):
@@ -25,7 +25,7 @@ def tnorm_var(scale, limit):
     pdf_b = norm_pdf(b)
     z = norm_cdf(b) - norm_cdf(a)
 
-    return scale ** 2 * (1 + (a * pdf_a - b * pdf_b) / z - ((pdf_a - pdf_b) / z) ** 2)
+    return scale**2 * (1 + (a * pdf_a - b * pdf_b) / z - ((pdf_a - pdf_b) / z) ** 2)
 
 
 def _test_variance_scaling(dist, scale, mode, seed):
@@ -49,7 +49,7 @@ def _test_variance_scaling(dist, scale, mode, seed):
     assert samples.shape == shape
     assert np.allclose(np.mean(samples), 0.0, atol=5e-4)
     if dist.distribution == "uniform":
-        var = 4 * std ** 2 / 12
+        var = 4 * std**2 / 12
         assert np.allclose(np.var(samples), var, rtol=5e-3)
     else:
         assert np.allclose(np.var(samples), tnorm_var(std, 2 * std), rtol=5e-3)
@@ -78,7 +78,7 @@ def test_glorot(scale, distribution, seed):
 @pytest.mark.parametrize("distribution", ["uniform", "normal"])
 def test_he(scale, distribution, seed):
     dist = dists.He(scale=scale, distribution=distribution)
-    _test_variance_scaling(dist, scale ** 2, "fan_in", seed)
+    _test_variance_scaling(dist, scale**2, "fan_in", seed)
 
 
 @pytest.mark.parametrize("limit", [None, 0.5])

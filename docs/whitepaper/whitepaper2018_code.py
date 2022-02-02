@@ -39,22 +39,23 @@ targets = inputs**2
 
 with nengo_dl.Simulator(net, minibatch_size=10) as sim:
     sim.train(
-        data={a: inputs,
-              p: targets},
+        data={a: inputs, p: targets},
         optimizer=tf.train.AdamOptimizer(),
         n_epochs=2,
-        objective={p: nengo_dl.objectives.mse})
+        objective={p: nengo_dl.objectives.mse},
+    )
 
 # snippet 6 (section 3.3)
 with net:
+
     def tensor_func(time, x):
         return tf.layers.dense(x, 100, activation=tf.nn.relu)
+
     t = nengo_dl.TensorNode(tensor_func, size_in=1)
     nengo.Connection(a, t)
     nengo.Connection(t, b.neurons)
 
 # snippet 7 (section 3.3)
 with net:
-    t = nengo_dl.tensor_layer(a, tf.layers.dense, units=100,
-                              activation=tf.nn.relu)
+    t = nengo_dl.tensor_layer(a, tf.layers.dense, units=100, activation=tf.nn.relu)
     nengo.Connection(t, b.neurons)

@@ -82,4 +82,4 @@ def test_nan_mse():
 
     loss = losses.nan_mse(y, x)
 
-    assert tf.keras.backend.get_value(loss) == (3 ** 2 + 4 ** 2) / 10
+    assert tf.keras.backend.get_value(loss) == (3**2 + 4**2) / 10
