@@ -37,7 +37,7 @@ else:
     # for release versions of nengo-dl, this should be the latest released
     # nengo version. for dev versions of nengo-dl, this should be the current
     # nengo dev version.
-    latest_nengo_version = (3, 2, 0)
+    latest_nengo_version = (3, 2, 1)
 
     if nengo.version.version_info < minimum_nengo_version:  # pragma: no cover
         raise ValueError(

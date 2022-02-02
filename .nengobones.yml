@@ -74,6 +74,9 @@ setup_cfg:
         tests/test_nengo_tests.py::test_multirun
       tests/test_learning_rules.py::test_rls_*:
         RLS learning rule not implemented
+      tests/test_processes.py::test_x_copy:
+        the behaviour of Processes that return None is not well defined (it's allowed
+        but behaves oddly in NengoCore, it's an explicit error in NengoDL)
     allclose_tolerances:
       - tests/test_synapses.py::test_lowpass atol=5e-7
       - tests/test_synapses.py::test_triangle atol=5e-7
@@ -249,6 +252,7 @@ travis_yml:
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
         TF_VERSION: tensorflow<2.3.0
+        NUMPY_VERSION: numpy<1.20.0
     - script: test-coverage
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
