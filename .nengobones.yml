@@ -339,5 +339,5 @@ pre_commit_config_yaml:
 version_py:
   major: 3
   minor: 4
-  patch: 4
-  release: true
+  patch: 5
+  release: false

@@ -18,6 +18,10 @@ Release history
    - Deprecated
    - Removed
 
+3.4.5 (unreleased)
+------------------
+
+
 3.4.4 (February 10, 2022)
 -------------------------
 
