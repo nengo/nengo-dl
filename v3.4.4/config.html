@@ -1,0 +1,776 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Configuration options &#8212; NengoDL 3.4.4 docs</title>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/basic.css" type="text/css" />
+<link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,400i,600|Rajdhani:700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
+<link rel="stylesheet" href="https://www.nengo.ai/css/bootstrap.css" type="text/css">
+<style>
+  body .title-bar,
+  body .documentation-source h1:after {
+    background-color: #ff6600;
+  }
+</style>
+<!-- Google Tag Manager -->
+<script>
+ (function (w, d, s, l, i) {
+   w[l] = w[l] || [];
+   w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+   var f = d.getElementsByTagName(s)[0],
+       j = d.createElement(s),
+       dl = l != "dataLayer" ? "&l=" + l : "";
+   j.async = true;
+   j.src = "https://www.googletagmanager.com/gtm.js?id=" + i + dl;
+   f.parentNode.insertBefore(j, f);
+ })(window, document, "script", "dataLayer", "GTM-KWCR2HN");
+</script>
+<!-- End Google Tag Manager -->
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/scrollreveal"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stickyfill/2.1.0/stickyfill.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+<!-- From basic/layout.html -->
+<script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+  
+  
+<script src="_static/underscore.js"></script>
+  
+  
+<script src="_static/doctools.js"></script>
+  
+  
+<script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Tips and tricks" href="tips.html" />
+    <link rel="prev" title="Converter" href="converter.html" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  </head><body class="bg-dark">
+
+<header class="fixed-top header-top shadow-sm">
+  <nav class="navbar navbar-expand-md navbar-light bg-white">
+    <a class="navbar-brand" href="https://www.nengo.ai/">
+      <img
+        src="https://www.nengo.ai/design/_images/general-full-light.svg"
+        alt="Nengo"
+        class="logo"
+      />
+    </a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-toggle="collapse"
+      data-target="#navbar-collapse"
+      aria-controls="navbar-collapse"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-collapse">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/">What is Nengo?</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/examples/">Examples</a>
+        </li>
+        <li class="nav-item dropdown active">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-docs"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Documentation</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-docs"
+          >
+            
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo/">Nengo core</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-gui/">NengoGUI</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-dl/">NengoDL</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-spa/">NengoSPA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-extras/">NengoExtras</a>
+            <a class="dropdown-item" href="https://arvoelke.github.io/nengolib-docs/">Nengolib</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/keras-spiking">KerasSpiking</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/pytorch-spiking">PyTorchSpiking</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-fpga/">NengoFPGA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-loihi/">NengoLoihi</a>
+            <a class="dropdown-item" href="https://labs.nengo.ai/nengo-ocl/">NengoOCL</a>
+            <a class="dropdown-item" href="https://github.com/project-rig/nengo_spinnaker">NengoSpiNNaker</a>
+            <a class="dropdown-item" href="https://github.com/nengo-labs/nengo-mpi">NengoMPI</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/documentation/"
+              >All documentation</a
+            >
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-community"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Community</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-community"
+          >
+            <a class="dropdown-item" href="https://forum.nengo.ai">Forum</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/people/"
+              >People</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/summer-school/"
+              >Summer school</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/contributing/"
+              >Contributing</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/publications/"
+              >Publications</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/videos/"
+              >Videos</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/conduct/"
+              >Code of conduct</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/caa/">CAA</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link btn btn-success btn-sm text-white"
+            href="https://www.nengo.ai/getting-started/"
+            >Getting started</a
+          >
+        </li>
+      </ul>
+    </div>
+  </nav>
+</header>
+<div class="main-content gradient-top">
+  <div class="container-fluid">
+    <div class="row"><a class="toggle-sidenav d-block d-md-none" href="#"
+  ><i class="icon-close fa fa-fw fa-arrow-left"></i
+  ><i class="icon-open fa fa-fw fa-arrow-right"></i
+></a>
+<div role="complementary" class="sidenav col-4 col-xl-3 p-0 border-right">
+  <h3 class="pt-5 px-5">
+    <a href="index.html">
+      <img
+        class="img-fluid documentation-image"
+        src="https://www.nengo.ai/design/_images/nengo-dl-full-light.svg"
+        alt="NengoDL"
+      />
+    </a>
+  </h3>
+<form class="px-5 py-3 my-0 border-bottom" action="search.html" method="get">
+  <div class="form-group form-group-single">
+    <input type="text" name="q" class="form-control" placeholder="Search" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+    <button type="submit" class="btn btn-link">
+      <img src="https://www.nengo.ai/img/icon-search.svg" alt="Go" />
+    </button>
+  </div>
+</form><div class="p-5 toctree">
+  
+    <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="user-guide.html">User guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="simulator.html">NengoDL Simulator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tensor-node.html">TensorNodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="converter.html">Converter</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Configuration options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#trainable">trainable</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#planner">planner</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sorter">sorter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#simplifications">simplifications</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#inference-only">inference_only</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lif-smoothing">lif_smoothing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dtype">dtype</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#keep-history">keep_history</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#stateful">stateful</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#use-loop">use_loop</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#learning-phase">learning_phase</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tips.html">Tips and tricks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Project information</a></li>
+</ul>
+
+  
+  </div>
+  
+  <form class="p-5 my-0 border-top">
+    <div class="form-group">
+      <label class="text-gray">Version:</label>
+      <select class="custom-select" onchange="switchVersion(this);">
+        
+        
+        <option value="../config.html">latest</option>
+        
+        
+          
+        <option selected>v3.4.4</option>
+          
+        
+          
+        <option value="../v3.4.3/config.html">
+          v3.4.3
+        </option>
+          
+        
+          
+        <option value="../v3.4.2/config.html">
+          v3.4.2
+        </option>
+          
+        
+          
+        <option value="../v3.4.1/config.html">
+          v3.4.1
+        </option>
+          
+        
+          
+        <option value="../v3.4.0/config.html">
+          v3.4.0
+        </option>
+          
+        
+          
+        <option value="../v3.3.0/config.html">
+          v3.3.0
+        </option>
+          
+        
+          
+        <option value="../v3.2.0/config.html">
+          v3.2.0
+        </option>
+          
+        
+          
+        <option value="../v3.1.0/config.html">
+          v3.1.0
+        </option>
+          
+        
+          
+        <option value="../v3.0.0/config.html">
+          v3.0.0
+        </option>
+          
+        
+          
+        <option value="../v2.2.2/config.html">
+          v2.2.2
+        </option>
+          
+        
+          
+        <option value="../v2.2.1/config.html">
+          v2.2.1
+        </option>
+          
+        
+          
+        <option value="../v2.2.0/config.html">
+          v2.2.0
+        </option>
+          
+        
+          
+        <option value="../v2.1.1/config.html">
+          v2.1.1
+        </option>
+          
+        
+          
+        <option value="../v2.1.0/config.html">
+          v2.1.0
+        </option>
+          
+        
+          
+        <option value="../v2.0.0/config.html">
+          v2.0.0
+        </option>
+          
+        
+          
+        <option value="../v1.2.1/config.html">
+          v1.2.1
+        </option>
+          
+        
+          
+        <option value="../v1.2.0/config.html">
+          v1.2.0
+        </option>
+          
+        
+          
+        <option value="../v1.1.0/config.html">
+          v1.1.0
+        </option>
+          
+        
+          
+        <option value="../v1.0.0/config.html">
+          v1.0.0
+        </option>
+          
+        
+          
+        <option value="../v0.6.2/config.html">
+          v0.6.2
+        </option>
+          
+        
+          
+        <option value="../v0.6.1/config.html">
+          v0.6.1
+        </option>
+          
+        
+          
+        <option value="../v0.6.0/config.html">
+          v0.6.0
+        </option>
+          
+        
+          
+        <option value="../v0.5.2/config.html">
+          v0.5.2
+        </option>
+          
+        
+          
+        <option value="../v0.5.1/config.html">
+          v0.5.1
+        </option>
+          
+        
+          
+        <option value="../v0.5.0/config.html">
+          v0.5.0
+        </option>
+          
+        
+          
+        <option value="../v0.4.0/config.html">
+          v0.4.0
+        </option>
+          
+        
+          
+        <option value="../v0.3.1/config.html">
+          v0.3.1
+        </option>
+          
+        
+          
+        <option value="../v0.3.0/config.html">
+          v0.3.0
+        </option>
+          
+        
+          
+        <option value="../v0.2.0/config.html">
+          v0.2.0
+        </option>
+          
+        
+      </select>
+    </div>
+  </form>
+  
+</div>
+      
+
+      <div class="col-12 col-md-8 col-xl-9">
+        <div class="container">
+          <div class="row">
+            <div class="col-10 offset-1 pb-5 documentation-source" role="main">
+              
+              
+  <div class="section" id="configuration-options">
+<h1>Configuration options<a class="headerlink" href="#configuration-options" title="Permalink to this headline">¶</a></h1>
+<p>NengoDL uses Nengo’s <a class="reference external" href="https://www.nengo.ai/nengo/config.html">config system</a>
+to allow users to control more fine-grained aspects of the simulation.  In
+general, most users will not need to worry about these options, and can leave
+them at their default settings.  However, these options may be useful in
+some scenarios.</p>
+<p><a class="reference internal" href="reference.html#nengo_dl.configure_settings" title="nengo_dl.configure_settings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">configure_settings</span></code></a> is a utility function that can be used to set these
+configuration options.  It needs to be called within a Network context, as in:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">config_option</span><span class="o">=</span><span class="n">config_value</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>Each call to <code class="docutils literal notranslate"><span class="pre">configure_settings</span></code> only sets the configuration
+options specified in that call.  That is,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">option0</span><span class="o">=</span><span class="n">val0</span><span class="p">)</span>
+<span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">option1</span><span class="o">=</span><span class="n">val1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>is equivalent to</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">option0</span><span class="o">=</span><span class="n">val0</span><span class="p">,</span> <span class="n">option1</span><span class="o">=</span><span class="n">val1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Under the hood, <code class="docutils literal notranslate"><span class="pre">configure_settings</span></code> is setting <code class="docutils literal notranslate"><span class="pre">Network.config</span></code> attributes on
+the top-level network.  All of the same effects could be achieved by setting
+those <code class="docutils literal notranslate"><span class="pre">Network.config</span></code> attributes directly, <code class="docutils literal notranslate"><span class="pre">configure_settings</span></code> simply makes this
+easier.</p>
+<p>Note that TensorFlow also has its own <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/config">config system</a>, which can be
+used as normal with NengoDL to control the underlying TensorFlow behaviour.</p>
+<div class="section" id="trainable">
+<span id="config-trainable"></span><h2>trainable<a class="headerlink" href="#trainable" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">trainable</span></code> config attribute can be used to control which parts of a
+model will be optimized by the <a class="reference internal" href="reference.html#nengo_dl.Simulator.fit" title="nengo_dl.Simulator.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.fit</span></code></a> process.
+<code class="docutils literal notranslate"><span class="pre">configure_settings(trainable=None)</span></code> will add a configurable <code class="docutils literal notranslate"><span class="pre">trainable</span></code>
+attribute to the objects in a network.  Setting <code class="docutils literal notranslate"><span class="pre">trainable=None</span></code> will use the
+default trainability settings, or <code class="docutils literal notranslate"><span class="pre">trainable=True/False</span></code> can be used to
+override the default for all objects.</p>
+<p>Once the <code class="docutils literal notranslate"><span class="pre">trainable</span></code> attribute has been added to all the objects in a model,
+the <code class="docutils literal notranslate"><span class="pre">Network.config</span></code> system can then be used to control the trainability of
+individual objects.</p>
+<p>For example, suppose we only want to optimize one connection in our network,
+while leaving everything else unchanged.  This could be achieved via</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="c1"># this adds the `trainable` attribute to all the trainable objects</span>
+    <span class="c1"># in the network, and initializes it to `False`</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="n">a</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">size_in</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+
+    <span class="c1"># make this specific connection trainable</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">conn</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="kc">True</span>
+</pre></div>
+</div>
+<p>Or if we wanted to disable training for some subnetwork:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="o">...</span>
+    <span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">subnet</span><span class="p">:</span>
+        <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="o">...</span>
+</pre></div>
+</div>
+<p>Note that <code class="docutils literal notranslate"><span class="pre">config[nengo.Ensemble].trainable</span></code> controls both encoders and
+biases, as both are properties of an Ensemble.  However, it is possible to
+separately control the biases via <code class="docutils literal notranslate"><span class="pre">config[nengo.ensemble.Neurons].trainable</span></code>
+or <code class="docutils literal notranslate"><span class="pre">config[my_ensemble.neurons].trainable</span></code>.</p>
+<p>There is one important caveat to keep in mind when configuring <code class="docutils literal notranslate"><span class="pre">trainable</span></code>,
+which differ from the standard config behaviour. <code class="docutils literal notranslate"><span class="pre">trainable</span></code> applies to all objects
+in a network, regardless of whether
+they were created before or after <code class="docutils literal notranslate"><span class="pre">trainable</span></code> is set.  For example,</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="o">...</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>is the same as</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="o">...</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>Trainability settings are prioritized according to the following rules:</p>
+<ol class="arabic">
+<li><p>Settings in lower subnetworks take priority.</p>
+<blockquote>
+<div><div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">subnet</span><span class="p">:</span>
+        <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1"># this ensemble will not be trainable, because settings on</span>
+        <span class="c1"># `subnet` override settings on `net`</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p>Settings on instances take priority over classes.</p>
+<blockquote>
+<div><div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+    <span class="n">a</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># this will make `a` trainable (even though Ensembles in general</span>
+    <span class="c1"># are not trainable)</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">a</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="kc">False</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ol>
+</div>
+<div class="section" id="planner">
+<span id="config-planner"></span><h2>planner<a class="headerlink" href="#planner" title="Permalink to this headline">¶</a></h2>
+<p>This option can be used to change the algorithm used for assigning an order
+to simulation operations during the graph optimization stage.  For example, we
+could disable operator merging by using the <code class="docutils literal notranslate"><span class="pre">noop_planner</span></code>.</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nengo_dl.graph_optimizer</span> <span class="kn">import</span> <span class="n">noop_planner</span>
+
+<span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">planner</span><span class="o">=</span><span class="n">noop_planner</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="sorter">
+<h2>sorter<a class="headerlink" href="#sorter" title="Permalink to this headline">¶</a></h2>
+<p>This option can be used to change the algorithm used for sorting
+signals/operators during the graph optimization stage.  For example, we could
+disable sorting via</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nengo_dl.graph_optimizer</span> <span class="kn">import</span> <span class="n">noop_order_signals</span>
+
+<span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">sorter</span><span class="o">=</span><span class="n">noop_order_signals</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="simplifications">
+<span id="config-simplifications"></span><h2>simplifications<a class="headerlink" href="#simplifications" title="Permalink to this headline">¶</a></h2>
+<p>This option can be used to change the simplification transformations applied
+during the graph optimization stage.  This takes a list of transformation
+functions, where each will be applied in sequence.  For example, we could apply
+only two of the default simplifications via</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nengo_dl.graph_optimizer</span> <span class="kn">import</span> <span class="n">remove_identity_muls</span><span class="p">,</span> <span class="n">remove_zero_incs</span>
+
+<span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">simplifications</span><span class="o">=</span><span class="p">[</span><span class="n">remove_identity_muls</span><span class="p">,</span>
+                                                 <span class="n">remove_zero_incs</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="inference-only">
+<span id="config-inference-only"></span><h2>inference_only<a class="headerlink" href="#inference-only" title="Permalink to this headline">¶</a></h2>
+<p>By default, NengoDL models are built to support both training and inference.
+However, sometimes we may know that we’ll only be using a simulation for
+inference (for example, if we want to take advantage of the batching/GPU
+acceleration of NengoDL, but don’t need the <code class="docutils literal notranslate"><span class="pre">sim.fit</span></code> functionality).  In
+that case we can improve the simulation speed of the model by omitting some
+of the aspects related to training.  Setting
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings(inference_only=True)</span></code> will cause the network
+to be built in inference-only mode.</p>
+</div>
+<div class="section" id="lif-smoothing">
+<h2>lif_smoothing<a class="headerlink" href="#lif-smoothing" title="Permalink to this headline">¶</a></h2>
+<p>During training, NengoDL automatically replaces the non-differentiable
+spiking <a class="reference external" href="https://www.nengo.ai/nengo/frontend-api.html#nengo.LIF" title="(in Nengo v3.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LIF</span></code></a> neuron model with the differentiable
+<a class="reference external" href="https://www.nengo.ai/nengo/frontend-api.html#nengo.LIFRate" title="(in Nengo v3.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LIFRate</span></code></a> approximation.
+However, although <code class="docutils literal notranslate"><span class="pre">LIFRate</span></code> is generally differentiable, it has a sharp
+discontinuity at the firing threshold.  In some cases this can lead to
+difficulties during the training process, and performance can be improved by
+smoothing the <code class="docutils literal notranslate"><span class="pre">LIFRate</span></code> response around the firing threshold.  This is
+known as the <a class="reference internal" href="reference.html#nengo_dl.SoftLIFRate" title="nengo_dl.SoftLIFRate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SoftLIFRate</span></code></a> neuron model.</p>
+<p><code class="docutils literal notranslate"><span class="pre">SoftLIFRate</span></code> has a parameter <code class="docutils literal notranslate"><span class="pre">sigma</span></code> that controls the degree of smoothing
+(<code class="docutils literal notranslate"><span class="pre">SoftLIFRate</span></code> approaches <code class="docutils literal notranslate"><span class="pre">LIFRate</span></code> as <code class="docutils literal notranslate"><span class="pre">sigma</span></code> goes to zero).  Setting
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings(lif_smoothing=x)</span></code> will cause the <code class="docutils literal notranslate"><span class="pre">LIF</span></code>
+gradients to be approximated by <code class="docutils literal notranslate"><span class="pre">SoftLIFRate</span></code> instead of <code class="docutils literal notranslate"><span class="pre">LIFRate</span></code>, with
+<code class="docutils literal notranslate"><span class="pre">sigma=x</span></code>.</p>
+</div>
+<div class="section" id="dtype">
+<h2>dtype<a class="headerlink" href="#dtype" title="Permalink to this headline">¶</a></h2>
+<p>This specifies the floating point precision to be used for the simulator’s
+internal computations.  It can be either <code class="docutils literal notranslate"><span class="pre">&quot;float32&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;float64&quot;</span></code>,
+for 32 or 64-bit precision, respectively.  32-bit precision is the default,
+as it is faster, will use less memory, and in most cases will not make a
+difference in the results of the simulation.  However, if very precise outputs
+are required then this can be changed to <code class="docutils literal notranslate"><span class="pre">&quot;float64&quot;</span></code>.</p>
+</div>
+<div class="section" id="keep-history">
+<h2>keep_history<a class="headerlink" href="#keep-history" title="Permalink to this headline">¶</a></h2>
+<p>By default, a <a class="reference external" href="https://www.nengo.ai/nengo/frontend-api.html#nengo.Probe" title="(in Nengo v3.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nengo.Probe</span></code></a> stores the probed output from every simulation
+timestep.  However, sometimes in NengoDL we want to add a probe to something
+for other reasons, and don’t necessarily care about all of that data (which can
+consume a lot of memory).  For example, we might want to apply a probe to some
+connection weights so that we can apply a regularization penalty, but since
+the weights aren’t changing during a simulation run we don’t need to keep
+the value from every simulation step.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">keep_history</span></code> config option allows Probes to be configured so that they
+only store the output of the probed signal from the last simulation timestep.
+Calling</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">keep_history</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>will set the default value for all probes in the simulation, which can then
+be further configured on a per-probe basis, e.g.</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+   <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">keep_history</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+   <span class="n">my_ens</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+   <span class="n">my_probe</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">my_ens</span><span class="p">)</span>
+   <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">my_probe</span><span class="p">]</span><span class="o">.</span><span class="n">keep_history</span> <span class="o">=</span> <span class="kc">False</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="stateful">
+<span id="config-stateful"></span><h2>stateful<a class="headerlink" href="#stateful" title="Permalink to this headline">¶</a></h2>
+<p>By default, a NengoDL simulator is built to be stateful (meaning that internal
+simulation state can be preserved between runs). However, if you know that you will
+not need this functionality (i.e. you want all Simulator executions to begin from
+the default initial conditions) it can be disabled by setting
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings(stateful=False)</span></code>. This may slightly improve the
+simulation speed.</p>
+<p>Note that in any case the internal state of the Simulation will be
+tracked within a given call (e.g. within one call to <a class="reference internal" href="reference.html#nengo_dl.Simulator.run" title="nengo_dl.Simulator.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.run</span></code></a>). This only
+affects whether state is preserved between calls.</p>
+</div>
+<div class="section" id="use-loop">
+<span id="config-use-loop"></span><h2>use_loop<a class="headerlink" href="#use-loop" title="Permalink to this headline">¶</a></h2>
+<p>By default, NengoDL models run inside a loop within TensorFlow; this is what
+allows us to flexibly simulate a model for any number of timesteps. However, in some
+cases we may not need this functionality (for example, if we have a simple feedforward
+network that will only ever be simulated for a single timestep). In that case we can
+set <code class="docutils literal notranslate"><span class="pre">nengo_dl.configure_settings(use_loop=False)</span></code> to build the model without the
+outer loop, which can improve the simulation speed.</p>
+<p>Note that it is still possible to have a model that simulates multiple timesteps by
+setting <code class="docutils literal notranslate"><span class="pre">nengo_dl.Simulator(...,</span> <span class="pre">unroll_simulation=x)</span></code>. This will explicitly build
+<code class="docutils literal notranslate"><span class="pre">x</span></code> timesteps into the model (without using a loop).  So if we use
+<code class="docutils literal notranslate"><span class="pre">unroll_simulation=x</span></code> and <code class="docutils literal notranslate"><span class="pre">use_loop=False</span></code>, then the simulation will always run
+for exactly <code class="docutils literal notranslate"><span class="pre">x</span></code> timesteps.</p>
+</div>
+<div class="section" id="learning-phase">
+<h2>learning_phase<a class="headerlink" href="#learning-phase" title="Permalink to this headline">¶</a></h2>
+<p>NengoDL (and Keras in general) can run models in two different modes, or “phases”:
+training and inference. Typically the mode is set automatically based on the function
+used to execute the model; <code class="docutils literal notranslate"><span class="pre">sim.fit</span></code> will run in training mode, and all other
+functions (e.g., <code class="docutils literal notranslate"><span class="pre">sim.predict</span></code>, <code class="docutils literal notranslate"><span class="pre">sim.run</span></code>, and <code class="docutils literal notranslate"><span class="pre">sim.evaluate</span></code>) run in inference
+mode.</p>
+<p>The most important way that the learning phase affects a NengoDL model is that it
+controls whether spiking neurons are simulated in spiking or non-spiking mode.
+Normally during training spiking neurons will automatically swap their behaviour to
+a non-spiking equivalent, and use the spiking behaviour during inference.</p>
+<p>However, sometimes it can be useful to override this default behaviour. For example,
+we might want to evaluate a spiking model in training mode, to get more insight into
+how it is behaving during training. That is the role of the <code class="docutils literal notranslate"><span class="pre">learning_phase</span></code>
+config option. It can be specified during Network construction to make a network
+that will <em>always</em> run in training/inference mode, regardless of what function is
+being called.  For example:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">learning_phase</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># this ensemble will always use the &quot;training&quot; mode of LIF</span>
+    <span class="c1"># (equivalent to LIFRate)</span>
+    <span class="n">ens</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">neuron_type</span><span class="o">=</span><span class="n">nengo</span><span class="o">.</span><span class="n">LIF</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div><footer class="text-light footer-main gradient-bottom">
+  <p class="small text-center mb-0">
+    <a class="no-hover-line" href="https://appliedbrainresearch.com">
+      <img
+        src="https://appliedbrainresearch.com/img/logo-blue-notext.svg"
+        height="48"
+      />
+    </a>
+    <a href="https://www.nengo.ai/">What is Nengo?</a>
+    <a href="https://www.nengo.ai/examples/">Examples</a>
+    <a href="https://www.nengo.ai/documentation/">Documentation</a>
+    <a href="https://www.nengo.ai/getting-started/">Getting started</a>
+    <a href="https://www.nengo.ai/privacy/">Privacy</a>
+  </p>
+  <p class="small text-center mb-0">&copy; Applied Brain Research</p>
+</footer>
+<script>
+  function switchVersion(select) {
+    var option = select.selectedOptions[0];
+    if (option.hasAttribute("value")) {
+      window.location = option.value;
+    }
+  }
+</script>
+
+<script>
+  var elements = document.querySelectorAll('.sidenav');
+  Stickyfill.add(elements);
+</script>
+<script>
+  ScrollReveal().reveal(".fade-in", {
+      scale: 0.85,
+      duration: 1000,
+      delay: 250,
+      interval: 50
+  });
+</script>
+<script>
+  $('a.toggle-sidenav').on('click', function(e) {
+    e.preventDefault();
+    if ( $(this).hasClass('active') ) {
+      $(this).removeClass('active');
+      $('.sidenav').removeClass('open');
+    } else {
+      $(this).addClass('active');
+      $('.sidenav').addClass('open');
+    }
+  });
+</script>
+<script>
+  var lists = document.querySelectorAll('.toctree ul');
+  lists.forEach((ul) => {
+      ul.classList.add("nav");
+  });
+  var links = document.querySelectorAll('.toctree a');
+  links.forEach((link) => {
+      link.classList.add("nav-link");
+  });
+  $("body").scrollspy({target: ".sidenav"});
+</script>
+  </body>
+</html>
