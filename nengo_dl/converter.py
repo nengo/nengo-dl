@@ -1323,6 +1323,7 @@ class ConvertConv(LayerConverter):
             padding=self.layer.padding,
             channels_last=self.layer.data_format == "channels_last",
             init=kernel,
+            groups=self.layer.groups,
         )
 
         self.add_connection(node_id, output, transform=transform, trainable=True)

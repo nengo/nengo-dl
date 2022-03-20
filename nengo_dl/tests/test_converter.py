@@ -48,7 +48,7 @@ def test_conv(seed):
     if utils.tf_gpu_installed:
         x = tf.keras.layers.Reshape((2, 4, 4))(x)
         x = tf.keras.layers.Conv2D(
-            filters=4, kernel_size=3, data_format="channels_first"
+            filters=4, kernel_size=3, groups=2, data_format="channels_first"
         )(x)
 
     _test_convert(inp, x)
