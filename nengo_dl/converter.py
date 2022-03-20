@@ -1323,11 +1323,19 @@ class ConvertConv(LayerConverter):
             padding=self.layer.padding,
             channels_last=self.layer.data_format == "channels_last",
             init=kernel,
+            **(dict(groups=self.layer.groups) if compat.HAS_NENGO_3_2_1 else {}),
         )
 
         self.add_connection(node_id, output, transform=transform, trainable=True)
 
         return output
+
+    @classmethod
+    def convertible(cls, layer, converter):
+        if not compat.HAS_NENGO_3_2_1 and layer.groups != 1:
+            return False, "Grouped Convolution layers require Nengo>3.2.0"
+
+        return super().convertible(layer, converter)
 
 
 @Converter.register(tf.keras.layers.Conv1D)

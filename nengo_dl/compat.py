@@ -126,6 +126,7 @@ else:
 
 # Nengo compatibility
 
+HAS_NENGO_3_2_1 = version.parse(nengo.__version__) >= version.parse("3.2.1")
 HAS_NENGO_3_2_0 = version.parse(nengo.__version__) >= version.parse("3.2.0")
 HAS_NENGO_3_1_0 = version.parse(nengo.__version__) >= version.parse("3.1.0")
 

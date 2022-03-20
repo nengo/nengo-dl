@@ -29,6 +29,7 @@ Release history
 
 - Included ``tensorflow-macos`` in the alternative tensorflow package names checked
   during installation. (`#228`_)
+- Added support for ``groups`` parameter to ConvertConv. (`#223`_)
 
 **Changed**
 
@@ -48,6 +49,7 @@ Release history
   incompatible ``protobuf`` version that the user will need to manually correct).
   (`#228`_)
 
+.. _#223: https://github.com/nengo/nengo-dl/pull/223
 .. _#228: https://github.com/nengo/nengo-dl/pull/228
 .. _#229: https://github.com/nengo/nengo-dl/pull/229
 
