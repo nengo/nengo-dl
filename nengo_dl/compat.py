@@ -232,8 +232,7 @@ else:
 
 # Nengo compatibility
 
-# TODO: change to `>= version.parse(3.2.0)` once NengoCore 3.2.0 is released
-HAS_NENGO_3_2_0 = version.parse(nengo.__version__) > version.parse("3.1.0")
+HAS_NENGO_3_2_0 = version.parse(nengo.__version__) >= version.parse("3.2.0")
 HAS_NENGO_3_1_0 = version.parse(nengo.__version__) >= version.parse("3.1.0")
 
 if HAS_NENGO_3_2_0:  # pragma: no cover

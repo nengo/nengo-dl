@@ -10,7 +10,7 @@ and conform to PEP440 (see https://www.python.org/dev/peps/pep-0440/).
 a release version. Release versions are git tagged with the version.
 """
 
-version_info = (3, 4, 5)
+version_info = (3, 5, 0)
 
 name = "nengo-dl"
 dev = 0

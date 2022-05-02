@@ -18,12 +18,18 @@ Release history
    - Deprecated
    - Removed
 
-3.4.5 (unreleased)
+3.5.0 (unreleased)
 ------------------
 
 *Compatible with Nengo 3.0 - 3.2*
 
 *Compatible with TensorFlow 2.2 - 2.9*
+
+**Changed**
+
+- Dropped support for Python 3.6 and added support for 3.9 and 3.10. (`#224`_)
+
+.. _#224: https://github.com/nengo/nengo-dl/pull/224
 
 3.4.4 (February 10, 2022)
 -------------------------

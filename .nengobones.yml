@@ -6,6 +6,8 @@ description: Deep learning integration for Nengo
 copyright_start: 2015
 license: abr-free
 
+min_python: "3.7"
+
 license_rst: {}
 
 contributing_rst: {}
@@ -238,7 +240,7 @@ ci_scripts:
   - template: deploy
 
 travis_yml:
-  python: 3.7
+  python: "3.9"
   global_vars:
     NUMPY_VERSION: numpy>=1.16.0
     TF_VERSION: tensorflow
@@ -253,18 +255,19 @@ travis_yml:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
         TF_VERSION: tensorflow<2.3.0
         NUMPY_VERSION: numpy<1.20.0
+      python: "3.8"
     - script: test-coverage
       env:
         NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
         SCIPY_VERSION: scipy
       dist: bionic
-      python: 3.8
+      python: "3.10"
     - script: test-coverage
       env:
         NENGO_VERSION: nengo[tests]==3.0.0
         TF_VERSION: tensorflow==2.2.0
         NUMPY_VERSION: numpy==1.16.0
-      python: 3.6
+      python: "3.7"
     - script: test-coverage
       test_args: --graph-mode
     - stage: advanced
@@ -322,9 +325,10 @@ setup_py:
       - "Operating System :: Microsoft :: Windows"
       - "Operating System :: POSIX :: Linux"
       - "Programming Language :: Python"
-      - "Programming Language :: Python :: 3.6"
       - "Programming Language :: Python :: 3.7"
       - "Programming Language :: Python :: 3.8"
+      - "Programming Language :: Python :: 3.9"
+      - "Programming Language :: Python :: 3.10"
       - "Topic :: Scientific/Engineering"
       - "Topic :: Scientific/Engineering :: Artificial Intelligence"
 
@@ -338,6 +342,6 @@ pre_commit_config_yaml:
 
 version_py:
   major: 3
-  minor: 4
-  patch: 5
+  minor: 5
+  patch: 0
   release: false

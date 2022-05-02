@@ -6,15 +6,15 @@ jobs:
     strategy:
       matrix:
         include:
-          - python_version: 3.7
+          - python_version: "3.9"
             numpy_version: numpy
             tf_version: tensorflow
             nengo_version: nengo[tests]
-          - python_version: 3.8
+          - python_version: "3.10"
             numpy_version: numpy
             tf_version: tensorflow --pre
             nengo_version: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
-          - python_version: 3.6
+          - python_version: "3.7"
             numpy_version: numpy==1.16.0
             tf_version: tensorflow==2.2.0
             nengo_version: nengo[tests]==3.0.0
@@ -32,5 +32,5 @@ jobs:
           pip freeze
       - name: Run tests
         run: |
-          pytest -n 2 -v --durations 20 nengo_dl
-          pytest -n 2 -v --durations 20 --pyargs nengo
+          pytest -v -n 2 --color=yes --durations 20 nengo_dl
+          pytest -v -n 2 --color=yes --durations 20 --pyargs nengo

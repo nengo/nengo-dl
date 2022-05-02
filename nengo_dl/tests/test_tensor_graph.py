@@ -565,9 +565,6 @@ def test_unsupported_op_error():
         tensor_graph.TensorGraph(model, None, None, None, None, None, None)
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 6, 0), reason="order is not deterministic in python<3.6"
-)
 @pytest.mark.parametrize(
     "planner", ("greedy_planner", "tree_planner", "transitive_planner", "noop_planner")
 )
