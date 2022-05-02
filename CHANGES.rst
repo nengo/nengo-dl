@@ -21,6 +21,9 @@ Release history
 3.4.5 (unreleased)
 ------------------
 
+*Compatible with Nengo 3.0 - 3.2*
+
+*Compatible with TensorFlow 2.2 - 2.9*
 
 3.4.4 (February 10, 2022)
 -------------------------
