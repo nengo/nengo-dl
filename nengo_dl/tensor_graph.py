@@ -1095,8 +1095,7 @@ class TensorGraph(tf.keras.layers.Layer):
 
             if i in breaks:
                 # start a new array for all current bases
-                for k in curr_keys:
-                    curr_keys[k] = object()
+                curr_keys = {k: object() for k in curr_keys}
 
             # convert to appropriate dtype
             if np.issubdtype(sig.dtype, np.floating):
