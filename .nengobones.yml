@@ -345,4 +345,4 @@ version_py:
   major: 3
   minor: 5
   patch: 0
-  release: false
+  release: true
