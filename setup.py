@@ -76,6 +76,8 @@ install_req = [
     "jinja2>=2.10.1",
     "packaging>=20.0",
     "progressbar2>=3.39.0",
+    # fixes a bug in TF, see https://github.com/tensorflow/tensorflow/issues/56077
+    "protobuf<4.21.0rc0",
 ]
 docs_req = [
     "click>=6.7",
