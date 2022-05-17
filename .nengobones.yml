@@ -87,6 +87,7 @@ setup_cfg:
       - tests/test_synapses.py::test_linearfilter atol=1e-4
       - tests/test_transforms.py::test_convolution[* atol=1e-6
       - tests/test_transforms_conv.py::test_convolution[* atol=1e-4
+      - tests/test_transforms_conv.py::test_convolution_groups[* atol=1e-4
   pylint:
     known_third_party:
       - PIL
