@@ -127,7 +127,7 @@ def fill_docs(*args, **kwargs):
                     {{ param_name }}=np.ones(({{ batch_size }}, 10, 1)))
                 {% endif %}
 
-        {% if uses_y %}
+        {% if func_name not in ["predict_on_batch", "run_steps"] %}
         .. testoutput::
             :hide:
 
@@ -171,7 +171,7 @@ def fill_docs(*args, **kwargs):
                 )
                 {% endif %}
 
-        {% if uses_y %}
+        {% if func_name not in ["predict_on_batch", "run_steps"] %}
         .. testoutput::
             :hide:
 
@@ -227,7 +227,7 @@ def fill_docs(*args, **kwargs):
                 sim.{{ func_name }}({{ param_name }}=dataset)
                 {% endif %}
 
-        {% if uses_y %}
+        {% if func_name not in ["predict_on_batch", "run_steps"] %}
         .. testoutput::
             :hide:
 

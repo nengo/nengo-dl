@@ -225,7 +225,7 @@ class Converter:
             self.model.compile(optimizer=tf.optimizers.SGD(0.1), loss=tf.losses.mse)
             self.model.fit(inp_vals, out_vals, epochs=epochs)
 
-        keras_out = self.model.predict(inp_vals)
+        keras_out = self.model.predict(inp_vals, verbose=0)
 
         if not isinstance(keras_out, (list, tuple)):
             keras_out = [keras_out]
@@ -252,7 +252,7 @@ class Converter:
                 sim.compile(optimizer=tf.optimizers.SGD(0.1), loss=tf.losses.mse)
                 sim.fit(inp_vals, out_vals, epochs=epochs)
 
-            sim_out = sim.predict(inp_vals)
+            sim_out = sim.predict(inp_vals, verbose=0)
 
         for i, out in enumerate(self.model.outputs):
             keras_vals = np.ravel(keras_out[i])
