@@ -18,6 +18,13 @@ Release history
    - Deprecated
    - Removed
 
+3.5.1 (unreleased)
+------------------
+
+*Compatible with Nengo 3.0 - 3.2*
+
+*Compatible with TensorFlow 2.2 - 2.9*
+
 3.5.0 (May 18, 2022)
 --------------------
 
