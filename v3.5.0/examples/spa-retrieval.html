@@ -1,0 +1,1023 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Optimizing a cognitive model &#8212; NengoDL 3.5.0 docs</title>
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/basic.css" type="text/css" />
+<link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,400i,600|Rajdhani:700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
+<link rel="stylesheet" href="https://www.nengo.ai/css/bootstrap.css" type="text/css">
+<style>
+  body .title-bar,
+  body .documentation-source h1:after {
+    background-color: #ff6600;
+  }
+</style>
+<!-- Google Tag Manager -->
+<script>
+ (function (w, d, s, l, i) {
+   w[l] = w[l] || [];
+   w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+   var f = d.getElementsByTagName(s)[0],
+       j = d.createElement(s),
+       dl = l != "dataLayer" ? "&l=" + l : "";
+   j.async = true;
+   j.src = "https://www.googletagmanager.com/gtm.js?id=" + i + dl;
+   f.parentNode.insertBefore(j, f);
+ })(window, document, "script", "dataLayer", "GTM-KWCR2HN");
+</script>
+<!-- End Google Tag Manager -->
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/scrollreveal"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stickyfill/2.1.0/stickyfill.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+<!-- From basic/layout.html -->
+<script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+  
+  
+<script src="../_static/underscore.js"></script>
+  
+  
+<script src="../_static/doctools.js"></script>
+  
+  
+<script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+  
+  
+<script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+  
+<script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "tex2jax_ignore|mathjax_ignore|document", "processClass": "tex2jax_process|mathjax_process|math|output_area"}})</script>
+  
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Optimizing a cognitive model with temporal dynamics" href="spa-memory.html" />
+    <link rel="prev" title="Legendre Memory Units in NengoDL" href="lmu.html" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  </head><body class="bg-dark">
+
+<header class="fixed-top header-top shadow-sm">
+  <nav class="navbar navbar-expand-md navbar-light bg-white">
+    <a class="navbar-brand" href="https://www.nengo.ai/">
+      <img
+        src="https://www.nengo.ai/design/_images/general-full-light.svg"
+        alt="Nengo"
+        class="logo"
+      />
+    </a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-toggle="collapse"
+      data-target="#navbar-collapse"
+      aria-controls="navbar-collapse"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-collapse">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/">What is Nengo?</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/examples/">Examples</a>
+        </li>
+        <li class="nav-item dropdown active">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-docs"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Documentation</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-docs"
+          >
+            
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo/">Nengo core</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-gui/">NengoGUI</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-dl/">NengoDL</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-spa/">NengoSPA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-extras/">NengoExtras</a>
+            <a class="dropdown-item" href="https://arvoelke.github.io/nengolib-docs/">Nengolib</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/keras-spiking">KerasSpiking</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/pytorch-spiking">PyTorchSpiking</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-fpga/">NengoFPGA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-loihi/">NengoLoihi</a>
+            <a class="dropdown-item" href="https://labs.nengo.ai/nengo-ocl/">NengoOCL</a>
+            <a class="dropdown-item" href="https://github.com/project-rig/nengo_spinnaker">NengoSpiNNaker</a>
+            <a class="dropdown-item" href="https://github.com/nengo-labs/nengo-mpi">NengoMPI</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/documentation/"
+              >All documentation</a
+            >
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-community"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Community</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-community"
+          >
+            <a class="dropdown-item" href="https://forum.nengo.ai">Forum</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/people/"
+              >People</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/summer-school/"
+              >Summer school</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/contributing/"
+              >Contributing</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/publications/"
+              >Publications</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/videos/"
+              >Videos</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/conduct/"
+              >Code of conduct</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/caa/">CAA</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link btn btn-success btn-sm text-white"
+            href="https://www.nengo.ai/getting-started/"
+            >Getting started</a
+          >
+        </li>
+      </ul>
+    </div>
+  </nav>
+</header>
+<div class="main-content gradient-top">
+  <div class="container-fluid">
+    <div class="row"><a class="toggle-sidenav d-block d-md-none" href="#"
+  ><i class="icon-close fa fa-fw fa-arrow-left"></i
+  ><i class="icon-open fa fa-fw fa-arrow-right"></i
+></a>
+<div role="complementary" class="sidenav col-4 col-xl-3 p-0 border-right">
+  <h3 class="pt-5 px-5">
+    <a href="../index.html">
+      <img
+        class="img-fluid documentation-image"
+        src="https://www.nengo.ai/design/_images/nengo-dl-full-light.svg"
+        alt="NengoDL"
+      />
+    </a>
+  </h3>
+<form class="px-5 py-3 my-0 border-bottom" action="../search.html" method="get">
+  <div class="form-group form-group-single">
+    <input type="text" name="q" class="form-control" placeholder="Search" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+    <button type="submit" class="btn btn-link">
+      <img src="https://www.nengo.ai/img/icon-search.svg" alt="Go" />
+    </button>
+  </div>
+</form><div class="p-5 toctree">
+  
+    <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user-guide.html">User guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference.html">API reference</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="from-nengo.html">Coming from Nengo to NengoDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="from-tensorflow.html">Coming from TensorFlow to NengoDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tensorflow-models.html">Integrating a Keras model into a Nengo network</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spiking-mnist.html">Optimizing a spiking neural network</a></li>
+<li class="toctree-l2"><a class="reference internal" href="keras-to-snn.html">Converting a Keras model to a spiking neural network</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lmu.html">Legendre Memory Units in NengoDL</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Optimizing a cognitive model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spa-memory.html">Optimizing a cognitive model with temporal dynamics</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../resources.html">Additional resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../project.html">Project information</a></li>
+</ul>
+
+  
+  </div>
+  
+  <form class="p-5 my-0 border-top">
+    <div class="form-group">
+      <label class="text-gray">Version:</label>
+      <select class="custom-select" onchange="switchVersion(this);">
+        
+        
+        <option value="../../examples/spa-retrieval.html">latest</option>
+        
+        
+          
+        <option selected>v3.5.0</option>
+          
+        
+          
+        <option value="../../v3.4.4/examples/spa-retrieval.html">
+          v3.4.4
+        </option>
+          
+        
+          
+        <option value="../../v3.4.3/examples/spa-retrieval.html">
+          v3.4.3
+        </option>
+          
+        
+          
+        <option value="../../v3.4.2/examples/spa-retrieval.html">
+          v3.4.2
+        </option>
+          
+        
+          
+        <option value="../../v3.4.1/examples/spa-retrieval.html">
+          v3.4.1
+        </option>
+          
+        
+          
+        <option value="../../v3.4.0/examples/spa-retrieval.html">
+          v3.4.0
+        </option>
+          
+        
+          
+        <option value="../../v3.3.0/examples/spa-retrieval.html">
+          v3.3.0
+        </option>
+          
+        
+          
+        <option value="../../v3.2.0/examples/spa-retrieval.html">
+          v3.2.0
+        </option>
+          
+        
+          
+        <option value="../../v3.1.0/examples/spa-retrieval.html">
+          v3.1.0
+        </option>
+          
+        
+          
+        <option value="../../v3.0.0/examples/spa-retrieval.html">
+          v3.0.0
+        </option>
+          
+        
+          
+        <option value="../../v2.2.2/examples/spa-retrieval.html">
+          v2.2.2
+        </option>
+          
+        
+          
+        <option value="../../v2.2.1/examples/spa-retrieval.html">
+          v2.2.1
+        </option>
+          
+        
+          
+        <option value="../../v2.2.0/examples/spa-retrieval.html">
+          v2.2.0
+        </option>
+          
+        
+          
+        <option value="../../v2.1.1/examples/spa-retrieval.html">
+          v2.1.1
+        </option>
+          
+        
+          
+        <option value="../../v2.1.0/examples/spa-retrieval.html">
+          v2.1.0
+        </option>
+          
+        
+          
+        <option value="../../v2.0.0/examples/spa-retrieval.html">
+          v2.0.0
+        </option>
+          
+        
+          
+        <option value="../../v1.2.1/examples/spa-retrieval.html">
+          v1.2.1
+        </option>
+          
+        
+          
+        <option value="../../v1.2.0/examples/spa-retrieval.html">
+          v1.2.0
+        </option>
+          
+        
+          
+        <option value="../../v1.1.0/examples/spa-retrieval.html">
+          v1.1.0
+        </option>
+          
+        
+          
+        <option value="../../v1.0.0/examples/spa-retrieval.html">
+          v1.0.0
+        </option>
+          
+        
+          
+        <option value="../../v0.6.2/examples/spa-retrieval.html">
+          v0.6.2
+        </option>
+          
+        
+          
+        <option value="../../v0.6.1/examples/spa-retrieval.html">
+          v0.6.1
+        </option>
+          
+        
+          
+        <option value="../../v0.6.0/examples/spa-retrieval.html">
+          v0.6.0
+        </option>
+          
+        
+          
+        <option value="../../v0.5.2/examples/spa-retrieval.html">
+          v0.5.2
+        </option>
+          
+        
+          
+        <option value="../../v0.5.1/examples/spa-retrieval.html">
+          v0.5.1
+        </option>
+          
+        
+          
+        <option value="../../v0.5.0/examples/spa-retrieval.html">
+          v0.5.0
+        </option>
+          
+        
+          
+        <option value="../../v0.4.0/examples/spa-retrieval.html">
+          v0.4.0
+        </option>
+          
+        
+          
+        <option value="../../v0.3.1/examples/spa-retrieval.html">
+          v0.3.1
+        </option>
+          
+        
+          
+        <option value="../../v0.3.0/examples/spa-retrieval.html">
+          v0.3.0
+        </option>
+          
+        
+          
+        <option value="../../v0.2.0/examples/spa-retrieval.html">
+          v0.2.0
+        </option>
+          
+        
+      </select>
+    </div>
+  </form>
+  
+</div>
+      
+
+      <div class="col-12 col-md-8 col-xl-9">
+        <div class="container">
+          <div class="row">
+            <div class="col-10 offset-1 pb-5 documentation-source" role="main">
+              
+              
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt *,
+div.nbinput.container div.input_area pre,
+div.nboutput.container div.output_area pre,
+div.nbinput.container div.input_area .highlight,
+div.nboutput.container div.output_area .highlight {
+    border: none;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+div.nbinput.container > div[class*=highlight],
+div.nboutput.container > div[class*=highlight] {
+    margin: 0;
+}
+
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt * {
+    background: none;
+}
+
+div.nboutput.container div.output_area .highlight,
+div.nboutput.container div.output_area pre {
+    background: unset;
+}
+
+div.nboutput.container div.output_area div.highlight {
+    color: unset;  /* override Pygments text color */
+}
+
+/* avoid gaps between output lines */
+div.nboutput.container div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput.container,
+div.nboutput.container {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput.container,
+    div.nboutput.container {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput.container {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast.container {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput.container div.prompt pre {
+    color: #307FC1;
+}
+
+/* output prompt */
+div.nboutput.container div.prompt pre {
+    color: #BF5B3D;
+}
+
+/* all prompts */
+div.nbinput.container div.prompt,
+div.nboutput.container div.prompt {
+    width: 4.5ex;
+    padding-top: 5px;
+    position: relative;
+    user-select: none;
+}
+
+div.nbinput.container div.prompt > div,
+div.nboutput.container div.prompt > div {
+    position: absolute;
+    right: 0;
+    margin-right: 0.3ex;
+}
+
+@media (max-width: 540px) {
+    div.nbinput.container div.prompt,
+    div.nboutput.container div.prompt {
+        width: unset;
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput.container div.prompt.empty {
+        padding: 0;
+    }
+
+    div.nbinput.container div.prompt > div,
+    div.nboutput.container div.prompt > div {
+        position: unset;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput.container div.prompt pre,
+div.nboutput.container div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput.container div.input_area,
+div.nboutput.container div.output_area {
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput.container div.input_area,
+    div.nboutput.container div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput.container div.input_area {
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    /*background: #f5f5f5;*/
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput.container div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput.container div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput.container div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+
+div.nbinput.container div.input_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight].math,
+div.nboutput.container div.output_area.rendered_html,
+div.nboutput.container div.output_area > div.output_javascript,
+div.nboutput.container div.output_area:not(.rendered_html) > img{
+    padding: 5px;
+    margin: 0;
+}
+
+/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
+div.nbinput.container div.input_area > div[class^='highlight'],
+div.nboutput.container div.output_area > div[class^='highlight']{
+    overflow-y: hidden;
+}
+
+/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
+.prompt .copybtn {
+    display: none;
+}
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+div.rendered_html th {
+  font-weight: bold;
+}
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+</style>
+<div class="section" id="Optimizing-a-cognitive-model">
+<h1>Optimizing a cognitive model<a class="headerlink" href="#Optimizing-a-cognitive-model" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference external" href="https://colab.research.google.com/github/nengo/nengo-dl/blob/master/docs/examples/spa-retrieval.ipynb"><img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a></p>
+<p>The purpose of this example is to illustrate how NengoDL can be used to optimize a more complex cognitive model, involving the retrieval of information from highly structured <a class="reference external" href="http://compneuro.uwaterloo.ca/research/spa.html">semantic pointers</a>. We will create a network that takes a collection of information as input (encoded using semantic pointers), and train it to retrieve some specific element from that collection.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+
+<span class="kn">from</span> <span class="nn">urllib.request</span> <span class="kn">import</span> <span class="n">urlretrieve</span>
+
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">nengo</span>
+<span class="kn">from</span> <span class="nn">nengo</span> <span class="kn">import</span> <span class="n">spa</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+
+<span class="kn">import</span> <span class="nn">nengo_dl</span>
+</pre></div>
+</div>
+</div>
+<p>The first thing to do is define a function that produces random examples of structured semantic pointers. Each example consists of a collection of role-filler pairs of the following form:</p>
+<p><span class="math notranslate nohighlight">\(TRACE_0 = \sum_{j=0}^N Role_{0,j} \circledast Filler_{0,j}\)</span></p>
+<p>where terms like <span class="math notranslate nohighlight">\(Role\)</span> refer to simpler semantic pointers (i.e., random vectors), the <span class="math notranslate nohighlight">\(\circledast\)</span> symbol denotes circular convolution, and the summation means vector addition. That is, we define different pieces of information consisting of Roles and Fillers, and then we sum the information together in order to generate the full trace. As an example of how this might look in practice, we could encode information about a dog as</p>
+<p><span class="math notranslate nohighlight">\(DOG = COLOUR \circledast BROWN + LEGS \circledast FOUR + TEXTURE \circledast FURRY + ...\)</span></p>
+<p>The goal of the system is then to retrieve a cued piece of information from the semantic pointer. For example, if we gave the network the trace <span class="math notranslate nohighlight">\(DOG\)</span> and the cue <span class="math notranslate nohighlight">\(COLOUR\)</span> it should output <span class="math notranslate nohighlight">\(BROWN\)</span>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="n">n_items</span><span class="p">,</span> <span class="n">pairs_per_item</span><span class="p">,</span> <span class="n">vec_d</span><span class="p">,</span> <span class="n">vocab_seed</span><span class="p">):</span>
+    <span class="c1"># the vocabulary object will handle the creation of semantic</span>
+    <span class="c1"># pointers for us</span>
+    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="n">vocab_seed</span><span class="p">)</span>
+    <span class="n">vocab</span> <span class="o">=</span> <span class="n">spa</span><span class="o">.</span><span class="n">Vocabulary</span><span class="p">(</span><span class="n">dimensions</span><span class="o">=</span><span class="n">vec_d</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="n">rng</span><span class="p">,</span> <span class="n">max_similarity</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># initialize arrays of shape (n_inputs, n_steps, vec_d)</span>
+    <span class="n">traces</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_items</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">vec_d</span><span class="p">))</span>
+    <span class="n">cues</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_items</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">vec_d</span><span class="p">))</span>
+    <span class="n">targets</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_items</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">vec_d</span><span class="p">))</span>
+
+    <span class="c1"># iterate through all of the examples to be generated</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_items</span><span class="p">):</span>
+        <span class="n">role_names</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;ROLE_</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">pairs_per_item</span><span class="p">)]</span>
+        <span class="n">filler_names</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;FILLER_</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">pairs_per_item</span><span class="p">)]</span>
+
+        <span class="c1"># create key for the &#39;trace&#39; of bound pairs (i.e. a</span>
+        <span class="c1"># structured semantic pointer)</span>
+        <span class="n">trace_key</span> <span class="o">=</span> <span class="s2">&quot;TRACE_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="n">trace_ptr</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span>
+            <span class="s2">&quot;+&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2"> * </span><span class="si">{</span><span class="n">y</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">role_names</span><span class="p">,</span> <span class="n">filler_names</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="n">trace_ptr</span><span class="o">.</span><span class="n">normalize</span><span class="p">()</span>
+        <span class="n">vocab</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">trace_key</span><span class="p">,</span> <span class="n">trace_ptr</span><span class="p">)</span>
+
+        <span class="c1"># pick which element will be cued for retrieval</span>
+        <span class="n">cue_idx</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">pairs_per_item</span><span class="p">)</span>
+
+        <span class="c1"># fill array elements correspond to this example</span>
+        <span class="n">traces</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">vocab</span><span class="p">[</span><span class="n">trace_key</span><span class="p">]</span><span class="o">.</span><span class="n">v</span>
+        <span class="n">cues</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">vocab</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;ROLE_</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">cue_idx</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">v</span>
+        <span class="n">targets</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">vocab</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;FILLER_</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">cue_idx</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">v</span>
+
+    <span class="k">return</span> <span class="n">traces</span><span class="p">,</span> <span class="n">cues</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">vocab</span>
+</pre></div>
+</div>
+</div>
+<p>Next we’ll define a Nengo model that retrieves cued items from structured semantic pointers. So, for a given trace (e.g., <span class="math notranslate nohighlight">\(TRACE_0\)</span>) and cue (e.g., <span class="math notranslate nohighlight">\(Role_{0,0}\)</span>), the correct output would be the corresponding filler (<span class="math notranslate nohighlight">\(Filler_{0,0}\)</span>). The model we’ll build will perform such retrieval by implementing a computation of the form:</p>
+<p><span class="math notranslate nohighlight">\(TRACE_0 \:\: \circledast \sim Role_{0,0} \approx Filler_{0,0}\)</span></p>
+<p>That is, convolving the trace with the inverse of the given cue will produce (approximately) the associated filler. More details about the mathematics of how/why this works can be found <a class="reference external" href="https://www.semanticscholar.org/paper/Holographic-reduced-representations-Plate/564427596799f7967c91934966cd3c6bd31cb06d">here</a>.</p>
+<p>We can create a model to perform this calculation by using the <code class="docutils literal notranslate"><span class="pre">nengo.networks.CircularConvolution</span></code> network that comes with Nengo.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">seed</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">dims</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">50</span>
+<span class="n">n_pairs</span> <span class="o">=</span> <span class="mi">2</span>
+
+<span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="c1"># use rectified linear neurons</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">]</span><span class="o">.</span><span class="n">neuron_type</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">RectifiedLinear</span><span class="p">()</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">]</span><span class="o">.</span><span class="n">synapse</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># provide a pointer and a cue as input to the network</span>
+    <span class="n">trace_inp</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dims</span><span class="p">))</span>
+    <span class="n">cue_inp</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dims</span><span class="p">))</span>
+
+    <span class="c1"># create a convolution network to perform the computation</span>
+    <span class="c1"># specified above</span>
+    <span class="n">cconv</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">networks</span><span class="o">.</span><span class="n">CircularConvolution</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">invert_b</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># connect the trace and cue inputs to the circular</span>
+    <span class="c1"># convolution network</span>
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">trace_inp</span><span class="p">,</span> <span class="n">cconv</span><span class="o">.</span><span class="n">input_a</span><span class="p">)</span>
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">cue_inp</span><span class="p">,</span> <span class="n">cconv</span><span class="o">.</span><span class="n">input_b</span><span class="p">)</span>
+
+    <span class="c1"># probe the output</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">cconv</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>In order to assess the retrieval accuracy of the model we need a metric for success. In this case we’ll say that a cue has been successfully retrieved if the output vector is more similar to the correct filler vector than it is to any of the other vectors in the vocabulary.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">accuracy</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">vocab</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">t_step</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+    <span class="c1"># provide the probed output data, the vocab,</span>
+    <span class="c1"># the target vectors, and the time step at which to evaluate</span>
+
+    <span class="c1"># get output at the given time step</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="p">[:,</span> <span class="n">t_step</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="c1"># compute similarity between each output and vocab item</span>
+    <span class="n">sims</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">vocab</span><span class="o">.</span><span class="n">vectors</span><span class="p">,</span> <span class="n">output</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+    <span class="n">idxs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">sims</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># check that the output is most similar to the target</span>
+    <span class="n">acc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">vocab</span><span class="o">.</span><span class="n">vectors</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">==</span> <span class="n">targets</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">acc</span>
+</pre></div>
+</div>
+</div>
+<p>Now we can run the model on some test data to check the baseline retrieval accuracy. Since we used only a small number of neurons in the circular convolution network, we should expect mediocre results.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># generate some test inputs</span>
+<span class="n">test_traces</span><span class="p">,</span> <span class="n">test_cues</span><span class="p">,</span> <span class="n">test_targets</span><span class="p">,</span> <span class="n">test_vocab</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span>
+    <span class="n">minibatch_size</span><span class="p">,</span> <span class="n">n_pairs</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">vocab_seed</span><span class="o">=</span><span class="n">seed</span>
+<span class="p">)</span>
+<span class="n">test_inputs</span> <span class="o">=</span> <span class="p">{</span><span class="n">trace_inp</span><span class="p">:</span> <span class="n">test_traces</span><span class="p">,</span> <span class="n">cue_inp</span><span class="p">:</span> <span class="n">test_cues</span><span class="p">}</span>
+
+<span class="c1"># run the simulator for one time step to compute the network outputs</span>
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">test_inputs</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Retrieval accuracy:&quot;</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">out</span><span class="p">],</span> <span class="n">test_vocab</span><span class="p">,</span> <span class="n">test_targets</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Build finished in 0:00:01
+Optimization finished in 0:00:00
+Construction finished in 0:00:05
+Retrieval accuracy: 0.06
+</pre></div></div>
+</div>
+<p>These results indicate that the model is only rarely performing accurate retrieval, which means that this network is not very capable of manipulating structured semantic pointers in a useful way.</p>
+<p>We can visualize the similarity of the output for one of the traces to get a sense of what this accuracy looks like (the similarity to the correct output is shown in red).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">bars</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">test_vocab</span><span class="o">.</span><span class="n">vectors</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">test_vocab</span><span class="o">.</span><span class="n">vectors</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">out</span><span class="p">][</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<span class="p">)</span>
+<span class="n">bars</span><span class="p">[</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">test_vocab</span><span class="o">.</span><span class="n">vectors</span> <span class="o">==</span> <span class="n">test_targets</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="p">]</span><span class="o">.</span><span class="n">set_color</span><span class="p">(</span><span class="s2">&quot;r&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Vocabulary items&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Similarity&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spa-retrieval_11_0.png" src="../_images/examples_spa-retrieval_11_0.png" />
+</div>
+</div>
+<p>We can see that the actual output is not particularly similar to this desired output, which illustrates that the model is not performing accurate retrieval.</p>
+<p>Now we’ll train the network parameters to improve performance. We won’t directly optimize retrieval accuracy, but will instead minimize the mean squared error between the model’s output vectors and the vectors corresponding to the correct output items for each input cue. We’ll use a large number of training examples that are distinct from our test data, so as to avoid explicitly fitting the model parameters to the test items.</p>
+<p>To make this example run a bit quicker we’ll download some pretrained model parameters by default. Set <code class="docutils literal notranslate"><span class="pre">do_training=True</span></code> to train the model yourself.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
+
+<span class="n">do_training</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="k">if</span> <span class="n">do_training</span><span class="p">:</span>
+    <span class="c1"># create training data and data feeds</span>
+    <span class="n">train_traces</span><span class="p">,</span> <span class="n">train_cues</span><span class="p">,</span> <span class="n">train_targets</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span>
+        <span class="n">n_items</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">pairs_per_item</span><span class="o">=</span><span class="n">n_pairs</span><span class="p">,</span> <span class="n">vec_d</span><span class="o">=</span><span class="n">dims</span><span class="p">,</span> <span class="n">vocab_seed</span><span class="o">=</span><span class="n">seed</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="p">)</span>
+
+    <span class="c1"># train the model</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">optimizers</span><span class="o">.</span><span class="n">RMSprop</span><span class="p">(</span><span class="mf">2e-3</span><span class="p">),</span> <span class="n">loss</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">mse</span><span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+        <span class="p">{</span><span class="n">trace_inp</span><span class="p">:</span> <span class="n">train_traces</span><span class="p">,</span> <span class="n">cue_inp</span><span class="p">:</span> <span class="n">train_cues</span><span class="p">},</span> <span class="p">{</span><span class="n">out</span><span class="p">:</span> <span class="n">train_targets</span><span class="p">},</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">100</span>
+    <span class="p">)</span>
+
+    <span class="n">sim</span><span class="o">.</span><span class="n">save_params</span><span class="p">(</span><span class="s2">&quot;./spa_retrieval_params&quot;</span><span class="p">)</span>
+
+<span class="k">else</span><span class="p">:</span>
+    <span class="c1"># download pretrained parameters</span>
+    <span class="n">urlretrieve</span><span class="p">(</span>
+        <span class="s2">&quot;https://drive.google.com/uc?export=download&amp;&quot;</span>
+        <span class="s2">&quot;id=1KmroagQpaDAVbN-VnozqWVJw_1xjKxZj&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;spa_retrieval_params.npz&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># load parameters</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">load_params</span><span class="p">(</span><span class="s2">&quot;./spa_retrieval_params&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Build finished in 0:00:01
+Optimization finished in 0:00:00
+Construction finished in 0:00:00
+</pre></div></div>
+</div>
+<p>We can now recompute the network outputs using the trained model on the test data. We can see that the retrieval accuracy is significantly improved. You can modify the dimensionality of the vectors and the number of bound pairs in each trace to explore how these variables influence the upper bound on retrieval accuracy.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">test_inputs</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Retrieval accuracy:&quot;</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">out</span><span class="p">],</span> <span class="n">test_vocab</span><span class="p">,</span> <span class="n">test_targets</span><span class="p">))</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Retrieval accuracy: 0.86
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">bars</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">test_vocab</span><span class="o">.</span><span class="n">vectors</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">test_vocab</span><span class="o">.</span><span class="n">vectors</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">out</span><span class="p">][</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<span class="p">)</span>
+<span class="n">bars</span><span class="p">[</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">test_vocab</span><span class="o">.</span><span class="n">vectors</span> <span class="o">==</span> <span class="n">test_targets</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="p">]</span><span class="o">.</span><span class="n">set_color</span><span class="p">(</span><span class="s2">&quot;r&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Vocabulary items&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Similarity&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_spa-retrieval_17_0.png" src="../_images/examples_spa-retrieval_17_0.png" />
+</div>
+</div>
+<p>Check out <a class="reference external" href="https://www.nengo.ai/nengo-dl/examples/spa-memory.html">this example</a> for a more complicated version of this task/model, in which a structured semantic pointer is built up over time by binding together sequentially presented input items.</p>
+</div>
+
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div><footer class="text-light footer-main gradient-bottom">
+  <p class="small text-center mb-0">
+    <a class="no-hover-line" href="https://appliedbrainresearch.com">
+      <img
+        src="https://appliedbrainresearch.com/img/logo-blue-notext.svg"
+        height="48"
+      />
+    </a>
+    <a href="https://www.nengo.ai/">What is Nengo?</a>
+    <a href="https://www.nengo.ai/examples/">Examples</a>
+    <a href="https://www.nengo.ai/documentation/">Documentation</a>
+    <a href="https://www.nengo.ai/getting-started/">Getting started</a>
+    <a href="https://www.nengo.ai/privacy/">Privacy</a>
+  </p>
+  <p class="small text-center mb-0">&copy; Applied Brain Research</p>
+</footer>
+<script>
+  function switchVersion(select) {
+    var option = select.selectedOptions[0];
+    if (option.hasAttribute("value")) {
+      window.location = option.value;
+    }
+  }
+</script>
+
+<script>
+  var elements = document.querySelectorAll('.sidenav');
+  Stickyfill.add(elements);
+</script>
+<script>
+  ScrollReveal().reveal(".fade-in", {
+      scale: 0.85,
+      duration: 1000,
+      delay: 250,
+      interval: 50
+  });
+</script>
+<script>
+  $('a.toggle-sidenav').on('click', function(e) {
+    e.preventDefault();
+    if ( $(this).hasClass('active') ) {
+      $(this).removeClass('active');
+      $('.sidenav').removeClass('open');
+    } else {
+      $(this).addClass('active');
+      $('.sidenav').addClass('open');
+    }
+  });
+</script>
+<script>
+  var lists = document.querySelectorAll('.toctree ul');
+  lists.forEach((ul) => {
+      ul.classList.add("nav");
+  });
+  var links = document.querySelectorAll('.toctree a');
+  links.forEach((link) => {
+      link.classList.add("nav-link");
+  });
+  $("body").scrollspy({target: ".sidenav"});
+</script>
+  </body>
+</html>
