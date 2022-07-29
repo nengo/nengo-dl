@@ -18,7 +18,7 @@ def test_warn_on_opensim_del(Simulator):
 
     sim = Simulator(net)
     with pytest.warns(RuntimeWarning):
-        sim.__del__()
+        sim.__del__()  # pylint: disable=unnecessary-dunder-call
     sim.close()
 
 

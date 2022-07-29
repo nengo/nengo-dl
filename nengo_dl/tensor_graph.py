@@ -259,7 +259,9 @@ class TensorGraph(tf.keras.layers.Layer):
                     ),
                     dtype=dtype,
                 )
-                initializer = lambda shape=None, dtype=None: val
+
+                def initializer(shape=None, dtype=None):
+                    return val
 
             # figure out shape of full concatenated initial value
             shape = list(shapes[0])
