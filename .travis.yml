@@ -21,7 +21,6 @@ env:
   global:
     - SCRIPT="test"
     - TEST_ARGS=""
-    - BRANCH_NAME="${TRAVIS_PULL_REQUEST_BRANCH:-$TRAVIS_BRANCH}"
     - NUMPY_VERSION="numpy>=1.16.0"
     - TF_VERSION="tensorflow"
     - NENGO_VERSION="nengo[tests]"
@@ -112,7 +111,7 @@ before_install:
   # fixes setuptools bug, see https://github.com/pypa/setuptools/issues/3293
   - pip install "importlib-metadata>=0.21"
   # install/run nengo-bones
-  - pip install git+https://github.com/nengo/nengo-bones#egg=nengo-bones
+  - pip install git+https://github.com/nengo/nengo-bones@github-actions#egg=nengo-bones
   - bones-generate --output-dir .ci ci-scripts
   - bones-check --verbose
   # display environment info
@@ -122,26 +121,14 @@ install:
   - .ci/$SCRIPT.sh install
   - pip freeze
 
-before_script:
-  - .ci/$SCRIPT.sh before_script
-
 script:
   - .ci/$SCRIPT.sh script
-
-before_cache:
-  - .ci/$SCRIPT.sh before_cache
 
 after_success:
   - .ci/$SCRIPT.sh after_success
 
 after_failure:
   - .ci/$SCRIPT.sh after_failure
-
-before_deploy:
-  - .ci/$SCRIPT.sh before_deploy
-
-after_deploy:
-  - .ci/$SCRIPT.sh after_deploy
 
 after_script:
   - .ci/$SCRIPT.sh after_script

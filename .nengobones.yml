@@ -288,6 +288,7 @@ travis_yml:
     01EnCzuFhye03XfQ+I2ChwYYrE6uzftn7tQEYexwVqDqEI9HhqKhDXtfGAJYOrbguyH/a2u2ioa0CkEhzD\
     nOmW6KvVAGg9mUCNfbWR2uIehtXCjgJRqng+ztedRsoelktlOCMT4RTLc1sV3tRWwEppsMByrqDCjiOQxL\
     hQVJ+X1bFjMhZWKqoGFJQxOI5tRU+lUV3p8UimBbaCZruTU="
+  bones_install: git+https://github.com/nengo/nengo-bones@github-actions#egg=nengo-bones
 
 codecov_yml:
   abs_target: 100%
