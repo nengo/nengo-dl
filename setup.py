@@ -62,6 +62,7 @@ else:
         "tf-nightly-cpu",
         "tensorflow-gpu",
         "tensorflow-cpu",
+        "tensorflow-macos",
     ]:
         if d in installed_dists:
             tf_req = d

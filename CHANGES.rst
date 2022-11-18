@@ -25,6 +25,11 @@ Release history
 
 *Compatible with TensorFlow 2.2 - 2.11*
 
+**Added**
+
+- Included ``tensorflow-macos`` in the alternative tensorflow package names checked
+  during installation. (`#228`_)
+
 **Changed**
 
 - Pinned TensorFlow version to <2.11 on Windows. As of 2.11 the TensorFlow package for
@@ -39,6 +44,7 @@ Release history
   some models; if you need this functionality, try using a previous version of NengoDL.
   (`#229`_)
 
+.. _#228: https://github.com/nengo/nengo-dl/pull/228
 .. _#229: https://github.com/nengo/nengo-dl/pull/229
 
 3.5.0 (May 18, 2022)
