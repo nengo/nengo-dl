@@ -17,8 +17,8 @@ def test_warn_on_opensim_del(Simulator):
         nengo.Ensemble(10, 1)
 
     sim = Simulator(net)
-    with pytest.warns(RuntimeWarning):
-        sim.__del__()
+    with pytest.warns(RuntimeWarning, match="Simulator.*deallocated while open"):
+        sim.__del__()  # pylint: disable=unnecessary-dunder-call
     sim.close()
 
 

@@ -1,6 +1,4 @@
-"""
-Build classes for Nengo transform operators.
-"""
+"""Build classes for Nengo transform operators."""
 
 import warnings
 
@@ -13,10 +11,8 @@ from nengo_dl.compat import ConvTransposeInc
 
 
 class ConvSet(ConvInc):
-    """
-    A version of `~nengo.builder.transforms.ConvInc` that overwrites the target
-    rather than incrementing.
-    """
+    """A version of `~nengo.builder.transforms.ConvInc` that overwrites the target
+    rather than incrementing."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -30,10 +26,8 @@ class ConvSet(ConvInc):
 
 
 class ConvTransposeSet(ConvTransposeInc):
-    """
-    A version of `~nengo.builder.transforms.ConvTransposeInc` that overwrites
-    the target rather than incrementing.
-    """
+    """A version of `~nengo.builder.transforms.ConvTransposeInc` that overwrites the
+    target rather than incrementing."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -51,9 +45,7 @@ class ConvTransposeSet(ConvTransposeInc):
 @Builder.register(ConvTransposeInc)
 @Builder.register(ConvTransposeSet)
 class ConvIncBuilder(OpBuilder):
-    """
-    Build a group of `nengo.builder.transforms.ConvInc` operators.
-    """
+    """Build a group of `nengo.builder.transforms.ConvInc` operators."""
 
     @staticmethod
     def is_transpose_op(op):

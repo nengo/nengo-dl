@@ -1,6 +1,4 @@
-"""
-Build classes for basic Nengo operators.
-"""
+"""Build classes for basic Nengo operators."""
 
 import logging
 import warnings
@@ -28,10 +26,8 @@ logger = logging.getLogger(__name__)
 
 
 class ResetInc(Reset):
-    """
-    A version of `~nengo.builder.operator.Reset` that increments the target value
-    rather than overwriting.
-    """
+    """A version of `~nengo.builder.operator.Reset` that increments the target value
+    rather than overwriting."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -45,10 +41,8 @@ class ResetInc(Reset):
 
 
 class ElementwiseSet(ElementwiseInc):
-    """
-    A version of `~nengo.builder.operator.ElementwiseInc` that overwrites the target
-    rather than incrementing.
-    """
+    """A version of `~nengo.builder.operator.ElementwiseInc` that overwrites the target
+    rather than incrementing."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -62,10 +56,8 @@ class ElementwiseSet(ElementwiseInc):
 
 
 class DotSet(DotInc):
-    """
-    A version of `~nengo.builder.operator.DotInc` that overwrites the target rather
-    than incrementing.
-    """
+    """A version of `~nengo.builder.operator.DotInc` that overwrites the target rather
+    than incrementing."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -79,10 +71,8 @@ class DotSet(DotInc):
 
 
 class SparseDotSet(SparseDotInc):
-    """
-    A version of `~nengo.builder.operator.SparseDotInc` that overwrites the target
-    rather than incrementing.
-    """
+    """A version of `~nengo.builder.operator.SparseDotInc` that overwrites the target
+    rather than incrementing."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -98,9 +88,7 @@ class SparseDotSet(SparseDotInc):
 @Builder.register(Reset)
 @Builder.register(ResetInc)
 class ResetBuilder(OpBuilder):
-    """
-    Build a group of `~nengo.builder.operator.Reset` operators.
-    """
+    """Build a group of `~nengo.builder.operator.Reset` operators."""
 
     def build_pre(self, signals, config):
         super().build_pre(signals, config)
@@ -152,9 +140,7 @@ class ResetBuilder(OpBuilder):
 
 @Builder.register(Copy)
 class CopyBuilder(OpBuilder):
-    """
-    Build a group of `~nengo.builder.operator.Copy` operators.
-    """
+    """Build a group of `~nengo.builder.operator.Copy` operators."""
 
     def build_pre(self, signals, config):
         super().build_pre(signals, config)
@@ -191,9 +177,7 @@ class CopyBuilder(OpBuilder):
 @Builder.register(ElementwiseInc)
 @Builder.register(ElementwiseSet)
 class ElementwiseIncBuilder(OpBuilder):
-    """
-    Build a group of `~nengo.builder.operator.ElementwiseInc` operators.
-    """
+    """Build a group of `~nengo.builder.operator.ElementwiseInc` operators."""
 
     def build_pre(self, signals, config):
         super().build_pre(signals, config)
@@ -255,7 +239,7 @@ class ElementwiseIncBuilder(OpBuilder):
 
 def sparse_matmul(A_indices, A_data, A_shape, X, transpose_x=False):
     """
-    Matrix multiplication between sparse matrix A and dense matrix X
+    Matrix multiplication between sparse matrix A and dense matrix X.
 
     Parameters
     ----------
@@ -304,9 +288,7 @@ def sparse_matmul(A_indices, A_data, A_shape, X, transpose_x=False):
 @Builder.register(DotInc)
 @Builder.register(DotSet)
 class DotIncBuilder(OpBuilder):
-    """
-    Build a group of `~nengo.builder.operator.DotInc` operators.
-    """
+    """Build a group of `~nengo.builder.operator.DotInc` operators."""
 
     def build_pre(self, signals, config):
         super().build_pre(signals, config)
@@ -372,9 +354,7 @@ class DotIncBuilder(OpBuilder):
 
 @Builder.register(SimPyFunc)
 class SimPyFuncBuilder(OpBuilder):
-    """
-    Build a group of `~nengo.builder.operator.SimPyFunc` operators.
-    """
+    """Build a group of `~nengo.builder.operator.SimPyFunc` operators."""
 
     def build_pre(self, signals, config):
         super().build_pre(signals, config)
@@ -466,9 +446,7 @@ class SimPyFuncBuilder(OpBuilder):
 @Builder.register(SparseDotInc)
 @Builder.register(SparseDotSet)
 class SparseDotIncBuilder(OpBuilder):
-    """
-    Build a group of `~nengo.builder.operator.SparseDotInc` operators.
-    """
+    """Build a group of `~nengo.builder.operator.SparseDotInc` operators."""
 
     def build_pre(self, signals, config):
         super().build_pre(signals, config)
@@ -537,9 +515,7 @@ class SparseDotIncBuilder(OpBuilder):
 
 @Builder.register(TimeUpdate)
 class TimeUpdateBuilder(OpBuilder):
-    """
-    Build a group of `~nengo.builder.operator.TimeUpdate` operators.
-    """
+    """Build a group of `~nengo.builder.operator.TimeUpdate` operators."""
 
     def build_pre(self, signals, config):
         super().build_pre(signals, config)
@@ -567,9 +543,7 @@ class TimeUpdateBuilder(OpBuilder):
 
 @Builder.register(SimProbe)
 class SimProbeBuilder(OpBuilder):
-    """
-    Build a group of `~nengo.builder.probe.SimProbe` operators.
-    """
+    """Build a group of `~nengo.builder.probe.SimProbe` operators."""
 
     def build_step(self, signals):
         # doesn't do anything (probe reading is handled directly in

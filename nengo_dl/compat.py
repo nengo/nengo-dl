@@ -1,9 +1,7 @@
 # pylint: disable=unused-import,ungrouped-imports
 
-"""
-Utilities to ease cross-compatibility between different versions of upstream
-dependencies.
-"""
+"""Utilities to ease cross-compatibility between different versions of upstream
+dependencies."""
 
 import collections
 import inspect
@@ -88,10 +86,8 @@ tf.get_logger().addFilter(TFLogFilter(err_on_deprecation=False))
 if version.parse(tf.__version__) < version.parse("2.3.0rc0"):
 
     def _build_map(outputs):
-        """
-        Vendored from ``tensorflow.python.keras.engine.functional._build_map``
-        in TF 2.3.0 (with a few changes noted below).
-        """
+        """Vendored from ``tensorflow.python.keras.engine.functional._build_map`` in TF
+        2.3.0 (with a few changes noted below)."""
         finished_nodes = set()
         nodes_in_progress = set()
         nodes_in_decreasing_depth = []  # nodes from inputs -> outputs.
@@ -214,8 +210,10 @@ else:
     def get_effective_source_map(self):
         """
         Sometimes the source file is unknown (e.g. when running code through Sphinx's
-        doctest builder). This causes TensorFlow to crash (as of TF 2.5). So we convert
-        any Nones to the string "unknown".
+        doctest builder).
+
+        This causes TensorFlow to crash (as of TF 2.5). So we convert any Nones
+        to the string "unknown".
         """
 
         effective_source_map = old_source_map(self)

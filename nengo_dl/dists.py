@@ -1,6 +1,6 @@
 """
-Additions to the `distributions included with Nengo
-<nengo.dists.Distribution>`.
+Additions to the distributions included with Nengo.
+
 These distributions are usually used to initialize weight matrices, e.g.
 ``nengo.Connection(a.neurons, b.neurons, transform=nengo_dl.dists.Glorot())``.
 """
@@ -11,8 +11,9 @@ from nengo.params import EnumParam, NumberParam
 
 
 class TruncatedNormal(Distribution):
-    """Normal distribution where any values more than some distance from the
-    mean are resampled.
+    """
+    Normal distribution where any values more than some distance from the mean are
+    resampled.
 
     Parameters
     ----------
@@ -37,7 +38,8 @@ class TruncatedNormal(Distribution):
         self.limit = 2 * stddev if limit is None else limit
 
     def sample(self, n, d=None, rng=None):
-        """Samples the distribution.
+        """
+        Samples the distribution.
 
         Parameters
         ----------
@@ -73,7 +75,8 @@ class TruncatedNormal(Distribution):
 
 
 class VarianceScaling(Distribution):
-    """Variance scaling distribution for weight initialization (analogous to
+    """
+    Variance scaling distribution for weight initialization (analogous to
     ``tf.initializers.VarianceScaling``).
 
     Parameters
@@ -99,7 +102,8 @@ class VarianceScaling(Distribution):
         self.distribution = distribution
 
     def sample(self, n, d=None, rng=None):
-        """Samples the distribution.
+        """
+        Samples the distribution.
 
         Parameters
         ----------
@@ -145,8 +149,8 @@ class VarianceScaling(Distribution):
 
 
 class Glorot(VarianceScaling):
-    """Weight initialization method from [1]_ (also known as Xavier
-    initialization).
+    """
+    Weight initialization method from [1]_ (also known as Xavier initialization).
 
     Parameters
     ----------
@@ -169,7 +173,8 @@ class Glorot(VarianceScaling):
 
 
 class He(VarianceScaling):
-    """Weight initialization method from [1]_.
+    """
+    Weight initialization method from [1]_.
 
     Parameters
     ----------

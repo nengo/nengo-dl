@@ -89,9 +89,8 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope="session")
 def Simulator(request):
-    """
-    Simulator class to be used in tests (use this instead of ``nengo_dl.Simulator``).
-    """
+    """Simulator class to be used in tests (use this instead of
+    ``nengo_dl.Simulator``)."""
 
     return make_test_sim(request)
 

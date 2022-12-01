@@ -1,7 +1,5 @@
-"""
-These functions are used to restructure the Nengo operator graph so that it
-can be simulated more efficiently when converted into a TensorFlow graph.
-"""
+"""These functions are used to restructure the Nengo operator graph so that it can be
+simulated more efficiently when converted into a TensorFlow graph."""
 
 import logging
 import warnings
@@ -208,8 +206,8 @@ def tree_planner(op_list, max_depth=3):
     def shortest_plan(
         selected, successors_of, predecessors_of, cache, max_depth, available
     ):
-        """Recursively check what the shortest plan is after selecting each
-        available group."""
+        """Recursively check what the shortest plan is after selecting each available
+        group."""
 
         shortest = (None, len(successors_of) + 1)
         nonempty_available = [x for x in enumerate(available) if len(x[1]) > 0]
@@ -469,8 +467,8 @@ def transitive_planner(op_list):
 
 def transitive_closure_recurse(dg, ops, trans, builder_type, builder_types, cache):
     """
-    Computes the transitive closure for the given graph, restricted to the
-    operators with the given builder type.
+    Computes the transitive closure for the given graph, restricted to the operators
+    with the given builder type.
 
     Parameters
     ----------
@@ -531,8 +529,7 @@ def transitive_closure_recurse(dg, ops, trans, builder_type, builder_types, cach
 
 def noop_planner(operators):
     """
-    Orders operators into a valid execution order, but does not perform
-    any merging.
+    Orders operators into a valid execution order, but does not perform any merging.
 
     Parameters
     ----------
@@ -556,8 +553,7 @@ def noop_planner(operators):
 
 def order_signals(plan, n_passes=10):
     """
-    Orders signals and operators to try to structure reads/writes in contiguous
-    blocks.
+    Orders signals and operators to try to structure reads/writes in contiguous blocks.
 
     Parameters
     ----------
@@ -730,9 +726,8 @@ def order_signals(plan, n_passes=10):
 
 def hamming_sort(blocks):
     """
-    Reorder signals using heuristics to try to place signals that are accessed
-    by the same operators into adjacent positions (giving priority to larger
-    blocks).
+    Reorder signals using heuristics to try to place signals that are accessed by the
+    same operators into adjacent positions (giving priority to larger blocks).
 
     Parameters
     ----------
@@ -929,8 +924,8 @@ def sort_ops_by_signals(sorted_io, sigs, sig_idxs, new_plan, blocks, op_sigs):
 
 def sort_signals_by_ops(sorted_io, sigs, sig_idxs, new_plan, blocks, op_sigs):
     """
-    Attempts to rearrange ``sigs`` so that it is in the same order as
-    operator signals, without changing the overall block order.
+    Attempts to rearrange ``sigs`` so that it is in the same order as operator signals,
+    without changing the overall block order.
 
     Parameters
     ----------
@@ -1020,8 +1015,8 @@ def sort_signals_by_ops(sorted_io, sigs, sig_idxs, new_plan, blocks, op_sigs):
 
 
 def noop_order_signals(plan, **_):
-    """A version of `.graph_optimizer.order_signals` that doesn't do any
-    reordering, for debugging."""
+    """A version of `.graph_optimizer.order_signals` that doesn't do any reordering, for
+    debugging."""
 
     all_signals = list(
         compat.FrozenOrderedSet(
@@ -1033,8 +1028,7 @@ def noop_order_signals(plan, **_):
 
 def remove_unmodified_resets(operators):
     """
-    Remove any Reset operators that are targeting a signal that is
-    never modified.
+    Remove any Reset operators that are targeting a signal that is never modified.
 
     If a signal is reset, but never inced/updated after that, we can just set
     the default signal value to the reset value and remove the reset. Note:
@@ -1072,8 +1066,7 @@ def remove_unmodified_resets(operators):
 
 def remove_zero_incs(operators):
     """
-    Remove any operators where we know the input (and therefore output) is
-    zero.
+    Remove any operators where we know the input (and therefore output) is zero.
 
     If the input to a DotInc/ElementwiseInc/Copy/ConvInc is zero then we know
     that the output of the op will be zero, so we can just get rid of it.
@@ -1148,7 +1141,8 @@ def remove_zero_incs(operators):
 
 
 def remove_reset_incs(operators):
-    """Replace ``y=Reset(0) + x`` with ``y=x``.
+    """
+    Replace ``y=Reset(0) + x`` with ``y=x``.
 
     If a signal is Reset and Inc'd, we can change that to a Set that combines
     the two ops (note: any other incs of that signal can proceed as normal)
@@ -1488,8 +1482,7 @@ def signal_io_dicts(operators):
 
 def display_signal_blocks(operators, all_signals):
     """
-    Creates a visual depiction of the signals blocks read by each operator
-    group.
+    Creates a visual depiction of the signals blocks read by each operator group.
 
     Parameters
     ----------

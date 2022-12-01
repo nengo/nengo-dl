@@ -1,7 +1,5 @@
-"""
-Some common loss functions (for use with the ``loss`` argument in
-`.Simulator.compile`).
-"""
+"""Some common loss functions (for use with the ``loss`` argument in
+`.Simulator.compile`)."""
 
 import tensorflow as tf
 

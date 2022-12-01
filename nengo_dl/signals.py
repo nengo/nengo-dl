@@ -1,6 +1,4 @@
-"""
-Represents and manages the internal simulation signals.
-"""
+"""Represents and manages the internal simulation signals."""
 
 import logging
 from collections import defaultdict
@@ -50,9 +48,7 @@ class TensorSignal:
         self.reset()
 
     def reset(self):
-        """
-        Reset cached Tensors.
-        """
+        """Reset cached Tensors."""
         self._tf_shape = None
         self._tf_indices = None
         self._tf_indices_nd = None
@@ -60,9 +56,7 @@ class TensorSignal:
 
     @property
     def slices(self):
-        """
-        The slices containing the data for this signal in the base array.
-        """
+        """The slices containing the data for this signal in the base array."""
         return self._slices
 
     @slices.setter
@@ -71,9 +65,7 @@ class TensorSignal:
 
     @property
     def ndim(self):
-        """
-        The rank of this signal.
-        """
+        """The rank of this signal."""
         return len(self.shape)
 
     def __repr__(self):
@@ -81,8 +73,8 @@ class TensorSignal:
 
     def __getitem__(self, indices):
         """
-        Create a new TensorSignal representing a subset (slice or advanced
-        indexing) of the indices of this TensorSignal.
+        Create a new TensorSignal representing a subset (slice or advanced indexing) of
+        the indices of this TensorSignal.
 
         Parameters
         ----------
@@ -128,8 +120,8 @@ class TensorSignal:
 
     def reshape(self, shape):
         """
-        Create a new TensorSignal representing a reshaped view of the
-        same data in this TensorSignal (size of data must remain unchanged).
+        Create a new TensorSignal representing a reshaped view of the same data in this
+        TensorSignal (size of data must remain unchanged).
 
         Parameters
         ----------
@@ -169,9 +161,7 @@ class TensorSignal:
 
     @property
     def tf_shape(self):
-        """
-        A ``tf.Tensor`` representing the shape of this signal.
-        """
+        """A ``tf.Tensor`` representing the shape of this signal."""
         if self._tf_shape is None:
             self._tf_shape = tf.constant(self.full_shape, dtype=tf.int32)
 
@@ -179,9 +169,7 @@ class TensorSignal:
 
     @property
     def tf_indices(self):
-        """
-        A ``tf.Tensor`` representing the indices of this signal.
-        """
+        """A ``tf.Tensor`` representing the indices of this signal."""
         if self._tf_indices is None:
             self._tf_indices = tf.constant(
                 np.concatenate(
@@ -198,10 +186,8 @@ class TensorSignal:
 
     @property
     def tf_indices_nd(self):
-        """
-        A ``tf.Tensor`` representing the indices of this signal for use with e.g.
-        ``scatter_nd``.
-        """
+        """A ``tf.Tensor`` representing the indices of this signal for use with e.g.
+        ``scatter_nd``."""
 
         if self._tf_indices_nd is None:
             if self.minibatched:
@@ -221,8 +207,8 @@ class TensorSignal:
     @property
     def tf_slice(self):
         """
-        A tuple of ``tf.Tensors`` representing the ``(start, stop, stride)``
-        slice within the base array containing the data for this signal.
+        A tuple of ``tf.Tensors`` representing the ``(start, stop, stride)`` slice
+        within the base array containing the data for this signal.
 
         This can be used as a more efficient representation of
         `.TensorSignal.tf_indices`.
@@ -286,9 +272,10 @@ class SignalDict(Mapping):
         """
         Reset build-specific data structures.
 
-        These are data structures that are filled out during the TensorGraph build
-        process (and therefore need to be re-initialized if we build the model again),
-        as opposed to data that is constant for a given Nengo model.
+        These are data structures that are filled out during the TensorGraph
+        build process (and therefore need to be re-initialized if we build the
+        model again), as opposed to data that is constant for a given Nengo
+        model.
         """
         # these values will be re-generated whenever the model is rebuilt
         self.bases = {}
@@ -423,8 +410,7 @@ class SignalDict(Mapping):
 
     def combine(self, sigs, label="Combine"):
         """
-        Combines several TensorSignals into one by concatenating along
-        the first axis.
+        Combines several TensorSignals into one by concatenating along the first axis.
 
         Parameters
         ----------

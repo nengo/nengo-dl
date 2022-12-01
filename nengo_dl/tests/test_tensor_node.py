@@ -118,26 +118,26 @@ def test_pre_build(Simulator):
 
             self.size_out = size_out
 
-        def build(self, shape_in):
-            super().build(shape_in)
+        def build(self, input_shape):
+            super().build(input_shape)
 
             self.w = self.add_weight(
                 initializer=tf.initializers.ones(),
-                shape=(shape_in[-1], self.size_out),
+                shape=(input_shape[-1], self.size_out),
                 name="weights",
             )
 
-        def call(self, x):
-            return tf.matmul(x, tf.cast(self.w, x.dtype))
+        def call(self, inputs):
+            return tf.matmul(inputs, tf.cast(self.w, inputs.dtype))
 
         def compute_output_shape(self, _):
             return tf.TensorShape((None, self.size_out))
 
     class TestLayer2(tf.keras.layers.Layer):
-        def build(self, shape_in):
+        def build(self, input_shape):
             # TODO: add this check back in once
             #  https://github.com/tensorflow/tensorflow/issues/32786 is fixed
-            # assert shape_in == [(), (1, 1, 1)]
+            # assert input_shape == [(), (1, 1, 1)]
             pass
 
         def call(self, inputs):
@@ -235,8 +235,8 @@ def test_reuse_vars(Simulator, pytestconfig):
                 initializer=tf.initializers.constant(2.0), name="weights"
             )
 
-        def call(self, x):
-            return x * tf.cast(self.w, x.dtype)
+        def call(self, inputs):
+            return inputs * tf.cast(self.w, inputs.dtype)
 
     with nengo.Network() as net:
         configure_settings(trainable=False)
@@ -304,11 +304,11 @@ def test_nested_layer(Simulator, pytestconfig):
                 dtype=pytestconfig.getoption("--dtype"),
             )
 
-        def build(self, input_shapes):
-            super().build(input_shapes)
+        def build(self, input_shape):
+            super().build(input_shape)
 
             if not self.layer.built:
-                self.layer.build(input_shapes)
+                self.layer.build(input_shape)
 
         def call(self, inputs):
             return self.layer(inputs)

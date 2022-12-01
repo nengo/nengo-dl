@@ -346,7 +346,7 @@ def test_create_signals():
     ]
 
     # check that boolean signals are handled correctly
-    sigs = [dummies.Signal(dtype=np.bool, shape=())]
+    sigs = [dummies.Signal(dtype=np.bool_, shape=())]
     plan = [(dummies.Op(reads=sigs),)]
     graph = dummies.TensorGraph(plan, tf.float32, 1)
     graph.create_signals(sigs)

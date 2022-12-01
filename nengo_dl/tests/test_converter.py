@@ -88,8 +88,8 @@ def test_fallback(Simulator):
     inp = x = tf.keras.Input(shape=(2, 2))
 
     class MyLayer(tf.keras.layers.Layer):
-        def build(self, input_shapes):
-            super().build(input_shapes)
+        def build(self, input_shape):
+            super().build(input_shape)
             self.kernel = self.add_weight(
                 shape=(), initializer=tf.initializers.RandomUniform()
             )
@@ -716,11 +716,12 @@ def test_layer_dicts():
 
 
 def test_mid_model_output():
-    """Check that converter supports output tensors from the middle of the model.
+    """
+    Check that converter supports output tensors from the middle of the model.
 
-    Previous converter put output tensors last in build order, so having an output
-    tensor that needed to be built before non-output tensors was problematic.
-    https://github.com/nengo/nengo-dl/pull/137
+    Previous converter put output tensors last in build order, so having an
+    output tensor that needed to be built before non-output tensors was
+    problematic. https://github.com/nengo/nengo-dl/pull/137
     """
 
     # model must have at least three layers, with one layer in between outputs
@@ -774,9 +775,8 @@ def test_dense_fallback_bias():
 
 
 def test_swap_activations_key_never_used():
-    """
-    Ensure warnings are thrown properly when there is an unused swap activations key.
-    """
+    """Ensure warnings are thrown properly when there is an unused swap activations
+    key."""
 
     def relu(x):
         return tf.maximum(x, 0)

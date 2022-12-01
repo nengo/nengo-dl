@@ -1,8 +1,5 @@
-"""
-The Simulator class is the access point for the main features of NengoDL,
-including `running <.Simulator.run_steps>` and `training <.Simulator.fit>`
-a model.
-"""
+"""The Simulator class is the access point for the main features of NengoDL, including
+`running <.Simulator.run_steps>` and `training <.Simulator.fit>` a model."""
 
 import collections
 import contextlib
@@ -56,8 +53,8 @@ def with_self(wrapped, instance, args, kwargs):
 
 @decorator
 def require_open(wrapped, instance, args, kwargs):
-    """A decorator that can be used to mark methods that require the Simulator to
-    be open."""
+    """A decorator that can be used to mark methods that require the Simulator to be
+    open."""
 
     if instance.closed:
         raise SimulatorClosed(
@@ -68,8 +65,8 @@ def require_open(wrapped, instance, args, kwargs):
 
 
 def fill_docs(*args, **kwargs):
-    """Stores documentation for common arguments in one place, to avoid duplication,
-    and then fills them in automatically in the docstring."""
+    """Stores documentation for common arguments in one place, to avoid duplication, and
+    then fills them in automatically in the docstring."""
 
     docs = {
         "x": """
@@ -629,9 +626,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
     @require_open
     @with_self
     def soft_reset(self, include_trainable=False, include_probes=False):
-        """
-        Deprecated, use `.Simulator.reset` instead.
-        """
+        """Deprecated, use `.Simulator.reset` instead."""
 
         warnings.warn(
             "Simulator.soft_reset is deprecated, use Simulator.reset("
@@ -1277,8 +1272,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
     @require_open
     def freeze_params(self, objs):
         """
-        Stores the live parameter values from the simulation back into a
-        Nengo object definition.
+        Stores the live parameter values from the simulation back into a Nengo object
+        definition.
 
         This can be helpful for reusing a NengoDL model inside a different
         Simulator.  For example:
@@ -1345,8 +1340,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
     def get_nengo_params(self, nengo_objs, as_dict=False):
         """
-        Extract model parameters in a form that can be used to initialize
-        Nengo objects in a different model.
+        Extract model parameters in a form that can be used to initialize Nengo objects
+        in a different model.
 
         For example:
 
@@ -1534,8 +1529,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
     @with_self
     def check_gradients(self, inputs=None, outputs=None, atol=1e-5, rtol=1e-3):
         """
-        Perform gradient checks for the network (used to verify that the
-        analytic gradients are correct).
+        Perform gradient checks for the network (used to verify that the analytic
+        gradients are correct).
 
         Raises a simulation error if the difference between analytic and
         numeric gradient is greater than ``atol + rtol * numeric_grad``
@@ -1783,8 +1778,8 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
     def _generate_inputs(self, data=None, n_steps=None):
         """
-        Generate inputs for the network (the output values of each Node with
-        no incoming connections).
+        Generate inputs for the network (the output values of each Node with no incoming
+        connections).
 
         Parameters
         ----------
@@ -2089,9 +2084,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
         self.close()
 
     def __del__(self):
-        """
-        Raise a RuntimeWarning if the Simulator is deallocated while open.
-        """
+        """Raise a RuntimeWarning if the Simulator is deallocated while open."""
 
         if self.closed is not None and not self.closed:
             warnings.warn(
@@ -2150,7 +2143,8 @@ class SimulationData(collections.abc.Mapping):
         self.minibatched = minibatched
 
     def __getitem__(self, obj):
-        """Return the data associated with ``obj``.
+        """
+        Return the data associated with ``obj``.
 
         Parameters
         ----------
@@ -2309,8 +2303,7 @@ class SimulationData(collections.abc.Mapping):
 
     def _attr_map(self, obj, attr):
         """
-        Maps from ``sim.data[obj].attr`` to the equivalent
-        ``model.sig[obj][attr]``.
+        Maps from ``sim.data[obj].attr`` to the equivalent ``model.sig[obj][attr]``.
 
         Parameters
         ----------
@@ -2325,7 +2318,6 @@ class SimulationData(collections.abc.Mapping):
             The nengo object to key into ``model.sig``
         attr : str
             The name of the signal corresponding to input attr
-
         """
 
         if isinstance(obj, Ensemble) and attr == "bias":

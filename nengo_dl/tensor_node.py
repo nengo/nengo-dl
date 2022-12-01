@@ -2,8 +2,8 @@
 TensorNodes allow parts of a model to be defined using TensorFlow and smoothly
 integrated with the rest of a Nengo model.
 
-See `the documentation <https://www.nengo.ai/nengo-dl/tensor-node.html>`_ for more
-details.
+See `the documentation <https://www.nengo.ai/nengo-dl/tensor-node.html>`_ for
+more details.
 """
 
 import contextlib
@@ -76,8 +76,8 @@ class TensorFuncParam(Parameter):
 
     def coerce(self, instance, value):
         """
-        Performs validation on the function passed to TensorNode, and sets
-        ``shape_out`` if necessary.
+        Performs validation on the function passed to TensorNode, and sets ``shape_out``
+        if necessary.
 
         Parameters
         ----------
@@ -208,11 +208,9 @@ class TensorNode(Node):
 
     @property
     def output(self):
-        """
-        Ensures that nothing tries to evaluate the `output` attribute
-        (indicating that something is trying to simulate this as a regular
-        `nengo.Node` rather than a TensorNode).
-        """
+        """Ensures that nothing tries to evaluate the `output` attribute (indicating
+        that something is trying to simulate this as a regular `nengo.Node` rather than
+        a TensorNode)."""
 
         def output_func(*_):
             raise SimulationError(
@@ -266,7 +264,8 @@ def build_tensor_node(model, node):
 
 
 class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
-    """Operator for TensorNodes (constructed by `.build_tensor_node`).
+    """
+    Operator for TensorNodes (constructed by `.build_tensor_node`).
 
     Parameters
     ----------
@@ -315,8 +314,7 @@ class SimTensorNode(builder.Operator):  # pylint: disable=abstract-method
 
 @Builder.register(SimTensorNode)
 class SimTensorNodeBuilder(OpBuilder):
-    """Builds a `~.tensor_node.SimTensorNode` operator into a NengoDL
-    model."""
+    """Builds a `~.tensor_node.SimTensorNode` operator into a NengoDL model."""
 
     def build_pre(self, signals, config):
         super().build_pre(signals, config)

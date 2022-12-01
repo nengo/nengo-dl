@@ -1,7 +1,5 @@
-"""
-Manages the data and build processes associated with implementing a Nengo simulation
-in TensorFlow.
-"""
+"""Manages the data and build processes associated with implementing a Nengo simulation
+in TensorFlow."""
 
 import logging
 import warnings
@@ -191,8 +189,8 @@ class TensorGraph(tf.keras.layers.Layer):
 
     def build_inputs(self):
         """
-        Generates a set of Input layers that can be used as inputs to a
-        TensorGraph layer.
+        Generates a set of Input layers that can be used as inputs to a TensorGraph
+        layer.
 
         Returns
         -------
@@ -259,7 +257,9 @@ class TensorGraph(tf.keras.layers.Layer):
                     ),
                     dtype=dtype,
                 )
-                initializer = lambda shape=None, dtype=None: val
+
+                def initializer(shape=None, dtype=None):
+                    return val
 
             # figure out shape of full concatenated initial value
             shape = list(shapes[0])
@@ -796,10 +796,8 @@ class TensorGraph(tf.keras.layers.Layer):
 
     @trackable.no_automatic_dependency_tracking
     def build_post(self):
-        """
-        Executes post-build processes for operators (after the graph has
-        been constructed and whenever Simulator is reset).
-        """
+        """Executes post-build processes for operators (after the graph has been
+        constructed and whenever Simulator is reset)."""
 
         rng = np.random.RandomState(self.seed)
 
@@ -859,9 +857,9 @@ class TensorGraph(tf.keras.layers.Layer):
 
     def mark_signals(self):
         """
-        Mark all the signals in ``self.model`` according to whether they
-        represent trainable parameters of the model (parameters that can be
-        optimized by deep learning methods).
+        Mark all the signals in ``self.model`` according to whether they represent
+        trainable parameters of the model (parameters that can be optimized by deep
+        learning methods).
 
         Trainable parameters include connection weights, ensemble encoders, and
         neuron biases.  Unless one of those signals is targeted by a Nengo
@@ -1015,8 +1013,8 @@ class TensorGraph(tf.keras.layers.Layer):
     @trackable.no_automatic_dependency_tracking
     def create_signals(self, sigs):
         """
-        Groups signal data together into larger arrays, and represent each
-        individual signal as a slice into that array.
+        Groups signal data together into larger arrays, and represent each individual
+        signal as a slice into that array.
 
         Parameters
         ----------

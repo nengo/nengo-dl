@@ -1,8 +1,5 @@
-"""
-The builder manages the mapping between (groups of) Nengo operators and the
-builder objects that know how to translate those operators into a
-TensorFlow graph.
-"""
+"""The builder manages the mapping between (groups of) Nengo operators and the builder
+objects that know how to translate those operators into a TensorFlow graph."""
 
 import logging
 import warnings
@@ -44,8 +41,8 @@ class Builder:
 
     def build_pre(self, signals, config, progress=None):
         """
-        Setup step for build classes, in which they compute any of the
-        values that are constant across simulation timesteps.
+        Setup step for build classes, in which they compute any of the values that are
+        constant across simulation timesteps.
 
         Parameters
         ----------
@@ -173,8 +170,7 @@ class BuildConfig(
     )
 ):
     """
-    Stores configuration parameters that may be relevant to parts of the
-    build process.
+    Stores configuration parameters that may be relevant to parts of the build process.
 
     Parameters
     ----------
@@ -196,10 +192,8 @@ class BuildConfig(
 
 
 class OpBuilder:
-    """
-    Base class for build classes, which implement the logic for building a group of
-    Nengo Operators into TensorFlow.
-    """
+    """Base class for build classes, which implement the logic for building a group of
+    Nengo Operators into TensorFlow."""
 
     def __init__(self, ops):
         """
@@ -218,8 +212,8 @@ class OpBuilder:
 
     def build_pre(self, signals, config):
         """
-        This function should set up any computations that are fixed for
-        this op (i.e., things that do not need to be recomputed each timestep).
+        This function should set up any computations that are fixed for this op (i.e.,
+        things that do not need to be recomputed each timestep).
 
         Parameters
         ----------
@@ -238,8 +232,8 @@ class OpBuilder:
 
     def build_step(self, signals):
         """
-        This function builds whatever computations need to be executed in
-        each simulation timestep.
+        This function builds whatever computations need to be executed in each
+        simulation timestep.
 
         Parameters
         ----------
@@ -259,8 +253,8 @@ class OpBuilder:
 
     def build_post(self, signals):
         """
-        This function will be called after the graph has been built and
-        each time the Simulator is reset.
+        This function will be called after the graph has been built and each time the
+        Simulator is reset.
 
         Note that this function may be called multiple times per session, so
         it should do any required operations in-place.
@@ -299,8 +293,8 @@ class NengoBuilder(builder.Builder):
     """
     Copy of the default Nengo builder.
 
-    This class is here so that we can register new build functions for
-    NengoDL without affecting the default Nengo build process.
+    This class is here so that we can register new build functions for NengoDL
+    without affecting the default Nengo build process.
     """
 
     builders = {}

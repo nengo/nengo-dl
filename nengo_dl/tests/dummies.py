@@ -10,9 +10,7 @@ from nengo_dl import builder, signals, tensor_graph
 
 
 class Signal(nengo.builder.signal.Signal):
-    """
-    Mock-up for `nengo.builder.Signal`.
-    """
+    """Mock-up for `nengo.builder.Signal`."""
 
     def __init__(
         self,
@@ -91,9 +89,7 @@ class Signal(nengo.builder.signal.Signal):
 
 
 class Op:
-    """
-    Mock-up for `nengo.builder.Operator`.
-    """
+    """Mock-up for `nengo.builder.Operator`."""
 
     def __init__(self, sets=None, incs=None, reads=None, updates=None):
         self.sets = [] if sets is None else sets
@@ -127,9 +123,7 @@ class Op:
 
 @builder.Builder.register(Op)
 class Builder(builder.OpBuilder):
-    """
-    Mock-up builder for `.Op`.
-    """
+    """Mock-up builder for `.Op`."""
 
     @staticmethod
     def mergeable(x, y):
@@ -137,9 +131,7 @@ class Builder(builder.OpBuilder):
 
 
 class Probe(nengo.Probe):
-    """
-    Mock-up for `nengo.Probe`.
-    """
+    """Mock-up for `nengo.Probe`."""
 
     def __init__(self, target=None):
         # pylint: disable=super-init-not-called
@@ -159,18 +151,14 @@ class Probe(nengo.Probe):
 
 
 class Simulator:
-    """
-    Mock-up for `nengo.Simulator`.
-    """
+    """Mock-up for `nengo.Simulator`."""
 
     model = nengo.builder.Model()
     model.sig = defaultdict(lambda: defaultdict(Signal))
 
 
 class TensorGraph(tensor_graph.TensorGraph):
-    """
-    Mock-up for `.tensor_graph.TensorGraph`.
-    """
+    """Mock-up for `.tensor_graph.TensorGraph`."""
 
     def __init__(self, plan=None, dtype=None, minibatch_size=None):
         # pylint: disable=bad-super-call
@@ -186,9 +174,7 @@ class TensorGraph(tensor_graph.TensorGraph):
 
 
 def linear_net():
-    """
-    A simple network with an input, output, and no nonlinearity.
-    """
+    """A simple network with an input, output, and no nonlinearity."""
 
     with nengo.Network() as net:
         a = nengo.Node([1])
@@ -200,11 +186,9 @@ def linear_net():
 
 
 def DeterministicLIF(**kwargs):
-    """
-    A LIF neuron with fixed initial voltages (useful in tests where we want neurons
-    to always have the same output given the same parameters, but don't want to
-    fix the seed).
-    """
+    """A LIF neuron with fixed initial voltages (useful in tests where we want neurons
+    to always have the same output given the same parameters, but don't want to fix the
+    seed)."""
 
     if version.parse(nengo.__version__) <= version.parse("3.0.0"):
         return nengo.LIF(**kwargs)

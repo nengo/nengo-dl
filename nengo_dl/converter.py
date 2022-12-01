@@ -371,9 +371,7 @@ class Converter:
         return register_converter
 
     class KerasTensorDict(collections.abc.Mapping):
-        """
-        A dictionary-like object that has extra logic to handle Layer/Tensor keys.
-        """
+        """A dictionary-like object that has extra logic to handle Layer/Tensor keys."""
 
         def __init__(self):
             self.dict = {}
@@ -406,9 +404,8 @@ class Converter:
             return len(self.dict)
 
     class TrackedDict(collections.abc.Mapping):
-        """
-        A dictionary-like object that keeps track of which keys have been accessed.
-        """
+        """A dictionary-like object that keeps track of which keys have been
+        accessed."""
 
         def __init__(self, dict):
             self.dict = dict
@@ -608,8 +605,8 @@ class LayerConverter:
 
     def add_connection(self, node_id, obj, input_idx=0, trainable=False, **kwargs):
         """
-        Adds a Connection from one of the inputs of the Node being built to the
-        Nengo object.
+        Adds a Connection from one of the inputs of the Node being built to the Nengo
+        object.
 
         Parameters
         ----------
@@ -814,7 +811,7 @@ class LayerConverter:
 
     def convert(self, node_id):
         """
-        Convert the given node of this layer to Nengo objects
+        Convert the given node of this layer to Nengo objects.
 
         Parameters
         ----------
@@ -938,10 +935,8 @@ class ConvertSequential(ConvertModel):
 
 @Converter.register(None)
 class ConvertFallback(LayerConverter):
-    """
-    Convert layers which do not have a native Nengo equivalent into a
-    `.TensorNode`.
-    """
+    """Convert layers which do not have a native Nengo equivalent into a
+    `.TensorNode`."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1104,7 +1099,8 @@ class ConvertAvgPool1D(ConvertAvgPool):
     Convert ``tf.keras.layers.AvgPool1D`` to Nengo objects.
 
     Also works for ``tf.keras.layers.GlobalAvgPool1D``, and
-    ``tf.keras.layers.MaxPool1D``/``GlobalMaxPool1D`` (if ``max_to_avg_pool=True``).
+    ``tf.keras.layers.MaxPool1D``/``GlobalMaxPool1D`` (if
+    ``max_to_avg_pool=True``).
     """
 
     def convert(self, node_id):
@@ -1120,7 +1116,8 @@ class ConvertAvgPool2D(ConvertAvgPool):
     Convert ``tf.keras.layers.AvgPool2D`` to Nengo objects.
 
     Also works for ``tf.keras.layers.GlobalAvgPool2D``, and
-    ``tf.keras.layers.MaxPool2D``/``GlobalMaxPool2D`` (if ``max_to_avg_pool=True``).
+    ``tf.keras.layers.MaxPool2D``/``GlobalMaxPool2D`` (if
+    ``max_to_avg_pool=True``).
     """
 
     def convert(self, node_id):
@@ -1136,7 +1133,8 @@ class ConvertAvgPool3D(ConvertAvgPool):
     Convert ``tf.keras.layers.AvgPool3D`` to Nengo objects.
 
     Also works for ``tf.keras.layers.GlobalAvgPool3D``, and
-    ``tf.keras.layers.MaxPool3D``/``GlobalMaxPool3D`` (if ``max_to_avg_pool=True``).
+    ``tf.keras.layers.MaxPool3D``/``GlobalMaxPool3D`` (if
+    ``max_to_avg_pool=True``).
     """
 
     def convert(self, node_id):

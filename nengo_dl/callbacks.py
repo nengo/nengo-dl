@@ -9,7 +9,6 @@ The short answer is that these can be passed to, e.g., `.Simulator.fit` like
 .. code-block:: python
 
     sim.fit(..., callbacks=[nengo_dl.callbacks.NengoSummaries(...)]
-
 """
 
 import contextlib
@@ -100,9 +99,7 @@ class NengoSummaries(tf.keras.callbacks.Callback):
 
 
 class TensorBoard(tf.keras.callbacks.TensorBoard):
-    """
-    A version of the Keras TensorBoard callback that also profiles inference.
-    """
+    """A version of the Keras TensorBoard callback that also profiles inference."""
 
     def on_predict_batch_end(self, batch, logs=None):
         """Redirect to training function."""

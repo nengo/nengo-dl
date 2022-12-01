@@ -1,6 +1,4 @@
-"""
-Build classes for Nengo neuron operators.
-"""
+"""Build classes for Nengo neuron operators."""
 
 import contextlib
 import logging
@@ -21,8 +19,7 @@ logger = logging.getLogger(__name__)
 
 class GenericNeuronBuilder(OpBuilder):
     """
-    Builds all neuron types for which there is no custom TensorFlow
-    implementation.
+    Builds all neuron types for which there is no custom TensorFlow implementation.
 
     Notes
     -----
@@ -165,10 +162,11 @@ class TFNeuronBuilder(OpBuilder):
         """
         Implements the logic for a single inference step.
 
-        If the neuron has no states, returns only the neuron output. Otherwise, returns
-        a tuple where the first element is the neuron output, and subsequent elements
-        correspond to each of the neuron's states. The order of the states must be the
-        same as the order they appear in the neuron type's ``state`` dictionary.
+        If the neuron has no states, returns only the neuron output. Otherwise,
+        returns a tuple where the first element is the neuron output, and
+        subsequent elements correspond to each of the neuron's states. The order
+        of the states must be the same as the order they appear in the neuron
+        type's ``state`` dictionary.
         """
         raise NotImplementedError("Subclasses must implement")
 

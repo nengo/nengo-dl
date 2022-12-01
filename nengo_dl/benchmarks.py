@@ -1,6 +1,4 @@
-"""
-Benchmark networks and utilities for evaluating NengoDL's performance.
-"""
+"""Benchmark networks and utilities for evaluating NengoDL's performance."""
 
 import inspect
 import random
@@ -723,7 +721,7 @@ def main():
     help="Arbitrary kwarg to pass to benchmark network (key=value)",
 )
 def build(obj, benchmark, dimensions, neurons_per_d, neuron_type, kwarg):
-    """Builds one of the benchmark networks"""
+    """Builds one of the benchmark networks."""
 
     # get benchmark network by name
     benchmark = globals()[benchmark]

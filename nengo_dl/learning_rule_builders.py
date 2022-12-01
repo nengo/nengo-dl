@@ -1,6 +1,4 @@
-"""
-Build classes for Nengo learning rule operators.
-"""
+"""Build classes for Nengo learning rule operators."""
 
 import numpy as np
 import tensorflow as tf
@@ -25,8 +23,7 @@ from nengo_dl.builder import Builder, NengoBuilder, OpBuilder
 
 @Builder.register(SimBCM)
 class SimBCMBuilder(OpBuilder):
-    """Build a group of `~nengo.builder.learning_rules.SimBCM`
-    operators."""
+    """Build a group of `~nengo.builder.learning_rules.SimBCM` operators."""
 
     def build_pre(self, signals, config):
         super().build_pre(signals, config)

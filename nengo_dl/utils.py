@@ -1,6 +1,4 @@
-"""
-Utility objects used throughout the code base.
-"""
+"""Utility objects used throughout the code base."""
 
 import logging
 import re
@@ -85,8 +83,8 @@ def function_name(func, sanitize=True):
 
 def align_func(output_dtype):
     """
-    Decorator that ensures the output of ``func`` is a valid
-    `~numpy.ndarray` with the given dtype.
+    Decorator that ensures the output of ``func`` is a valid `~numpy.ndarray` with the
+    given dtype.
 
     Parameters
     ----------
@@ -248,9 +246,7 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
         super().finish(**kwargs)
 
     def step(self):
-        """
-        Advance the progress bar one step.
-        """
+        """Advance the progress bar one step."""
 
         self.value += 1
 
@@ -275,10 +271,8 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
 
     @property
     def max_steps(self):
-        """
-        Alias for max_value to allow this to work with Nengo progress bar
-        interface.
-        """
+        """Alias for max_value to allow this to work with Nengo progress bar
+        interface."""
         return self.max_value
 
     @max_steps.setter
@@ -304,9 +298,7 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
 
 
 class SubProgressBar(ProgressBar):  # pylint: disable=too-many-ancestors
-    """
-    A progress bar representing a sub-task within an overall progress bar.
-    """
+    """A progress bar representing a sub-task within an overall progress bar."""
 
     def finish(self, **kwargs):
         """Finishing a sub-progress bar doesn't start a new line."""
@@ -324,23 +316,19 @@ class NullProgressBar(progressbar.NullBar):  # pylint: disable=too-many-ancestor
         super().__init__(max_value=max_value, **kwargs)
 
     def sub(self, *args, **kwargs):
-        """
-        Noop for creating a sub-progress bar.
-        """
+        """Noop for creating a sub-progress bar."""
         return self
 
     def step(self, **kwargs):
-        """
-        Noop for incrementing the progress bar.
-        """
+        """Noop for incrementing the progress bar."""
 
 
 def numpy_function(func, inp, Tout, name=None):
     """
     A version of ``tf.numpy_function`` that copies its inputs.
 
-    This is so that any in-place operations inside the numpy function can't modify
-    the data underlying the input Tensors.
+    This is so that any in-place operations inside the numpy function can't
+    modify the data underlying the input Tensors.
     """
     # we use the roll to force a copy
     inp = tf.nest.pack_sequence_as(

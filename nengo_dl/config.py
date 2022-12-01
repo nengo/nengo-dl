@@ -1,8 +1,8 @@
 """
-The configuration system is used to change NengoDL's default behaviour in
-various ways.
+The configuration system is used to change NengoDL's default behaviour in various ways.
 
-See `the documentation <https://www.nengo.ai/nengo-dl/config.html>`__ for more details.
+See `the documentation <https://www.nengo.ai/nengo-dl/config.html>`__ for more
+details.
 """
 
 from nengo import Connection, Ensemble, Network, Probe, ensemble
@@ -13,8 +13,8 @@ from nengo.params import BoolParam, Parameter
 
 def configure_settings(**kwargs):
     """
-    Pass settings to ``nengo_dl`` by setting them as parameters on the
-    top-level Network config.
+    Pass settings to ``nengo_dl`` by setting them as parameters on the top-level Network
+    config.
 
     The settings are passed as keyword arguments to ``configure_settings``;
     e.g., to set ``trainable`` use ``configure_settings(trainable=True)``.

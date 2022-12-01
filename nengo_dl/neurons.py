@@ -1,6 +1,4 @@
-"""
-Additions to the `neuron types included with Nengo <nengo.neurons.NeuronType>`.
-"""
+"""Additions to the `neuron types included with Nengo <nengo.neurons.NeuronType>`."""
 
 import numpy as np
 from nengo.neurons import LIFRate, RectifiedLinear, SpikingRectifiedLinear
@@ -8,7 +6,8 @@ from nengo.params import NumberParam
 
 
 class SoftLIFRate(LIFRate):
-    """LIF neuron with smoothing around the firing threshold.
+    """
+    LIF neuron with smoothing around the firing threshold.
 
     This is a rate version of the LIF neuron whose tuning curve has a
     continuous first derivative, due to the smoothing around the firing
@@ -66,7 +65,7 @@ class SoftLIFRate(LIFRate):
         return out
 
     def step(self, dt, J, output):
-        """Compute rates in Hz for input current (incl. bias)"""
+        """Compute rates in Hz for input current (including bias)."""
 
         j = J - 1
         js = j / self.sigma
@@ -151,9 +150,7 @@ class SpikingLeakyReLU(SpikingRectifiedLinear):
         return out
 
     def step(self, dt, J, output, voltage):
-        """
-        Implement the spiking leaky relu nonlinearity.
-        """
+        """Implement the spiking leaky relu nonlinearity."""
 
         voltage += np.where(J < 0, self.negative_slope * J, J) * dt
         n_spikes = np.trunc(voltage)

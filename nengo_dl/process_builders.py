@@ -1,6 +1,4 @@
-"""
-Build classes for Nengo process operators.
-"""
+"""Build classes for Nengo process operators."""
 
 import contextlib
 import logging
@@ -20,8 +18,7 @@ logger = logging.getLogger(__name__)
 
 class GenericProcessBuilder(OpBuilder):
     """
-    Builds all process types for which there is no custom TensorFlow
-    implementation.
+    Builds all process types for which there is no custom TensorFlow implementation.
 
     Notes
     -----
