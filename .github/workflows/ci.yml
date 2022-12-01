@@ -1,0 +1,155 @@
+name: CI testing
+on:
+  pull_request: {}
+  push:
+    branches:
+      - main
+      - release-candidate-*
+    tags:
+      - v*
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: Run the build with SSH debugging enabled
+        required: false
+        default: false
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: nengo/nengo-bones/actions/setup@main
+      - uses: nengo/nengo-bones/actions/generate-and-check@main
+      - uses: nengo/nengo-bones/actions/run-script@main
+        with:
+          name: static
+  test:
+    needs:
+      - static
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - script: test
+          - script: remote-test
+            coverage-name: remote
+            nengo-version: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
+          - script: test-coverage
+            coverage-name: latest
+            python: "3.10"
+            nengo-version: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
+            scipy-version: scipy
+          - script: test-coverage
+            coverage-name: oldest
+            python: "3.7"
+            numpy-version: numpy==1.16.0
+            tf-version: tensorflow==2.2.0
+            nengo-version: nengo[tests]==3.0.0
+          - script: test-coverage
+            coverage-name: py39-graph
+            test_args: --graph-mode
+      fail-fast: false
+    env:
+      NUMPY_VERSION: ${{ matrix.numpy-version || 'numpy>=1.16.0' }}
+      TF_VERSION: ${{ matrix.tf-version || 'tensorflow==2.9' }}
+      NENGO_VERSION: ${{ matrix.nengo-version || 'nengo[tests]' }}
+      SCIPY_VERSION: ${{ matrix.scipy-version || 'noop' }}
+      TEST_ARGS: ${{ matrix.test_args }}
+      SSH_KEY: ${{ secrets.SSH_KEY }}
+      SSH_CONFIG: ${{ secrets.SSH_CONFIG }}
+    steps:
+      - uses: nengo/nengo-bones/actions/setup@main
+        with:
+          python-version: ${{ matrix.python || '3.9' }}
+      - name: Write secrets to file
+        run: |
+          mkdir -p ~/.ssh
+          echo '${{ secrets.AZURE_PEM }}' > ~/.ssh/azure.pem
+      - uses: nengo/nengo-bones/actions/generate-and-check@main
+      - uses: nengo/nengo-bones/actions/run-script@main
+        with:
+          name: ${{ matrix.script }}
+      - uses: actions/upload-artifact@v3
+        if: ${{ always() && matrix.coverage-name }}
+        with:
+          name: coverage-${{ matrix.coverage-name }}
+          path: .coverage
+  test-advanced:
+    needs:
+      - test
+    timeout-minutes: 45
+    strategy:
+      matrix:
+        include:
+          - script: remote-docs
+          - script: remote-examples
+          - script: test
+            test_args: --unroll-simulation 5 --dtype float64 --simulator-only
+          - script: test
+            test_args: --inference-only --simulator-only
+          - script: test
+            os: windows-latest
+          - script: test
+            os: windows-latest
+            python: "3.7"
+            numpy-version: numpy==1.16.0
+            tf-version: tensorflow==2.2.0
+            nengo-version: nengo[tests]==3.0.0
+          - script: test
+            os: windows-latest
+            python: "3.10"
+            tf-version: tensorflow
+            nengo-version: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
+      fail-fast: false
+    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
+    env:
+      NUMPY_VERSION: ${{ matrix.numpy-version || 'numpy>=1.16.0' }}
+      TF_VERSION: ${{ matrix.tf-version || 'tensorflow==2.9' }}
+      NENGO_VERSION: ${{ matrix.nengo-version || 'nengo[tests]' }}
+      SCIPY_VERSION: noop
+      TEST_ARGS: ${{ matrix.test_args }}
+      SSH_KEY: ${{ secrets.SSH_KEY }}
+      SSH_CONFIG: ${{ secrets.SSH_CONFIG }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+    steps:
+      - uses: nengo/nengo-bones/actions/setup@main
+        with:
+          python-version: ${{ matrix.python || '3.9' }}
+      - name: Write secrets to file
+        run: |
+          mkdir -p ~/.ssh
+          echo '${{ secrets.AZURE_PEM }}' > ~/.ssh/azure.pem
+      - uses: nengo/nengo-bones/actions/generate-and-check@main
+      - uses: nengo/nengo-bones/actions/run-script@main
+        with:
+          name: ${{ matrix.script }}
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - test
+    if: ${{ always() }}
+    steps:
+      - uses: nengo/nengo-bones/actions/coverage-report@main
+  deploy:
+    needs:
+      - test-advanced
+    if: >-
+      startsWith(github.ref_name, 'release-candidate-') ||
+      (github.ref_type == 'tag' && startsWith(github.ref_name, 'v'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Write .pypirc to file
+        run: |
+          echo '${{ secrets.PYPIRC_FILE }}' > ~/.pypirc
+      - uses: actions/checkout@v3
+      - uses: nengo/nengo-bones/actions/setup@main
+        with:
+          python-version: "3.10"
+      - uses: nengo/nengo-bones/actions/generate-and-check@main
+      - uses: nengo/nengo-bones/actions/run-script@main
+        with:
+          name: deploy

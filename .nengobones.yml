@@ -74,8 +74,7 @@ setup_cfg:
       tests/test_probe.py::test_multirun:
         simulation times may not line up exactly if unroll_simulation != 1, see
         tests/test_nengo_tests.py::test_multirun
-      tests/test_learning_rules.py::test_rls_*:
-        RLS learning rule not implemented
+      tests/test_learning_rules.py::test_rls_*: RLS learning rule not implemented
       tests/test_processes.py::test_x_copy:
         the behaviour of Processes that return None is not well defined (it's allowed
         but behaves oddly in NengoCore, it's an explicit error in NengoDL)
@@ -110,7 +109,6 @@ docs_conf_py:
   nengo_logo_color: "#ff6600"
   sphinx_options:
     suppress_warnings: "['image.nonlocal_uri']"
-  tagmanager_id: GTM-KWCR2HN
   doctest_setup:
     - import nengo
     - import numpy as np
@@ -195,7 +193,6 @@ ci_scripts:
     remote_script: test-performance
     output_name: remote-test
     host: azure
-    travis_var_key: 2895d60e3414
     coverage: true
     azure_name: nengo-dl
     azure_group: nengo-ci
@@ -212,7 +209,6 @@ ci_scripts:
     remote_script: docs
     output_name: remote-docs
     host: azure-docs
-    travis_var_key: 2895d60e3414
     azure_name: nengo-dl-docs
     azure_group: nengo-ci
     remote_vars:
@@ -227,7 +223,6 @@ ci_scripts:
     remote_script: examples
     output_name: remote-examples
     host: azure-examples
-    travis_var_key: 2895d60e3414
     azure_name: nengo-dl-examples
     azure_group: nengo-ci
     remote_vars:
@@ -240,64 +235,12 @@ ci_scripts:
       - export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$CONDA_PREFIX/lib
   - template: deploy
 
-travis_yml:
-  python: "3.9"
-  global_vars:
-    NUMPY_VERSION: numpy>=1.16.0
-    TF_VERSION: tensorflow
-    NENGO_VERSION: nengo[tests]
-    SCIPY_VERSION: noop
-  jobs:
-    - stage: basic
-      script: static
-    - script: test
-    - script: remote-test
-      env:
-        NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
-        TF_VERSION: tensorflow<2.3.0
-        NUMPY_VERSION: numpy<1.20.0
-      python: "3.8"
-    - script: test-coverage
-      env:
-        NENGO_VERSION: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
-        SCIPY_VERSION: scipy
-      dist: bionic
-      python: "3.10"
-    - script: test-coverage
-      env:
-        NENGO_VERSION: nengo[tests]==3.0.0
-        TF_VERSION: tensorflow==2.2.0
-        NUMPY_VERSION: numpy==1.16.0
-      python: "3.7"
-    - script: test-coverage
-      test_args: --graph-mode
-    - stage: advanced
-      script: remote-docs
-    - script: remote-examples
-    - test_args: --unroll-simulation 5 --dtype float64 --simulator-only
-    - test_args: --inference-only --simulator-only
-  pypi_user: __token__
-  deploy_dists:
-    - sdist
-  slack_notifications: "u7LEiuoLupKwd/p4C3MXaojqvkBvZKlSw6UaBr2C6ZJINRD2N/34bHtv6Qc1wi\
-    hhLnRzPt3rlWxRGM+Lh2A4LGLqnSqdZqjF+Qn9geCBBn1vXHVNJCTEdDxNQWcjnrHPYSsoeNIvr+y/NwEh\
-    FLT8qkRc4mjjV12Vd0qTtHzlyEFbXb/F/jVTohel5DyCIGL0kysEerLumWTxa02ySSkkRtZG5nfhkmMbuH\
-    womdl9oXAmO8DvfPD2C9A4djDQ93BCzZh8Q0TjWzDl3cbSmG1eom9MFmqxpIIuY9gESGLWhva/I01NKoxs\
-    ZrA9CM5VO4bVKspVRjtip2wtdwwxt9SKkmqPZ7mkGpaIHtzRlFgH4rDzcFM5K9AmkwQUnO2qx9IiBSAzl0\
-    IgAJX6tgb7nA5coUpSRWPUJ3tqvown41BO9z5KVopQd5mg/dwIip0yUpZhF6ItJZ69f3RYmWOY4XIU1NDX\
-    01EnCzuFhye03XfQ+I2ChwYYrE6uzftn7tQEYexwVqDqEI9HhqKhDXtfGAJYOrbguyH/a2u2ioa0CkEhzD\
-    nOmW6KvVAGg9mUCNfbWR2uIehtXCjgJRqng+ztedRsoelktlOCMT4RTLc1sV3tRWwEppsMByrqDCjiOQxL\
-    hQVJ+X1bFjMhZWKqoGFJQxOI5tRU+lUV3p8UimBbaCZruTU="
-
-codecov_yml:
-  abs_target: 100%
-
 setup_py:
   include_package_data: True
   optional_req:
     - keras-spiking>=0.3.0
   docs_req:
-    - click>=6.7  # needed for sphinx-click
+    - click>=6.7 # needed for sphinx-click
     - jupyter>=1.0.0
     - matplotlib>=2.0.0
     - nbsphinx>=0.3.5
@@ -315,23 +258,23 @@ setup_py:
     - pytest-cov>=2.6.0
     - pytest-rng>=1.0.0
     - pytest-xdist>=1.16.0
-    - six>=1.11.0  # hint for pip dependency resolution, required by nbval
+    - six>=1.11.0 # hint for pip dependency resolution, required by nbval
   entry_points:
     nengo.backends:
       - dl = nengo_dl:Simulator
   classifiers:
-      - "Development Status :: 5 - Production/Stable"
-      - "Framework :: Nengo"
-      - "Intended Audience :: Science/Research"
-      - "Operating System :: Microsoft :: Windows"
-      - "Operating System :: POSIX :: Linux"
-      - "Programming Language :: Python"
-      - "Programming Language :: Python :: 3.7"
-      - "Programming Language :: Python :: 3.8"
-      - "Programming Language :: Python :: 3.9"
-      - "Programming Language :: Python :: 3.10"
-      - "Topic :: Scientific/Engineering"
-      - "Topic :: Scientific/Engineering :: Artificial Intelligence"
+    - "Development Status :: 5 - Production/Stable"
+    - "Framework :: Nengo"
+    - "Intended Audience :: Science/Research"
+    - "Operating System :: Microsoft :: Windows"
+    - "Operating System :: POSIX :: Linux"
+    - "Programming Language :: Python"
+    - "Programming Language :: Python :: 3.7"
+    - "Programming Language :: Python :: 3.8"
+    - "Programming Language :: Python :: 3.9"
+    - "Programming Language :: Python :: 3.10"
+    - "Topic :: Scientific/Engineering"
+    - "Topic :: Scientific/Engineering :: Artificial Intelligence"
 
 pyproject_toml:
   exclude:
