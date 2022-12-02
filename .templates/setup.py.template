@@ -45,6 +45,7 @@ install_req = [
     "nengo>=3.0.0",
     "numpy>=1.16.0",
     "{}>=2.2.0".format(tf_req),
+    "{}<2.11.0rc0; sys_platform == 'win32'".format(tf_req),
     "jinja2>=2.10.1",
     "packaging>=20.0",
     "progressbar2>=3.39.0",

@@ -25,6 +25,12 @@ Release history
 
 *Compatible with TensorFlow 2.2 - 2.11*
 
+**Changed**
+
+- Pinned TensorFlow version to <2.11 on Windows. As of 2.11 the TensorFlow package for
+  Windows is maintained by a third party (Intel), and there are currently bugs in that
+  package affecting functionality that is required by NengoDL. (`#229`_)
+
 **Removed**
 
 - Removed support for "graph mode" (i.e., running with
