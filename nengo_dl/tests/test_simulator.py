@@ -1,6 +1,5 @@
 # pylint: disable=missing-docstring
 
-import contextlib
 import logging
 import pickle
 import sys
@@ -18,10 +17,9 @@ from nengo.exceptions import (
 )
 from packaging import version
 from tensorflow.core.util import event_pb2
-from tensorflow.python.eager import context
 
 from nengo_dl import Layer, TensorNode, callbacks, configure_settings, dists, utils
-from nengo_dl.compat import TFLogFilter, default_transform, eager_enabled
+from nengo_dl.compat import TFLogFilter, default_transform
 from nengo_dl.simulator import SimulationData
 from nengo_dl.tests import dummies
 
@@ -758,11 +756,7 @@ def test_tensorboard(Simulator, tmp_path):
         )
 
     # look up name of event file
-    event_dir = (
-        log_dir / "train"
-        if version.parse(tf.__version__) < version.parse("2.3.0rc0") or eager_enabled()
-        else log_dir
-    )
+    event_dir = log_dir / "train"
     event_file = [
         x
         for x in event_dir.glob("events.out.tfevents*")
@@ -774,23 +768,18 @@ def test_tensorboard(Simulator, tmp_path):
 
     summaries = ["epoch_loss", "epoch_probe_loss", "epoch_probe_1_loss"]
     # metadata stuff in event file
-    meta_steps = (
-        2
-        if version.parse(tf.__version__) < version.parse("2.3.0rc0") or eager_enabled()
-        else 3
-    )
-    with contextlib.suppress() if eager_enabled() else context.eager_mode():
-        for i, record in enumerate(tf.data.TFRecordDataset(str(event_file))):
-            event = event_pb2.Event.FromString(record.numpy())
+    meta_steps = 2
+    for i, record in enumerate(tf.data.TFRecordDataset(str(event_file))):
+        event = event_pb2.Event.FromString(record.numpy())
 
-            if i >= meta_steps:
-                curr_step = (i - meta_steps) // len(summaries)
-                assert event.step == curr_step
+        if i >= meta_steps:
+            curr_step = (i - meta_steps) // len(summaries)
+            assert event.step == curr_step
 
-                assert (
-                    event.summary.value[0].tag
-                    == summaries[(i - meta_steps) % len(summaries)]
-                )
+            assert (
+                event.summary.value[0].tag
+                == summaries[(i - meta_steps) % len(summaries)]
+            )
 
     assert i == len(summaries) * n_epochs + (  # pylint: disable=undefined-loop-variable
         meta_steps - 1
@@ -807,17 +796,16 @@ def test_tensorboard(Simulator, tmp_path):
         "Ensemble.neurons_None_bias",
         "Connection_None_weights",
     ]
-    with contextlib.suppress() if eager_enabled() else context.eager_mode():
-        for i, record in enumerate(tf.data.TFRecordDataset(str(event_file))):
-            event = event_pb2.Event.FromString(record.numpy())
+    for i, record in enumerate(tf.data.TFRecordDataset(str(event_file))):
+        event = event_pb2.Event.FromString(record.numpy())
 
-            if i < 1:
-                # metadata stuff
-                continue
+        if i < 1:
+            # metadata stuff
+            continue
 
-            curr_step = (i - 1) // len(summaries)
-            assert event.step == curr_step
-            assert event.summary.value[0].tag == summaries[(i - 1) % len(summaries)]
+        curr_step = (i - 1) // len(summaries)
+        assert event.step == curr_step
+        assert event.summary.value[0].tag == summaries[(i - 1) % len(summaries)]
 
     assert i == len(summaries) * n_epochs  # pylint: disable=undefined-loop-variable
 
@@ -833,15 +821,6 @@ def test_tensorboard(Simulator, tmp_path):
 @pytest.mark.parametrize("mode", ("predict", "train"))
 @pytest.mark.training
 def test_profile(Simulator, mode, tmp_path, pytestconfig):
-    if (
-        pytestconfig.getoption("--graph-mode")
-        and version.parse(tf.__version__) >= version.parse("2.4.0rc0")
-        and mode == "predict"
-    ):
-        pytest.skip(
-            "TensorFlow bug, see https://github.com/tensorflow/tensorflow/issues/44563"
-        )
-
     net, a, p = dummies.linear_net()
 
     with Simulator(net) as sim:
@@ -1645,10 +1624,6 @@ def test_tf_seed(Simulator, seed):
     with Simulator(net, seed=seed) as sim0:
         sim0.step()
 
-    if not eager_enabled():
-        # this is necessary to reset the graph seed
-        tf.keras.backend.clear_session()
-
     with Simulator(net, seed=seed) as sim1:
         sim1.step()
 
@@ -1755,19 +1730,11 @@ def test_io_names(Simulator):
 
 
 def test_log_filter(Simulator, caplog):
-    with nengo.Network() as net:
-        a = nengo.Node([0])
-        p = nengo.Probe(a)
+    net = dummies.linear_net()[0]
 
     with Simulator(net) as sim:
-        sim.compile(loss={p: "mse"})
-        assert "missing from loss dictionary" not in caplog.text
-
         sim.tensor_graph.add_weight()
         assert "constraint is deprecated" not in caplog.text
-
-        tf.compat.v1.keras.backend.get_session()
-        assert "tf.keras.backend.get_session" not in caplog.text
 
         # make sure there were no other deprecation warnings
         filt = TFLogFilter(err_on_deprecation=True)

@@ -16,8 +16,6 @@ from nengo.exceptions import BuildError
 from nengo.neurons import Direct
 from nengo.synapses import Lowpass
 from nengo.transforms import SparseMatrix
-from tensorflow.python.eager import context
-from tensorflow.python.training.tracking import base as trackable
 
 from nengo_dl import (
     builder,
@@ -57,7 +55,7 @@ class TensorGraph(tf.keras.layers.Layer):
         Seed for random number generation.
     """
 
-    @trackable.no_automatic_dependency_tracking
+    @compat.trackable.no_automatic_dependency_tracking
     def __init__(
         self, model, dt, unroll_simulation, minibatch_size, device, progress, seed
     ):
@@ -268,11 +266,11 @@ class TensorGraph(tf.keras.layers.Layer):
             return initializer, tuple(shape), dtype
 
         # save initializers so that we can reset the model later
-        with trackable.no_automatic_dependency_tracking_scope(self):
+        with compat.trackable.no_automatic_dependency_tracking_scope(self):
             self.initial_values = {}
 
         # variables for model parameters
-        with trackable.no_automatic_dependency_tracking_scope(self):
+        with compat.trackable.no_automatic_dependency_tracking_scope(self):
             self.base_params = {}
         assert len(self.base_params) == 0
         for sig_type in ("trainable", "non_trainable"):
@@ -294,7 +292,7 @@ class TensorGraph(tf.keras.layers.Layer):
         logger.debug([str(x) for x in self.base_params.values()])
 
         # variables to save the internal state of simulation between runs
-        with trackable.no_automatic_dependency_tracking_scope(self):
+        with compat.trackable.no_automatic_dependency_tracking_scope(self):
             self.saved_state = {}
         for k, v in self.base_arrays_init["state"].items():
             initializer, shape, dtype = get_initializer(v)
@@ -384,22 +382,9 @@ class TensorGraph(tf.keras.layers.Layer):
             # do all the weight getting/setting in one go, for efficiency reasons
 
             # match the fetch context to the context in which the weights were created
-            ctx = (
-                weight_gets[0].graph.as_default()
-                if hasattr(weight_gets[0], "graph")
-                else context.eager_mode()
-            )
-            with ctx:
-                weight_vals = tf.keras.backend.batch_get_value(weight_gets)
+            weight_vals = tf.keras.backend.batch_get_value(weight_gets)
 
             tf.keras.backend.batch_set_value(zip(weight_sets, weight_vals))
-
-        if not compat.eager_enabled():
-            # initialize state variables (need to do this manually because we're not
-            # adding them to self.weights)
-            tf.keras.backend.batch_get_value(
-                [var.initializer for var in self.saved_state.values()]
-            )
 
     @tf.autograph.experimental.do_not_convert
     def call(self, inputs, training=None, progress=None, stateful=False):
@@ -454,7 +439,7 @@ class TensorGraph(tf.keras.layers.Layer):
         self.signals.one = tf.constant(1, self.dtype)
 
         # set up invariant inputs
-        with trackable.no_automatic_dependency_tracking_scope(self):
+        with compat.trackable.no_automatic_dependency_tracking_scope(self):
             self.node_inputs = {}
         for n, inp in zip(self.invariant_inputs, inputs):
             # specify shape of inputs (keras sometimes loses this shape information)
@@ -489,7 +474,7 @@ class TensorGraph(tf.keras.layers.Layer):
             )
 
         # store these so that they can be accessed after the initial build
-        with trackable.no_automatic_dependency_tracking_scope(self):
+        with compat.trackable.no_automatic_dependency_tracking_scope(self):
             self.steps_run = steps_run
             self.probe_arrays = probe_arrays
             self.final_internal_state = final_internal_state
@@ -531,10 +516,6 @@ class TensorGraph(tf.keras.layers.Layer):
                 updates.append(var.assign(val))
 
         logger.info("Number of state updates: %d", len(updates))
-
-        if not compat.eager_enabled() and len(updates) > 0:
-            with tf.control_dependencies(updates):
-                outputs = [tf.identity(x) for x in outputs]
 
         return outputs
 
@@ -794,7 +775,7 @@ class TensorGraph(tf.keras.layers.Layer):
 
         return loop_i
 
-    @trackable.no_automatic_dependency_tracking
+    @compat.trackable.no_automatic_dependency_tracking
     def build_post(self):
         """Executes post-build processes for operators (after the graph has been
         constructed and whenever Simulator is reset)."""
@@ -1010,7 +991,7 @@ class TensorGraph(tf.keras.layers.Layer):
             if not hasattr(sig, "minibatched"):
                 sig.minibatched = sig.base.minibatched
 
-    @trackable.no_automatic_dependency_tracking
+    @compat.trackable.no_automatic_dependency_tracking
     def create_signals(self, sigs):
         """
         Groups signal data together into larger arrays, and represent each individual

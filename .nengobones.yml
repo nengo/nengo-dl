@@ -178,17 +178,22 @@ ci_scripts:
       - git+https://github.com/drasmuss/spaun2.0.git
     nengo_tests: true
     pre_commands:
+      - python -c "import tensorflow as tf; assert tf.test.is_gpu_available()"
       - pytest $TEST_ARGS nengo_dl/tests/test_benchmarks.py::test_performance --performance -v --durations 20 --color=yes
   - template: examples
     pip_install:
       - $TF_VERSION
       - $NUMPY_VERSION
       - $NENGO_VERSION
+    pre_commands:
+      - python -c "import tensorflow as tf; assert tf.test.is_gpu_available()"
   - template: docs
     pip_install:
       - $TF_VERSION
       - $NUMPY_VERSION
       - $NENGO_VERSION
+    pre_commands:
+      - python -c "import tensorflow as tf; assert tf.test.is_gpu_available()"
   - template: remote-script
     remote_script: test-performance
     output_name: remote-test
@@ -203,8 +208,7 @@ ci_scripts:
       NENGO_VERSION: $NENGO_VERSION
       SCIPY_VERSION: $SCIPY_VERSION
     remote_setup:
-      - conda install -y -c conda-forge cudatoolkit=10.1 cudnn=7.6
-      - export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$CONDA_PREFIX/lib
+      - conda install -y -q -c conda-forge --override-channels "$TF_VERSION"
   - template: remote-script
     remote_script: docs
     output_name: remote-docs
@@ -217,8 +221,7 @@ ci_scripts:
       NENGO_VERSION: $NENGO_VERSION
       SCIPY_VERSION: $SCIPY_VERSION
     remote_setup:
-      - conda install -y -c conda-forge cudatoolkit=11.3 cudnn=8.2
-      - export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$CONDA_PREFIX/lib
+      - conda install -y -q -c conda-forge --override-channels "$TF_VERSION"
   - template: remote-script
     remote_script: examples
     output_name: remote-examples
@@ -231,8 +234,7 @@ ci_scripts:
       NENGO_VERSION: $NENGO_VERSION
       SCIPY_VERSION: $SCIPY_VERSION
     remote_setup:
-      - conda install -y -c conda-forge cudatoolkit=11.3 cudnn=8.2
-      - export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$CONDA_PREFIX/lib
+      - conda install -y -q -c conda-forge --override-channels "$TF_VERSION"
   - template: deploy
 
 setup_py:
@@ -286,6 +288,6 @@ pre_commit_config_yaml:
 
 version_py:
   major: 3
-  minor: 5
-  patch: 1
+  minor: 6
+  patch: 0
   release: false

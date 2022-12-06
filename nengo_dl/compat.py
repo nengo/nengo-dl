@@ -10,7 +10,6 @@ import nengo
 import tensorflow as tf
 from nengo._vendor.scipy.sparse import linalg_interface, linalg_onenormest
 from packaging import version
-from tensorflow.python.eager import context
 
 
 class NoType:
@@ -60,17 +59,6 @@ class TFLogFilter:
         AttributeError
             If a deprecation message is detected and ``err_on_deprecation=True``.
         """
-
-        # "tf.keras.backend.get_session is deprecated": this deprecation message
-        # is raised incorrectly due to a bug, see
-        # https://github.com/tensorflow/tensorflow/issues/33182
-        if len(record.args) > 1 and record.args[1] == "tf.keras.backend.get_session":
-            return False
-
-        # "Output steps_run missing from loss dictionary": steps_run should
-        # never have a loss defined
-        if record.msg.startswith("Output steps_run missing from loss dictionary"):
-            return False
 
         if self.err_on_deprecation and (
             "deprecation.py" in record.pathname or "deprecated" in record.msg.lower()
@@ -227,6 +215,11 @@ else:
 
     StackTraceMapper.get_effective_source_map = get_effective_source_map
 
+if version.parse(tf.__version__) < version.parse("2.10.0rc0"):
+    from tensorflow.python.training.tracking import base as trackable
+else:
+    from tensorflow.python.trackable import base as trackable
+
 
 # Nengo compatibility
 
@@ -341,18 +334,6 @@ else:
 
     # monkeypatch fix for https://github.com/nengo/nengo/pull/1587
     linalg_onenormest.aslinearoperator = linalg_interface.aslinearoperator
-
-
-def eager_enabled():
-    """
-    Check if we're in eager mode or graph mode.
-
-    Note: this function differs from ``tf.executing_eagerly()`` in that it will still
-    return ``True`` if we're inside a ``tf.function``. Essentially this checks whether
-    the user has called ``tf.compat.v1.disable_eager_execution()`` or not.
-    """
-
-    return context.default_execution_mode == context.EAGER_MODE
 
 
 try:

@@ -1,6 +1,5 @@
 """Build classes for Nengo process operators."""
 
-import contextlib
 import logging
 
 import numpy as np
@@ -10,7 +9,7 @@ from nengo.exceptions import SimulationError
 from nengo.synapses import LinearFilter, Lowpass
 from nengo.utils.filter_design import cont2discrete
 
-from nengo_dl import compat, utils
+from nengo_dl import utils
 from nengo_dl.builder import Builder, OpBuilder
 
 logger = logging.getLogger(__name__)
@@ -90,22 +89,12 @@ class GenericProcessBuilder(OpBuilder):
         input = [] if self.input_data is None else [signals.gather(self.input_data)]
         state = [signals.gather(s) for s in self.state_data]
 
-        if compat.eager_enabled():
-            # noop
-            control_deps = contextlib.suppress()
-        else:
-            # we need to make sure that the previous call to this function
-            # has completed before the next starts, since we don't know that the
-            # functions are thread safe
-            control_deps = tf.control_dependencies(self.prev_result)
-
-        with control_deps:
-            result = utils.numpy_function(
-                self.merged_func,
-                time + input + state,
-                [self.output_data.dtype] + [s.dtype for s in self.state_data],
-                name=self.merged_func.__name__,
-            )
+        result = utils.numpy_function(
+            self.merged_func,
+            time + input + state,
+            [self.output_data.dtype] + [s.dtype for s in self.state_data],
+            name=self.merged_func.__name__,
+        )
 
         # TensorFlow will automatically squeeze length-1 outputs (if there is
         # no state), which we don't want

@@ -7,7 +7,7 @@ import tensorflow as tf
 from nengo.exceptions import BuildError, ValidationError
 from packaging import version
 
-from nengo_dl import compat, config, dists
+from nengo_dl import config, dists
 from nengo_dl.tests import dummies
 
 
@@ -78,9 +78,8 @@ def test_predict(Simulator, seed):
         assert np.allclose(output[p], data_tile)
 
         # tf input
-        if compat.eager_enabled():
-            output = sim.predict(tf.constant(a_vals))
-            assert np.allclose(output[p], data_tile)
+        output = sim.predict(tf.constant(a_vals))
+        assert np.allclose(output[p], data_tile)
 
         # dict input
         for key in [a, "a"]:
@@ -166,14 +165,13 @@ def test_evaluate(Simulator):
         assert np.allclose(loss["probe_1_loss"], 1)
 
         # tensor inputs
-        if compat.eager_enabled():
-            loss = sim.evaluate(
-                x=[tf.constant(inputs), tf.constant(inputs * 2)],
-                y={p0: tf.constant(targets), p1: tf.constant(targets)},
-            )
-            assert np.allclose(loss["loss"], 1)
-            assert np.allclose(loss["probe_loss"], 0)
-            assert np.allclose(loss["probe_1_loss"], 1)
+        loss = sim.evaluate(
+            x=[tf.constant(inputs), tf.constant(inputs * 2)],
+            y={p0: tf.constant(targets), p1: tf.constant(targets)},
+        )
+        assert np.allclose(loss["loss"], 1)
+        assert np.allclose(loss["probe_loss"], 0)
+        assert np.allclose(loss["probe_1_loss"], 1)
 
         gen = (
             (
@@ -285,15 +283,14 @@ def test_fit(Simulator, seed):
         )
         assert np.allclose(history.history["val_loss"][-1], 0)
 
-        if compat.eager_enabled():
-            sim.reset()
-            history = sim.fit(
-                [tf.constant(x[..., [0]]), tf.constant(x[..., [1]])],
-                tf.constant(y),
-                epochs=200,
-                verbose=0,
-            )
-            assert history.history["loss"][-1] < 5e-4
+        sim.reset()
+        history = sim.fit(
+            [tf.constant(x[..., [0]]), tf.constant(x[..., [1]])],
+            tf.constant(y),
+            epochs=200,
+            verbose=0,
+        )
+        assert history.history["loss"][-1] < 5e-4
 
         sim.reset()
         history = sim.fit(
@@ -411,18 +408,10 @@ def test_multi_input_warning(Simulator):
         with pytest.warns(UserWarning, match="does not match number of Nodes"):
             sim.evaluate(np.zeros((1, 10, 1)), [np.zeros((1, 10, 1))] * 2)
 
-        with pytest.warns(
-            UserWarning, match="does not match number of Probes"
-        ) if compat.eager_enabled() else pytest.raises(
-            ValueError, match="No data provided for"
-        ):
+        with pytest.warns(UserWarning, match="does not match number of Probes"):
             sim.evaluate([np.zeros((1, 10, 1))] * 2, np.zeros((1, 10, 1)))
 
-        with pytest.warns(
-            UserWarning, match="does not match number of Probes"
-        ) if compat.eager_enabled() else pytest.raises(
-            ValueError, match="No data provided for"
-        ):
+        with pytest.warns(UserWarning, match="does not match number of Probes"):
             sim.evaluate([np.zeros((1, 10, 1))] * 2, np.zeros((1, 10, 1)))
 
 
@@ -441,10 +430,7 @@ def test_uneven_validation_split(Simulator):
         # regular keras error message when trying to use validation_split with
         # a generator
         with pytest.raises(
-            ValueError,
-            match="`validation_split` is only supported for Tensors"
-            if compat.eager_enabled()
-            else "cannot use `validation_split`",
+            ValueError, match="`validation_split` is only supported for Tensors"
         ):
             sim.fit(
                 ((x, y) for x, y in zip(np.zeros((10, 10, 1)), np.zeros((10, 10, 1)))),

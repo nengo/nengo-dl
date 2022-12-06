@@ -384,8 +384,7 @@ def test_sequential(seed):
 
     conv = converter.Converter(model, allow_fallback=False)
     assert conv.verify(training=False)
-    # TODO: not sure why this is slightly less accurate in graph mode
-    assert conv.verify(training=True, atol=1e-8 if compat.eager_enabled() else 1e-7)
+    assert conv.verify(training=True)
 
 
 @pytest.mark.parametrize(
@@ -843,9 +842,7 @@ def test_spiking_activation(Simulator, seed, rng, pytestconfig):
     model = tf.keras.Model(inp, x)
     conv = converter.Converter(model, temporal_model=True)
     assert conv.verify(training=False, inputs=[inp_val])
-    if not pytestconfig.getoption("--graph-mode"):
-        # the keras-spiking gradient implementation doesn't work in graph mode
-        assert conv.verify(training=True, inputs=[inp_val])
+    assert conv.verify(training=True, inputs=[inp_val])
 
     # check non-default dt
     inp = x = tf.keras.Input((None, 10))

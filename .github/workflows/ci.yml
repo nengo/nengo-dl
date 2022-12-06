@@ -35,6 +35,7 @@ jobs:
           - script: test
           - script: remote-test
             coverage-name: remote
+            tf-version: tensorflow==2.10
             nengo-version: git+https://github.com/nengo/nengo.git#egg=nengo[tests]
           - script: test-coverage
             coverage-name: latest
@@ -47,13 +48,10 @@ jobs:
             numpy-version: numpy==1.16.0
             tf-version: tensorflow==2.2.0
             nengo-version: nengo[tests]==3.0.0
-          - script: test-coverage
-            coverage-name: py39-graph
-            test_args: --graph-mode
       fail-fast: false
     env:
       NUMPY_VERSION: ${{ matrix.numpy-version || 'numpy>=1.16.0' }}
-      TF_VERSION: ${{ matrix.tf-version || 'tensorflow==2.9' }}
+      TF_VERSION: ${{ matrix.tf-version || 'tensorflow' }}
       NENGO_VERSION: ${{ matrix.nengo-version || 'nengo[tests]' }}
       SCIPY_VERSION: ${{ matrix.scipy-version || 'noop' }}
       TEST_ARGS: ${{ matrix.test_args }}
@@ -84,7 +82,9 @@ jobs:
       matrix:
         include:
           - script: remote-docs
+            tf-version: tensorflow==2.10
           - script: remote-examples
+            tf-version: tensorflow==2.10
           - script: test
             test_args: --unroll-simulation 5 --dtype float64 --simulator-only
           - script: test
@@ -106,7 +106,7 @@ jobs:
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     env:
       NUMPY_VERSION: ${{ matrix.numpy-version || 'numpy>=1.16.0' }}
-      TF_VERSION: ${{ matrix.tf-version || 'tensorflow==2.9' }}
+      TF_VERSION: ${{ matrix.tf-version || 'tensorflow' }}
       NENGO_VERSION: ${{ matrix.nengo-version || 'nengo[tests]' }}
       SCIPY_VERSION: noop
       TEST_ARGS: ${{ matrix.test_args }}

@@ -449,7 +449,6 @@ def test_get_tensor(Simulator, use_loop):
         assert np.allclose(sim.data[p], np.arange(10)[None, :])
 
 
-@pytest.mark.eager_only
 @pytest.mark.parametrize("trainable", (True, False))
 def test_build(trainable, rng):
     sigs = [

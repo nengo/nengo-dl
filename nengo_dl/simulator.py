@@ -2,7 +2,6 @@
 `running <.Simulator.run_steps>` and `training <.Simulator.fit>` a model."""
 
 import collections
-import contextlib
 import copy
 import logging
 import textwrap
@@ -597,14 +596,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
         if include_trainable:
             reset_vars.extend(self.tensor_graph.base_params.items())
 
-        if compat.eager_enabled():
-            for key, var in reset_vars:
-                var.assign(
-                    # TODO: cache these instead of regenerating each time
-                    self.tensor_graph.initial_values[key](var.shape, dtype=var.dtype)
-                )
-        else:
-            tf.keras.backend.batch_get_value([var.initializer for _, var in reset_vars])
+        for key, var in reset_vars:
+            var.assign(
+                # TODO: cache these instead of regenerating each time
+                self.tensor_graph.initial_values[key](var.shape, dtype=var.dtype)
+            )
 
         if include_probes:
             for p in self.model.probes:
@@ -948,9 +944,7 @@ class Simulator:  # pylint: disable=too-many-public-methods
                 f"ignoring value passed to `{func_type}`"
             )
         if "on_batch" not in func_type:
-            kwargs["batch_size"] = (
-                self.minibatch_size if compat.eager_enabled() else None
-            )
+            kwargs["batch_size"] = self.minibatch_size
 
         # TODO: apply standardize/generate/check data to generator somehow
         # maybe move it into a callback where the generated data is available?
@@ -993,23 +987,13 @@ class Simulator:  # pylint: disable=too-many-public-methods
         # warn for synapses with n_steps=1
         # note: we don't warn if stateful, since there could be effects across runs
         if not stateful:
-            if compat.eager_enabled():
-                target_probes = [
-                    p
-                    for p, e in zip(self.model.probes, self.keras_model.output_names)
-                    if self.keras_model.compiled_loss is None
-                    or self.keras_model.compiled_loss._losses is None
-                    or e in self.keras_model.compiled_loss._losses
-                ]
-            else:
-                target_probes = [
-                    p
-                    for p, e in zip(
-                        self.model.probes,
-                        getattr(self.keras_model, "_training_endpoints", []),
-                    )
-                    if not e.should_skip_target()
-                ]
+            target_probes = [
+                p
+                for p, e in zip(self.model.probes, self.keras_model.output_names)
+                if self.keras_model.compiled_loss is None
+                or self.keras_model.compiled_loss._losses is None
+                or e in self.keras_model.compiled_loss._losses
+            ]
 
             synapses = [
                 x.synapse is not None
@@ -1610,19 +1594,11 @@ class Simulator:  # pylint: disable=too-many-public-methods
             include_probes=False, include_trainable=False, include_processes=False
         )
 
-        ctx = (
-            # noop
-            contextlib.suppress
-            if compat.eager_enabled()
-            else tf.compat.v1.keras.backend.get_session().as_default
-        )
-
         grads = {}
         for output in outputs:
-            with ctx():
-                analytic, numeric = tf.test.compute_gradient(
-                    partial(arg_func, output=output), inputs
-                )
+            analytic, numeric = tf.test.compute_gradient(
+                partial(arg_func, output=output), inputs
+            )
             grads[output] = {}
             grads[output]["analytic"] = analytic
             grads[output]["numeric"] = numeric

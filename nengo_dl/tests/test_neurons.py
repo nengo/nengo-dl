@@ -128,7 +128,6 @@ def test_neuron_gradients(Simulator, neuron_type, seed, rng):
         sim.check_gradients()
 
 
-@pytest.mark.eager_only
 @pytest.mark.parametrize(
     "rate, spiking",
     [
@@ -149,6 +148,14 @@ def test_neuron_gradients(Simulator, neuron_type, seed, rng):
             marks=pytest.mark.skipif(
                 version.parse(nengo.__version__) < version.parse("3.1.0"),
                 reason="RegularSpiking does not exist",
+            ),
+        ),
+        pytest.param(
+            nengo.LIFRate,
+            lambda **kwargs: nengo.StochasticSpiking(nengo.LIFRate(**kwargs)),
+            marks=pytest.mark.skipif(
+                version.parse(nengo.__version__) < version.parse("3.1.0"),
+                reason="StochasticSpiking does not exist",
             ),
         ),
     ],
@@ -192,8 +199,10 @@ def test_spiking_swap(Simulator, rate, spiking, seed):
         with nengo.Simulator(net) as sim2:
             sim2.run(0.5)
 
-            if not isinstance(neuron_type(), compat.PoissonSpiking):
-                # we don't expect these to match for poissonspiking, since we have
+            if not isinstance(
+                neuron_type(), (compat.PoissonSpiking, compat.StochasticSpiking)
+            ):
+                # we don't expect these to match for random spiking, since we have
                 # different rng implementations in numpy vs tensorflow
                 assert np.allclose(sim.data[p], sim2.data[p])
 

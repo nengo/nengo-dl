@@ -11,12 +11,9 @@ The short answer is that these can be passed to, e.g., `.Simulator.fit` like
     sim.fit(..., callbacks=[nengo_dl.callbacks.NengoSummaries(...)]
 """
 
-import contextlib
-
 import nengo
 import tensorflow as tf
 from nengo.exceptions import ValidationError
-from tensorflow.python.eager import context
 
 from nengo_dl import compat, utils
 
@@ -44,9 +41,7 @@ class NengoSummaries(tf.keras.callbacks.Callback):
         super().__init__()
 
         self.sim = sim
-
-        with contextlib.suppress() if compat.eager_enabled() else context.eager_mode():
-            self.writer = tf.summary.create_file_writer(str(log_dir))
+        self.writer = tf.summary.create_file_writer(str(log_dir))
 
         self.summaries = []
         for obj in objects:
@@ -85,17 +80,14 @@ class NengoSummaries(tf.keras.callbacks.Callback):
             *[(obj, attr) for _, obj, attr in self.summaries]
         )
 
-        with (
-            contextlib.suppress() if compat.eager_enabled() else context.eager_mode()
-        ), self.writer.as_default():
+        with self.writer.as_default():
             for (name, _, _), val in zip(self.summaries, summary_vals):
                 tf.summary.histogram(name, val, step=epoch)
 
     def on_train_end(self, logs=None):
         """Close summary writer at end of training."""
 
-        with contextlib.suppress() if compat.eager_enabled() else context.eager_mode():
-            self.writer.close()
+        self.writer.close()
 
 
 class TensorBoard(tf.keras.callbacks.TensorBoard):

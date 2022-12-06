@@ -18,12 +18,22 @@ Release history
    - Deprecated
    - Removed
 
-3.5.1 (unreleased)
+3.6.0 (unreleased)
 ------------------
 
 *Compatible with Nengo 3.0 - 3.2*
 
-*Compatible with TensorFlow 2.2 - 2.9*
+*Compatible with TensorFlow 2.2 - 2.11*
+
+**Removed**
+
+- Removed support for "graph mode" (i.e., running with
+  ``tf.compat.v1.disable_eager_execution()``). TensorFlow is no longer supporting
+  this functionality, and it is increasingly buggy. Graph mode may still be faster for
+  some models; if you need this functionality, try using a previous version of NengoDL.
+  (`#229`_)
+
+.. _#229: https://github.com/nengo/nengo-dl/pull/229
 
 3.5.0 (May 18, 2022)
 --------------------

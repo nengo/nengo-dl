@@ -6,7 +6,6 @@ See `the documentation <https://www.nengo.ai/nengo-dl/tensor-node.html>`_ for
 more details.
 """
 
-import contextlib
 import warnings
 
 import numpy as np
@@ -18,10 +17,9 @@ from nengo.config import Config
 from nengo.exceptions import SimulationError, ValidationError
 from nengo.neurons import NeuronType
 from nengo.params import BoolParam, Default, Parameter, ShapeParam
-from tensorflow.python.eager import context
 
 from nengo_dl.builder import Builder, NengoBuilder, OpBuilder
-from nengo_dl.compat import default_transform, eager_enabled
+from nengo_dl.compat import default_transform
 from nengo_dl.config import configure_settings
 
 
@@ -115,11 +113,8 @@ class TensorFuncParam(Parameter):
                 if len(input_spec) == 1:
                     input_spec = input_spec[0]
 
-                ctx = contextlib.suppress() if eager_enabled() else context.eager_mode()
-
                 try:
-                    with ctx:
-                        result = value.compute_output_signature(input_spec)
+                    result = value.compute_output_signature(input_spec)
                 except Exception as e:
                     raise ValidationError(
                         "Attempting to automatically determine TensorNode output shape "
