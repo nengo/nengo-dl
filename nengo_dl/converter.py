@@ -1239,7 +1239,8 @@ class ConvertConcatenate(LayerConverter):
         offsets = np.cumsum([shape[axis] if type(shape) is tuple else shape for shape in self.input_shape(node_id)])
         offsets = np.concatenate(([0], offsets))
 
-        for i in range(len(self.layer.input.shape)):
+        num_layers = len(self.layer.input) if type(self.layer.input) is list else 1
+        for i in range(num_layers):
             slices[axis] = slice(offsets[i], offsets[i + 1])
             self.add_connection(
                 node_id, output[np.ravel(idxs[tuple(slices)])], input_idx=i
