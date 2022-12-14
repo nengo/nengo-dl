@@ -1236,7 +1236,7 @@ class ConvertConcatenate(LayerConverter):
             self.output_shape(node_id)
         )
         slices = [slice(None) for _ in range(idxs.ndim)]
-        offsets = np.cumsum([shape[axis] for shape in self.input_shape(node_id)])
+        offsets = np.cumsum([shape[axis] if type(shape) is tuple else shape for shape in self.input_shape(node_id)])
         offsets = np.concatenate(([0], offsets))
 
         for i in range(len(self.layer.input)):
