@@ -11,6 +11,7 @@ on:
     inputs:
       debug_enabled:
         description: Run the build with SSH debugging enabled
+        type: boolean
         required: false
         default: false
 
