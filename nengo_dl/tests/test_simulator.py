@@ -837,8 +837,6 @@ def test_profile(Simulator, mode, tmp_path, pytestconfig):
             )
 
         path = tmp_path / "profile"
-        if version.parse(tf.__version__) < version.parse("2.3.0rc0"):
-            path /= "train"
         assert path.exists()
 
 

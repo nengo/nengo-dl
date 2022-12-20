@@ -23,7 +23,7 @@ Release history
 
 *Compatible with Nengo 3.0 - 3.2*
 
-*Compatible with TensorFlow 2.2 - 2.11*
+*Compatible with TensorFlow 2.3 - 2.11*
 
 **Added**
 
@@ -43,6 +43,10 @@ Release history
   this functionality, and it is increasingly buggy. Graph mode may still be faster for
   some models; if you need this functionality, try using a previous version of NengoDL.
   (`#229`_)
+- Dropped support for TensorFlow 2.2. The minimum supported version is now 2.3.4
+  (earlier 2.3.x versions should work as well, but TensorFlow may install an
+  incompatible ``protobuf`` version that the user will need to manually correct).
+  (`#228`_)
 
 .. _#228: https://github.com/nengo/nengo-dl/pull/228
 .. _#229: https://github.com/nengo/nengo-dl/pull/229
