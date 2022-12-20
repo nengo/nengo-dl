@@ -96,7 +96,7 @@ setup_cfg:
       - tensorflow
   coverage:
     omit_files:
-      - nengo_dl/tests/dummies.py
+      - "*/tests/dummies.py"
   flake8:
     ignore:
       - C901
