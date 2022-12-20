@@ -419,7 +419,6 @@ def test_train_no_data(Simulator):
     net, _, p = dummies.linear_net()
 
     with Simulator(net) as sim:
-
         sim.compile(
             tf.optimizers.SGD(0.1), loss={p: lambda y_true, y_pred: abs(2.0 - y_pred)}
         )
@@ -733,7 +732,6 @@ def test_tensorboard(Simulator, tmp_path):
     # check that training summaries are output properly
     n_epochs = 3
     with Simulator(net) as sim:
-
         log_dir = tmp_path / "a_run"
 
         sim.compile(

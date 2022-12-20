@@ -2240,7 +2240,6 @@ class SimulationData(collections.abc.Mapping):
         sigs = []
         fetches = {}
         for obj, attr in obj_attrs:
-
             sig_obj, sig_attr = self._attr_map(obj, attr)
             sig = self.sim.model.sig[sig_obj][sig_attr]
             sigs.append(sig)

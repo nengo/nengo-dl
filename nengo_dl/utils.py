@@ -186,7 +186,6 @@ class ProgressBar(progressbar.ProgressBar):  # pylint: disable=too-many-ancestor
     """
 
     def __init__(self, present="", past=None, max_value=1, **kwargs):
-
         self.present = present
         self.sub_bar = None
         self.finished = None
