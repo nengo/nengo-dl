@@ -4,7 +4,7 @@
 NengoDL license
 ***************
 
-Copyright (c) 2015-2022 Applied Brain Research
+Copyright (c) 2015-2023 Applied Brain Research
 
 **ABR License**
 
