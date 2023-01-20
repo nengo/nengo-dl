@@ -48,10 +48,30 @@ def test_conv(seed):
     if utils.tf_gpu_installed:
         x = tf.keras.layers.Reshape((2, 4, 4))(x)
         x = tf.keras.layers.Conv2D(
-            filters=4, kernel_size=3, groups=2, data_format="channels_first"
+            filters=4, kernel_size=3, data_format="channels_first"
         )(x)
 
     _test_convert(inp, x)
+
+
+def test_conv_groups(seed):
+    tf.random.set_seed(seed)
+
+    inp = x = tf.keras.Input(shape=(28, 28, 4))
+    x = tf.keras.layers.Conv2D(filters=4, kernel_size=3, groups=4)(x)
+
+    model = tf.keras.Model(inp, x)
+
+    with contextlib.suppress() if compat.HAS_NENGO_3_2_1 else pytest.raises(
+        TypeError, match="Convolution layers require Nengo>3.2.0"
+    ):
+        conv = converter.Converter(model, allow_fallback=False)
+
+        assert conv.verify(training=False)
+        if utils.tf_gpu_installed:
+            # there are some weird bugs in TF when running backprop with grouped
+            # convolutions on the CPU
+            assert conv.verify(training=True)
 
 
 def test_activation():
