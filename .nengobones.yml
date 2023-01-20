@@ -209,7 +209,7 @@ ci_scripts:
       NENGO_VERSION: $NENGO_VERSION
       SCIPY_VERSION: $SCIPY_VERSION
     remote_setup:
-      - conda install -y -q -c conda-forge --override-channels "$TF_VERSION"
+      - micromamba install -y "$TF_VERSION"
   - template: remote-script
     remote_script: docs
     output_name: remote-docs
@@ -222,7 +222,7 @@ ci_scripts:
       NENGO_VERSION: $NENGO_VERSION
       SCIPY_VERSION: $SCIPY_VERSION
     remote_setup:
-      - conda install -y -q -c conda-forge --override-channels "$TF_VERSION"
+      - micromamba install -y "$TF_VERSION"
   - template: remote-script
     remote_script: examples
     output_name: remote-examples
@@ -235,7 +235,7 @@ ci_scripts:
       NENGO_VERSION: $NENGO_VERSION
       SCIPY_VERSION: $SCIPY_VERSION
     remote_setup:
-      - conda install -y -q -c conda-forge --override-channels "$TF_VERSION"
+      - micromamba install -y "$TF_VERSION"
   - template: deploy
 
 setup_py:
