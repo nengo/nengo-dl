@@ -126,9 +126,9 @@ else:
 
 # Nengo compatibility
 
-HAS_NENGO_3_2_1 = version.parse(nengo.__version__) >= version.parse("3.2.1")
-HAS_NENGO_3_2_0 = version.parse(nengo.__version__) >= version.parse("3.2.0")
-HAS_NENGO_3_1_0 = version.parse(nengo.__version__) >= version.parse("3.1.0")
+HAS_NENGO_3_2_1 = version.parse(nengo.__version__) >= version.parse("3.2.1.dev0")
+HAS_NENGO_3_2_0 = version.parse(nengo.__version__) >= version.parse("3.2.0.dev0")
+HAS_NENGO_3_1_0 = version.parse(nengo.__version__) >= version.parse("3.1.0.dev0")
 
 if HAS_NENGO_3_2_0:  # pragma: no cover
     from nengo.builder.transforms import ConvTransposeInc
