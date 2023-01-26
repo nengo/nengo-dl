@@ -6,10 +6,6 @@
   :target: https://pypi.org/project/nengo-dl
   :alt: Python versions
 
-.. image:: https://img.shields.io/codecov/c/github/nengo/nengo-dl/master.svg
-  :target: https://codecov.io/gh/nengo/nengo-dl
-  :alt: Test coverage
-
 |
 
 .. image:: https://www.nengo.ai/design/_images/nengo-dl-full-light.svg
