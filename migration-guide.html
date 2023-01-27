@@ -1,0 +1,973 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Migration guide &#8212; NengoDL 3.6.0 docs</title>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/basic.css" type="text/css" />
+<link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,400i,600|Rajdhani:700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
+<link rel="stylesheet" href="https://www.nengo.ai/css/bootstrap.css" type="text/css">
+<style>
+ body .title-bar,
+ body .documentation-source h1:after {
+   background-color: #ff6600;
+ }
+</style>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/scrollreveal"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stickyfill/2.1.0/stickyfill.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+<!-- From basic/layout.html -->
+<script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+
+
+<script src="_static/underscore.js"></script>
+
+
+<script src="_static/doctools.js"></script>
+
+
+<script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-GT8XEDLTMJ"></script>
+        <script>
+         window.dataLayer = window.dataLayer || [];
+         function gtag(){dataLayer.push(arguments);}
+         gtag('js', new Date());
+         gtag('config', 'G-GT8XEDLTMJ');
+        </script>
+        <!-- End Google tag (gtag.js) -->
+        <!-- Matomo -->
+        <script>
+         var _paq = window._paq = window._paq || [];
+         _paq.push(["setDocumentTitle", document.domain + "/" + document.title]);
+         _paq.push(["setCookieDomain", "*.appliedbrainresearch.com"]);
+         _paq.push(["setDomains", ["*.appliedbrainresearch.com","*.edge.nengo.ai","*.forum.nengo.ai","*.labs.nengo.ai","*.nengo.ai"]]);
+         _paq.push(["enableCrossDomainLinking"]);
+         _paq.push(["setDoNotTrack", true]);
+         _paq.push(['trackPageView']);
+         _paq.push(['enableLinkTracking']);
+         (function() {
+           var u="https://appliedbrainresearch.matomo.cloud/";
+           _paq.push(['setTrackerUrl', u+'matomo.php']);
+           _paq.push(['setSiteId', '3']);
+           var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+           g.async=true; g.src='//cdn.matomo.cloud/appliedbrainresearch.matomo.cloud/matomo.js'; s.parentNode.insertBefore(g,s);
+         })();
+        </script>
+        <!-- End Matomo Code -->
+    
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Contributing to NengoDL" href="contributing.html" />
+    <link rel="prev" title="Release history" href="release-history.html" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  </head><body class="bg-dark">
+
+<header class="fixed-top header-top shadow-sm">
+  <nav class="navbar navbar-expand-md navbar-light bg-white">
+    <a class="navbar-brand" href="https://www.nengo.ai/">
+      <img
+        src="https://www.nengo.ai/design/_images/general-full-light.svg"
+        alt="Nengo"
+        class="logo"
+      />
+    </a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-toggle="collapse"
+      data-target="#navbar-collapse"
+      aria-controls="navbar-collapse"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-collapse">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/">What is Nengo?</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.nengo.ai/examples/">Examples</a>
+        </li>
+        <li class="nav-item dropdown active">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-docs"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Documentation</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-docs"
+          >
+            
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo/">Nengo core</a>
+            <a class="dropdown-item" href="https://github.com/nengo/nengo-gui/">NengoGUI</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-dl/">NengoDL</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-spa/">NengoSPA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-extras/">NengoExtras</a>
+            <a class="dropdown-item" href="https://arvoelke.github.io/nengolib-docs/">Nengolib</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/keras-spiking">KerasSpiking</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/pytorch-spiking">PyTorchSpiking</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-fpga/">NengoFPGA</a>
+            <a class="dropdown-item" href="https://www.nengo.ai/nengo-loihi/">NengoLoihi</a>
+            <a class="dropdown-item" href="https://labs.nengo.ai/nengo-ocl/">NengoOCL</a>
+            <a class="dropdown-item" href="https://github.com/project-rig/nengo_spinnaker">NengoSpiNNaker</a>
+            <a class="dropdown-item" href="https://github.com/nengo-labs/nengo-mpi">NengoMPI</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/documentation/"
+              >All documentation</a
+            >
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a
+            class="nav-link dropdown-toggle"
+            id="navbar-dropdown-community"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+            href="#"
+            >Community</a
+          >
+          <div
+            class="dropdown-menu shadow-lg border-0"
+            aria-labelledby="navbar-dropdown-community"
+          >
+            <a class="dropdown-item" href="https://forum.nengo.ai">Forum</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://www.nengo.ai/people/"
+              >People</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/summer-school/"
+              >Summer school</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/contributing/"
+              >Contributing</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/publications/"
+              >Publications</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/videos/"
+              >Videos</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/conduct/"
+              >Code of conduct</a
+            >
+            <a class="dropdown-item" href="https://www.nengo.ai/caa/">CAA</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link btn btn-success btn-sm text-white"
+            href="https://www.nengo.ai/getting-started/"
+            >Getting started</a
+          >
+        </li>
+      </ul>
+    </div>
+  </nav>
+</header>
+<div class="main-content gradient-top">
+  <div class="container-fluid">
+    <div class="row"><a class="toggle-sidenav d-block d-md-none" href="#"
+  ><i class="icon-close fa fa-fw fa-arrow-left"></i
+  ><i class="icon-open fa fa-fw fa-arrow-right"></i
+></a>
+<div role="complementary" class="sidenav col-4 col-xl-3 p-0 border-right">
+  <h3 class="pt-5 px-5">
+    <a href="index.html">
+      <img
+        class="img-fluid documentation-image"
+        src="https://www.nengo.ai/design/_images/nengo-dl-full-light.svg"
+        alt="NengoDL"
+      />
+    </a>
+  </h3>
+<form class="px-5 py-3 my-0 border-bottom" action="search.html" method="get">
+  <div class="form-group form-group-single">
+    <input type="text" name="q" class="form-control" placeholder="Search" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+    <button type="submit" class="btn btn-link">
+      <img src="https://www.nengo.ai/img/icon-search.svg" alt="Go" />
+    </button>
+  </div>
+</form><div class="p-5 toctree">
+  
+    <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user-guide.html">User guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Additional resources</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="project.html">Project information</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="release-history.html">Release history</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Migration guide</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nengodl-2-to-3">NengoDL 2 to 3</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html">Contributing to NengoDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="license.html">NengoDL license</a></li>
+<li class="toctree-l2"><a class="reference internal" href="citation.html">Citation</a></li>
+</ul>
+</li>
+</ul>
+
+  
+  </div>
+  
+  <form class="p-5 my-0 border-top">
+    <div class="form-group">
+      <label class="text-gray">Version:</label>
+      <select class="custom-select" onchange="switchVersion(this);">
+        
+        
+        <option selected>latest</option>
+        
+        
+          
+        <option value="v3.5.0/migration-guide.html">
+          v3.5.0
+        </option>
+          
+        
+          
+        <option value="v3.4.4/migration-guide.html">
+          v3.4.4
+        </option>
+          
+        
+          
+        <option value="v3.4.3/migration-guide.html">
+          v3.4.3
+        </option>
+          
+        
+          
+        <option value="v3.4.2/migration-guide.html">
+          v3.4.2
+        </option>
+          
+        
+          
+        <option value="v3.4.1/migration-guide.html">
+          v3.4.1
+        </option>
+          
+        
+          
+        <option value="v3.4.0/migration-guide.html">
+          v3.4.0
+        </option>
+          
+        
+          
+        <option value="v3.3.0/migration-guide.html">
+          v3.3.0
+        </option>
+          
+        
+          
+        <option value="v3.2.0/migration-guide.html">
+          v3.2.0
+        </option>
+          
+        
+          
+        <option value="v3.1.0/migration-guide.html">
+          v3.1.0
+        </option>
+          
+        
+          
+        <option value="v3.0.0/migration-guide.html">
+          v3.0.0
+        </option>
+          
+        
+          
+        <option value="v2.2.2/migration-guide.html">
+          v2.2.2
+        </option>
+          
+        
+          
+        <option value="v2.2.1/migration-guide.html">
+          v2.2.1
+        </option>
+          
+        
+          
+        <option value="v2.2.0/migration-guide.html">
+          v2.2.0
+        </option>
+          
+        
+          
+        <option value="v2.1.1/migration-guide.html">
+          v2.1.1
+        </option>
+          
+        
+          
+        <option value="v2.1.0/migration-guide.html">
+          v2.1.0
+        </option>
+          
+        
+          
+        <option value="v2.0.0/migration-guide.html">
+          v2.0.0
+        </option>
+          
+        
+          
+        <option value="v1.2.1/migration-guide.html">
+          v1.2.1
+        </option>
+          
+        
+          
+        <option value="v1.2.0/migration-guide.html">
+          v1.2.0
+        </option>
+          
+        
+          
+        <option value="v1.1.0/migration-guide.html">
+          v1.1.0
+        </option>
+          
+        
+          
+        <option value="v1.0.0/migration-guide.html">
+          v1.0.0
+        </option>
+          
+        
+          
+        <option value="v0.6.2/migration-guide.html">
+          v0.6.2
+        </option>
+          
+        
+          
+        <option value="v0.6.1/migration-guide.html">
+          v0.6.1
+        </option>
+          
+        
+          
+        <option value="v0.6.0/migration-guide.html">
+          v0.6.0
+        </option>
+          
+        
+          
+        <option value="v0.5.2/migration-guide.html">
+          v0.5.2
+        </option>
+          
+        
+          
+        <option value="v0.5.1/migration-guide.html">
+          v0.5.1
+        </option>
+          
+        
+          
+        <option value="v0.5.0/migration-guide.html">
+          v0.5.0
+        </option>
+          
+        
+          
+        <option value="v0.4.0/migration-guide.html">
+          v0.4.0
+        </option>
+          
+        
+          
+        <option value="v0.3.1/migration-guide.html">
+          v0.3.1
+        </option>
+          
+        
+          
+        <option value="v0.3.0/migration-guide.html">
+          v0.3.0
+        </option>
+          
+        
+          
+        <option value="v0.2.0/migration-guide.html">
+          v0.2.0
+        </option>
+          
+        
+      </select>
+    </div>
+  </form>
+  
+</div>
+      
+
+      <div class="col-12 col-md-8 col-xl-9">
+        <div class="container">
+          <div class="row">
+            <div class="col-10 offset-1 pb-5 documentation-source" role="main">
+              
+              
+              <div class="admonition note">
+                  <p class="admonition-title">Note</p>
+                  <p>
+                  This documentation is for a development version.
+                  <a href="v3.5.0/migration-guide.html">
+                  Click here for the latest stable release (v3.5.0).
+                  </a>
+                  </p>
+              </div>
+              
+              
+  <div class="section" id="migration-guide">
+<h1>Migration guide<a class="headerlink" href="#migration-guide" title="Permalink to this headline">¶</a></h1>
+<p>The goal of this section is to help with upgrading code that was written for an older
+version of NengoDL.  Note that this is not a list of all
+the new features available in newer versions. Here we will only look at features that
+were present in older versions, and how they have changed.</p>
+<p>See <a class="reference internal" href="release-history.html"><span class="doc">the release history</span></a> for complete details on what has
+changed in each version.</p>
+<div class="section" id="nengodl-2-to-3">
+<h2>NengoDL 2 to 3<a class="headerlink" href="#nengodl-2-to-3" title="Permalink to this headline">¶</a></h2>
+<p>NengoDL 3 makes some significant changes to the API, mainly motivated by the
+release of TensorFlow 2.0.  TensorFlow 2.0 adopts the Keras API as the standard
+high-level interface, so in NengoDL 3 we make the same change, modifying the API
+to better integrate with Keras.</p>
+<div class="section" id="simulator-changes">
+<h3>Simulator changes<a class="headerlink" href="#simulator-changes" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p><strong>Use</strong> <a class="reference internal" href="reference.html#nengo_dl.Simulator.fit" title="nengo_dl.Simulator.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.fit</span></code></a> <strong>instead of</strong> <code class="docutils literal notranslate"><span class="pre">Simulator.train</span></code>. <a class="reference internal" href="reference.html#nengo_dl.Simulator.fit" title="nengo_dl.Simulator.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.fit</span></code></a> is the
+new access point for optimizing a NengoDL model.  It is closely based on the Keras
+<a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/keras/Model#fit">Model.fit</a>
+function. One important difference between <code class="docutils literal notranslate"><span class="pre">fit</span></code> and <code class="docutils literal notranslate"><span class="pre">train</span></code> is that the
+optimizer and loss functions are specified in a separate <a class="reference internal" href="reference.html#nengo_dl.Simulator.compile" title="nengo_dl.Simulator.compile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.compile</span></code></a> step
+(analogous to Keras’ <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/keras/Model#compile">Model.compile</a>)
+rather than directly in <code class="docutils literal notranslate"><span class="pre">Simulator.train</span></code>. Another difference is that input
+and target data are specified in separate <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code> arguments, rather than
+a single <code class="docutils literal notranslate"><span class="pre">data</span></code> argument.</p>
+<p>Also note that you should use the updated TensorFlow 2.0 optimizers/loss functions
+in <code class="docutils literal notranslate"><span class="pre">tf.optimizers</span></code> and <code class="docutils literal notranslate"><span class="pre">tf.losses</span></code>, rather than the deprecated optimizers
+in <code class="docutils literal notranslate"><span class="pre">tf.compat.v1.train</span></code>.</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">example_net</span><span class="p">:</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Node</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">ens</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">nengo</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">ens</span><span class="p">,</span> <span class="n">synapse</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">probe</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">ens</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">example_net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="n">node</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">probe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+        <span class="n">optimizer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="mf">0.01</span><span class="p">),</span>
+        <span class="n">objective</span><span class="o">=</span><span class="n">nengo_dl</span><span class="o">.</span><span class="n">objectives</span><span class="o">.</span><span class="n">mse</span><span class="p">,</span>
+        <span class="n">n_epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">example_net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">optimizers</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="mf">0.01</span><span class="p">),</span> <span class="n">loss</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">mse</span><span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="p">{</span><span class="n">node</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+        <span class="n">y</span><span class="o">=</span><span class="p">{</span><span class="n">probe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+        <span class="n">epochs</span><span class="o">=</span><span class="mi">10</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Use</strong> <a class="reference internal" href="reference.html#nengo_dl.Simulator.evaluate" title="nengo_dl.Simulator.evaluate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.evaluate</span></code></a> <strong>instead of</strong> <code class="docutils literal notranslate"><span class="pre">Simulator.loss</span></code>.  In the same way as
+<code class="docutils literal notranslate"><span class="pre">train</span></code> is replaced by <code class="docutils literal notranslate"><span class="pre">fit</span></code>, <code class="docutils literal notranslate"><span class="pre">loss</span></code> is replaced by <code class="docutils literal notranslate"><span class="pre">evaluate</span></code>, which is
+equivalent to the Keras
+<a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate">Model.evaluate</a>
+function.  It differs from <code class="docutils literal notranslate"><span class="pre">loss</span></code> in all the same ways (separate <code class="docutils literal notranslate"><span class="pre">compile</span></code>
+step and independently specified inputs and targets).</p>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">example_net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">loss</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="n">node</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">probe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+        <span class="n">objective</span><span class="o">=</span><span class="n">nengo_dl</span><span class="o">.</span><span class="n">objectives</span><span class="o">.</span><span class="n">mse</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">example_net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">mse</span><span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="p">{</span><span class="n">node</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span> <span class="n">y</span><span class="o">=</span><span class="p">{</span><span class="n">probe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))})</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Extra simulator steps will no longer be hidden</strong>.  When simulating a number of
+timesteps that is not evenly divisible by <code class="docutils literal notranslate"><span class="pre">Simulator.unroll_simulation</span></code>,
+extra simulation steps will be executed (this is true in both 2 and 3).
+In NengoDL 2 these extra steps and
+any data associated with them were hidden from the user. In NengoDL 3 the
+number of steps executed is unchanged, but the simulation is now updated to
+reflect the number of steps that were actually executed (rather than the number
+the user requested).</p>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">example_net</span><span class="p">,</span> <span class="n">unroll_simulation</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run_steps</span><span class="p">(</span><span class="mi">18</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">sim</span><span class="o">.</span><span class="n">n_steps</span> <span class="o">==</span> <span class="mi">18</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">probe</span><span class="p">])</span> <span class="o">==</span> <span class="mi">18</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">example_net</span><span class="p">,</span> <span class="n">unroll_simulation</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">run_steps</span><span class="p">(</span><span class="mi">18</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">sim</span><span class="o">.</span><span class="n">n_steps</span> <span class="o">==</span> <span class="mi">20</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">probe</span><span class="p">])</span> <span class="o">==</span> <span class="mi">20</span>
+</pre></div>
+</div>
+</li>
+<li><p><a class="reference internal" href="reference.html#nengo_dl.Simulator.save_params" title="nengo_dl.Simulator.save_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.save_params</span></code></a> <strong>and</strong> <a class="reference internal" href="reference.html#nengo_dl.Simulator.load_params" title="nengo_dl.Simulator.load_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.load_params</span></code></a>
+<strong>arguments</strong> <code class="docutils literal notranslate"><span class="pre">include_global</span></code> <strong>and</strong> <code class="docutils literal notranslate"><span class="pre">include_local</span></code>
+<strong>replaced with</strong> <code class="docutils literal notranslate"><span class="pre">include_non_trainable</span></code>.  TensorFlow 2.0 removed the division of
+Variables into “global” and “local” collections.  Instead, Keras organizes Variables
+according to whether they are trainable or not.  Generally speaking, in NengoDL 2
+global variables were trainable and local variables were not, so the two
+organization schemes are roughly equivalent. However, it is possible for users to
+manually create non-trainable global variables or trainable local variables, in
+which case these two organization schemes would not be equivalent.</p>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">example_net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">save_params</span><span class="p">(</span><span class="s2">&quot;trainable&quot;</span><span class="p">,</span> <span class="n">include_global</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">include_local</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">save_params</span><span class="p">(</span><span class="s2">&quot;non_trainable&quot;</span><span class="p">,</span> <span class="n">include_global</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">include_local</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">save_params</span><span class="p">(</span><span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="n">include_global</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">include_local</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">example_net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">save_params</span><span class="p">(</span><span class="s2">&quot;trainable&quot;</span><span class="p">,</span> <span class="n">include_non_trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">save_params</span><span class="p">(</span><span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="n">include_non_trainable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that with the simplified single argument it is no longer possible to save
+only the non-trainable parameters. However, it is still possible to save these
+parameters manually if it is critical that trainable parameters not be included.</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">example_net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">savez_compressed</span><span class="p">(</span>
+        <span class="s2">&quot;non_trainable&quot;</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">batch_get_value</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">keras_model</span><span class="o">.</span><span class="n">non_trainable_weights</span><span class="p">)</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Rate/spiking neuron swapping is controlled by Keras</strong> <code class="docutils literal notranslate"><span class="pre">learning_phase</span></code>.  In
+NengoDL 2 and 3 spiking neuron models are automatically swapped for rate mode
+equivalents during training.  However, sometimes it is useful to manually enable
+this swapping in other functions (for example, in order to evaluate the loss
+function on test data but with the swapped rate neuron models).  There were a couple
+ways to do this in NengoDL 2; in NengoDL 3 it is all controlled through the
+<code class="docutils literal notranslate"><span class="pre">learning_phase</span></code> configuration option.</p>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">example_net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">loss</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="n">node</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">probe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+        <span class="n">objective</span><span class="o">=</span><span class="n">nengo_dl</span><span class="o">.</span><span class="n">objectives</span><span class="o">.</span><span class="n">mse</span><span class="p">,</span>
+        <span class="n">training</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_feeds</span><span class="o">=</span><span class="p">{</span><span class="n">sim</span><span class="o">.</span><span class="n">tensor_graph</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">training</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">example_net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">learning_phase</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">example_net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">mse</span><span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="p">{</span><span class="n">node</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span> <span class="n">y</span><span class="o">=</span><span class="p">{</span><span class="n">probe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))})</span>
+
+    <span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>TensorBoard functionality replaced by Keras TensorBoard callback</strong>.  NengoDL
+allows data about training metrics or model parameters to be output and displayed in
+TensorBoard.  In TensorFlow 2.0 the <a class="reference external" href="https://www.tensorflow.org/tensorboard/get_started">recommended way of doing this</a> is through Keras callbacks,
+and NengoDL 3 adopts the same API.</p>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">example_net</span><span class="p">,</span> <span class="n">tensorboard</span><span class="o">=</span><span class="s2">&quot;results&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="n">node</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">probe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+        <span class="n">optimizer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="mf">0.01</span><span class="p">),</span>
+        <span class="n">objective</span><span class="o">=</span><span class="n">nengo_dl</span><span class="o">.</span><span class="n">objectives</span><span class="o">.</span><span class="n">mse</span><span class="p">,</span>
+        <span class="n">n_epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">summaries</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">,</span> <span class="n">ens</span><span class="p">],</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">example_net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">optimizers</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="mf">0.01</span><span class="p">),</span> <span class="n">loss</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">mse</span><span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="p">{</span><span class="n">node</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+        <span class="n">y</span><span class="o">=</span><span class="p">{</span><span class="n">probe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+        <span class="n">epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">callbacks</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">TensorBoard</span><span class="p">(</span><span class="n">log_dir</span><span class="o">=</span><span class="s2">&quot;results&quot;</span><span class="p">),</span>
+            <span class="n">nengo_dl</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">NengoSummaries</span><span class="p">(</span><span class="s2">&quot;results&quot;</span><span class="p">,</span> <span class="n">sim</span><span class="p">,</span> <span class="p">[</span><span class="n">ens</span><span class="p">]),</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</div>
+<div class="section" id="tensornode-changes">
+<h3>TensorNode changes<a class="headerlink" href="#tensornode-changes" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p><strong>Use</strong> <a class="reference internal" href="reference.html#nengo_dl.Layer" title="nengo_dl.Layer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nengo_dl.Layer</span></code></a> <strong>instead of</strong> <code class="docutils literal notranslate"><span class="pre">nengo_dl.tensor_layer</span></code>.
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.tensor_layer</span></code> was designed to mimic the <code class="docutils literal notranslate"><span class="pre">tf.layers</span></code> API.
+In TensorFlow 2.0 <code class="docutils literal notranslate"><span class="pre">tf.layers</span></code> has been deprecated in favour of
+<code class="docutils literal notranslate"><span class="pre">tf.keras.layers</span></code>.  <a class="reference internal" href="reference.html#nengo_dl.Layer" title="nengo_dl.Layer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nengo_dl.Layer</span></code></a> has the same functionality as
+<code class="docutils literal notranslate"><span class="pre">nengo_dl.tensor_layer</span></code>, but mimics the Keras Layer API instead.</p>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">():</span>
+    <span class="n">layer</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">():</span>
+    <span class="n">layer</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Layer</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Dense</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="mi">10</span><span class="p">))(</span><span class="n">node</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Use custom Keras Layers instead of callable classes</strong>.  When making more
+complicated TensorNodes we sometimes need to separate the layer logic into separate
+preparation and execution steps.  In NengoDL 2 this was done by creating a callable
+class that defined <code class="docutils literal notranslate"><span class="pre">pre_build</span></code>, <code class="docutils literal notranslate"><span class="pre">__call__</span></code>, and <code class="docutils literal notranslate"><span class="pre">post_build</span></code> functions.
+In NengoDL 3 this is done by creating a custom Keras Layer subclass instead, which
+can define <code class="docutils literal notranslate"><span class="pre">build</span></code> and <code class="docutils literal notranslate"><span class="pre">call</span></code> methods.  There is no longer a <code class="docutils literal notranslate"><span class="pre">post_build</span></code>
+step, as this was used for TensorNodes that needed access to the TensorFlow
+Session object (which is no longer used in TensorFlow 2.0).</p>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyLayer</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">pre_build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape_in</span><span class="p">,</span> <span class="n">shape_out</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">t</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span>
+
+<span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">():</span>
+    <span class="n">tensor_node</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">TensorNode</span><span class="p">(</span><span class="n">MyLayer</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyLayer</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Layer</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_shapes</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_weight</span><span class="p">(</span>
+            <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">initializer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">initializers</span><span class="o">.</span><span class="n">ones</span><span class="p">(),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">inputs</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span>
+
+<span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">():</span>
+    <span class="n">tensor_node</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">TensorNode</span><span class="p">(</span><span class="n">MyLayer</span><span class="p">())</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>TensorNodes define multidimensional</strong> <code class="docutils literal notranslate"><span class="pre">shape_in</span></code>/<code class="docutils literal notranslate"><span class="pre">shape_out</span></code> <strong>rather than
+scalar</strong> <code class="docutils literal notranslate"><span class="pre">size_in</span></code>/<code class="docutils literal notranslate"><span class="pre">size_out</span></code>.  In core Nengo all inputs and outputs are
+vectors, and in NengoDL 2 this was also true for <code class="docutils literal notranslate"><span class="pre">TensorNodes</span></code>.  However, often
+when working with <code class="docutils literal notranslate"><span class="pre">TensorNodes</span></code> it is useful to have multidimensional inputs
+and outputs, so in NengoDL 3 TensorNodes are defined with a full shape.  Note that
+these shapes do not include the batch dimension (which is defined when the
+<code class="docutils literal notranslate"><span class="pre">Simulator</span></code> is created).</p>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">my_func</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="n">t</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">()</span>
+    <span class="k">assert</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">24</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+
+<span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">():</span>
+    <span class="n">tensor_node</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">TensorNode</span><span class="p">(</span><span class="n">my_func</span><span class="p">,</span> <span class="n">size_in</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span> <span class="n">size_out</span><span class="o">=</span><span class="mi">24</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">my_func</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="n">t</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">()</span>
+    <span class="k">assert</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">12</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+
+<span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">():</span>
+    <span class="n">tensor_node</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">TensorNode</span><span class="p">(</span>
+        <span class="n">my_func</span><span class="p">,</span> <span class="n">shape_in</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">12</span><span class="p">),</span> <span class="n">shape_out</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Connections created by</strong> <a class="reference internal" href="reference.html#nengo_dl.Layer" title="nengo_dl.Layer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nengo_dl.Layer</span></code></a> <strong>are non-trainable by default</strong>.  We
+usually don’t want these Connections to contain trainable weights (since any weights
+we want would be built into the TensorNode).  In NengoDL 2 they needed to be
+manually marked as non-trainable, but that is the default behaviour in NengoDL 3.</p>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">layer</span><span class="p">,</span> <span class="n">conn</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">tensor_layer</span><span class="p">(</span>
+        <span class="n">node</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">return_conn</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">conn</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="kc">False</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">layer</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Layer</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Dense</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="mi">10</span><span class="p">))(</span><span class="n">node</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The connection can still be manually marked as trainable if desired:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">layer</span><span class="p">,</span> <span class="n">conn</span> <span class="o">=</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Layer</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Dense</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="mi">10</span><span class="p">))(</span>
+        <span class="n">node</span><span class="p">,</span> <span class="n">return_conn</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">conn</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="kc">True</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</div>
+<div class="section" id="nengo-dl-objectives-changes">
+<h3>nengo_dl.objectives changes<a class="headerlink" href="#nengo-dl-objectives-changes" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p><code class="docutils literal notranslate"><span class="pre">nengo_dl.objectives</span></code> <strong>renamed to</strong> <code class="docutils literal notranslate"><span class="pre">nengo_dl.losses</span></code>. This is for consistency
+with <code class="docutils literal notranslate"><span class="pre">tf.losses</span></code>/<code class="docutils literal notranslate"><span class="pre">tf.keras.losses</span></code>.</p></li>
+<li><p><strong>Loss functions take two arguments</strong> <code class="docutils literal notranslate"><span class="pre">(y_true,</span> <span class="pre">y_pred)</span></code> <strong>instead of</strong>
+<code class="docutils literal notranslate"><span class="pre">(outputs,</span> <span class="pre">targets)</span></code>.  Again this is for consistency with <code class="docutils literal notranslate"><span class="pre">tf.losses</span></code>. Note that
+this swaps the order of the two arguments (so the ground truth now comes first).</p>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">my_loss</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">outputs</span> <span class="o">-</span> <span class="n">targets</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">my_loss</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">y_pred</span> <span class="o">-</span> <span class="n">y_true</span>
+</pre></div>
+</div>
+</li>
+<li><p><a class="reference internal" href="reference.html#nengo_dl.losses.Regularize" title="nengo_dl.losses.Regularize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nengo_dl.losses.Regularize</span></code></a> <strong>accepts two arguments</strong> (<code class="docutils literal notranslate"><span class="pre">y_true</span></code> <strong>and</strong>
+<code class="docutils literal notranslate"><span class="pre">y_pred</span></code>) <strong>instead of just</strong> <code class="docutils literal notranslate"><span class="pre">outputs</span></code>. <code class="docutils literal notranslate"><span class="pre">y_true</span></code> is not used, but Keras
+requires all loss functions to accept two arguments regardless.</p>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">nengo_dl</span><span class="o">.</span><span class="n">objectives</span><span class="o">.</span><span class="n">Regularize</span><span class="p">()(</span><span class="n">tf</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)))</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">nengo_dl</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">Regularize</span><span class="p">()(</span><span class="kc">None</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)))</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Use</strong> <code class="docutils literal notranslate"><span class="pre">loss_weights</span></code> <strong>parameter in</strong> <a class="reference internal" href="reference.html#nengo_dl.Simulator.compile" title="nengo_dl.Simulator.compile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Simulator.compile</span></code></a> <strong>instead of</strong>
+<code class="docutils literal notranslate"><span class="pre">weight</span></code> <strong>parameter in</strong> <a class="reference internal" href="reference.html#nengo_dl.losses.Regularize" title="nengo_dl.losses.Regularize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nengo_dl.losses.Regularize</span></code></a>.</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">example_net</span><span class="p">:</span>
+    <span class="n">p0</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+    <span class="n">p1</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Probe</span><span class="p">(</span><span class="n">ens</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">example_net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">train</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="n">node</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">probe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+        <span class="n">optimizer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="mf">0.01</span><span class="p">),</span>
+        <span class="n">objective</span><span class="o">=</span><span class="p">{</span>
+            <span class="n">probe</span><span class="p">:</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">objectives</span><span class="o">.</span><span class="n">mse</span><span class="p">,</span>
+            <span class="n">p0</span><span class="p">:</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">objectives</span><span class="o">.</span><span class="n">Regularize</span><span class="p">(</span><span class="n">weight</span><span class="o">=</span><span class="mf">0.5</span><span class="p">),</span>
+            <span class="n">p1</span><span class="p">:</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">objectives</span><span class="o">.</span><span class="n">Regularize</span><span class="p">(</span><span class="n">weight</span><span class="o">=</span><span class="mf">0.5</span><span class="p">),</span>
+        <span class="p">},</span>
+        <span class="n">n_epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">example_net</span><span class="p">)</span> <span class="k">as</span> <span class="n">sim</span><span class="p">:</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+        <span class="n">optimizer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">optimizers</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="mf">0.01</span><span class="p">),</span>
+        <span class="n">loss</span><span class="o">=</span><span class="p">{</span>
+            <span class="n">probe</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">mse</span><span class="p">,</span>
+            <span class="n">p0</span><span class="p">:</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">Regularize</span><span class="p">(),</span>
+            <span class="n">p1</span><span class="p">:</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">Regularize</span><span class="p">(),</span>
+        <span class="p">},</span>
+        <span class="n">loss_weights</span><span class="o">=</span><span class="p">{</span><span class="n">probe</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="n">p0</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">p1</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">},</span>
+    <span class="p">)</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="p">{</span><span class="n">node</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+        <span class="n">y</span><span class="o">=</span><span class="p">{</span>
+            <span class="n">probe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>
+            <span class="n">p0</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>
+            <span class="n">p1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>
+        <span class="p">},</span>
+        <span class="n">epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nengo_dl.objectives.mse</span></code> <strong>renamed to</strong> <a class="reference internal" href="reference.html#nengo_dl.losses.nan_mse" title="nengo_dl.losses.nan_mse"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nengo_dl.losses.nan_mse</span></code></a>.  This is to
+distinguish it from the standard <code class="docutils literal notranslate"><span class="pre">tf.losses.mse</span></code>, and emphasize the special
+treatment of <code class="docutils literal notranslate"><span class="pre">nan</span></code> targets.</p>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">assert</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">objectives</span><span class="o">.</span><span class="n">mse</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">assert</span> <span class="n">nengo_dl</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">nan_mse</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)))</span> <span class="o">==</span> <span class="mi">0</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</div>
+<div class="section" id="configure-settings-changes">
+<h3>configure_settings changes<a class="headerlink" href="#configure-settings-changes" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p><strong>Specify</strong> <code class="docutils literal notranslate"><span class="pre">dtype</span></code> <strong>as string instead of</strong> <code class="docutils literal notranslate"><span class="pre">tf.Dtype</span></code>.</p>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">():</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">():</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Configure trainability separately within subnetworks, rather than marking
+networks as trainable</strong>.</p>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">subnet</span><span class="p">:</span>
+        <span class="n">ens</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">net</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">subnet</span><span class="p">]</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="kc">False</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">net</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">()</span> <span class="k">as</span> <span class="n">subnet</span><span class="p">:</span>
+        <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="n">ens</span> <span class="o">=</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Ensemble</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Use</strong> <code class="docutils literal notranslate"><span class="pre">tf.config</span></code> <strong>instead of</strong> <code class="docutils literal notranslate"><span class="pre">session_config</span></code>.  TensorFlow 2.0 uses
+functions in the <code class="docutils literal notranslate"><span class="pre">tf.config</span></code> namespace to control settings that used to be
+controlled through the SessionConfig object (which no longer exists).  So we no
+longer need the <code class="docutils literal notranslate"><span class="pre">session_config</span></code> option, and can instead just directly use those
+<code class="docutils literal notranslate"><span class="pre">tf.config</span></code> functions.</p>
+<p>NengoDL 2:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">nengo</span><span class="o">.</span><span class="n">Network</span><span class="p">():</span>
+    <span class="n">nengo_dl</span><span class="o">.</span><span class="n">configure_settings</span><span class="p">(</span><span class="n">session_config</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;allow_soft_placement&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>NengoDL 3:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">tf</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">set_soft_device_placement</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div><footer class="text-light footer-main gradient-bottom">
+  <p class="small text-center mb-0">
+    <a class="no-hover-line" href="https://appliedbrainresearch.com">
+      <img
+        src="https://appliedbrainresearch.com/img/logo-blue-notext.svg"
+        height="48"
+      />
+    </a>
+    <a href="https://www.nengo.ai/">What is Nengo?</a>
+    <a href="https://www.nengo.ai/examples/">Examples</a>
+    <a href="https://www.nengo.ai/documentation/">Documentation</a>
+    <a href="https://www.nengo.ai/getting-started/">Getting started</a>
+    <a href="https://www.nengo.ai/privacy/">Privacy</a>
+  </p>
+  <p class="small text-center mb-0">&copy; Applied Brain Research</p>
+</footer>
+<script>
+  function switchVersion(select) {
+    var option = select.selectedOptions[0];
+    if (option.hasAttribute("value")) {
+      window.location = option.value;
+    }
+  }
+</script>
+
+<script>
+  var elements = document.querySelectorAll('.sidenav');
+  Stickyfill.add(elements);
+</script>
+<script>
+  ScrollReveal().reveal(".fade-in", {
+      scale: 0.85,
+      duration: 1000,
+      delay: 250,
+      interval: 50
+  });
+</script>
+<script>
+  $('a.toggle-sidenav').on('click', function(e) {
+    e.preventDefault();
+    if ( $(this).hasClass('active') ) {
+      $(this).removeClass('active');
+      $('.sidenav').removeClass('open');
+    } else {
+      $(this).addClass('active');
+      $('.sidenav').addClass('open');
+    }
+  });
+</script>
+<script>
+  var lists = document.querySelectorAll('.toctree ul');
+  lists.forEach((ul) => {
+      ul.classList.add("nav");
+  });
+  var links = document.querySelectorAll('.toctree a');
+  links.forEach((link) => {
+      link.classList.add("nav-link");
+  });
+  $("body").scrollspy({target: ".sidenav"});
+</script>
+  </body>
+</html>
