@@ -11,10 +11,10 @@ unless the code base represents a release version. Release versions are git
 tagged with the version.
 """
 
-version_info = (3, 6, 0)
+version_info = (3, 6, 1)
 
 name = "nengo-dl"
-dev = None
+dev = 0
 
 # use old string formatting, so that this can still run in Python <= 3.5
 # (since this file is parsed in setup.py, before python_requires is applied)
@@ -38,7 +38,7 @@ else:
     # for release versions of nengo-dl, this should be the latest released
     # nengo version. for dev versions of nengo-dl, this should be the current
     # nengo dev version.
-    latest_nengo_version = (3, 2, 0)
+    latest_nengo_version = (3, 2, 1)
 
     if nengo.version.version_info < minimum_nengo_version:  # pragma: no cover
         raise ValueError(
