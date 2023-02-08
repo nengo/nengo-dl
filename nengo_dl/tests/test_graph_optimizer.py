@@ -171,9 +171,9 @@ def test_mergeable():
 
     def get_state(sig):
         if version.parse(nengo.__version__) <= version.parse("3.0.0"):
-            return dict(states=[sig])
+            return {"states": [sig]}
         else:
-            return dict(state={"voltage": sig})
+            return {"state": {"voltage": sig}}
 
     assert not mergeable(
         SimNeurons(
@@ -674,9 +674,9 @@ def test_order_signals_neuron_states():
 
     def get_state(sig):
         if version.parse(nengo.__version__) <= version.parse("3.0.0"):
-            return dict(states=[sig])
+            return {"states": [sig]}
         else:
-            return dict(state={"voltage": sig})
+            return {"state": {"voltage": sig}}
 
     plan = [
         tuple(

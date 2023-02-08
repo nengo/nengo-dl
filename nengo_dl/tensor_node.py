@@ -348,7 +348,7 @@ class SimTensorNodeBuilder(OpBuilder):
             if len(inputs) == 1:
                 inputs = inputs[0]
             kwargs = (
-                dict(training=self.config.training)
+                {"training": self.config.training}
                 if self.func._expects_training_arg
                 else {}
             )

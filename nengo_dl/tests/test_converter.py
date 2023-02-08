@@ -595,7 +595,7 @@ def test_upsampling(Layer, size, data_format, rng):
         input_shape = (2,) + input_shape
     inp = x = tf.keras.Input(shape=input_shape, batch_size=3)
     x = Layer(
-        size=size, **({} if data_format is None else dict(data_format=data_format))
+        size=size, **({} if data_format is None else {"data_format": data_format})
     )(x)
 
     _test_convert(

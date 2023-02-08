@@ -220,7 +220,7 @@ def test_leaky_relu(Simulator, Neurons):
     )
 
     if Neurons.spiking and version.parse(nengo.__version__) > version.parse("3.0.0"):
-        kwargs = dict(initial_state={"voltage": nengo.dists.Choice([0])})
+        kwargs = {"initial_state": {"voltage": nengo.dists.Choice([0])}}
     else:
         kwargs = {}
 

@@ -177,9 +177,10 @@ def mnist(use_tensor_layer=True):
         if use_tensor_layer:
             nengo_nl = nengo.RectifiedLinear()
 
-            ensemble_params = dict(
-                max_rates=nengo.dists.Choice([100]), intercepts=nengo.dists.Choice([0])
-            )
+            ensemble_params = {
+                "max_rates": nengo.dists.Choice([100]),
+                "intercepts": nengo.dists.Choice([0]),
+            }
             amplitude = 1
             synapse = None
 

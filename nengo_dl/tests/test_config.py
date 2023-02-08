@@ -55,7 +55,7 @@ def test_keep_history(Simulator, use_loop, seed):
         a = Ensemble(30, 1)
         p = Probe(a.neurons, synapse=0.1)
 
-    kwargs = {} if use_loop else dict(unroll_simulation=10)
+    kwargs = {} if use_loop else {"unroll_simulation": 10}
     with Simulator(net, **kwargs) as sim:
         sim.run_steps(10)
 
@@ -81,7 +81,7 @@ def test_stateful(Simulator, sim_stateful, func_stateful, func):
         Ensemble(30, 1)
 
     with Simulator(net) as sim:
-        kwargs = dict(n_steps=5, stateful=func_stateful)
+        kwargs = {"n_steps": 5, "stateful": func_stateful}
 
         with pytest.warns(None) as recwarns:
             getattr(sim, func)(**kwargs)

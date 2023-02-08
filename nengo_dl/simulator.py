@@ -1015,9 +1015,9 @@ class Simulator:  # pylint: disable=too-many-public-methods
 
         # call underlying keras function
         if "predict" in func_type:
-            func_args = dict(x=x, **kwargs)
+            func_args = dict(x=x, **kwargs)  # pylint: disable=use-dict-literal
         else:
-            func_args = dict(x=x, y=y, **kwargs)
+            func_args = dict(x=x, y=y, **kwargs)  # pylint: disable=use-dict-literal
 
         outputs = getattr(self.keras_model, func_type)(**func_args)
 
