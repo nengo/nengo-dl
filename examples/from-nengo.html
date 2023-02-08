@@ -5,10 +5,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Coming from Nengo to NengoDL &#8212; NengoDL 3.6.0 docs</title>
+    <title>Coming from Nengo to NengoDL &#8212; NengoDL 3.6.1.dev0 docs</title>
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="../_static/basic.css" type="text/css" />
-<link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,400i,600|Rajdhani:700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
 <link rel="stylesheet" href="https://www.nengo.ai/css/bootstrap.css" type="text/css">
 <style>
@@ -179,12 +181,21 @@
             <a class="dropdown-item" href="https://www.nengo.ai/caa/">CAA</a>
           </div>
         </li>
+      </ul>
+      <ul class="navbar-nav ml-auto">
         <li class="nav-item">
           <a
             class="nav-link btn btn-success btn-sm text-white"
             href="https://www.nengo.ai/getting-started/"
-            >Getting started</a
-          >
+          >Getting started</a
+        >
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link btn btn-success btn-sm text-white"
+            href="https://www.nengo.ai/store/"
+          >Store</a
+        >
         </li>
       </ul>
     </div>
@@ -249,199 +260,6 @@
   
   </div>
   
-  <form class="p-5 my-0 border-top">
-    <div class="form-group">
-      <label class="text-gray">Version:</label>
-      <select class="custom-select" onchange="switchVersion(this);">
-        
-        
-        <option selected>latest</option>
-        
-        
-          
-        <option value="../v3.5.0/examples/from-nengo.html">
-          v3.5.0
-        </option>
-          
-        
-          
-        <option value="../v3.4.4/examples/from-nengo.html">
-          v3.4.4
-        </option>
-          
-        
-          
-        <option value="../v3.4.3/examples/from-nengo.html">
-          v3.4.3
-        </option>
-          
-        
-          
-        <option value="../v3.4.2/examples/from-nengo.html">
-          v3.4.2
-        </option>
-          
-        
-          
-        <option value="../v3.4.1/examples/from-nengo.html">
-          v3.4.1
-        </option>
-          
-        
-          
-        <option value="../v3.4.0/examples/from-nengo.html">
-          v3.4.0
-        </option>
-          
-        
-          
-        <option value="../v3.3.0/examples/from-nengo.html">
-          v3.3.0
-        </option>
-          
-        
-          
-        <option value="../v3.2.0/examples/from-nengo.html">
-          v3.2.0
-        </option>
-          
-        
-          
-        <option value="../v3.1.0/examples/from-nengo.html">
-          v3.1.0
-        </option>
-          
-        
-          
-        <option value="../v3.0.0/examples/from-nengo.html">
-          v3.0.0
-        </option>
-          
-        
-          
-        <option value="../v2.2.2/examples/from-nengo.html">
-          v2.2.2
-        </option>
-          
-        
-          
-        <option value="../v2.2.1/examples/from-nengo.html">
-          v2.2.1
-        </option>
-          
-        
-          
-        <option value="../v2.2.0/examples/from-nengo.html">
-          v2.2.0
-        </option>
-          
-        
-          
-        <option value="../v2.1.1/examples/from-nengo.html">
-          v2.1.1
-        </option>
-          
-        
-          
-        <option value="../v2.1.0/examples/from-nengo.html">
-          v2.1.0
-        </option>
-          
-        
-          
-        <option value="../v2.0.0/examples/from-nengo.html">
-          v2.0.0
-        </option>
-          
-        
-          
-        <option value="../v1.2.1/examples/from-nengo.html">
-          v1.2.1
-        </option>
-          
-        
-          
-        <option value="../v1.2.0/examples/from-nengo.html">
-          v1.2.0
-        </option>
-          
-        
-          
-        <option value="../v1.1.0/examples/from-nengo.html">
-          v1.1.0
-        </option>
-          
-        
-          
-        <option value="../v1.0.0/examples/from-nengo.html">
-          v1.0.0
-        </option>
-          
-        
-          
-        <option value="../v0.6.2/examples/from-nengo.html">
-          v0.6.2
-        </option>
-          
-        
-          
-        <option value="../v0.6.1/examples/from-nengo.html">
-          v0.6.1
-        </option>
-          
-        
-          
-        <option value="../v0.6.0/examples/from-nengo.html">
-          v0.6.0
-        </option>
-          
-        
-          
-        <option value="../v0.5.2/examples/from-nengo.html">
-          v0.5.2
-        </option>
-          
-        
-          
-        <option value="../v0.5.1/examples/from-nengo.html">
-          v0.5.1
-        </option>
-          
-        
-          
-        <option value="../v0.5.0/examples/from-nengo.html">
-          v0.5.0
-        </option>
-          
-        
-          
-        <option value="../v0.4.0/examples/from-nengo.html">
-          v0.4.0
-        </option>
-          
-        
-          
-        <option value="../v0.3.1/examples/from-nengo.html">
-          v0.3.1
-        </option>
-          
-        
-          
-        <option value="../v0.3.0/examples/from-nengo.html">
-          v0.3.0
-        </option>
-          
-        
-          
-        <option value="../v0.2.0/examples/from-nengo.html">
-          v0.2.0
-        </option>
-          
-        
-      </select>
-    </div>
-  </form>
-  
 </div>
       
 
@@ -449,17 +267,6 @@
         <div class="container">
           <div class="row">
             <div class="col-10 offset-1 pb-5 documentation-source" role="main">
-              
-              
-              <div class="admonition note">
-                  <p class="admonition-title">Note</p>
-                  <p>
-                  This documentation is for a development version.
-                  <a href="../v3.5.0/examples/from-nengo.html">
-                  Click here for the latest stable release (v3.5.0).
-                  </a>
-                  </p>
-              </div>
               
               
   
@@ -799,7 +606,7 @@ div.rendered_html tbody tr:hover {
 <div class="output_area rendered_html docutils container">
 <script>
     if (Jupyter.version.split(".")[0] < 5) {
-        var pb = document.getElementById("08465199-f690-45c4-8821-a753643bb729");
+        var pb = document.getElementById("06ff0a0e-95f8-4e2a-963c-36dc3c946ea9");
         var text = document.createTextNode(
             "HMTL progress bar requires Jupyter Notebook >= " +
             "5.0 or Jupyter Lab. Alternatively, you can use " +
@@ -807,7 +614,7 @@ div.rendered_html tbody tr:hover {
         pb.parentNode.insertBefore(text, pb);
     }
 </script>
-<div id="08465199-f690-45c4-8821-a753643bb729" style="
+<div id="06ff0a0e-95f8-4e2a-963c-36dc3c946ea9" style="
     width: 100%;
     border: 1px solid #cfcfcf;
     border-radius: 4px;
@@ -837,7 +644,7 @@ div.rendered_html tbody tr:hover {
 <div class="output_area rendered_html docutils container">
 <script>
               (function () {
-                  var root = document.getElementById('08465199-f690-45c4-8821-a753643bb729');
+                  var root = document.getElementById('06ff0a0e-95f8-4e2a-963c-36dc3c946ea9');
                   var text = root.getElementsByClassName('pb-text')[0];
                   var fill = root.getElementsByClassName('pb-fill')[0];
 
@@ -862,7 +669,7 @@ div.rendered_html tbody tr:hover {
 <div class="output_area rendered_html docutils container">
 <script>
     if (Jupyter.version.split(".")[0] < 5) {
-        var pb = document.getElementById("7616e069-60a4-4f88-ab1b-5def883fb817");
+        var pb = document.getElementById("72024318-486d-4993-9908-d532cc8c1f67");
         var text = document.createTextNode(
             "HMTL progress bar requires Jupyter Notebook >= " +
             "5.0 or Jupyter Lab. Alternatively, you can use " +
@@ -870,7 +677,7 @@ div.rendered_html tbody tr:hover {
         pb.parentNode.insertBefore(text, pb);
     }
 </script>
-<div id="7616e069-60a4-4f88-ab1b-5def883fb817" style="
+<div id="72024318-486d-4993-9908-d532cc8c1f67" style="
     width: 100%;
     border: 1px solid #cfcfcf;
     border-radius: 4px;
@@ -900,7 +707,7 @@ div.rendered_html tbody tr:hover {
 <div class="output_area rendered_html docutils container">
 <script>
               (function () {
-                  var root = document.getElementById('7616e069-60a4-4f88-ab1b-5def883fb817');
+                  var root = document.getElementById('72024318-486d-4993-9908-d532cc8c1f67');
                   var text = root.getElementsByClassName('pb-text')[0];
                   var fill = root.getElementsByClassName('pb-fill')[0];
 
@@ -971,7 +778,7 @@ div.rendered_html tbody tr:hover {
 Build finished in 0:00:00
 Optimization finished in 0:00:00
 Construction finished in 0:00:05
-Simulation finished in 0:00:14
+Simulation finished in 0:00:16
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1009,7 +816,7 @@ Simulation finished in 0:00:14
 <div class="output_area rendered_html docutils container">
 <script>
     if (Jupyter.version.split(".")[0] < 5) {
-        var pb = document.getElementById("26dece58-40c3-43a6-b5dc-305066d003d6");
+        var pb = document.getElementById("fcbfb7be-6110-4df6-ad5d-1aabd823fce3");
         var text = document.createTextNode(
             "HMTL progress bar requires Jupyter Notebook >= " +
             "5.0 or Jupyter Lab. Alternatively, you can use " +
@@ -1017,7 +824,7 @@ Simulation finished in 0:00:14
         pb.parentNode.insertBefore(text, pb);
     }
 </script>
-<div id="26dece58-40c3-43a6-b5dc-305066d003d6" style="
+<div id="fcbfb7be-6110-4df6-ad5d-1aabd823fce3" style="
     width: 100%;
     border: 1px solid #cfcfcf;
     border-radius: 4px;
@@ -1047,7 +854,7 @@ Simulation finished in 0:00:14
 <div class="output_area rendered_html docutils container">
 <script>
               (function () {
-                  var root = document.getElementById('26dece58-40c3-43a6-b5dc-305066d003d6');
+                  var root = document.getElementById('fcbfb7be-6110-4df6-ad5d-1aabd823fce3');
                   var text = root.getElementsByClassName('pb-text')[0];
                   var fill = root.getElementsByClassName('pb-fill')[0];
 
@@ -1072,7 +879,7 @@ Simulation finished in 0:00:14
 <div class="output_area rendered_html docutils container">
 <script>
     if (Jupyter.version.split(".")[0] < 5) {
-        var pb = document.getElementById("88535ae3-4a1f-49b1-bf97-b473c2c2b86f");
+        var pb = document.getElementById("d9d91bb3-e4aa-47ae-80f8-52950ddbf081");
         var text = document.createTextNode(
             "HMTL progress bar requires Jupyter Notebook >= " +
             "5.0 or Jupyter Lab. Alternatively, you can use " +
@@ -1080,7 +887,7 @@ Simulation finished in 0:00:14
         pb.parentNode.insertBefore(text, pb);
     }
 </script>
-<div id="88535ae3-4a1f-49b1-bf97-b473c2c2b86f" style="
+<div id="d9d91bb3-e4aa-47ae-80f8-52950ddbf081" style="
     width: 100%;
     border: 1px solid #cfcfcf;
     border-radius: 4px;
@@ -1110,7 +917,7 @@ Simulation finished in 0:00:14
 <div class="output_area rendered_html docutils container">
 <script>
               (function () {
-                  var root = document.getElementById('88535ae3-4a1f-49b1-bf97-b473c2c2b86f');
+                  var root = document.getElementById('d9d91bb3-e4aa-47ae-80f8-52950ddbf081');
                   var text = root.getElementsByClassName('pb-text')[0];
                   var fill = root.getElementsByClassName('pb-fill')[0];
 
@@ -1139,7 +946,7 @@ Simulation finished in 0:00:14
 <div class="output_area rendered_html docutils container">
 <script>
     if (Jupyter.version.split(".")[0] < 5) {
-        var pb = document.getElementById("dc995556-4f2e-475a-bc89-94b8907279f6");
+        var pb = document.getElementById("3da179d4-cdde-4f7a-a2cc-57a6300a6b06");
         var text = document.createTextNode(
             "HMTL progress bar requires Jupyter Notebook >= " +
             "5.0 or Jupyter Lab. Alternatively, you can use " +
@@ -1147,7 +954,7 @@ Simulation finished in 0:00:14
         pb.parentNode.insertBefore(text, pb);
     }
 </script>
-<div id="dc995556-4f2e-475a-bc89-94b8907279f6" style="
+<div id="3da179d4-cdde-4f7a-a2cc-57a6300a6b06" style="
     width: 100%;
     border: 1px solid #cfcfcf;
     border-radius: 4px;
@@ -1177,7 +984,7 @@ Simulation finished in 0:00:14
 <div class="output_area rendered_html docutils container">
 <script>
               (function () {
-                  var root = document.getElementById('dc995556-4f2e-475a-bc89-94b8907279f6');
+                  var root = document.getElementById('3da179d4-cdde-4f7a-a2cc-57a6300a6b06');
                   var text = root.getElementsByClassName('pb-text')[0];
                   var fill = root.getElementsByClassName('pb-fill')[0];
 
@@ -1206,7 +1013,7 @@ Simulation finished in 0:00:14
 <div class="output_area rendered_html docutils container">
 <script>
     if (Jupyter.version.split(".")[0] < 5) {
-        var pb = document.getElementById("02f1e444-1104-400f-bfef-a7003e8b159e");
+        var pb = document.getElementById("f1f1d5a7-f5f4-4f47-a41c-46eeb0aa1e00");
         var text = document.createTextNode(
             "HMTL progress bar requires Jupyter Notebook >= " +
             "5.0 or Jupyter Lab. Alternatively, you can use " +
@@ -1214,7 +1021,7 @@ Simulation finished in 0:00:14
         pb.parentNode.insertBefore(text, pb);
     }
 </script>
-<div id="02f1e444-1104-400f-bfef-a7003e8b159e" style="
+<div id="f1f1d5a7-f5f4-4f47-a41c-46eeb0aa1e00" style="
     width: 100%;
     border: 1px solid #cfcfcf;
     border-radius: 4px;
@@ -1244,7 +1051,7 @@ Simulation finished in 0:00:14
 <div class="output_area rendered_html docutils container">
 <script>
               (function () {
-                  var root = document.getElementById('02f1e444-1104-400f-bfef-a7003e8b159e');
+                  var root = document.getElementById('f1f1d5a7-f5f4-4f47-a41c-46eeb0aa1e00');
                   var text = root.getElementsByClassName('pb-text')[0];
                   var fill = root.getElementsByClassName('pb-fill')[0];
 
@@ -1510,7 +1317,7 @@ Build finished in 0:00:00
 Optimization finished in 0:00:00
 Construction finished in 0:00:00
 Epoch 1/25
-128/128 [==============================] - 3s 6ms/step - loss: 0.0015 - probe_2_loss: 0.0015
+128/128 [==============================] - 3s 7ms/step - loss: 0.0015 - probe_2_loss: 0.0015
 Epoch 2/25
 128/128 [==============================] - 1s 6ms/step - loss: 0.0011 - probe_2_loss: 0.0011
 Epoch 3/25
@@ -1641,7 +1448,7 @@ performance of the model we defined, which contains spiking neurons, that we wan
 Build finished in 0:00:00
 Optimization finished in 0:00:00
 Construction finished in 0:00:00
-32/32 [==============================] - 3s 67ms/step - loss: 0.0040 - probe_1_loss: 0.0040
+32/32 [==============================] - 3s 68ms/step - loss: 0.0040 - probe_1_loss: 0.0040
 Error before training: 0.003992334473878145
 Training
 Epoch 1/25
@@ -1694,7 +1501,7 @@ Epoch 24/25
 128/128 [==============================] - 1s 6ms/step - loss: 2.9450e-04 - probe_2_loss: 2.9450e-04
 Epoch 25/25
 128/128 [==============================] - 1s 6ms/step - loss: 2.8924e-04 - probe_2_loss: 2.8924e-04
-32/32 [==============================] - 3s 69ms/step - loss: 0.0031 - probe_1_loss: 0.0031
+32/32 [==============================] - 3s 65ms/step - loss: 0.0031 - probe_1_loss: 0.0031
 Error after training: 0.0030983116012066603
 </pre></div></div>
 </div>
@@ -1769,31 +1576,24 @@ examples</a> for more information.</p>
 
     </div>
   </div>
-</div><footer class="text-light footer-main gradient-bottom">
-  <p class="small text-center mb-0">
+</div><footer class="text-light footer-main gradient-bottom-center">
+  <p class="text-center">
     <a class="no-hover-line" href="https://appliedbrainresearch.com">
       <img
-        src="https://appliedbrainresearch.com/img/logo-blue-notext.svg"
-        height="48"
+        class="abr-logo"
+        src="https://www.nengo.ai/img/abr-logo.svg"
+        height="32"
       />
     </a>
     <a href="https://www.nengo.ai/">What is Nengo?</a>
     <a href="https://www.nengo.ai/examples/">Examples</a>
     <a href="https://www.nengo.ai/documentation/">Documentation</a>
+    <a href="https://www.nengo.ai/store/">Store</a>
     <a href="https://www.nengo.ai/getting-started/">Getting started</a>
     <a href="https://www.nengo.ai/privacy/">Privacy</a>
   </p>
-  <p class="small text-center mb-0">&copy; Applied Brain Research</p>
+  <p class="small text-center pb-0 mb-0">&copy; Applied Brain Research</p>
 </footer>
-<script>
-  function switchVersion(select) {
-    var option = select.selectedOptions[0];
-    if (option.hasAttribute("value")) {
-      window.location = option.value;
-    }
-  }
-</script>
-
 <script>
   var elements = document.querySelectorAll('.sidenav');
   Stickyfill.add(elements);
