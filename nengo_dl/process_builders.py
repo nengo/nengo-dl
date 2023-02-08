@@ -302,7 +302,9 @@ class LinearFilterBuilder(OpBuilder):
             # combine D scalars for each op, and broadcast along minibatch and
             # signal dimensions
             self.D = tf.constant(
-                np.concatenate([step.D[None, :, None] for step in steps], axis=1),
+                np.concatenate(
+                    [np.reshape(step.D, (1, step.D.size, 1)) for step in steps], axis=1
+                ),
                 dtype=signals.dtype,
             )
 
@@ -337,7 +339,9 @@ class LinearFilterBuilder(OpBuilder):
                 self.D = None
             else:
                 self.D = tf.constant(
-                    np.concatenate([step.D[:, None, None] for step in steps]),
+                    np.concatenate(
+                        [np.reshape(step.D, (step.D.size, 1, 1)) for step in steps]
+                    ),
                     dtype=signals.dtype,
                 )
                 assert self.D.shape == (self.n_ops, 1, 1)
