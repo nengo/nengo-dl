@@ -22,7 +22,7 @@ version = ".".join(str(v) for v in version_info)
 if dev is not None:
     version += ".dev%d" % dev  # pragma: no cover
 
-copyright = "Copyright (c) 2015-2023 Applied Brain Research"
+copyright = "Copyright (c) 2015-2024 Applied Brain Research"
 
 import warnings  # noqa: E402 pylint: disable=wrong-import-position
 
