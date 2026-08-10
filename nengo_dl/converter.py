@@ -1141,8 +1141,7 @@ class ConvertAvgPool3D(ConvertAvgPool):
         return super().convert(node_id, dimensions=3)
 
 
-@Converter.register(compat.BatchNormalizationV1)
-@Converter.register(compat.BatchNormalizationV2)
+@Converter.register(compat.BatchNormalization)
 class ConvertBatchNormalization(LayerConverter):
     """Convert ``tf.keras.layers.BatchNormalization`` to Nengo objects."""
 
